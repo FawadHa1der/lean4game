@@ -2,6 +2,7 @@ import { atom } from "jotai";
 import { LeanMonaco, LeanMonacoOptions } from 'lean4monaco'
 import { gameIdAtom } from "./location-atoms";
 import { levelProgressAtom, progressAtom } from "./progress-atoms";
+import { gameLspPort } from "../wasm/game-boot";
 import { Selection } from "./progress-types";
 import { levelInfoAtom } from "./query-atoms";
 import { ProofState } from "../components/infoview/rpc_api";
@@ -9,17 +10,33 @@ import { Diagnostic } from 'vscode-languageserver-types'
 
 /** Options for the LeanMonaco instance */
 export const leanMonacoOptionsAtom = atom<LeanMonacoOptions>(get => {
+  // CAUTION: this atom must stay stable across gameplay — app.tsx restarts
+  // the whole LeanMonaco instance whenever it changes identity. difficulty
+  // and inventory are therefore NOT read here; the wasm translation layer
+  // reads them live at didOpen time (see game-boot's providers).
   const gameId = get(gameIdAtom)
   return {
+  // wasm64 build: the Lean server runs in-tab (QED64 worker); the LSP client
+  // attaches to a MessagePort instead of the relay websocket. The port exists
+  // synchronously — traffic buffers until the wasm runtime finishes booting.
+  // monaco-editor-wrapper only consumes `$type`/`worker`/`messagePort` from
+  // this config, so the extra fields are harmless (upstream types predate it).
   websocket: {
-    url: ((window.location.protocol === "https:") ? "wss://" : "ws://") + window.location.host + '/websocket/' + gameId
-  },
+    $type: "WorkerDirect",
+    worker: { postMessage() {/* replaced by messagePort */} },
+    messagePort: gameLspPort(),
+  } as any,
+
   htmlElement: undefined, // The wrapper div for monaco
   vscode: {
     // The default options are defined in `LeanMonaco.start` and can be overwritten here.
     // See docstring of `LeanMonacoOptions`!
     // For example:
     "editor.wordWrap": true,
+    // lean4game replaces the iframe infoview with its own EditorConnection
+    // (level.tsx fabricates the webview panel); the built-in auto-open only
+    // crashes into elements that are never rendered.
+    "lean4.infoview.autoOpen": false,
   }
 }})
 

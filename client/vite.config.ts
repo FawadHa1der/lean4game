@@ -10,6 +10,30 @@ import importMetaUrlPlugin from '@codingame/esbuild-import-meta-url-plugin'
 
 const backendPort = process.env.PORT || 8080;
 const clientPort = process.env.CLIENT_PORT || 3000;
+// wasm64 build: no relay/backend — the Lean server runs in-tab. Static
+// gamedata is served from public/, and the dev server must send COOP/COEP
+// so SharedArrayBuffer + Memory64 are available to the worker.
+const wasmMode = process.env.QED64_WASM !== "0"; // default ON in this fork
+
+const crossOriginIsolation = {
+  name: "cross-origin-isolation",
+  configureServer(server) {
+    server.middlewares.use((_req, res, next) => {
+      res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+      res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      next();
+    });
+  },
+  configurePreviewServer(server) {
+    server.middlewares.use((_req, res, next) => {
+      res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+      res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      next();
+    });
+  },
+};
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -19,6 +43,7 @@ export default defineConfig({
     outDir: 'dist',
   },
   plugins: [
+    ...(wasmMode ? [crossOriginIsolation] : []),
     react(),
     svgr({
       svgrOptions: {
@@ -48,17 +73,26 @@ export default defineConfig({
       },
     }),
   ],
+  define: {
+    // qed64-boot pins its runtime manifest by build id; "dev" 404s the pinned
+    // name and falls back to the mutable runtime-manifest.json we ship.
+    __QED64_BUILD_ID__: JSON.stringify("dev"),
+  },
   publicDir: "public",
   base: "/", // setting this to `/leangame/` means the server is now accessible at `localhost:3000/leangame`
   optimizeDeps: {
-    exclude: ['games'],
+    exclude: ['games', 'qed64'],
     esbuildOptions: {
       plugins: [importMetaUrlPlugin]
     }
   },
   server: {
     port: Number(clientPort),
-    proxy: {
+    fs: {
+      // the qed64 substrate is an npm file: symlink outside the vite root
+      allow: ['..', normalizePath(path.resolve(__dirname, '../../wasm64-lean-fable/qed64'))],
+    },
+    proxy: wasmMode ? {} : {
       '/websocket': {
         target: `ws://localhost:${backendPort}`,
         ws: true

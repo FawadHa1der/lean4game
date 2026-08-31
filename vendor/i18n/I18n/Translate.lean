@@ -1,0 +1,164 @@
+module
+
+public import Lean
+public import I18n.Utils
+public meta import I18n.Language
+public meta import I18n.EnvExtension
+public meta import I18n.Json.Read
+public meta import I18n.PO.Read
+public meta import I18n.Utils.CodeBlockExtractor
+public meta import I18n.InterpolatedStr
+public section
+
+open Lean Elab Term System
+
+/-! # Translated strings
+
+Defines `t!"…"`, `tm!"…"`, and `String.translate` which all take (interpolated) strings,
+add them to the `untranslatedKeysExt` and try to fetch a translated (interp.) string
+for replacement.
+
+If the command `set_language` is used within that document,
+-/
+
+namespace I18n
+
+/-- Load translations from PO-file. They can then be accessed with `I18n.getTranslations`. -/
+meta def loadTranslations : CoreM Unit := do
+  let langState ← getLanguageState
+  let project ← getCurrentProjectContext (← getEnv)
+
+  let ending := if langState.useJson then "json" else "po"
+  let file := project.dir / ".i18n" / s!"{langState.lang}" / s!"{project.name.toString}.{ending}"
+  if ¬ (← FilePath.pathExists file) then
+    logWarning s!"Translation file not found: {file}"
+    return ()
+
+  let f ← if langState.useJson then
+    POFile.readFromJson file
+  else
+    POFile.read file
+
+  for e in f.entries do
+    modifyEnv (translationExt.addEntry · (e.msgId, e.msgStr))
+
+/-- Set the language this document should be translated into. -/
+elab "set_language" lang:ident : command => do
+  -- Load the language state
+  let language : Language := Language.ofString lang.getId.toString
+  let project ← getCurrentProjectContext (← getEnv)
+  let langState ← readLanguageConfigAt project.dir (some language) project.isRoot
+  setLanguageState {langState with lang := language}
+
+  /-
+  Do not keep translations from an earlier `set_language` command in the same module when the new
+  catalog is partial or missing
+  -/
+  modifyEnv (translationExt.setState · {})
+
+  -- Load in the translation for that language
+  Elab.Command.liftCoreM <| loadTranslations
+
+/--
+Turns a module name `Package.Module.Name` into `Package/Module/Name.lean`.
+Does not check if the resulting file exists.
+
+Note: one could use `FilePath` for this. However, we want consistent separators across different
+OS and it seems in the `FilePath`-API one cannot manually specify the separator
+ -/
+private meta def toSourceFilePath (mod : Name) : String :=
+  mod.toString.replace "." "/" ++ ".lean"
+
+private meta def hasBackslashLine (s : String) : Bool :=
+  (s.splitOn "\n").any (fun line => line.trimAsciiEnd.endsWith "\\")
+
+/--
+Add a string to the set of untranslated strings
+-/
+meta def _root_.String.markForTranslation [Monad m] [MonadEnv m] [MonadLog m] [AddMessageContext m]
+    [MonadOptions m] (s : String) : m Unit := do
+
+  -- validation: do not translate empty string
+  if s.length == 0 then
+    return
+
+  let env ← getEnv
+
+  let (key, codeBlocks) := s.extractCodeBlocks
+
+  for block in codeBlocks do
+    if hasBackslashLine block then
+    --Print a warning if line ends in a backslash
+      logWarning m!"i18n: extracted translation comment contains a line ending in a backslash. This can cause Poedit to incorrectly merge comment lines. Recommended fix: add a LaTeX comment character '%' after the backslash in your Lean file (e.g., '\\\\ %')."
+
+  let extractedComment := match codeBlocks.size with
+  | 0 => none
+  | _ => some <| codeBlocks.zipIdx.foldl (init := "") fun acc (block, n) => acc ++ s!"§{n}: {block}\n"
+
+  let pos ← getRefPosition
+  let entry : POEntry := {
+    msgId := key
+    ref := some [(toSourceFilePath env.mainModule, some pos.line)]
+    extrComment := extractedComment }
+  modifyEnv (untranslatedKeysExt.addEntry · entry)
+
+/--
+Add the string as untranslated, look up a translation
+and return the translated string.
+Returns the original string on failure.
+-/
+meta def _root_.String.translate [Monad m] [MonadEnv m] [MonadLog m] [AddMessageContext m]
+    [MonadOptions m] (s : String) : m String := do
+  let s := s.trimAscii.copy
+
+  -- validation: do not translate empty string
+  if s.length == 0 then
+    return ""
+
+  s.markForTranslation
+
+  let (key, codeBlocks) := s.extractCodeBlocks
+  match (← getTranslations)[key]? with
+  | none =>
+    let langConfig : LanguageState ← getLanguageState
+    unless langConfig.lang == langConfig.sourceLang do
+      -- Print a warning that the translation has not been found
+      logWarning s!"No translation ({langConfig.lang}) found for: {key}"
+    -- nevertheless, call `insertCodeBlocks` so that escape sequences are parsed properly
+    return key.insertCodeBlocks codeBlocks
+  | some tr =>
+    -- Insert the codeblocks from the original string into the translation.
+    return tr.insertCodeBlocks codeBlocks
+
+/--
+Translate an interpolated string by turning it into a normal string
+and translating that one.
+-/
+meta def interpolatedStrKind.translate (interpStr : TSyntax `interpolatedStrKind)
+    : TermElabM <| TSyntax `interpolatedStrKind := do
+  let env ← getEnv
+  let key := (← interpolatedStrKind.toString interpStr).trimAscii.copy
+
+  -- Search for a translation
+  let tKey : String ← key.translate
+  -- Parse the translation
+  let newInterpStr ← match Parser.String.parseAsInterpolatedStr env tKey with
+    | .ok stx => pure stx
+    | .error err =>
+      logError s!"Could not parse translated string: {err}\n\ninput: {key}"
+      pure interpStr
+  return newInterpStr
+
+/-- A translated string. -/
+syntax:max "t!" interpolatedStr(term) : term
+
+/-- A translated string as message data. -/
+syntax:max "mt!" interpolatedStr(term) : term
+
+elab_rules : term
+  | `(t! $interpStr) =>  withFreshMacroScope do
+    let newInterpStr ← interpolatedStrKind.translate interpStr
+    Term.elabTerm (← `(s! $newInterpStr)) none
+  | `(mt! $interpStr) =>  withFreshMacroScope do
+    let newInterpStr ← interpolatedStrKind.translate interpStr
+    Term.elabTerm (← `(m! $newInterpStr)) none

@@ -1,0 +1,158 @@
+module
+
+import I18n.Utils
+public import I18n.PO.Definition
+
+public section
+
+/-!
+This file contains the tools to turn `POEntry` objects into strings.
+
+The other direction, i.e. parsing, happens in `I18n.PO.Read` using `Parsec`.
+-/
+
+namespace I18n
+
+namespace POEntry
+
+/-- A file name containing spaces is wrapped in U+2068 and U+2069. -/
+def escapeRef (s : String) : String := if
+  s.contains ' ' then s!"⁨{s}⁩" else s
+-- TODO: remove these characters when parsing a file!
+
+-- TODO: escape '"' everywhere
+/-- Turn a PO-entry intro a string as it would appear in the PO-file. Such a string
+starts with a bunch of comment lines, followed by `msgid` and `msgstr` (and other options):
+
+```
+#  some comment
+#: Project.MyFile
+msgid "untranslated sentence"
+msgstr "übersetzter Satz"
+
+Note that even the comments are sometimes parsed, depending on the second character after `#`.
+```
+ -/
+
+/-
+If a comment line (`#.`) ends in a backslash after trimming whitespaces,
+append `%` so it gets not treated as a continuation
+-/
+def sanitizeExtrCommentLine (s : String) : String :=
+  let trimmed := s.trimAsciiEnd
+  if trimmed.endsWith "\\" then s ++ "%" else s
+
+def toString (e : POEntry) : String := Id.run do
+  let mut out := ""
+  if let some comment := e.comment then
+    out := out.append <| "".intercalate <| (escape comment).trimAscii.copy.splitToList (· == '\n') |>.map (s!"\n#  {·}")
+  --print the sanitized KaTex comment
+  if let some extrComment := e.extrComment then
+    let lines := (escape extrComment).trimAscii.copy.splitOn "\n"
+    let sanitized := lines.map sanitizeExtrCommentLine
+    out := out.append ("\n" ++ "\n".intercalate (sanitized.map (s!"#. {·}")))
+  -- print the refs
+  if let some ref := e.ref then
+    -- TODO: One example shows `#: src/msgcmp.c:338 src/po-lex.c:699` which is
+    -- different to what's implemented here.
+    let formattedRefs := ref.map (fun (file, line?) => match line? with
+      | none => s!"\n#: {escapeRef file}"
+      | some line => s!"\n#: {escapeRef file}:{line}" )
+    out := out.append <| "".intercalate formattedRefs
+  -- print the flags
+  if let some flags := e.flags then
+    out := out.append <| "\n#, " ++ ", ".intercalate flags
+
+  if let some prevMsgCtxt := e.prevMsgCtxt then
+    out := out.append <| s!"\n#| msgctxt \"{escape prevMsgCtxt}\""
+  if let some prevMsgId := e.prevMsgId then
+      out := out.append <|
+        "\n#| msgid \"" ++
+        ("\\n\"\n#| \"".intercalate <| (escape prevMsgId).splitToList (· == '\n')) ++ "\""
+  if let some msgCtx := e.msgCtxt then
+    out := out.append <| s!"\nmsgctxt \"{escape msgCtx}\""
+  -- print the translation
+  let msgId := "\"" ++ ("\\n\"\n\"".intercalate <| (escape e.msgId).splitToList (· == '\n')) ++ "\""
+  let msgStr := "\"" ++ ("\\n\"\n\"".intercalate <| (escape e.msgStr).splitToList (· == '\n')) ++ "\""
+  out := out.append <| "\nmsgid " ++ msgId
+  out := out.append <| "\nmsgstr " ++ msgStr
+  return out.trimAscii.copy
+
+instance : ToString POEntry := ⟨POEntry.toString⟩
+
+/-- Paring the header entry into a `POHeaderEntry`. -/
+def toPOHeaderEntry (header : POEntry): POHeaderEntry := Id.run do
+  let lines := header.msgStr.splitOn "\n"
+  let mut pairs : List (String × String) := []
+  for line in lines do
+    let parts := line.splitOn ":"
+    if parts.length >= 2 then
+      let key := parts[0]!.trimAscii.toString
+      let value := (":".intercalate parts.tail).trimAscii.toString
+      pairs := pairs ++ [(key, value)]
+  return {
+    projectIdVersion := find pairs "Project-Id-Version"
+    reportMsgidBugsTo := find pairs "Report-Msgid-Bugs-To"
+    potCreationDate := find pairs "POT-Creation-Date"
+    poRevisionDate := findOpt pairs "PO-Revision-Date"
+    lastTranslator := find pairs "Last-Translator"
+    languageTeam := findOpt pairs "Language-Team"
+    language := find pairs "Language"
+    contentType := find pairs "Content-Type"
+    contentTransferEncoding := find pairs "Content-Transfer-Encoding"
+    pluralForms := findOpt pairs "Plural-Forms"
+    poeditBasepath := findOpt pairs "X-Poedit-Basepath"
+    poeditSearchPath := findOpt pairs "X-Poedit-SearchPath-0"
+  }
+where
+  find (pairs: List (String × String)) (key : String) :=
+    (pairs.find? (·.1 == key)).map (·.2) |>.getD ""
+
+  findOpt (pairs: List (String × String)) (key : String) : Option String :=
+    match (pairs.find? (·.1 == key)).map (·.2) |>.getD "" with
+    | "" => none
+    | s => some s
+
+end POEntry
+
+namespace POHeaderEntry
+
+/-- The header entry is marked in the PO-file with `msgid = ""`. -/
+def toPOEntry (header : POHeaderEntry): POEntry := Id.run do
+  let mut msgStr := ""
+  msgStr := msgStr.append s!"Project-Id-Version: {header.projectIdVersion}"
+  msgStr := msgStr.append s!"\nReport-Msgid-Bugs-To: {header.reportMsgidBugsTo}"
+  msgStr := msgStr.append s!"\nPOT-Creation-Date: {header.potCreationDate}"
+  if let some revisionDate := header.poRevisionDate then
+    msgStr := msgStr.append s!"\nPO-Revision-Date: {revisionDate}"
+  msgStr := msgStr.append s!"\nLast-Translator: {header.lastTranslator}"
+  msgStr := msgStr.append s!"\nLanguage-Team: {header.languageTeam}"
+  msgStr := msgStr.append s!"\nLanguage: {header.language}"
+  msgStr := msgStr.append s!"\nContent-Type: {header.contentType}"
+  msgStr := msgStr.append s!"\nContent-Transfer-Encoding: {header.contentTransferEncoding}"
+  if let some pluralForms := header.pluralForms then
+    msgStr := msgStr.append s!"\nPlural-Forms: {pluralForms}"
+  if let some poeditBasepath := header.poeditBasepath then
+    msgStr := msgStr.append s!"\nX-Poedit-Basepath: {poeditBasepath}"
+  if let some poeditSearchPath := header.poeditSearchPath then
+    msgStr := msgStr.append s!"\nX-Poedit-SearchPath-0: {poeditSearchPath}"
+  return {msgId := "", msgStr := msgStr}
+
+end POHeaderEntry
+
+namespace POFile
+
+/-- Print a PO file as string.
+A PO file is a series of po-entries, the first one should come from the header.
+-/
+def toString (f : POFile) : String :=
+  ("\n\n".intercalate (([f.header.toPOEntry] ++ f.entries.toList).map (s!"{·}"))) ++ "\n"
+
+instance : ToString POFile := ⟨POFile.toString⟩
+
+open Lean System
+
+/-- Write a PO-file to disk. -/
+def save (poFile : POFile) (path : FilePath) : IO Unit :=
+  -- TODO: add overwrite-check
+  IO.FS.writeFile path poFile.toString

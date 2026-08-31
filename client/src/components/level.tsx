@@ -256,7 +256,7 @@ function PlayableLevel() {
 
         const infoProvider = leanMonaco.infoProvider as {
         editorApi: EditorApi
-        webviewPanel?: { api: InfoviewApi, visible: boolean }
+        webviewPanel?: { api: InfoviewApi, visible: boolean, dispose?: () => void }
         sendConfig?: () => Promise<void>
         sendPosition?: () => Promise<void>
       } | undefined
@@ -300,6 +300,12 @@ function PlayableLevel() {
       infoProvider.webviewPanel = {
         api: infoviewApi,
         visible: true,
+        // lean4monaco calls webviewPanel.dispose() when the LeanMonaco
+        // instance restarts or is torn down (e.g. React StrictMode's double
+        // effect in dev, or the wasm client's late server ready). The
+        // fabricated panel must tolerate that instead of throwing and
+        // breaking the editor pipeline before didOpen.
+        dispose: () => {},
       }
 
       const editorConnection = new EditorConnection(infoProvider.editorApi, editorEvents)
