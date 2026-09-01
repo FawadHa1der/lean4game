@@ -17,6 +17,31 @@ cp "$GAME"/.lake/gamedata/*.json "$PUB/data/g/test/TestGame/"
 cp "$GAME"/.i18n/de/Game.json "$PUB/i18n/g/test/TestGame/de"
 printf 'CPU, MEM\n0, 0\n' > "$PUB/data/stats"
 
+# NNG4 — local clone at games-src/NNG4 (branch wasm64-port; see wasm/README)
+NNG="$HERE/games-src/NNG4"
+if [ -d "$NNG/.lake/gamedata" ]; then
+  mkdir -p "$PUB/data/g/hhu-adam/NNG4" "$PUB/i18n/g/hhu-adam/NNG4"
+  cp "$NNG"/.lake/gamedata/*.json "$PUB/data/g/hhu-adam/NNG4/"
+  [ -d "$NNG/.lake/gamedata/images" ] && cp -r "$NNG/.lake/gamedata/images" "$PUB/data/g/hhu-adam/NNG4/"
+  for L in fr it uk zh de; do
+    [ -f "$NNG/.i18n/$L/Game.json" ] && cp "$NNG/.i18n/$L/Game.json" "$PUB/i18n/g/hhu-adam/NNG4/$L"
+  done
+fi
+
+# landing-page tile list: {owner, game, tile-from-game.json} per staged game
+node -e '
+const fs = require("fs"), path = require("path");
+const here = process.argv[1];
+const games = [["test","TestGame", path.join(here, "cypress/TestGame/.lake/gamedata/game.json")],
+               ["hhu-adam","NNG4", path.join(here, "games-src/NNG4/.lake/gamedata/game.json")]];
+const out = [];
+for (const [owner, game, p] of games) {
+  try { out.push({ owner, game, tile: JSON.parse(fs.readFileSync(p, "utf8")).tile }); } catch {}
+}
+fs.mkdirSync(path.join(here, "client/public/api"), { recursive: true });
+fs.writeFileSync(path.join(here, "client/public/api/games"), JSON.stringify(out));
+' "$HERE"
+
 # substrate: worker + core profile from qed64; runtime via chunk-runtime.mjs
 cp "$QED64/public/workers/lean.worker.js" "$PUB/workers/"
 cp "$QED64"/public/profiles/index.json "$QED64"/public/profiles/lean-core.manifest.json \

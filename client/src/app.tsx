@@ -20,6 +20,11 @@ import { bootGameRuntime } from './wasm/game-boot';
 // download and snapshot load overlap the user reading the world map. The
 // editor's LSP port buffers until this resolves.
 void bootGameRuntime().catch((e) => console.error('[wasm] Lean runtime boot failed:', e));
+// A landing-page load defers game binding; re-trigger when a game route is
+// entered (bootGameRuntime is idempotent once bound).
+window.addEventListener('hashchange', () => {
+  void bootGameRuntime().catch((e) => console.error('[wasm] Lean runtime boot failed:', e));
+});
 
 function App({ children }: { children?: React.ReactNode }) {
 

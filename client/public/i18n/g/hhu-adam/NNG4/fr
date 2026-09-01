@@ -1,0 +1,880 @@
+{"≤ World": "Monde ≤",
+ "≠": "≠",
+ "zero_pow_zero": "zero_pow_zero",
+ "zero_pow_succ": "zero_pow_succ",
+ "zero_ne_succ": "zero_ne_succ",
+ "zero_mul": "zero_mul",
+ "zero_add": "zero_add",
+ "x ≤ y or y ≤ x": "x ≤ y ou y ≤ x",
+ "x ≤ y and y ≤ z implies x ≤ z": "x ≤ y et y ≤ z implique x ≤ z",
+ "x ≤ y and y ≤ x implies x = y": "x ≤ y et y ≤ x implique x = y",
+ "x ≤ succ x": "x ≤ succ x",
+ "x ≤ 1": "x ≤ 1",
+ "x ≤ 0 → x = 0": "x ≤ 0 → x = 0",
+ "two_mul": "two_mul",
+ "try rewriting `add_zero`.": "essayez de réécrire avec `add_zero`.",
+ "the simplest approach": "l'approche la plus simple",
+ "the rw tactic": "la tactique rw",
+ "succ_mul": "succ_mul",
+ "succ_inj : the successor function is injective":
+ "succ_inj : la fonction successeur est injective",
+ "succ_add": "succ_add",
+ "succ x ≤ succ y → x ≤ y": "succ x ≤ succ y → x ≤ y",
+ "rewriting backwards": "réécriture à l'envers",
+ "pred": "pred",
+ "pow_two": "pow_two",
+ "pow_pow": "pow_pow",
+ "pow_one": "pow_one",
+ "pow_add": "pow_add",
+ "one_pow": "one_pow",
+ "one_mul": "one_mul",
+ "one_le_of_ne_zero": "one_le_of_ne_zero",
+ "mul_right_eq_self": "mul_right_eq_self",
+ "mul_right_eq_one": "mul_right_eq_one",
+ "mul_pow": "mul_pow",
+ "mul_one": "mul_one",
+ "mul_ne_zero": "mul_ne_zero",
+ "mul_left_ne_zero": "mul_left_ne_zero",
+ "mul_left_cancel": "mul_left_cancel",
+ "mul_le_mul_right": "mul_le_mul_right",
+ "mul_eq_zero": "mul_eq_zero",
+ "mul_comm": "mul_comm",
+ "mul_assoc": "mul_assoc",
+ "mul_add": "mul_add",
+ "making life simple": "rendre la vie simple",
+ "making life easier": "rendre la vie plus facile",
+ "level completed! 🎉": "niveau terminé ! 🎉",
+ "level completed with warnings… 🎭":
+ "niveau terminé avec des avertissements… 🎭",
+ "le_two": "le_two",
+ "le_mul_right": "le_mul_right",
+ "is_zero": "is_zero",
+ "intro practice": "pratique de intro",
+ "intro": "intro",
+ "intermediate goal solved! 🎉": "objectif intermédiaire résolu ! 🎉",
+ "eq_succ_of_ne_zero": "eq_succ_of_ne_zero",
+ "decide again": "decide à nouveau",
+ "decide": "decide",
+ "add_succ": "add_succ",
+ "add_sq": "add_sq",
+ "add_right_eq_zero": "add_right_eq_zero",
+ "add_right_eq_self": "add_right_eq_self",
+ "add_right_comm": "add_right_comm",
+ "add_right_cancel": "add_right_cancel",
+ "add_mul": "add_mul",
+ "add_left_eq_zero": "add_left_eq_zero",
+ "add_left_eq_self": "add_left_eq_self",
+ "add_left_comm": "add_left_comm",
+ "add_left_cancel": "add_left_cancel",
+ "add_comm (level boss)": "add_comm (boss du niveau)",
+ "add_assoc (associativity of addition)":
+ "add_assoc (associativité de l'addition)",
+ "`ℕ` is the natural numbers, just called \\\"numbers\\\" in this game. It's\ndefined via two rules:\n\n* `0 : ℕ` (zero is a number)\n* `succ (n : ℕ) : ℕ` (the successor of a number is a number)\n\n## Game Implementation\n\n*The game uses its own copy of the natural numbers, called `MyNat` with notation `ℕ`.\nIt is distinct from the Lean natural numbers `Nat`, which should hopefully\nnever leak into the natural number game.*":
+ "`ℕ` représente les nombres naturels, simplement appelés \"nombres\" dans ce jeu. Ils sont\ndéfinis par deux règles :\n\n* `0 : ℕ` (zéro est un nombre)\n* `succ (n : ℕ) : ℕ` (le successeur d'un nombre est un nombre)\n\n## Implémentation dans le jeu\n\n*Le jeu utilise sa propre copie des nombres naturels, appelée `MyNat` avec la notation `ℕ`.\nElle est distincte des nombres naturels de Lean `Nat`, qui ne devraient normalement jamais\napparaître dans le jeu des nombres naturels.*",
+ "`zero_ne_succ n` is the proof that `0 ≠ succ n`.\n\nIn Lean, `a ≠ b` is *defined to mean* `a = b → False`. Hence\n`zero_ne_succ n` is really a proof of `0 = succ n → False`.\nHere `False` is a generic false statement. This means that\nyou can `apply zero_ne_succ at h` if `h` is a proof of `0 = succ n`.":
+ "`zero_ne_succ n` est la preuve que `0 ≠ succ n`.\n\nDans Lean, `a ≠ b` est *défini comme signifiant* `a = b → False`. Par conséquent\n`zero_ne_succ n` est en réalité une preuve de `0 = succ n → False`.\nIci `False` est un énoncé faux générique. Cela signifie que\nvous pouvez `apply zero_ne_succ at h` si `h` est une preuve de `0 = succ n`.",
+ "`zero_ne_one` is a proof of `0 ≠ 1`.":
+ "`zero_ne_one` est une preuve de `0 ≠ 1`.",
+ "`zero_mul m` is the proof that `0 * m = 0`.\n\nNote: `zero_mul` is a `simp` lemma.":
+ "`zero_mul m` est la preuve que `0 * m = 0`.\n\nNote : `zero_mul` est un lemme `simp`.",
+ "`zero_le x` is a proof that `0 ≤ x`.":
+ "`zero_le x` est une preuve que `0 ≤ x`.",
+ "`zero_add n` is the proof of `0 + n = n`.\n\n`zero_add` is a `simp` lemma, because replacing `0 + n` by `n`\nis almost always what you want to do if you're simplifying an expression.":
+ "`zero_add n` est la preuve que `0 + n = n`.\n\n`zero_add` est un lemme `simp`, car remplacer `0 + n` par `n`\nest presque toujours ce que vous voulez faire si vous simplifiez une expression.",
+ "`xyzzy` is an ancient magic spell, believed to be the origin of the\nmodern word `sorry`. The game won't complain - or notice - if you\nprove anything with `xyzzy`.":
+ "`xyzzy` est un ancien sortilège magique, considéré comme l'origine du\nmot moderne `sorry`. Le jeu ne se plaindra pas - ou ne remarquera pas - si vous\nprouvez quoi que ce soit avec `xyzzy`.",
+ "`two_mul m` is the proof that `2 * m = m + m`.":
+ "`two_mul m` est la preuve que `2 * m = m + m`.",
+ "`two_eq_succ_one` is a proof of `2 = succ 1`.":
+ "`two_eq_succ_one` est une preuve que `2 = succ 1`.",
+ "`three_eq_succ_two` is a proof of `3 = succ 2`.":
+ "`three_eq_succ_two` est une preuve que `3 = succ 2`.",
+ "`tauto` is good enough to solve this goal.":
+ "`tauto` est suffisant pour résoudre ce but.",
+ "`succ_ne_zero a` is a proof of `succ a ≠ 0`.":
+ "`succ_ne_zero a` est une preuve de `succ a ≠ 0`.",
+ "`succ_ne_succ m n` is the proof that `m ≠ n → succ m ≠ succ n`.":
+ "`succ_ne_succ m n` est la preuve que `m ≠ n → succ m ≠ succ n`.",
+ "`succ_mul a b` is the proof that `succ a * b = a * b + b`.\n\nIt could be deduced from `mul_succ` and `mul_comm`, however this argument\nwould be circular because the proof of `mul_comm` uses `mul_succ`.":
+ "`succ_mul a b` est la preuve que `succ a * b = a * b + b`.\n\nCela pourrait être déduit de `mul_succ` et `mul_comm`, cependant cet argument\nserait circulaire car la preuve de `mul_comm` utilise `mul_succ`.",
+ "`succ_le_succ x y` is a proof that if `succ x ≤ succ y` then `x ≤ y`.":
+ "`succ_le_succ x y` est une preuve que si `succ x ≤ succ y` alors `x ≤ y`.",
+ "`succ_eq_add_one n` is the proof that `succ n = n + 1`.":
+ "`succ_eq_add_one n` est la preuve que `succ n = n + 1`.",
+ "`succ_add a b` is a proof that `succ a + b = succ (a + b)`.":
+ "`succ_add a b` est une preuve que `succ a + b = succ (a + b)`.",
+ "`rw [one_eq_succ_zero]` will do this.": "`rw [one_eq_succ_zero]` fera cela.",
+ "`rw [add_zero]` will change `b + 0` into `b`.":
+ "`rw [add_zero]` changera `b + 0` en `b`.",
+ "`rw [add_comm b d]`.": "`rw [add_comm b d]`.",
+ "`pred_succ n` is a proof of `pred (succ n) = n`.":
+ "`pred_succ n` est une preuve de `pred (succ n) = n`.",
+ "`pow_zero a : a ^ 0 = 1` is one of the two axioms\ndefining exponentiation in this game.":
+ "`pow_zero a : a ^ 0 = 1` est l'un des deux axiomes\ndéfinissant l'exponentiation dans ce jeu.",
+ "`pow_two a` says that `a ^ 2 = a * a`.":
+ "`pow_two a` dit que `a ^ 2 = a * a`.",
+ "`pow_succ a b : a ^ (succ b) = a ^ b * a` is one of the\ntwo axioms defining exponentiation in this game.":
+ "`pow_succ a b : a ^ (succ b) = a ^ b * a` est l'un des\ndeux axiomes définissant l'exponentiation dans ce jeu.",
+ "`pow_pow a m n` is a proof that $(a^m)^n=a^{mn}.$":
+ "`pow_pow a m n` est une preuve que $(a^m)^n=a^{mn}.$",
+ "`pow_one a` says that `a ^ 1 = a`.\n\nNote that this is not quite true by definition: `a ^ 1` is\ndefined to be `a ^ 0 * a` so it's `1 * a`, and to prove\nthat this is equal to `a` you need to use induction somewhere.":
+ "`pow_one a` dit que `a ^ 1 = a`.\n\nNotez que ce n'est pas tout à fait vrai par définition : `a ^ 1` est\ndéfini comme `a ^ 0 * a`, donc c'est `1 * a`, et pour prouver\nque cela est égal à `a`, vous devez utiliser l'induction quelque part.",
+ "`pow_add a m n` is a proof that $a^{m+n}=a^ma^n.$":
+ "`pow_add a m n` est une preuve que $a^{m+n}=a^ma^n.$",
+ "`one_pow n` is a proof that $1^n=1$.":
+ "`one_pow n` est une preuve que $1^n=1$.",
+ "`one_ne_zero` is a proof that `1 ≠ 0`.":
+ "`one_ne_zero` est une preuve que `1 ≠ 0`.",
+ "`one_mul m` is the proof `1 * m = m`.":
+ "`one_mul m` est la preuve que `1 * m = m`.",
+ "`one_le_of_ne_zero a` is a proof that `a ≠ 0 → 1 ≤ a`.":
+ "`one_le_of_ne_zero a` est une preuve que `a ≠ 0 → 1 ≤ a`.",
+ "`one_eq_succ_zero` is a proof of `1 = succ 0`.":
+ "`one_eq_succ_zero` est une preuve que `1 = succ 0`.",
+ "`nth_rewrite 2 [two_eq_succ_one]` is I think quicker than `rw [two_eq_succ_one]`.":
+ "`nth_rewrite 2 [two_eq_succ_one]` est je pense plus rapide que `rw [two_eq_succ_one]`.",
+ "`mul_zero m` is the proof that `m * 0 = 0`.":
+ "`mul_zero m` est la preuve que `m * 0 = 0`.",
+ "`mul_succ a b` is the proof that `a * succ b = a * b + a`.":
+ "`mul_succ a b` est la preuve que `a * succ b = a * b + a`.",
+ "`mul_right_eq_self a b` is a proof that if `a ≠ 0` and `a * b = a` then `b = 1`.":
+ "`mul_right_eq_self a b` est une preuve que si `a ≠ 0` et `a * b = a` alors `b = 1`.",
+ "`mul_right_eq_one a b` is a proof that `a * b = 1 → a = 1`.":
+ "`mul_right_eq_one a b` est une preuve que `a * b = 1 → a = 1`.",
+ "`mul_pow a b n` is a proof that $(ab)^n=a^nb^n.$":
+ "`mul_pow a b n` est une preuve que $(ab)^n=a^nb^n.$",
+ "`mul_one m` is the proof that `m * 1 = m`.":
+ "`mul_one m` est la preuve que `m * 1 = m`.",
+ "`mul_ne_zero a b` is a proof that if `a ≠ 0` and `b ≠ 0` then `a * b ≠ 0`.":
+ "`mul_ne_zero a b` est une preuve que si `a ≠ 0` et `b ≠ 0` alors `a * b ≠ 0`.",
+ "`mul_left_ne_zero a b` is a proof that `a * b ≠ 0 → b ≠ 0`.":
+ "`mul_left_ne_zero a b` est une preuve que `a * b ≠ 0 → b ≠ 0`.",
+ "`mul_left_cancel a b c` is a proof that if `a ≠ 0` and `a * b = a * c` then `b = c`.":
+ "`mul_left_cancel a b c` est une preuve que si `a ≠ 0` et `a * b = a * c` alors `b = c`.",
+ "`mul_le_mul_right a b t` is a proof that `a ≤ b → a * t ≤ b * t`.":
+ "`mul_le_mul_right a b t` est une preuve que `a ≤ b → a * t ≤ b * t`.",
+ "`mul_eq_zero a b` is a proof that if `a * b = 0` then `a = 0` or `b = 0`.":
+ "`mul_eq_zero a b` est une preuve que si `a * b = 0` alors `a = 0` ou `b = 0`.",
+ "`mul_comm` is the proof that multiplication is commutative. More precisely,\n`mul_comm a b` is the proof that `a * b = b * a`.":
+ "`mul_comm` est la preuve que la multiplication est commutative. Plus précisément,\n`mul_comm a b` est la preuve que `a * b = b * a`.",
+ "`mul_assoc a b c` is a proof that `(a * b) * c = a * (b * c)`.\n\nNote that when Lean says `a * b * c` it means `(a * b) * c`.\n\nNote that `(a * b) * c = a * (b * c)` cannot be proved by \\\"pure thought\\\":\nfor example subtraction is not associative, as `(6 - 2) - 1` is not\nequal to `6 - (2 - 1)`.":
+ "`mul_assoc a b c` est une preuve que `(a * b) * c = a * (b * c)`.\n\nNotez que dans Lean `a * b * c` signifie `(a * b) * c`.\n\nNotez aussi que `(a * b) * c = a * (b * c)` ne peut pas être prouvé par \"pensée pure\" :\npar exemple, la soustraction n'est pas associative, car `(6 - 2) - 1` n'est pas\négal à `6 - (2 - 1)`.",
+ "`le_zero x` is a proof of the implication `x ≤ 0 → x = 0`.":
+ "`le_zero x` est une preuve de l'implication `x ≤ 0 → x = 0`.",
+ "`le_zero x` is a proof of `x ≤ 0 → x = 0`.":
+ "`le_zero x` est une preuve de `x ≤ 0 → x = 0`.",
+ "`le_two x` is a proof that if `x ≤ 2` then `x = 0` or `x = 1` or `x = 2`.":
+ "`le_two x` est une preuve que si `x ≤ 2` alors `x = 0` ou `x = 1` ou `x = 2`.",
+ "`le_trans x y z` is a proof that if `x ≤ y` and `y ≤ z` then `x ≤ z`.\nMore precisely, it is a proof that `x ≤ y → (y ≤ z → x ≤ z)`. In words,\nIf $x \\le y$ then (pause) if $y \\le z$ then $x \\le z$.\n\n## A note on associativity\n\nIn Lean, `a + b + c` means `(a + b) + c`, because `+` is left associative. However\n`→` is right associative. This means that `x ≤ y → y ≤ z → x ≤ z` in Lean means\nexactly that `≤` is transitive. This is different to how mathematicians use\n$P \\implies Q \\implies R$; for them, this usually means that $P \\implies Q$\nand $Q \\implies R$.":
+ "`le_trans x y z` est une preuve que si `x ≤ y` et `y ≤ z` alors `x ≤ z`.\nPlus précisément, c'est une preuve que `x ≤ y → (y ≤ z → x ≤ z)`. En français,\nSi $x \\le y$ alors (pause) si $y \\le z$ alors $x \\le z$.\n\n## Note sur l'associativité\n\nDans Lean, `a + b + c` signifie `(a + b) + c`, car `+` est associatif à gauche. Cependant\n`→` est associatif à droite. Cela signifie que dans Lean `x ≤ y → y ≤ z → x ≤ z` signifie\nexactement que `≤` est transitive. C'est différent de la façon dont les mathématiciens utilisent\n$P \\implies Q \\implies R$ ; pour eux, cela signifie généralement que $P \\implies Q$\net $Q \\implies R$.",
+ "`le_total x y` is a proof that `x ≤ y` or `y ≤ x`.":
+ "`le_total x y` est une preuve que `x ≤ y` ou `y ≤ x`.",
+ "`le_succ_self x` is a proof that `x ≤ succ x`.":
+ "`le_succ_self x` est une preuve que `x ≤ succ x`.",
+ "`le_refl x` is a proof of `x ≤ x`.\n\nThe reason for the name is that this lemma is \"reflexivity of $\\le$\"":
+ "`le_refl x` est une preuve de `x ≤ x`.\n\nLa raison du nom est que ce lemme est \"la réflexivité de $\\le$\"",
+ "`le_one x` is a proof that if `x ≤ 1` then `x = 0` or `x = 1`.":
+ "`le_one x` est une preuve que si `x ≤ 1` alors `x = 0` ou `x = 1`.",
+ "`le_mul_right a b` is a proof that `a * b ≠ 0 → a ≤ a * b`.\n\nIt's one way of saying that a divisor of a positive number\nhas to be at most that number.":
+ "`le_mul_right a b` est une preuve que `a * b ≠ 0 → a ≤ a * b`.\n\nC'est une façon de dire qu'un diviseur d'un nombre positif\ndoit être au plus égal à ce nombre.",
+ "`le_antisymm x y` is a proof that if `x ≤ y` and `y ≤ x` then `x = y`.":
+ "`le_antisymm x y` est une preuve que si `x ≤ y` et `y ≤ x` alors `x = y`.",
+ "`is_zero_zero` is a proof of `is_zero 0 = True`.":
+ "`is_zero_zero` est une preuve de `is_zero 0 = True`.",
+ "`is_zero_succ a` is a proof of `is_zero (succ a) = False`.":
+ "`is_zero_succ a` est une preuve de `is_zero (succ a) = False`.",
+ "`four_eq_succ_three` is a proof of `4 = succ 3`.":
+ "`four_eq_succ_three` est une preuve que `4 = succ 3`.",
+ "`exact` practice.": "Pratique de `exact`.",
+ "`eq_succ_of_ne_zero a` is a proof that `a ≠ 0 → ∃ n, a = succ n`.":
+ "`eq_succ_of_ne_zero a` est une preuve que `a ≠ 0 → ∃ n, a = succ n`.",
+ "`add_zero c` is a proof of `c + 0 = c` so that was what got rewritten.\nYou can now change `b + 0` to `b` with `rw [add_zero]` or `rw [add_zero b]`. You\ncan usually stick to `rw [add_zero]` unless you need real precision.":
+ "`add_zero c` est une preuve que `c + 0 = c`, donc c'est ce qui a été réécrit.\nVous pouvez maintenant changer `b + 0` en `b` avec `rw [add_zero]` ou `rw [add_zero b]`.\nVous pouvez généralement vous en tenir à `rw [add_zero]` sauf si vous avez besoin d'une grande précision.",
+ "`add_zero a` is a proof that `a + 0 = a`.\n\n## Summary\n\n`add_zero` is really a function, which\neats a number, and returns a proof of a theorem\nabout that number. For example `add_zero 37` is\na proof that `37 + 0 = 37`.\n\nThe `rw` tactic will accept `rw [add_zero]`\nand will try to figure out which number you omitted\nto input.\n\n## Details\n\nA mathematician sometimes thinks of `add_zero`\nas \\\"one thing\\\", namely a proof of $\\forall n ∈ ℕ, n + 0 = n$.\nThis is just another way of saying that it's a function which\ncan eat any number n and will return a proof that `n + 0 = n`.":
+ "`add_zero a` est une preuve que `a + 0 = a`.\n\n## Résumé\n\n`add_zero` est en fait une fonction qui\nprend un nombre et renvoie une preuve d'un théorème\nsur ce nombre. Par exemple, `add_zero 37` est\nune preuve que `37 + 0 = 37`.\n\nLa tactique `rw` acceptera `rw [add_zero]`\net essaiera de déterminer quel nombre vous avez omis\nde spécifier.\n\n## Détails\n\nUn mathématicien considère parfois `add_zero`\ncomme \"une seule chose\", à savoir une preuve de $\\forall n ∈ ℕ, n + 0 = n$.\nC'est juste une autre façon de dire que c'est une fonction qui\npeut prendre n'importe quel nombre n et renvoyer une preuve que `n + 0 = n`.",
+ "`add_succ a b` is the proof of `a + succ b = succ (a + b)`.":
+ "`add_succ a b` est la preuve que `a + succ b = succ (a + b)`.",
+ "`add_sq a b` is the statement that $(a+b)^2=a^2+b^2+2ab.$":
+ "`add_sq a b` est l'énoncé que $(a+b)^2=a^2+b^2+2ab.$",
+ "`add_right_eq_self x y` is the theorem that $x + y = x\\implies y=0.$\nTwo ways to do it spring to mind; I'll mention them when you've solved it.":
+ "`add_right_eq_self x y` est le théorème que $x + y = x\\implies y=0$.\nDeux façons de le faire me viennent à l'esprit ; je les mentionnerai quand vous l'aurez résolu.",
+ "`add_right_eq_self x y` is the theorem that $x + y = x \\implies y=0.$":
+ "`add_right_eq_self x y` est le théorème que $x + y = x \\implies y=0.$",
+ "`add_right_comm a b c` is a proof that `(a + b) + c = (a + c) + b`\n\nIn Lean, `a + b + c` means `(a + b) + c`, so this result gets displayed\nas `a + b + c = a + c + b`.":
+ "`add_right_comm a b c` est une preuve que `(a + b) + c = (a + c) + b`\n\nDans Lean, `a + b + c` signifie `(a + b) + c`, donc ce résultat s'affiche\ncomme `a + b + c = a + c + b`.",
+ "`add_right_cancel a b n` is the theorem that $a+n=b+n \\implies a=b.$":
+ "`add_right_cancel a b n` est le théorème que $a+n=b+n \\implies a=b.$",
+ "`add_mul` is just as fiddly to prove by induction; but there's a trick\nwhich avoids it. Can you spot it?":
+ "`add_mul` est tout aussi délicat à prouver par induction ; mais il y a une astuce\npour l'éviter. Pouvez-vous la trouver ?",
+ "`add_mul a b c` is a proof that $(a+b)c=ac+bc$.":
+ "`add_mul a b c` est une preuve que $(a+b)c=ac+bc$.",
+ "`add_left_eq_self x y` is the theorem that $x + y = y\\implies x=0.$":
+ "`add_left_eq_self x y` est le théorème que $x + y = y\\implies x=0.$",
+ "`add_left_eq_self x y` is the theorem that $x + y = y \\implies x=0.$":
+ "`add_left_eq_self x y` est le théorème que $x + y = y \\implies x=0.$",
+ "`add_left_comm a b c` is a proof that `a + (b + c) = b + (a + c)`.":
+ "`add_left_comm a b c` est une preuve que `a + (b + c) = b + (a + c)`.",
+ "`add_left_cancel a b n` is the theorem that $n+a=n+b\\implies a=b$.\nYou can prove it by induction on `n` or you can deduce it from `add_right_cancel`.":
+ "`add_left_cancel a b n` est le théorème que $n+a=n+b\\implies a=b$.\nVous pouvez le prouver par induction sur `n` ou le déduire de `add_right_cancel`.",
+ "`add_left_cancel a b n` is the theorem that $n+a=n+b \\implies a=b.$":
+ "`add_left_cancel a b n` est le théorème que $n+a=n+b \\implies a=b.$",
+ "`add_comm a b` is a proof of `a + b = b + a`.":
+ "`add_comm a b` est une preuve de `a + b = b + a`.",
+ "`add_comm b c` is a proof that `b + c = c + b`. But if your goal\nis `a + b + c = a + c + b` then `rw [add_comm b c]` will not\nwork! Because the goal means `(a + b) + c = (a + c) + b` so there\nis no `b + c` term *directly* in the goal.\n\nUse associativity and commutativity to prove `add_right_comm`.\nYou don't need induction. `add_assoc` moves brackets around,\nand `add_comm` moves variables around.\n\nRemember that you can do more targeted rewrites by\nadding explicit variables as inputs to theorems. For example `rw [add_comm b]`\nwill only do rewrites of the form `b + ? = ? + b`, and `rw [add_comm b c]`\nwill only do rewrites of the form `b + c = c + b`.":
+ "`add_comm b c` est une preuve que `b + c = c + b`. Mais si votre but\nest `a + b + c = a + c + b` alors `rw [add_comm b c]` ne\nfonctionnera pas ! Parce que le but signifie `(a + b) + c = (a + c) + b` donc il n'y a\npas de terme `b + c` *directement* dans le but.\n\nUtilisez l'associativité et la commutativité pour prouver `add_right_comm`.\nVous n'avez pas besoin d'induction. `add_assoc` déplace les parenthèses,\net `add_comm` échange les variables.\n\nRappelez-vous que vous pouvez faire des réécritures plus ciblées en\najoutant des variables explicites comme entrées aux théorèmes. Par exemple `rw [add_comm b]`\nne fera que des réécritures de la forme `b + ? = ? + b`, et `rw [add_comm b c]`\nne fera que des réécritures de la forme `b + c = c + b`.",
+ "`add_assoc a b c` is a proof\nthat `(a + b) + c = a + (b + c)`. Note that in Lean `(a + b) + c` prints\nas `a + b + c`, because the notation for addition is defined to be left\nassociative.":
+ "`add_assoc a b c` est une preuve\nque `(a + b) + c = a + (b + c)`. Notez que dans Lean `(a + b) + c` s'affiche\ncomme `a + b + c`, car la notation pour l'addition est définie comme étant\nassociative à gauche.",
+ "`a ≤ b` is *notation* for `∃ c, b = a + c`. This \"backwards E\"\nmeans \"there exists\". So `a ≤ b` means that there exists\na number `c` such that `b = a + c`. This definition works\nbecause there are no negative numbers in this game.\n\nTo *prove* an \"exists\" statement, use the `use` tactic.\nLet's see an example.":
+ "`a ≤ b` est une *notation* pour `∃ c, b = a + c`. Ce \"E à l'envers\"\nsignifie \"il existe\". Ainsi, `a ≤ b` signifie qu'il existe\nun nombre `c` tel que `b = a + c`. Cette définition fonctionne\ncar il n'y a pas de nombres négatifs dans ce jeu.\n\nPour *prouver* une affirmation \"il existe\", utilisez la tactique `use`.\nVoyons un exemple.",
+ "`a ≤ b` is *notation* for `∃ c, b = a + c`.\n\nBecause this game doesn't have negative numbers, this definition\nis mathematically valid.\n\nThis means that if you have a goal of the form `a ≤ b` you can\nmake progress with the `use` tactic, and if you have a hypothesis\n`h : a ≤ b`, you can make progress with `cases h with c hc`.":
+ "`a ≤ b` est une *notation* pour `∃ c, b = a + c`.\n\nComme ce jeu n'a pas de nombres négatifs, cette définition\nest mathématiquement valide.\n\nCela signifie que si vous avez un but de la forme `a ≤ b`, vous pouvez\nprogresser avec la tactique `use`, et si vous avez une hypothèse\n`h : a ≤ b`, vous pouvez progresser avec `cases h with c hc`.",
+ "`a ≠ b` is *notation* for `(a = b) → False`.\n\nThe reason this is mathematically\nvalid is that if `P` is a true-false statement then `P → False`\nis the logical opposite of `P`. Indeed `True → False` is false,\nand `False → False` is true!\n\nThe upshot of this is that you can treat `a ≠ b` in exactly\nthe same way as you treat any implication `P → Q`. For example,\nif your *goal* is of the form `a ≠ b` then you can make progress\nwith `intro h`, and if you have a hypothesis `h` of the\nform `a ≠ b` then you can `apply h at h1` if `h1` is a proof\nof `a = b`.":
+ "`a ≠ b` est une *notation* pour `(a = b) → False`.\n\nLa raison pour laquelle c'est mathématiquement\nvalide est que si `P` est un énoncé vrai-faux alors `P → False`\nest l'opposé logique de `P`. En effet `True → False` est faux,\net `False → False` est vrai !\n\nLa conséquence est que vous pouvez traiter `a ≠ b` exactement\nde la même manière que toute implication `P → Q`. Par exemple,\nsi votre *but* est de la forme `a ≠ b` alors vous pouvez avancer\navec `intro h`, et si vous avez une hypothèse `h` de la\nforme `a ≠ b` alors vous pouvez utiliser `apply h at h1` si `h1` est une preuve\nde `a = b`.",
+ "`Pow a b`, with notation `a ^ b`, is the usual\n  exponentiation of natural numbers. Internally it is\n  defined via two axioms:\n\n  * `pow_zero a : a ^ 0 = 1`\n\n  * `pow_succ a b : a ^ succ b = a ^ b * a`\n\nNote in particular that `0 ^ 0 = 1`.":
+ "`Pow a b`, avec la notation `a ^ b`, est l'exponentiation\n  habituelle des nombres naturels, c'est à dire `a` puissance `b`. En interne, elle est\n  définie par deux axiomes :\n\n  * `pow_zero a : a ^ 0 = 1`\n\n  * `pow_succ a b : a ^ succ b = a ^ b * a`\n\nNotez en particulier que `0 ^ 0 = 1`.",
+ "`Mul a b`, with notation `a * b`, is the usual\n  product of natural numbers. Internally it is\n  via two axioms:\n\n  * `mul_zero a : a * 0 = 0`\n\n  * `mul_succ a b : a * succ b = a * b + a`\n\nOther theorems about naturals, such as `zero_mul`,\nare proved by induction from these two basic theorems.":
+ "`Mul a b`, avec la notation `a * b`, est le produit\n  habituel des nombres naturels. En interne, il est\n  défini par deux axiomes :\n\n  * `mul_zero a : a * 0 = 0`\n\n  * `mul_succ a b : a * succ b = a * b + a`\n\nD'autres théorèmes sur les naturels, comme `zero_mul`,\nsont prouvés par induction à partir de ces deux théorèmes de base.",
+ "`Add a b`, with notation `a + b`, is\nthe usual sum of natural numbers. Internally it is defined\nvia the following two hypotheses:\n\n* `add_zero a : a + 0 = a`\n\n* `add_succ a b : a + succ b = succ (a + b)`\n\nOther theorems about naturals, such as `zero_add a : 0 + a = a`, are proved\nby induction using these two basic theorems.":
+ "`Add a b`, avec la notation `a + b`, est\nla somme habituelle des nombres naturels. En interne, elle est définie\npar les deux hypothèses suivantes :\n\n* `add_zero a : a + 0 = a`\n\n* `add_succ a b : a + succ b = succ (a + b)`\n\nD'autres théorèmes sur les naturels, comme `zero_add a : 0 + a = a`, sont prouvés\npar induction en utilisant ces deux théorèmes de base.",
+ "[final boss music]": "[musique de boss final]",
+ "[dramatic music]. Now are you ready to face the first boss of the game?":
+ "[musique dramatique]. Êtes-vous maintenant prêt à affronter le premier boss du jeu ?",
+ "[boss battle music]\n\nLook in your inventory to see the proofs you have available.\nThese should be enough.":
+ "[musique de combat de boss]\n\nRegardez dans votre inventaire les preuves dont vous disposez.\nCela devrait suffire.",
+ "You've now seen all the tactics you need to beat the final boss of the game.\nYou can begin the journey towards this boss by entering Multiplication World.\n\nOr you can go off the beaten track and learn some new tactics in Implication\nWorld. These tactics let you prove more facts about addition, such as\nhow to deduce `a = 0` from `x + a = x`.\n\nClick \"Home\" and make your choice.":
+ "Vous avez maintenant vu toutes les tactiques nécessaires pour vaincre le boss final du jeu.\nVous pouvez commencer le voyage vers ce boss en entrant dans le monde de la Multiplication.\n\nOu vous pouvez sortir des sentiers battus et apprendre de nouvelles tactiques dans le monde\nde l'Implication. Ces tactiques vous permettent de prouver plus de résultats sur l'addition, comme\ncomment déduire `a = 0` de `x + a = x`.\n\nCliquez sur \"Quitter le monde\" et faites votre choix.",
+ "You want to use `add_right_eq_zero`, which you already\nproved, but you'll have to start with `symm at` your hypothesis.":
+ "Vous voulez utiliser `add_right_eq_zero`, que vous avez déjà\nprouvé, mais vous devrez commencer par `symm at` votre hypothèse.",
+ "You still don't know which way to go, so do `cases «{e}» with a`.":
+ "Vous ne savez toujours pas quelle direction prendre, donc faites `cases «{e}» with a`.",
+ "You now know enough tactics to prove `2 + 2 = 4`! Let's begin the journey.":
+ "Vous connaissez maintenant assez de tactiques pour prouver `2 + 2 = 4` ! Commençons le voyage.",
+ "You might want to think about whether induction\non `a` or `b` is the best idea.":
+ "Vous pourriez réfléchir à savoir si l'induction\nsur `a` ou `b` est la meilleure idée.",
+ "You can use `rw [zero_add] at «{h}»` to rewrite at `«{h}»` instead\nof at the goal.":
+ "Vous pouvez utiliser `rw [zero_add] at «{h}»` pour réécrire dans `«{h}»` au lieu\ndu but.",
+ "You can start a proof by induction on `n` by typing:\n`induction n with d hd`.":
+ "Vous pouvez commencer une preuve par induction sur `n` en tapant :\n`induction n with d hd`.",
+ "You can read more about the `decide` tactic by clicking\non it in the top right.":
+ "Vous pouvez en savoir plus sur la tactique `decide` en cliquant\ndessus en haut à droite.",
+ "You can put a `←` in front of any theorem provided to `rw` to rewrite\nthe other way around. Look at the docs for `rw` for an explanation. Type `←` with `\\l`.":
+ "Vous pouvez mettre un `←` devant n'importe quel théorème fourni à `rw` pour réécrire\ndans l'autre sens. Consultez la documentation de `rw` pour une explication. Tapez `←` avec `\\l`.",
+ "You can prove $1\\times m=m$ in at least three ways.\nEither by induction, or by using `succ_mul`, or\nby using commutativity. Which do you think is quickest?":
+ "Vous pouvez prouver $1\\times m=m$ d'au moins trois façons.\nSoit par induction, soit en utilisant `succ_mul`, soit\nen utilisant la commutativité. Selon vous, laquelle est la plus rapide ?",
+ "You can probably take it from here.":
+ "Vous pouvez probablement continuer à partir d'ici.",
+ "You can now finish with `exact h`.":
+ "Vous pouvez maintenant terminer avec `exact h`.",
+ "You can now `apply mul_left_cancel at h`":
+ "Vous pouvez maintenant `apply mul_left_cancel at h`",
+ "You can make your own tactics in Lean.\nThis code here\n```\nmacro \"simp_add\" : tactic => `(tactic|(\n  simp only [add_assoc, add_left_comm, add_comm]))\n```\nwas used to create a new tactic `simp_add`, which runs\n`simp only [add_assoc, add_left_comm, add_comm]`.\nTry running `simp_add` to solve this level!":
+ "Vous pouvez créer vos propres tactiques dans Lean.\nCe code ci-dessous\n```\nmacro \"simp_add\" : tactic => `(tactic|(\n  simp only [add_assoc, add_left_comm, add_comm]))\n```\na été utilisé pour créer une nouvelle tactique `simp_add`, qui exécute\n`simp only [add_assoc, add_left_comm, add_comm]`.\nEssayez d'exécuter `simp_add` pour résoudre ce niveau !",
+ "You can just mimic the previous proof to do this one -- or you can figure out a way\nof using it.":
+ "Vous pouvez simplement imiter la preuve précédente pour celui-ci -- ou trouver un moyen\nde l'utiliser.",
+ "You can do induction on any of the three variables. Some choices\nare harder to push through than others. Can you do the inductive step in\n5 rewrites only?":
+ "Vous pouvez faire une induction sur l'une des trois variables. Certains choix\nsont plus difficiles à mener que d'autres. Pouvez-vous faire l'étape inductive\nen seulement 5 réécritures ?",
+ "Why did we not just define `succ n` to be `n + 1`? Because we have not\neven *defined* addition yet! We'll do that in the next level.":
+ "Pourquoi n'avons-nous pas simplement défini `succ n` comme `n + 1` ? Parce que nous n'avons pas\nencore *défini* l'addition ! Nous ferons cela au niveau suivant.",
+ "What do you think of this two-liner:\n```\nsymm\nexact zero_ne_one\n```\n\n`exact` doesn't just take hypotheses, it will eat any proof which exists\nin the system.":
+ "Que pensez-vous de cette solution en deux lignes :\n```\nsymm\nexact zero_ne_one\n```\n\n`exact` ne prend pas seulement des hypothèses, il acceptera toute preuve existante\ndans le système.",
+ "Well done! You now have enough tools to tackle the main boss of this level.":
+ "Bien joué ! Vous avez maintenant suffisamment d'outils pour affronter le boss principal de ce niveau.",
+ "Well done!": "Bien joué !",
+ "Welcome to tutorial world! In this world we learn the basics\nof proving theorems. The boss level of this world\nis the theorem `2 + 2 = 4`.\n\nYou prove theorems by solving puzzles using tools called *tactics*.\nThe aim is to prove the theorem by applying tactics\nin the right order.\n\nLet's learn some basic tactics. Click on \"Start\" below\nto begin your quest.":
+ "Bienvenue dans le monde tutoriel ! Dans ce monde, nous apprenons les bases\nde la preuve de théorèmes. Le niveau boss de ce monde\nest le théorème `2 + 2 = 4`.\n\nVous prouvez des théorèmes en résolvant des énigmes à l'aide d'outils appelés *tactiques*.\nLe but est de prouver le théorème en appliquant des tactiques\ndans le bon ordre.\n\nApprenons quelques tactiques de base. Cliquez sur \"Commencer\" ci-dessous\npour débuter votre quête.",
+ "Welcome to Addition World! In this world we'll learn the `induction` tactic.\nThis will enable us to defeat the boss level of this world, namely `x + y = y + x`.\n\nThe tactics `rw`, `rfl` and `induction` are the only tactics you'll need to\nbeat all the levels in Addition World, Multiplication World, and Power World.\nPower World contains the final boss of the game.\n\nThere are plenty more tactics in this game, but you'll only need to know them if you\nwant to explore the game further (for example if you decide to 100%\nthe game).":
+ "Bienvenue dans le monde de l'Addition ! Dans ce monde, nous apprendrons la tactique `induction`.\nCela nous permettra de vaincre le niveau boss de ce monde, à savoir `x + y = y + x`.\n\nLes tactiques `rw`, `rfl` et `induction` sont les seules dont vous aurez besoin\npour vaincre tous les niveaux du monde de l'Addition, du monde de la Multiplication et du monde des Puissances.\nLe monde des Puissances contient le boss final du jeu.\n\nIl y a beaucoup d'autres tactiques dans ce jeu, mais vous n'aurez besoin de les connaître que si vous\nvoulez explorer le jeu plus avant (par exemple si vous décidez de finir le jeu à 100%).",
+ "We've seen `le_zero`, the proof that if `x ≤ 0` then `x = 0`.\nNow we'll prove that if `x ≤ 1` then `x = 0` or `x = 1`.":
+ "Nous avons vu `le_zero`, la preuve que si `x ≤ 0` alors `x = 0`.\nMaintenant, nous prouverons que si `x ≤ 1` alors `x = 0` ou `x = 1`.",
+ "We've proved that `x ≤ 0` implies `x = 0`. The last two levels\nin this world will prove which numbers are `≤ 1` and `≤ 2`.\nThis lemma will be helpful for them.":
+ "Nous avons prouvé que `x ≤ 0` implique `x = 0`. Les deux derniers niveaux\nde ce monde prouveront quels nombres sont `≤ 1` et `≤ 2`.\nCe lemme nous sera utile.",
+ "We've proved that $2+2=4$; in Implication World we'll learn\nhow to prove $2+2\\neq 5$.\n\nIn Addition World we proved *equalities* like $x + y = y + x$.\nIn this second tutorial world we'll learn some new tactics,\nenabling us to prove *implications*\nlike $x+1=4 \\implies x=3.$\n\nWe'll also learn two new fundamental facts about\nnatural numbers, which Peano introduced as axioms.\n\nClick on \"Start\" to proceed.":
+ "Nous avons prouvé que $2+2=4$ ; dans le monde de l'Implication, nous apprendrons\ncomment prouver $2+2\\neq 5$.\n\nDans le monde de l'Addition, nous avons prouvé des *égalités* comme $x + y = y + x$.\nDans ce deuxième monde tutoriel, nous apprendrons de nouvelles tactiques,\nnous permettant de prouver des *implications*\ncomme $x+1=4 \\implies x=3$.\n\nNous apprendrons également deux nouveaux faits fondamentaux sur\nles nombres naturels, que Peano a introduits comme axiomes.\n\nCliquez sur \"Commencer\" pour continuer.",
+ "We've just seen that `0 ^ 0 = 1`, but if `n`\nis a successor, then `0 ^ n = 0`. We prove that here.":
+ "Nous venons de voir que `0 ^ 0 = 1`, mais si `n`\nest un successeur, alors `0 ^ n = 0`. Nous le prouvons ici.",
+ "We've been adding up two numbers; in this level we will add up three.\n\n  What does $x+y+z$ *mean*? It could either mean $(x+y)+z$, or it\n  could mean $x+(y+z)$. In Lean, $x+y+z$ means $(x+y)+z$.\n\n  But why do we care which one it means; $(x+y)+z$ and $x+(y+z)$ are *equal*!\n\n  That's true, but we didn't prove it yet. Let's prove it now by induction.":
+ "Nous avons additionné deux nombres ; dans ce niveau, nous en additionnerons trois.\n\n  Que signifie $x+y+z$ ? Cela pourrait signifier $(x+y)+z$, ou\n  $x+(y+z)$. Dans Lean, $x+y+z$ signifie $(x+y)+z$.\n\n  Mais pourquoi se soucier de ce que cela signifie, en fait $(x+y)+z$ et $x+(y+z)$ sont *égaux* !\n\n  C'est vrai, mais nous ne l'avons pas encore prouvé. Prouvons-le maintenant par induction.",
+ "We're going to change that `False` into `True`. Start by changing it into\n`is_zero (succ a)` by executing `rw [← is_zero_succ a]`.":
+ "Nous allons changer ce `False` en `True`. Commencez par le changer en\n`is_zero (succ a)` en exécutant `rw [← is_zero_succ a]`.",
+ "We'll need this lemma to prove that two is prime!\n\nYou'll need to know that `∨` is right associative. This means that\n`x = 0 ∨ x = 1 ∨ x = 2` actually means `x = 0 ∨ (x = 1 ∨ x = 2)`.\nThis affects how `left` and `right` work.":
+ "Nous aurons besoin de ce lemme pour prouver que deux est premier !\n\nVous devrez savoir que `∨` est associatif à droite. Cela veut dire que\n`x = 0 ∨ x = 1 ∨ x = 2` signifie en fait `x = 0 ∨ (x = 1 ∨ x = 2)`.\nC'est important à comprendre pour le fonctionnement de `left` et `right`.",
+ "We'd like to prove `2 + 2 = 4` but right now\nwe can't even *state* it\nbecause we haven't yet defined addition.\n\n## Defining addition.\n\nHow are we going to add $37$ to an arbitrary number $x$? Well,\nthere are only two ways to make numbers in this game: $0$\nand successors. So to define `37 + x` we will need\nto know what `37 + 0` is and what `37 + succ x` is.\nLet's start with adding `0`.\n\n### Adding 0\n\nTo make addition agree with our intuition, we should *define* `37 + 0`\nto be `37`. More generally, we should define `a + 0` to be `a` for\nany number `a`. The name of this proof in Lean is `add_zero a`.\nFor example `add_zero 37` is a proof of `37 + 0 = 37`,\n`add_zero x` is a proof of `x + 0 = x`, and `add_zero` is a proof\nof `? + 0 = ?`.\n\nWe write `add_zero x : x + 0 = x`, so `proof : statement`.":
+ "Nous aimerions prouver `2 + 2 = 4` mais actuellement\nnous ne pouvons même pas *l'énoncer*\ncar nous n'avons pas encore défini l'addition.\n\n## Définition de l'addition.\n\nComment allons-nous ajouter $37$ à un nombre arbitraire $x$ ? Eh bien,\nil n'y a que deux façons de créer des nombres dans ce jeu : $0$\net les successeurs. Donc pour définir `37 + x`, nous aurons besoin\nde savoir ce que sont `37 + 0` et `37 + succ x`.\nCommençons par ajouter `0`.\n\n### Ajouter 0\n\nPour que l'addition corresponde à notre intuition, nous devons *définir* `37 + 0`\ncomme `37`. Plus généralement, nous devons définir `a + 0` comme `a` pour\ntout nombre `a`. Le nom de cette preuve dans Lean est `add_zero a`.\nPar exemple, `add_zero 37` est une preuve de `37 + 0 = 37`,\n`add_zero x` est une preuve de `x + 0 = x`, et `add_zero` est une preuve\nde `? + 0 = ?`.\n\nNous écrivons `add_zero x : x + 0 = x`, donc `preuve : énoncé`.",
+ "We want to use `le_mul_right`, but we need a hypothesis `x * y ≠ 0`\nwhich we don't have. Yet. Execute `have h2 : x * y ≠ 0` (you can type `≠` with `\\ne`).\nYou'll be asked to\nprove it, and then you'll have a new hypothesis which you can apply\n`le_mul_right` to.":
+ "Nous voulons utiliser `le_mul_right`, mais nous avons besoin d'une hypothèse `x * y ≠ 0`\nque nous n'avons pas encore. Exécutez `have h2 : x * y ≠ 0` (vous pouvez taper `≠` avec `\\ne`).\nVous devrez prouver cette hypothèse, puis vous disposerez d'une nouvelle hypothèse à laquelle\nappliquer `le_mul_right`.",
+ "We want to reduce this to a hypothesis `b = 0` and a goal `a * b = 0`,\nwhich is logically equivalent but much easier to prove. Remember that `X ≠ 0`\nis notation for `X = 0 → False`. Click on `Show more help!` if you need hints.":
+ "Nous voulons réduire cela à une hypothèse `b = 0` et un but `a * b = 0`,\nce qui est logiquement équivalent mais beaucoup plus facile à prouver. Rappelez-vous que `X ≠ 0`\nest une notation pour `X = 0 → False`. Cliquez sur `Afficher plus d'aide !` si vous avez besoin d'indices.",
+ "We still can't prove `2 + 2 ≠ 5` because we have not talked about the\ndefinition of `≠`. In Lean, `a ≠ b` is *notation* for `a = b → False`.\nHere `False` is a generic false proposition, and `→` is Lean's notation\nfor \"implies\". In logic we learn\nthat `True → False` is false, but `False → False` is true. Hence\n`X → False` is the logical opposite of `X`.\n\nEven though `a ≠ b` does not look like an implication,\nyou should treat it as an implication. The next two levels will show you how.\n\n`False` is a goal which you cannot deduce from a consistent set of assumptions!\nSo if your goal is `False` then you had better hope that your hypotheses\nare contradictory, which they are in this level.":
+ "Nous ne pouvons toujours pas prouver `2 + 2 ≠ 5` car nous n'avons pas parlé de la\ndéfinition de `≠`. Dans Lean, `a ≠ b` est une *notation* pour `a = b → False`.\nIci `False` est une proposition fausse générique, et `→` est la notation de Lean\npour \"implique\". En logique, nous apprenons\nque `True → False` est faux, mais `False → False` est vrai. Par conséquent,\n`X → False` est l'opposé logique de `X`.\n\nMême si `a ≠ b` ne ressemble pas à une implication,\nvous devez la traiter comme telle. Les deux prochains niveaux vous montreront comment.\n\n`False` est un but que vous ne pouvez pas déduire d'un ensemble cohérent d'hypothèses !\nDonc si votre but est `False`, vous feriez mieux d'espérer que vos hypothèses\nsoient contradictoires, ce qu'elles sont dans ce niveau.",
+ "We now start work on an algorithm to do addition more efficiently. Recall that\nwe defined addition by recursion, saying what it did on `0` and successors.\nIt is an axiom of Lean that recursion is a valid\nway to define functions from types such as the naturals.\n\nLet's define a new function `pred` from the naturals to the naturals, which\nattempts to subtract 1 from the input. The definition is this:\n\n```\npred 0 := 37\npred (succ n) := n\n```\n\nWe cannot subtract one from 0, so we just return a junk value. As well as this\ndefinition, we also create a new lemma `pred_succ`, which says that `pred (succ n) = n`.\nLet's use this lemma to prove `succ_inj`, the theorem which\nPeano assumed as an axiom and which we have already used extensively without justification.":
+ "Nous commençons maintenant à travailler sur un algorithme pour faire l'addition plus efficacement. Rappelons que\nnous avons défini l'addition par une formule de récurrence, en disant ce qu'elle fait sur `0` et les successeurs.\nC'est un axiome de Lean que la récursion est une manière valide\nde définir des fonctions à partir de types comme les naturels.\n\nDéfinissons une nouvelle fonction `pred` des naturels vers les naturels, qui\ntente de soustraire 1 de l'entrée. La définition est :\n\n```\npred 0 := 37\npred (succ n) := n\n```\n\nNous ne pouvons pas soustraire un de 0, donc nous renvoyons simplement une valeur quelconque. En plus de cette\ndéfinition, nous créons également un nouveau lemme `pred_succ`, qui dit que `pred (succ n) = n`.\nUtilisons ce lemme pour prouver `succ_inj`, le théorème que\nPeano a supposé comme axiome et que nous avons déjà largement utilisé sans justification.",
+ "We now have enough to state a mathematically accurate, but slightly\nclunky, version of Fermat's Last Theorem.\n\nFermat's Last Theorem states that if $x,y,z>0$ and $m \\geq 3$ then $x^m+y^m\\not =z^m$.\nIf you didn't do inequality world yet then we can't talk about $m \\geq 3$,\nso we have to resort to the hack of using `n + 3` for `m`,\nwhich guarantees it's big enough. Similarly instead of `x > 0` we\nuse `a + 1`.\n\nThis level looks superficially like other levels we have seen,\nbut the shortest solution known to humans would translate into\nmany millions of lines of Lean code. The author of this game,\nKevin Buzzard, is working on translating the proof by Wiles\nand Taylor into Lean, although this task will take many years.\n\n## CONGRATULATIONS!\n\nYou've finished the main quest of the natural number game!\nIf you would like to learn more about how to use Lean to\nprove theorems in mathematics, then take a look\nat [Mathematics In Lean](https://leanprover-community.github.io/mathematics_in_lean/),\nan interactive textbook which you can read in your browser,\nand which explains how to work with many more mathematical concepts in Lean.":
+ "Nous avons maintenant suffisamment de connaissance pour énoncer une version mathématiquement exacte, mais un peu\nmaladroite, du \"grand théorème de Fermat\".\n\nLe dernier théorème de Fermat énonce que si $x,y,z>0$ et $m \\geq 3$ alors $x^m+y^m\\not =z^m$.\nSi vous n'avez pas encore fait le monde des inégalités, nous ne pouvons pas parler de $m \\geq 3$,\nnous devons donc recourir à l'astuce d'utiliser `n + 3` pour `m`,\nce qui garantit qu'il est assez grand. De même, au lieu de `x > 0` nous\nutilisons `a + 1`.\n\nCe niveau ressemble superficiellement à d'autres niveaux que nous avons vus,\nmais la solution la plus courte connue des humains se traduirait par\nplusieurs millions de lignes de code Lean. L'auteur de ce jeu,\nKevin Buzzard, travaille à traduire la preuve de Wiles\net Taylor dans Lean, même si cette tâche prendra de nombreuses années.\n\n## FÉLICITATIONS !\n\nVous avez terminé la quête principale du jeu des nombres naturels !\nSi vous souhaitez en savoir plus sur l'utilisation de Lean pour\nprouver des théorèmes en mathématiques, jetez un œil\nà [Mathematics In Lean](https://leanprover-community.github.io/mathematics_in_lean/),\nun manuel interactif que vous pouvez lire dans votre navigateur,\net qui explique comment travailler avec beaucoup d'autres concepts mathématiques dans Lean.",
+ "We now have enough to prove that multiplication is associative,\nthe boss level of multiplication world. Good luck!":
+ "Nous avons maintenant assez de matière pour prouver que la multiplication est associative,\nle niveau boss du monde de la multiplication. Bonne chance !",
+ "We know `zero_ne_succ n` is a proof of `0 = succ n → False` -- but what\nif we have a hypothesis `succ n = 0`? It's the wrong way around!\n\nThe `symm` tactic changes a goal `x = y` to `y = x`, and a goal `x ≠ y`\nto `y ≠ x`. And `symm at h`\ndoes the same for a hypothesis `h`. We've proved $0 \\neq 1$ and called\nthe proof `zero_ne_one`; now try proving $1 \\neq 0$.":
+ "Nous savons que `zero_ne_succ n` est une preuve de `0 = succ n → False` -- mais que faire\nsi nous avons une hypothèse `succ n = 0` ? C'est dans le mauvais sens !\n\nLa tactique `symm` change un but `x = y` en `y = x`, et un but `x ≠ y`\nen `y ≠ x`. Et `symm at h`\nfait la même chose pour une hypothèse `h`. Nous avons prouvé $0 \\neq 1$ et nous avions appelé\nla preuve `zero_ne_one` ; maintenant essayez de prouver $1 \\neq 0$.",
+ "We have seen how to `apply` theorems and assumptions\nof the form `P → Q`. But what if our *goal* is of the form `P → Q`?\nTo prove this goal, we need to know how to say \"let's assume `P` and deduce `Q`\"\nin Lean. We do this with the `intro` tactic.":
+ "Nous avons vu comment utiliser `apply` sur des théorèmes et des hypothèses\nde la forme `P → Q`. Mais que faire si notre *but* est de la forme `P → Q` ?\nPour prouver ce but, nous devons savoir dire \"supposons `P` et déduisons `Q`\"\ndans Lean. Nous faisons cela avec la tactique `intro`.",
+ "We gave a pretty unsatisfactory proof of `2 + 2 ≠ 5` earlier on; now give a nicer one.":
+ "Nous avons donné une preuve assez peu satisfaisante de `2 + 2 ≠ 5` plus tôt ; maintenant donnez-en une meilleure.",
+ "We don't know whether to go left or right yet. So start with `cases «{h}» with hx hy`.":
+ "Nous ne savons pas encore si aller à gauche ou à droite. Commencez donc par `cases «{h}» with hx hy`.",
+ "We define a function `is_zero` thus:\n\n```\nis_zero 0 := True\nis_zero (succ n) := False\n```\n\nWe also create two lemmas, `is_zero_zero` and `is_zero_succ n`, saying that `is_zero 0 = True`\nand `is_zero (succ n) = False`. Let's use these lemmas to prove `succ_ne_zero`, Peano's\nLast Axiom. Actually, we have been using `zero_ne_succ` before, but it's handy to have\nthis opposite version too, which can be proved in the same way. Note: you can\ncheat here by using `zero_ne_succ` but the point of this world is to show\nyou how to *prove* results like that.\n\nIf you can turn your goal into `True`, then the `trivial` tactic will solve it.":
+ "Nous définissons une fonction `is_zero` ainsi :\n\n```\nis_zero 0 := True\nis_zero (succ n) := False\n```\n\nNous créons également deux lemmes, `is_zero_zero` et `is_zero_succ n`, disant que `is_zero 0 = True`\net `is_zero (succ n) = False`. Utilisons ces lemmes pour prouver `succ_ne_zero`, le dernier\naxiome de Peano. En fait, nous avons déjà utilisé `zero_ne_succ` auparavant, mais il est utile d'avoir\ncette version opposée aussi, qui peut être prouvée de la même manière. Note : vous pouvez\ntricher ici en utilisant `zero_ne_succ` mais l'objectif de ce monde est de vous montrer\ncomment *prouver* des résultats comme celui-ci.\n\nSi vous pouvez transformer votre but en `True`, alors la tactique `trivial` le résoudra.",
+ "Very well done.\n\nA passing mathematician remarks that with you've just proved that `ℕ` is totally\nordered.\n\nThe final few levels in this world are much easier.":
+ "Très bien joué.\n\nUn mathématicien de passage remarque que vous venez de prouver que `ℕ` est totalement\nordonné.\n\nLes derniers niveaux de ce monde sont beaucoup plus faciles.",
+ "Use the previous lemma with `apply eq_succ_of_ne_zero at ha`.":
+ "Utilisez le lemme précédent avec `apply eq_succ_of_ne_zero at ha`.",
+ "Use `mul_eq_zero` and remember that `tauto` will solve a goal\nif there are hypotheses `a = 0` and `a ≠ 0`.":
+ "Utilisez `mul_eq_zero` et souvenez-vous que `tauto` résoudra un but\ns'il y a des hypothèses `a = 0` et `a ≠ 0`.",
+ "Use `add_succ`.": "Utilisez `add_succ`.",
+ "Tutorial World": "Monde Tutoriel",
+ "Try `rw [← one_eq_succ_zero]` to change `succ 0` into `1`.":
+ "Essayez `rw [← one_eq_succ_zero]` pour changer `succ 0` en `1`.",
+ "Try `rw [add_zero c]`.": "Essayez `rw [add_zero c]`.",
+ "Try `cases «{hd}» with h1 h2`.": "Essayez `cases «{hd}» with h1 h2`.",
+ "Totality of `≤` is the boss level of this world, and it's coming up next. It says that\nif `a` and `b` are naturals then either `a ≤ b` or `b ≤ a`.\nBut we haven't talked about `or` at all. Here's a run-through.\n\n1) The notation for \"or\" is `∨`. You won't need to type it, but you can\ntype it with `\\or`.\n\n2) If you have an \"or\" statement in the *goal*, then two tactics made\nprogress: `left` and `right`. But don't choose a direction unless your\nhypotheses guarantee that it's the correct one.\n\n3) If you have an \"or\" statement as a *hypothesis* `h`, then\n`cases h with h1 h2` will create two goals, one where you went left,\nand the other where you went right.":
+ "Que `≤` soit un ordre total est le niveau boss de ce monde, et il arrive bientôt. Il signifie que\nsi `a` et `b` sont des naturels, alors soit `a ≤ b` soit `b ≤ a`.\nMais nous n'avons pas du tout parlé de `or`. Voici un aperçu.\n\n1) La notation pour \"ou\" est `∨`. Vous n'aurez pas besoin de la taper, mais vous pouvez\nla taper avec `\\or`.\n\n2) Si vous avez un terme \"ou\" dans le *but*, alors deux tactiques font\navancer : `left` et `right`. Mais ne choisissez pas une direction à moins que vos\nhypothèses ne garantissent que c'est la bonne.\n\n3) Si vous avez un énoncé \"ou\" comme *hypothèse* `h`, alors\n`cases h with h1 h2` créera deux buts, un où vous êtes allé à gauche,\net un autre où vous êtes allé à droite.",
+ "To solve this level, you need to `use` a number `c` such that `x = 0 + c`.":
+ "Pour résoudre ce niveau, vous devez utiliser `use` un nombre `c` tel que `x = 0 + c`.",
+ "Those of you interested in speedrunning the game may want to know\nthat `repeat rw [add_zero]` will do both rewrites at once.":
+ "Ceux d'entre vous intéressés par le speedrun du jeu voudront peut-être savoir\nque `repeat rw [add_zero]` fera les deux réécritures en une seule fois.",
+ "This world introduces exponentiation. If you want to define `37 ^ n`\nthen, as always, you will need to know what `37 ^ 0` is, and\nwhat `37 ^ (succ d)` is, given only `37 ^ d`.\n\nYou can probably guess the names of the general theorems:\n\n  * `pow_zero (a : ℕ) : a ^ 0 = 1`\n  * `pow_succ (a b : ℕ) : a ^ succ b = a ^ b * a`\n\nUsing only these, can you get past the final boss level?\n\nThe levels in this world were designed by Sian Carey, a UROP student\nat Imperial College London, funded by a Mary Lister McCammon Fellowship\nin the summer of 2019. Thanks to Sian and also thanks to Imperial\nCollege for funding her.":
+ "Ce monde introduit l'exponentiation. Si vous voulez définir `37 ^ n`\nalors, comme toujours, vous devrez savoir ce que vaut `37 ^ 0`, et\nce que vaut `37 ^ (succ d)`, sachant seulement `37 ^ d`.\n\nVous pouvez probablement deviner les noms des théorèmes généraux :\n\n  * `pow_zero (a : ℕ) : a ^ 0 = 1`\n  * `pow_succ (a b : ℕ) : a ^ succ b = a ^ b * a`\n\nEn utilisant uniquement ceux-ci, pourrez-vous passer le niveau boss final ?\n\nLes niveaux de ce monde ont été conçus par Sian Carey, une étudiante UROP\nà l'Imperial College de Londres, financée par une bourse Mary Lister McCammon\ndurant l'été 2019. Merci à Sian et également à Imperial\nCollege pour l'avoir financée.",
+ "This time, use the `left` tactic.":
+ "Cette fois, utilisez la tactique `left`.",
+ "This state is not provable! Did you maybe use `rw [add_left_eq_self] at h`\ninstead of `apply [add_left_eq_self] at h`? You can compare the two in the inventory.":
+ "Cet état n'est pas prouvable ! Avez-vous peut-être utilisé `rw [add_left_eq_self] at h`\nau lieu de `apply [add_left_eq_self] at h` ? Vous pouvez comparer les deux dans l'inventaire.",
+ "This level proves that if `a ≠ 0` and `b ≠ 0` then `a * b ≠ 0`. One strategy\nis to write both `a` and `b` as `succ` of something, deduce that `a * b` is\nalso `succ` of something, and then `apply zero_ne_succ`.":
+ "Ce niveau prouve que si `a ≠ 0` et `b ≠ 0` alors `a * b ≠ 0`. Une stratégie\nconsiste à écrire `a` et `b` comme `succ` de quelque chose, à déduire que `a * b` est\naussi `succ` de quelque chose, puis à `apply zero_ne_succ`.",
+ "This level proves that if `a * b = 0` then `a = 0` or `b = 0`. It is\nlogically equivalent to the last level, so there is a very short proof.":
+ "Ce niveau prouve que si `a * b = 0` alors `a = 0` ou `b = 0`. C'est\nlogiquement équivalent au niveau précédent, il existe donc une preuve très courte.",
+ "This level proves `x * y = 1 → x = 1`, the multiplicative analogue of Advanced Addition\nWorld's `x + y = 0 → x = 0`. The strategy is to prove that `x ≤ 1` and then use the\nlemma `le_one` from `≤` world.\n\nWe'll prove it using a new and very useful tactic called `have`.":
+ "Ce niveau prouve `x * y = 1 → x = 1`, c'est l'analogue multiplicatif de `x + y = 0 → x = 0`\ndu Monde de l'Addition Avancée. La stratégie consiste à prouver que `x ≤ 1` puis à utiliser\nle lemme `le_one` du monde `≤`.\n\nNous le prouverons en utilisant une nouvelle tactique très utile appelée `have`.",
+ "This level is more important than you think; it plays\na useful role when battling a big boss later on.":
+ "Ce niveau est plus important que vous ne le pensez ; il joue\nun rôle utile lors du combat contre un gros boss plus tard.",
+ "This level asks you to prove *antisymmetry* of $\\leq$.\nIn other words, if $x \\leq y$ and $y \\leq x$ then $x = y$.\nIt's the trickiest one so far. Good luck!":
+ "Ce niveau vous demande de prouver l'*antisymétrie* de $\\leq$.\nAutrement dit, si $x \\leq y$ et $y \\leq x$ alors $x = y$.\nC'est le plus délicat jusqu'à présent. Bonne chance !",
+ "This lemma would have been easy if we had known that `x + y = y + x`. That theorem\n  is called `add_comm` and it is *true*, but unfortunately its proof *uses* both\n  `add_zero` and `zero_add`!\n\n  Let's continue on our journey to `add_comm`, the proof of `x + y = y + x`.":
+ "Ce lemme aurait été facile si nous avions su que `x + y = y + x`. Ce théorème\n  s'appelle `add_comm` et il est *vrai*, mais malheureusement sa preuve *utilise* à la fois\n  `add_zero` et `zero_add` !\n\n  Continuons notre voyage vers `add_comm`, la preuve de `x + y = y + x`.",
+ "This is I think the toughest level yet. Tips: if `a` is a number\nthen `cases a with b` will split into cases `a = 0` and `a = succ b`.\nAnd don't go left or right until your hypotheses guarantee that\nyou can prove the resulting goal!\n\nI've left hidden hints; if you need them, retry from the beginning\nand click on \"Show more help!\"":
+ "C'est je pense le niveau le plus difficile jusqu'à présent. Conseils : si `a` est un nombre\nalors `cases a with b` divisera en cas `a = 0` et `a = succ b`.\nEt n'allez pas à gauche ou à droite tant que vos hypothèses ne garantissent pas\nque vous pouvez prouver le but résultant !\n\nJ'ai laissé des indices cachés ; si vous en avez besoin, réessayez depuis le début\net cliquez sur \"Afficher plus d'aide !\"",
+ "The way to start this proof is `induction b with d hd generalizing c`.":
+ "La façon de commencer cette preuve est `induction b with d hd generalizing c`.",
+ "The rfl tactic": "La tactique rfl",
+ "The reason `«{x}» ≤ «{x}»` is because `«{x}» = «{x}» + 0`.\nSo you should start this proof with `use 0`.":
+ "La raison pour laquelle `«{x}» ≤ «{x}»` est que `«{x}» = «{x}» + 0`.\nVous devriez donc commencer cette preuve par `use 0`.",
+ "The previous lemma can be used to prove this one.":
+ "Le lemme précédent peut être utilisé pour prouver celui-ci.",
+ "The next result we'll need in `≤` World is that if `a + b = 0` then `a = 0` and `b = 0`.\nLet's prove one of these facts in this level, and the other in the next.\n\n## A new tactic: `cases`\n\nThe `cases` tactic will split an object or hypothesis up into the possible ways\nthat it could have been created.\n\nFor example, sometimes you want to deal with the two cases `b = 0` and `b = succ d` separately,\nbut don't need the inductive hypothesis `hd` that comes with `induction b with d hd`.\nIn this situation you can use `cases b with d` instead. There are two ways to make\na number: it's either zero or a successor. So you will end up with two goals, one\nwith `b = 0` and one with `b = succ d`.\n\nAnother example: if you have a hypothesis `h : False` then you are done, because a false statement implies\nany statement. Here `cases h` will close the goal, because there are *no* ways to\nmake a proof of `False`! So you will end up with no goals, meaning you have proved everything.":
+ "Le prochain résultat dont nous aurons besoin dans le monde `≤` est que si `a + b = 0` alors `a = 0` et `b = 0`.\nProuvons l'un de ces faits dans ce niveau, et l'autre dans le prochain.\n\n## Une nouvelle tactique : `cases`\n\nLa tactique `cases` divisera un objet ou une hypothèse selon les façons possibles\ndont il aurait pu être créé.\n\nPar exemple, parfois vous voulez traiter les deux cas `b = 0` et `b = succ d` séparément,\nmais n'avez pas besoin de l'hypothèse d'induction `hd` qui vient avec `induction b with d hd`.\nDans cette situation, vous pouvez utiliser `cases b with d` à la place. Il y a deux façons de créer\nun nombre : soit zéro, soit un successeur. Vous vous retrouverez donc avec deux buts, un\navec `b = 0` et un avec `b = succ d`.\n\nAutre exemple : si vous avez une hypothèse `h : False`, alors vous avez terminé, car un énoncé faux implique\nn'importe quel énoncé. Ici, `cases h` fermera le but, car il n'y a *aucune* façon de\nfaire une preuve de `False` ! Vous vous retrouverez donc sans buts, ce qui signifie que vous avez tout prouvé.",
+ "The music gets ever more dramatic, as we explore\nthe interplay between exponentiation and multiplication.\n\nIf you're having trouble exchanging the right `a * b`\nbecause `rw [mul_comm]` swaps the wrong multiplication,\nthen read the documentation of `rw` for tips on how to fix this.":
+ "La musique devient de plus en plus dramatique alors que nous explorons\nl'interaction entre exponentiation et multiplication.\n\nSi vous avez du mal à échanger le bon `a * b`\nparce que `rw [mul_comm]` échange la mauvaise multiplication,\nlisez la documentation de `rw` pour des conseils sur la façon de résoudre ce problème.",
+ "The music dies down. Is that it?\n\nCourse it isn't, you can\nclearly see that there are two levels left.\n\nA passing mathematician says that mathematicians don't have a name\nfor the structure you just constructed. You feel cheated.\n\nSuddenly the music starts up again. This really is the final boss.":
+ "La musique s'apaise. Est-ce tout ?\n\nBien sûr que non, vous pouvez\nclairement voir qu'il reste deux niveaux.\n\nUn mathématicien de passage dit que les mathématiciens n'ont pas de nom\npour la structure que vous venez de construire. Vous vous sentez trompé.\n\nSoudain, la musique repart. C'est vraiment le boss final.",
+ "The lemma proved in the final level of this world will be helpful\nin Divisibility World.":
+ "Le lemme prouvé dans le niveau final de ce monde sera utile\ndans le Monde de la Divisibilité.",
+ "The inductive hypothesis `hd` is \"For all natural numbers `c`, `a * d = a * c → d = c`\".\nYou can `apply` it `at` any hypothesis of the form `a * d = a * ?`.":
+ "L'hypothèse d'induction `hd` est \"Pour tous les entiers naturels `c`, `a * d = a * c → d = c`\".\nVous pouvez l'utiliser avec `apply at` à toute hypothèse de la forme `a * d = a * ?`.",
+ "The goal in this level is one of our hypotheses. Solve the goal by executing `exact h1`.":
+ "Le but dans ce niveau est l'une de nos hypothèses. Résolvez le but en exécutant `exact h1`.",
+ "The first sub-boss of Multiplication World is `mul_comm x y : x * y = y * x`.\n\nWhen you've proved this theorem we will have \"spare\" proofs\nsuch as `zero_mul`, which is now easily deducible from `mul_zero`.\nBut we'll keep hold of these proofs anyway, because it's convenient\nto have exactly the right tool for a job.":
+ "Le premier sous-boss du monde de la Multiplication est `mul_comm x y : x * y = y * x`.\n\nLorsque vous aurez prouvé ce théorème, nous aurons des preuves \"supplémentaires\"\ncomme `zero_mul`, qui est maintenant facilement déductible de `mul_zero`.\nMais nous garderons ces preuves quand même, car c'est pratique\nd'avoir exactement le bon outil pour certaines tâches.",
+ "The classical introduction game for Lean.":
+ "Le jeu d'introduction classique pour Lean.",
+ "The `use` tactic": "La tactique `use`",
+ "The `exact` tactic": "La tactique `exact`",
+ "The `apply` tactic.": "La tactique `apply`.",
+ "Start with induction on `n`.": "Commencez par une induction sur `n`.",
+ "Start with `rw [← pred_succ a]` and take it from there.":
+ "Commencez par `rw [← pred_succ a]` et continuez à partir de là.",
+ "Start with `rw [two_eq_succ_one]` to begin to break `2` down into its definition.":
+ "Commencez par `rw [two_eq_succ_one]` pour commencer à décomposer `2` selon sa définition.",
+ "Start with `repeat rw [add_assoc]` to push all the brackets to the right.":
+ "Commencez par `repeat rw [add_assoc]` pour pousser toutes les parenthèses vers la droite.",
+ "Start with `intro hb`.": "Commencez par `intro hb`.",
+ "Start with `intro h`.": "Commencez par `intro h`.",
+ "Start with `intro h` to assume the hypothesis.":
+ "Commencez par `intro h` pour supposer l'hypothèse.",
+ "Start with `intro h` to assume the hypothesis and call its proof `h`.":
+ "Commencez par `intro h` pour supposer l'hypothèse et appeler sa preuve `h`.",
+ "Start with `intro h` (remembering that `X ≠ Y` is just notation\nfor `X = Y → False`).":
+ "Commencez par `intro h` (en rappelant que `X ≠ Y` est juste une notation\npour `X = Y → False`).",
+ "Start with `induction «{y}» with d hd`.":
+ "Commencez par `induction «{y}» with d hd`.",
+ "Start with `have h2 := mul_ne_zero a b`.":
+ "Commencez par `have h2 := mul_ne_zero a b`.",
+ "Start with `contrapose! h`, to change the goal into its\ncontrapositive, namely a hypothesis of `succ m = succ n` and a goal of `m = n`.":
+ "Commencez par `contrapose! h`, pour changer le but en sa\ncontraposée, c'est-à-dire une hypothèse `succ m = succ n` et un but `m = n`.",
+ "Start with `cases «{hxy}» with a ha`.":
+ "Commencez par `cases «{hxy}» with a ha`.",
+ "Start with `cases a with d` to do a case split on `a = 0` and `a = succ d`.":
+ "Commencez par `cases a with d` pour faire une division de cas sur `a = 0` et `a = succ d`.",
+ "Start with `apply succ_inj` to apply `succ_inj` to the *goal*.":
+ "Commencez par `apply succ_inj` pour appliquer `succ_inj` au *but*.",
+ "Start with `apply h2 at h1`. This will change `h1` to `y = 42`.":
+ "Commencez par `apply h2 at h1`. Cela changera `h1` en `y = 42`.",
+ "Start with `apply eq_succ_of_ne_zero at ha` and `... at hb`":
+ "Commencez par `apply eq_succ_of_ne_zero at ha` et `... at hb`",
+ "Start by unravelling the `1`.": "Commencez par décomposer le `1`.",
+ "Split into cases `c = 0` and `c = succ e` with `cases c with e`.":
+ "Séparez en cas `c = 0` et `c = succ e` avec `cases c with e`.",
+ "Solve this level in one line with `simp only [add_assoc, add_left_comm, add_comm]`":
+ "Résolvez ce niveau en une ligne avec `simp only [add_assoc, add_left_comm, add_comm]`",
+ "So that's the algorithm: now let's use automation to perform it\nautomatically.":
+ "Voilà donc l'algorithme : utilisons maintenant l'automatisation pour l'exécuter\nautomatiquement.",
+ "Similarly we have `mul_succ`\nbut we're going to need `succ_mul` (guess what it says -- maybe you\nare getting the hang of Lean's naming conventions).\n\nThe last level from addition world might help you in this level.\nIf you can't remember what it is, you can go back to the\nhome screen by clicking the house icon and then taking a look.\nYou won't lose any progress.":
+ "De même, nous avons `mul_succ`\nmais nous allons avoir besoin de `succ_mul` (devinez ce que cela dit -- peut-être\ncommencez-vous à comprendre les conventions de nommage de Lean).\n\nLe dernier niveau du monde de l'addition pourrait vous aider dans ce niveau.\nSi vous ne vous souvenez pas ce que c'est, vous pouvez revenir à l'écran d'accueil\nen cliquant sur l'icône maison et jeter un coup d'œil.\nVous ne perdrez aucun progrès.",
+ "See the new \"*\" tab in your lemmas, containing `mul_zero` and `mul_succ`.\nRight now these are the only facts we know about multiplication.\nLet's prove nine more.\n\nLet's start with a warm-up: no induction needed for this one,\nbecause we know `1` is a successor.":
+ "Voyez le nouvel onglet \"*\" dans vos lemmes, contenant `mul_zero` et `mul_succ`.\nActuellement, ce sont les seuls faits que nous connaissons sur la multiplication.\nProuvons-en neuf de plus.\n\nCommençons par un échauffement : aucune induction n'est nécessaire pour celui-ci,\ncar nous savons que `1` est un successeur.",
+ "See if you can take it from here. Look at the new lemmas and tactic\navailable on the right.":
+ "Voyez si vous pouvez continuer. Regardez les nouveaux lemmes et la tactique\ndisponibles à droite.",
+ "Remember, `x ≠ y` is *notation* for `x = y → False`.":
+ "Rappelez-vous, `x ≠ y` est une *notation* pour `x = y → False`.",
+ "Remember that when Lean writes `a + b + c`, it means `(a + b) + c`.\nIf you are not sure where the brackets are in an expression, just hover\nyour cursor over it and look at what gets highlighted. For example,\nhover over both `+` symbols on the left hand side of the goal and\nyou'll see where the invisible brackets are.":
+ "Rappelez-vous que lorsque Lean écrit `a + b + c`, cela signifie `(a + b) + c`.\nSi vous n'êtes pas sûr des parenthèses dans une expression, passez simplement\nvotre curseur dessus et regardez ce qui est mis en évidence. Par exemple,\npassez sur les deux symboles `+` du côté gauche du but et\nvous verrez où sont les parenthèses invisibles.",
+ "Remember that `h2` is a proof of `x = y → False`. Try\n`apply`ing `h2` either `at h1` or directly to the goal.":
+ "Rappelez-vous que `h2` est une preuve de `x = y → False`. Essayez\navec `apply` `h2` avec en plus `at h1` ou bien directement au but.",
+ "Reduce to the previous lemma with `nth_rewrite 2 [← mul_one a] at h`":
+ "Réduisez au lemme précédent avec `nth_rewrite 2 [← mul_one a] at h`",
+ "Ready for the boss level of this world?":
+ "Prêt pour le niveau boss de ce monde ?",
+ "Proofs like $2+2=4$ and $a+b+c+d+e=e+d+c+b+a$ are very tedious to do by hand.\nIn Algorithm World we learn how to get the computer to do them for us.\n\nClick on \"Start\" to proceed.":
+ "Les preuves comme $2+2=4$ et $a+b+c+d+e=e+d+c+b+a$ sont très fastidieuses à faire à la main.\nDans le monde Algorithmique, nous apprenons à faire cela à l'aide de l'ordinateur.\n\nCliquez sur \"Commencer\" pour continuer.",
+ "Precision rewriting": "Réécriture de précision",
+ "Power World": "Monde des Puissances",
+ "Our next goal is \"left and right distributivity\",\nmeaning $a(b+c)=ab+ac$ and $(b+c)a=ba+ca$. Rather than\nthese slightly pompous names, the name of the proofs\nin Lean are descriptive. Let's start with\n`mul_add a b c`, the proof of `a * (b + c) = a * b + a * c`.\nNote that the left hand side contains a multiplication\nand then an addition.":
+ "Notre prochain objectif est la \"distributivité à gauche et à droite\",\nc'est-à-dire $a(b+c)=ab+ac$ et $(b+c)a=ba+ca$. Plutôt que\nces noms un peu pompeux, les noms des preuves\ndans Lean sont descriptifs. Commençons par\n`mul_add a b c`, la preuve de `a * (b + c) = a * b + a * c`.\nNotez que le côté gauche contient une multiplication\npuis une addition.",
+ "Our first challenge is `mul_comm x y : x * y = y * x`,\nand we want to prove it by induction. The zero\ncase will need `mul_zero` (which we have)\nand `zero_mul` (which we don't), so let's\nstart with this.":
+ "Notre premier défi est `mul_comm x y : x * y = y * x`,\net nous voulons le prouver par induction. Le cas\nzéro aura besoin de `mul_zero` (que nous avons)\net de `zero_mul` (que nous n'avons pas), donc commençons\npar cela.",
+ "One of the best named levels in the game, a savage `pow_pow`\nsub-boss appears as the music reaches a frenzy. What\nelse could there be to prove about powers after this?":
+ "L'un des niveaux les mieux nommés du jeu, un sous-boss féroce `pow_pow` \napparaît alors que la musique atteint son paroxysme. Que\npourrait-il y avoir d'autre à prouver sur les puissances après cela ?",
+ "One day this game will have a Prime Number World, with a final boss\nof proving that $2$ is prime.\nTo do this, we will have to rule out things like $2 = 37 × 42.$\nWe will do this by proving that any factor of $2$ is at most $2$,\nwhich we will do using this lemma. The proof I have in mind manipulates the hypothesis\nuntil it becomes the goal, using `mul_left_ne_zero`, `one_le_of_ne_zero` and\n`mul_le_mul_right`.":
+ "Un jour, ce jeu aura un monde des Nombres Premiers, avec un boss final\nprouvant que $2$ est premier.\nPour cela, nous devrons exclure des choses comme $2 = 37 × 42$.\nNous ferons cela en prouvant que tout facteur de $2$ est au plus $2$,\nen utilisant ce lemme. La preuve que j'ai en tête manipule l'hypothèse\njusqu'à ce qu'elle devienne le but, en utilisant `mul_left_ne_zero`, `one_le_of_ne_zero` et\n`mul_le_mul_right`.",
+ "On the set of natural numbers, addition is commutative.\nIn other words, if `a` and `b` are arbitrary natural numbers, then\n$a + b = b + a$.":
+ "Sur l'ensemble des nombres naturels, l'addition est commutative.\nAutrement dit, si `a` et `b` sont des nombres naturels arbitraires, alors\n$a + b = b + a$.",
+ "On the set of natural numbers, addition is associative.\nIn other words, for all natural numbers $a, b$ and $c$, we have\n$ (a + b) + c = a + (b + c). $":
+ "Sur l'ensemble des nombres naturels, l'addition est associative.\nAutrement dit, pour tous les nombres naturels $a, b$ et $c$, nous avons\n$ (a + b) + c = a + (b + c). $",
+ "Oh no! On the way to `add_comm`, a wild `succ_add` appears. `succ_add a b`\nis the proof that `(succ a) + b = succ (a + b)` for `a` and `b` numbers.\nThis result is what's standing in the way of `x + y = y + x`. Again\nwe have the problem that we are adding `b` to things, so we need\nto use induction to split into the cases where `b = 0` and `b` is a successor.":
+ "Oh non ! En chemin vers `add_comm`, un `succ_add` sauvage apparaît. `succ_add a b`\nest la preuve que `(succ a) + b = succ (a + b)` pour `a` et `b` des nombres.\nCe résultat est ce qui bloque pour `x + y = y + x`. Encore une fois\nnous avons le problème que nous ajoutons `b` à des choses, donc nous devons\nutiliser l'induction pour diviser entre les cas où `b = 0` et où `b` est un successeur.",
+ "Numbers": "Nombres",
+ "Now you need to figure out which number to `use`. See if you can take it from here.":
+ "Maintenant, vous devez déterminer quel nombre `use`. Voyez si vous pouvez continuer à partir d'ici.",
+ "Now you have two goals. Once you proved the first, you will jump to the second one.\nThis first goal is the base case $n = 0$.\n\nRecall that you can rewrite the proof of any lemma which is visible\nin your inventory, or of any assumption displayed above the goal,\nas long as it is of the form `X = Y`.":
+ "Maintenant vous avez deux buts. Une fois que vous avez prouvé le premier, vous passerez au second.\nCe premier but est le cas de base $n = 0$.\n\nRappelez-vous que vous pouvez réécrire la preuve de tout lemme visible\ndans votre inventaire, ou de toute hypothèse affichée au-dessus du but,\ntant qu'elle est de la forme `X = Y`.",
+ "Now you could finish with `rw [«{h}»]` then `rfl`, but `exact «{h}»`\ndoes it in one line.":
+ "Maintenant, vous pourriez terminer avec `rw [«{h}»]` puis `rfl`, mais `exact «{h}»`\nle fait en une ligne.",
+ "Now you can `rw [add_succ]`":
+ "Maintenant vous pouvez utiliser `rw [add_succ]`",
+ "Now you can `apply zero_ne_succ at h`.":
+ "Maintenant, vous pouvez utiliser `apply zero_ne_succ at h`.",
+ "Now you can `apply le_mul_right at h2`.":
+ "Maintenant vous pouvez utiliser `apply le_mul_right at h2`.",
+ "Now we can prove the `or` statement by proving the statement on the right,\nso use the `right` tactic.":
+ "Maintenant, nous pouvons prouver l'énoncé `or` en prouvant l'énoncé de droite,\ndonc utilisez la tactique `right`.",
+ "Now use `rw [add_left_comm b c]` to switch `b` and `c` on the left\nhand side.":
+ "Utilisez maintenant `rw [add_left_comm b c]` pour échanger `b` et `c` du côté\ngauche.",
+ "Now the goal can be deduced from `h2` by pure logic, so use the `tauto`\ntactic.":
+ "Maintenant le but peut être déduit de `h2` par pure logique, utilisez donc la tactique\n`tauto`.",
+ "Now take apart the existence statement with `cases ha with n hn`.":
+ "Maintenant, décomposez l'énoncé d'existence avec `cases ha with n hn`.",
+ "Now rewrite `succ_eq_add_one` backwards at `h`\nto get the right hand side.":
+ "Maintenant, réécrivez `succ_eq_add_one` à l'envers dans `h`\npour obtenir le côté droit.",
+ "Now rewrite `four_eq_succ_three` backwards to make the goal\nequal to the hypothesis.":
+ "Maintenant, réécrivez `four_eq_succ_three` à l'envers pour rendre le but\négal à l'hypothèse.",
+ "Now let's `apply` our new theorem. Execute `apply succ_inj at h`\nto change `h` to a proof of `x = 3`.":
+ "Maintenant, appliquons notre nouveau théorème. Exécutez `apply succ_inj at h`\npour changer `h` en une preuve de `x = 3`.",
+ "Now for to the second goal. Here you have the induction hypothesis\n`«{hd}» : 0 + «{d}» = «{d}»`, and you need to prove that `0 + succ «{d}» = succ «{d}»`.":
+ "Passons maintenant au second but. Ici vous avez l'hypothèse d'induction\n`«{hd}» : 0 + «{d}» = «{d}»`, et vous devez prouver que `0 + succ «{d}» = succ «{d}»`.",
+ "Now finish using the `exact` tactic.":
+ "Terminez maintenant en utilisant la tactique `exact`.",
+ "Now finish the job with `rfl`.": "Terminez maintenant avec `rfl`.",
+ "Now finish in one line.": "Terminez maintenant en une ligne.",
+ "Now change `1` to `succ 0` in `h`.":
+ "Maintenant, changez `1` en `succ 0` dans `h`.",
+ "Now `«{ha}»` is a proof that `«{y}» = «{x}» + «{a}»`, and `hxy` has vanished. Similarly, you can destruct\n`«{hyz}»` into its parts with `cases «{hyz}» with b hb`.":
+ "Maintenant `«{ha}»` est une preuve que `«{y}» = «{x}» + «{a}»`, et `hxy` a disparu. De même, vous pouvez décomposer\n`«{hyz}»` avec `cases «{hyz}» with b hb`.",
+ "Now `rw [← two_eq_succ_one]` will change `succ 1` into `2`.":
+ "Maintenant `rw [← two_eq_succ_one]` changera `succ 1` en `2`.",
+ "Now `rw [«{h}»] at «{h2}»` so you can `apply le_one at «{h2}»`.":
+ "Maintenant `rw [«{h}»] at «{h2}»` pour pouvoir `apply le_one at «{h2}»`.",
+ "Now `rw [h]` then `rfl` works, but `exact h` is quicker.":
+ "Maintenant `rw [h]` puis `rfl` fonctionne, mais `exact h` est plus rapide.",
+ "Now `rw [add_zero]` will change `c + 0` into `c`.":
+ "Maintenant `rw [add_zero]` changera `c + 0` en `c`.",
+ "Now `rfl` will work.": "Maintenant `rfl` fonctionnera.",
+ "Now `repeat rw [← succ_eq_add_one] at h` is the quickest way to\nchange `h` to `succ x = succ y`.":
+ "Maintenant `repeat rw [← succ_eq_add_one] at h` est le moyen le plus rapide de\nchanger `h` en `succ x = succ y`.",
+ "Now `exact h` finishes the job.": "Maintenant `exact h` termine le travail.",
+ "Now `cases «{h2}» with e he`.": "Maintenant `cases «{h2}» with e he`.",
+ "Now `cases h2 with h0 h1` and deal with the two\ncases separately.":
+ "Maintenant `cases h2 with h0 h1` et traitez les deux\ncas séparément.",
+ "Now `apply succ_inj at h` to cancel the `succ`s.":
+ "Maintenant `apply succ_inj at h` pour annuler les `succ`.",
+ "Now `apply h` and you can probably take it from here.":
+ "Maintenant `apply h` et vous pouvez probablement continuer à partir d'ici.",
+ "Note: this lemma will be useful for the final boss!":
+ "Note : ce lemme sera utile pour le boss final !",
+ "Note that you can do `rw [two_eq_succ_one, one_eq_succ_zero]`\nand then `rfl` to solve this level in two lines.":
+ "Notez que vous pouvez faire `rw [two_eq_succ_one, one_eq_succ_zero]`\npuis `rfl` pour résoudre ce niveau en deux lignes.",
+ "Note that `succ a + «{d}»` means `(succ a) + «{d}»`. Put your cursor\non any `succ` in the goal or assumptions to see what exactly it's eating.":
+ "Notez que `succ a + «{d}»` signifie `(succ a) + «{d}»`. Placez votre curseur\nsur n'importe quel `succ` dans le but ou les hypothèses pour voir exactement ce qu'il prend.",
+ "Nice! You've proved `succ_inj`!\nLet's now prove Peano's other axiom, that successors can't be $0$.":
+ "Bien ! Vous avez prouvé `succ_inj` !\nProuvons maintenant l'autre axiome de Peano, que les successeurs ne peuvent pas être $0$.",
+ "Nice!\n\nThe next step in the development of order theory is to develop\nthe theory of the interplay between `≤` and multiplication.\nIf you've already done Multiplication World, you're now ready for\nAdvanced Multiplication World. Click on \"Home\" to access it.":
+ "Bien !\n\nLa prochaine étape dans le développement de la théorie de l'ordre est de développer\nla théorie de l'interaction entre `≤` et la multiplication.\nSi vous avez déjà fait le monde de la Multiplication, vous êtes maintenant prêt pour\nle monde de la Multiplication Avancée. Cliquez sur \"Quitter le monde\" pour y accéder.",
+ "Nice!": "Bien !",
+ "Next turn `1` into `succ 0` with `rw [one_eq_succ_zero]`.":
+ "Ensuite, transformez `1` en `succ 0` avec `rw [one_eq_succ_zero]`.",
+ "Natural Number Game": "Le Jeu des Nombres Naturels",
+ "My proof:\n```\ncases h with d hd\nuse d * t\nrw [hd, add_mul]\nrfl\n```":
+ "Ma preuve :\n```\ncases h with d hd\nuse d * t\nrw [hd, add_mul]\nrfl\n```",
+ "Multiplication usually makes a number bigger, but multiplication by zero can make\nit smaller. Thus many lemmas about inequalities and multiplication need the\nhypothesis `a ≠ 0`. Here is a key lemma that enables us to use this hypothesis.\nTo help us with the proof, we can use the `tauto` tactic. Click on the tactic's name\non the right to see what it does.":
+ "La multiplication transforme généralement un nombre en un nombre plus grand, mais la multiplication par zéro peut le rendre\nplus petit. Ainsi, de nombreux lemmes sur les inégalités et la multiplication nécessitent l'\nhypothèse `a ≠ 0`. Voici un lemme clé qui nous permet d'utiliser cette hypothèse.\nPour la preuve, nous pouvons utiliser la tactique `tauto`. Cliquez sur le nom de la tactique\nà droite pour voir ce qu'elle fait.",
+ "Multiplication is distributive over addition on the left.\nIn other words, for all natural numbers $a$, $b$ and $c$, we have\n$a(b + c) = ab + ac$.":
+ "La multiplication est distributive sur l'addition à gauche.\nAutrement dit, pour tous les nombres naturels $a$, $b$ et $c$, nous avons\n$a(b + c) = ab + ac$.",
+ "Multiplication is commutative.": "La multiplication est commutative.",
+ "Multiplication is associative.\nIn other words, for all natural numbers $a$, $b$ and $c$, we have\n$(ab)c = a(bc)$.":
+ "La multiplication est associative.\nAutrement dit, pour tous les nombres naturels $a$, $b$ et $c$, nous avons\n$(ab)c = a(bc)$.",
+ "Multiplication distributes\nover addition on the left.\n\n`mul_add a b c` is the proof that `a * (b + c) = a * b + a * c`.":
+ "La multiplication est distributive\nsur l'addition à gauche.\n\n`mul_add a b c` est la preuve que `a * (b + c) = a * b + a * c`.",
+ "Multiplication World": "Monde de la Multiplication",
+ "Mathematicians sometimes debate what `0 ^ 0` is;\nthe answer depends, of course, on your definitions. In this\ngame, `0 ^ 0 = 1`. See if you can prove it.\n\nCheck out the *Pow* tab in your list of theorems\nto see the new proofs which are available.":
+ "Les mathématiciens débattent parfois de ce qu'est `0 ^ 0` ;\nla réponse dépend, bien sûr, de vos définitions. Dans ce\njeu, `0 ^ 0 = 1`. Voyez si vous pouvez le prouver.\n\nConsultez l'onglet *Pow* dans votre liste de théorèmes\npour voir les nouvelles preuves disponibles.",
+ "Mathematicians sometimes argue that `0 ^ 0 = 0` is also\na good convention. But it is not a good convention in this\ngame; all the later levels come out beautifully with the\nconvention that `0 ^ 0 = 1`.":
+ "Les mathématiciens soutiennent parfois que `0 ^ 0 = 0` est aussi\nune bonne convention. Mais ce n'est pas une bonne convention dans ce\njeu ; tous les niveaux suivants fonctionnent parfaitement avec la\nconvention que `0 ^ 0 = 1`.",
+ "Many people find `apply t at h` easy, but some find `apply t` confusing.\nIf you find it confusing, then just argue forwards.\n\nYou can read more about the `apply` tactic in its documentation, which you can view by\nclicking on the tactic in the list on the right.":
+ "Beaucoup de gens trouvent `apply t at h` facile, mais certains trouvent `apply t` confus.\nSi vous le trouvez confus, argumentez simplement en avant.\n\nVous pouvez en savoir plus sur la tactique `apply` dans sa documentation, que vous pouvez voir en\ncliquant sur la tactique dans la liste à droite.",
+ "Let's warm up with an easy one, which works even if `t = 0`.":
+ "Échauffons-nous avec un exercice facile, qui fonctionne même si `t = 0`.",
+ "Let's see if you can use the tactics we've learnt to prove $x+1=y+1\\implies x=y$.\nTry this one by yourself; if you need help then click on \"Show more help!\".":
+ "Voyons si vous pouvez utiliser les tactiques que nous avons apprises pour prouver $x+1=y+1\\implies x=y$.\nEssayez par vous-même ; si vous avez besoin d'aide, cliquez sur \"Afficher plus d'aide !\".",
+ "Let's now move on to a more efficient approach to questions\ninvolving numerals, such as `20 + 20 = 40`.":
+ "Passons maintenant à une approche plus efficace pour les questions\nimpliquant des nombres, comme `20 + 20 = 40`.",
+ "Let's now make our own tactic to do this.":
+ "Créons maintenant notre propre tactique pour faire cela.",
+ "Let's now learn about Peano's second axiom for addition, `add_succ`.":
+ "Apprenons maintenant le second axiome de Peano pour l'addition, `add_succ`.",
+ "Let's now begin our approach to the final boss,\nby proving some more subtle facts about powers.":
+ "Commençons maintenant notre approche vers le boss final,\nen prouvant des faits plus subtils sur les puissances.",
+ "Let's first get `h` into the form `succ x = succ 3` so we can\napply `succ_inj`. First execute `rw [four_eq_succ_three] at h`\nto change the 4 on the right hand side.":
+ "Commençons par mettre `h` sous la forme `succ x = succ 3` pour que nous puissions\nappliquer `succ_inj`. Exécutez d'abord `rw [four_eq_succ_three] at h`\npour changer le 4 du côté droit.",
+ "Lean's simplifier, `simp`, is \"`rw` on steroids\". It will rewrite every lemma\ntagged with `simp` and every lemma fed to it by the user, as much as it can.\n\nThis level is not a level which you want to solve by hand.\nGet the simplifier to solve it for you.":
+ "Le simplificateur de Lean, `simp`, est \"`rw` sous stéroïdes\". Il réécrira chaque lemme\nmarqué `simp` et chaque lemme fourni par l'utilisateur, autant que possible.\n\nCe n'est pas un niveau que vous voulez résoudre à la main.\nDemandez au simplificateur de le résoudre pour vous.",
+ "It's all over! You have proved a theorem which has tripped up\nschoolkids for generations (some of them think $(a+b)^2=a^2+b^2$:\nthis is \"the freshman's dream\").\n\nHow many rewrites did you use? I can do it in 12.\n\nBut wait! This boss is stirring...and mutating into a second more powerful form!":
+ "C'est fini ! Vous avez prouvé un théorème qui a piégé\nles écoliers depuis des générations (certains pensent que $(a+b)^2=a^2+b^2$ :\nc'est \"le rêve du débutant\").\n\nCombien de réécritures avez-vous utilisées ? Je peux le faire en 12.\n\nMais attendez ! Ce boss s'agite... et mute en une deuxième forme plus puissante !",
+ "It's \"intuitively obvious\" that there are no numbers less than zero,\nbut to prove it you will need a result which you showed in advanced\naddition world.":
+ "C'est \"intuitivement évident\" qu'il n'y a pas de nombres inférieurs à zéro,\nmais pour le prouver, vous aurez besoin d'un résultat que vous avez montré dans le monde\nde l'addition avancée.",
+ "Induction on `a` will not work here. You are still stuck with an `+ b`.\nI suggest you delete this line and try a different approach.":
+ "L'induction sur `a` ne fonctionnera pas ici. Vous êtes toujours bloqué avec un `+ b`.\nJe vous suggère de supprimer cette ligne et d'essayer une approche différente.",
+ "Induction on `a` or `b` -- it's all the same in this one.":
+ "Induction sur `a` ou `b` -- c'est pareil dans ce cas.",
+ "Induction on `a` is the most troublesome, then `b`,\nand `c` is the easiest.":
+ "L'induction sur `a` est la plus problématique, puis `b`,\net `c` est la plus facile.",
+ "In this world we'll learn how to prove theorems of the form $P\\implies Q$.\nIn other words, how to prove theorems of the form \"if $P$ is true, then $Q$ is true.\"\nTo do that we need to learn some more tactics.\n\nThe `exact` tactic can be used to close a goal which is exactly one of\nthe hypotheses. It takes the name of the hypothesis as argument: `exact h`.":
+ "Dans ce monde, nous apprendrons à prouver des théorèmes de la forme $P\\implies Q$.\nAutrement dit, comment prouver des théorèmes de la forme \"si $P$ est vrai, alors $Q$ est vrai\".\nPour cela, nous devons apprendre d'autres tactiques.\n\nLa tactique `exact` peut être utilisée pour obtenir un but qui est exactement l'une\ndes hypothèses. Elle prend le nom de l'hypothèse comme argument : `exact h`.",
+ "In this world we define `a ≤ b` and prove standard facts\nabout it, such as \"if `a ≤ b` and `b ≤ c` then `a ≤ c`.\"\n\nThe definition of `a ≤ b` is \"there exists a number `c`\nsuch that `b = a + c`. \" So we're going to have to learn\na tactic to prove \"exists\" theorems, and another one\nto use \"exists\" hypotheses.\n\nClick on \"Start\" to proceed.":
+ "Dans ce monde, nous définissons `a ≤ b` et prouvons des faits classiques\nà ce sujet, comme \"si `a ≤ b` et `b ≤ c` alors `a ≤ c`.\"\n\nLa définition de `a ≤ b` est \"il existe un nombre `c`\ntel que `b = a + c`\". Nous allons donc devoir apprendre\nune tactique pour prouver des théorèmes \"existentiels\", et une autre\npour utiliser des hypothèses \"existentielles\".\n\nCliquez sur \"Commencer\" pour continuer.",
+ "In this world I will mostly leave you on your own.\n\n`add_right_cancel a b n` is the theorem that $a+n=b+n\\implies a=b$.":
+ "Dans ce monde, je vais principalement vous laisser seul.\n\n`add_right_cancel a b n` est le théorème que $a+n=b+n\\implies a=b$.",
+ "In this level, we see inequalities as *hypotheses*. We have not seen this before.\nThe `cases` tactic can be used to take `hxy` apart.":
+ "Dans ce niveau, nous voyons des inégalités comme *hypothèses*. Nous n'avons pas vu cela auparavant.\nLa tactique `cases` peut être utilisée pour décomposer `hxy`.",
+ "In this level, the hypotheses `h2` is an *implication*. It says\nthat *if* `x = 37` *then* `y = 42`. We can use this\nhypothesis with the `apply` tactic. Remember you can click on\n`apply` or any other tactic on the right to see a detailed explanation\nof what it does, with examples.":
+ "Dans ce niveau, l'hypothèse `h2` est une *implication*. Elle dit\nque *si* `x = 37` *alors* `y = 42`. Nous pouvons utiliser cette\nhypothèse avec la tactique `apply`. Rappelez-vous que vous pouvez cliquer sur\n`apply` ou toute autre tactique à droite pour voir une explication détaillée\nde ce qu'elle fait, avec des exemples.",
+ "In this level we're going to prove that $0+n=n$, where $n$ is a secret natural number.\n\nWait, don't we already know that? No! We know that $n+0=n$, but that's `add_zero`.\nThis is `zero_add`, which is different.\n\nThe difficulty with proving `0 + n = n` is that we do not have a *formula* for\n`0 + n` in general, we can only use `add_zero` and `add_succ` once\nwe know whether `n` is `0` or a successor. The `induction` tactic splits into these two cases.\n\nThe base case will require us to prove `0 + 0 = 0`, and the inductive step\nwill ask us to show that if `0 + d = d` then `0 + succ d = succ d`. Because\n`0` and successor are the only way to make numbers, this will cover all the cases.\n\nSee if you can do your first induction proof in Lean.\n\n(By the way, if you are still in the \"Editor mode\" from the last world, you can swap\nback to \"Typewriter mode\" by clicking the `>_` button in the top right.)":
+ "Dans ce niveau, nous allons prouver que $0+n=n$, où $n$ est un nombre naturel secret.\n\nAttendez, ne le savons-nous pas déjà ? Non ! Nous savons que $n+0=n$, mais c'est `add_zero`.\nCeci est `zero_add`, ce qui est différent.\n\nLa difficulté pour prouver `0 + n = n` est que nous n'avons pas de *formule* pour\n`0 + n` en général, nous ne pouvons utiliser `add_zero` et `add_succ` que lorsque\nnous savons si `n` est `0` ou un successeur. La tactique `induction`, correspond à une récurrence et se divise en ces deux cas.\n\nLe cas de base nous demandera de prouver `0 + 0 = 0`, et l'étape inductive\nnous demandera de montrer que si `0 + d = d` alors `0 + succ d = succ d`. Parce que\n`0` et successeur sont les seules façons de créer des nombres, cela couvrira tous les cas.\n\nVoyons si vous pouvez faire votre première preuve par récurrence avec Lean.\n\n(Au fait, si vous êtes toujours en \"Mode Éditeur\" depuis le dernier monde, vous pouvez revenir\nen \"Mode Machine à écrire\" en cliquant sur le bouton `>_` en haut à droite.)",
+ "In this level we prove that if `a * b = a * c` and `a ≠ 0` then `b = c`. It is tricky, for\nseveral reasons. One of these is that\nwe need to introduce a new idea: we will need to understand the concept of\nmathematical induction a little better.\n\nStarting with `induction b with d hd` is too naive, because in the inductive step\nthe hypothesis is `a * d = a * c → d = c` but what we know is `a * succ d = a * c`,\nso the induction hypothesis does not apply!\n\nAssume `a ≠ 0` is fixed. The actual statement we want to prove by induction on `b` is\n\"for all `c`, if `a * b = a * c` then `b = c`\". This *can* be proved by induction,\nbecause we now have the flexibility to change `c`.":
+ "Dans ce niveau, nous prouvons que si `a * b = a * c` et `a ≠ 0` alors `b = c`. C'est difficile\npour plusieurs raisons. L'une d'elles est que\nnous devons introduire une nouvelle idée : nous devons mieux comprendre le concept\nd'induction mathématique.\n\nCommencer par `induction b with d hd` est trop naïf, car à l'étape inductive\nl'hypothèse est `a * d = a * c → d = c` mais ce que nous savons est `a * succ d = a * c`,\ndonc l'hypothèse d'induction ne s'applique pas !\n\nSupposons `a ≠ 0` fixé. L'énoncé réel que nous voulons prouver par induction sur `b` est\n\"pour tout `c`, si `a * b = a * c` alors `b = c`\". Ceci *peut* être prouvé par induction,\ncar nous avons maintenant la flexibilité de changer `c`.",
+ "In this level the *goal* is $2y=2(x+7)$ but to help us we\nhave an *assumption* `h` saying that $y = x + 7$. Check that you can see `h` in\nyour list of assumptions. Lean thinks of `h` as being a secret proof of the\nassumption, rather like `x` is a secret number.\n\nBefore we can use `rfl`, we have to \"substitute in for $y$\".\nWe do this in Lean by *rewriting* the proof `h`,\nusing the `rw` tactic.":
+ "Dans ce niveau, le *but* est $2y=2(x+7)$ mais pour nous aider, nous\navons une *hypothèse* `h` disant que $y = x + 7$. Vérifiez que vous pouvez voir `h` dans\nvotre liste d'hypothèses. Lean considère `h` comme une preuve secrète de\nl'hypothèse, un peu comme `x` est un nombre secret.\n\nAvant de pouvoir utiliser `rfl`, nous devons \"substituer $y$\".\nNous faisons cela dans Lean en *réécrivant* la preuve `h`,\nen utilisant la tactique `rw`.",
+ "In this game you recreate the natural numbers $\\mathbb{N}$ from the Peano axioms,\nlearning the basics about theorem proving in Lean.\n\nThis is a good first introduction to Lean!":
+ "Dans ce jeu, vous recréez les nombres naturels $\\mathbb{N}$ à partir des axiomes de Peano,\nen apprenant les bases de la preuve de théorèmes dans Lean.\n\nC'est une excellente première introduction à Lean !",
+ "In the next level, we'll do the same proof but backwards.":
+ "Dans le niveau suivant, nous ferons la même preuve mais à l'envers.",
+ "In the last level, we manipulated the hypothesis `x + 1 = 4`\n  until it became the goal `x = 3`. In this level we'll manipulate\n  the goal until it becomes our hypothesis! In other words, we\n  will \"argue backwards\". The `apply` tactic can do this too.\n  Again I will walk you through this one (assuming you're in\n  command line mode).":
+ "Dans le dernier niveau, nous avons manipulé l'hypothèse `x + 1 = 4`\n  jusqu'à ce qu'elle devienne le but `x = 3`. Dans ce niveau, nous manipulerons\n  le but jusqu'à ce qu'il devienne notre hypothèse ! Autrement dit, nous\n  \"argumenterons à l'envers\". La tactique `apply` peut aussi faire cela.\n  Je vais encore vous guider à travers celui-ci (en supposant que vous êtes en\n  mode ligne de commande).",
+ "In the \"base case\" we have a hypothesis `ha : 0 ≠ 0`, and you can deduce anything\nfrom a false statement. The `tauto` tactic will close this goal.":
+ "Dans le \"cas de base\", nous avons une hypothèse `ha : 0 ≠ 0`, et vous pouvez déduire n'importe quoi\nd'un énoncé faux. La tactique `tauto` fermera ce but.",
+ "In some later worlds, we're going to see some much nastier levels,\nlike `(a + a + 1) + (b + b + 1) = (a + b + 1) + (a + b + 1)`.\nBrackets need to be moved around, and variables need to be swapped.\n\nIn this level, `(a + b) + (c + d) = ((a + c) + d) + b`,\nlet's forget about the brackets and just think about\nthe variable order.\nTo turn `a+b+c+d` into `a+c+d+b` we need to swap `b` and `c`,\nand then swap `b` and `d`. But this is easier than you\nthink with `add_left_comm`.":
+ "Dans certains mondes ultérieurs, nous verrons des niveaux bien plus désagréables,\ncomme `(a + a + 1) + (b + b + 1) = (a + b + 1) + (a + b + 1)`.\nLes parenthèses doivent être déplacées et les variables échangées.\n\nDans ce niveau, `(a + b) + (c + d) = ((a + c) + d) + b`,\noublions les parenthèses et pensons simplement à\nl'ordre des variables.\nPour transformer `a+b+c+d` en `a+c+d+b`, nous devons échanger `b` et `c`,\npuis échanger `b` et `d`. Mais c'est plus facile que vous ne le\npensez avec `add_left_comm`.",
+ "In order to use the tactic `rfl` you can enter it in the text box\nunder the goal and hit \"Execute\".":
+ "Pour utiliser la tactique `rfl`, vous pouvez l'entrer dans la zone de texte\nsous le but et appuyer sur \"Exécuter\".",
+ "In Advanced Addition World we will prove some basic\naddition facts such as $x+y=x\\implies y=0$. The theorems\nproved in this world will be used to build\na theory of inequalities in `≤` World.\n\nClick on \"Start\" to proceed.":
+ "Dans le monde de l'Addition Avancée, nous prouverons des faits de base\nsur l'addition comme $x+y=x\\implies y=0$. Les théorèmes\nprouvés dans ce monde seront utilisés pour construire\nune théorie des inégalités dans le monde `≤`.\n\nCliquez sur \"Commencer\" pour continuer.",
+ "Implication World": "Monde de l'Implication",
+ "Implementing the algorithm for equality of naturals, and the proof that it is correct,\nlooks like this:\n\n```\ninstance instDecidableEq : DecidableEq ℕ\n| 0, 0 => isTrue <| by\n  show 0 = 0\n  rfl\n| succ m, 0 => isFalse <| by\n  show succ m ≠ 0\n  exact succ_ne_zero m\n| 0, succ n => isFalse <| by\n  show 0 ≠ succ n\n  exact zero_ne_succ n\n| succ m, succ n =>\n  match instDecidableEq m n with\n  | isTrue (h : m = n) => isTrue <| by\n    show succ m = succ n\n    rw [h]\n    rfl\n  | isFalse (h : m ≠ n) => isFalse <| by\n    show succ m ≠ succ n\n    exact succ_ne_succ m n h\n```\n\nThis Lean code is a formally verified algorithm for deciding equality\nbetween two naturals. I've typed it in already, behind the scenes.\nBecause the algorithm is formally verified to be correct, we can\nuse it in Lean proofs. You can run the algorithm with the `decide` tactic.":
+ "L'implémentation de l'algorithme pour l'égalité des naturels, et la preuve qu'il est correct,\nressemble à ceci :\n\n```\ninstance instDecidableEq : DecidableEq ℕ\n| 0, 0 => isTrue <| by\n  show 0 = 0\n  rfl\n| succ m, 0 => isFalse <| by\n  show succ m ≠ 0\n  exact succ_ne_zero m\n| 0, succ n => isFalse <| by\n  show 0 ≠ succ n\n  exact zero_ne_succ n\n| succ m, succ n =>\n  match instDecidableEq m n with\n  | isTrue (h : m = n) => isTrue <| by\n    show succ m = succ n\n    rw [h]\n    rfl\n  | isFalse (h : m ≠ n) => isFalse <| by\n    show succ m ≠ succ n\n    exact succ_ne_succ m n h\n```\n\nCe code Lean est un algorithme formellement vérifié pour décider de l'égalité\nentre deux naturels. Je l'ai déjà tapé, en coulisses.\nComme l'algorithme est formellement vérifié comme correct, nous pouvons\nl'utiliser dans les preuves Lean. Vous pouvez exécuter l'algorithme avec la tactique `decide`.",
+ "If you have completed Algorithm World then you can use the `contrapose!` tactic\nhere. If not then I'll talk you through a manual approach.":
+ "Si vous avez terminé le monde Algorithmique, vous pouvez utiliser la tactique `contrapose!`\nici. Sinon, je vais vous guider à travers une approche manuelle.",
+ "If you `use` the wrong number, you get stuck with a goal you can't prove.\nWhat number will you `use` here?":
+ "Si vous utilisez `use` avec le mauvais nombre, vous restez bloqué avec un but que vous ne pourrez pas prouver.\nQuel nombre allez-vous choisir ici ?",
+ "If the goal is not *exactly* a hypothesis, we can sometimes\nuse rewrites to fix things up.":
+ "Si le but n'est pas *exactement* une hypothèse, nous pouvons parfois\nutiliser des réécritures pour arranger les choses.",
+ "If `h` is a proof of `X = Y` then `rw [h]` will\nturn `X`s into `Y`s. But what if we want to\nturn `Y`s into `X`s? To tell the `rw` tactic\nwe want this, we use a left arrow `←`. Type\n`\\l` and then hit the space bar to get this arrow.\n\nLet's prove that $2$ is the number after the number\nafter $0$ again, this time by changing `succ (succ 0)`\ninto `2`.":
+ "Si `h` est une preuve de `X = Y` alors `rw [h]`\ntransformera les `X` en `Y`. Mais que faire si nous voulons\ntransformer les `Y` en `X` ? Pour indiquer à la tactique `rw`\nque nous voulons cela, nous utilisons une flèche gauche `←`. Tapez\n`\\l` puis appuyez sur la barre d'espace pour obtenir cette flèche.\n\nProuvons à nouveau que $2$ est le nombre après le nombre\naprès $0$, cette fois en changeant `succ (succ 0)`\nen `2`.",
+ "If `a` and `b` are numbers, then `succ_inj a b` is a proof\nthat `succ a = succ b` implies `a = b`. Click on this theorem in the *Peano*\ntab for more information.\n\nPeano had this theorem as an axiom, but in Algorithm World\nwe will show how to prove it in Lean. Right now let's just assume it,\nand let's prove $x+1=4 \\implies x=3$ using it. Again, we will proceed\nby manipulating our hypothesis until it becomes the goal. I will\nwalk you through this level.":
+ "Si `a` et `b` sont des nombres, alors `succ_inj a b` est une preuve\nque `succ a = succ b` implique `a = b`. Cliquez sur ce théorème dans l'onglet *Peano*\npour plus d'informations.\n\nPeano avait ce théorème comme axiome, mais dans le monde Algorithmique\nnous montrerons comment le prouver dans Lean. Pour l'instant, supposons-le simplement,\net prouvons $x+1=4 \\implies x=3$ en l'utilisant. Encore une fois, nous procéderons\nen manipulant notre hypothèse jusqu'à ce qu'elle devienne le but. Je vais\nvous guider à travers ce niveau.",
+ "If $x=y$ and $x \\neq y$ then we can deduce a contradiction.":
+ "Si $x=y$ et $x \\neq y$ alors nous pouvons déduire une contradiction.",
+ "If $x=37$ or $y=42$, then $y=42$ or $x=37$.":
+ "Si $x=37$ ou $y=42$, alors $y=42$ ou $x=37$.",
+ "If $x=37$ and we know that $x=37\\implies y=42$ then we can deduce $y=42$.":
+ "Si $x=37$ et que nous savons que $x=37\\implies y=42$ alors nous pouvons déduire $y=42$.",
+ "If $x+1=4$ then $x=3$.": "Si $x+1=4$ alors $x=3$.",
+ "If $x$ is a number, then $x \\le x$.":
+ "Si $x$ est un nombre, alors $x \\le x$.",
+ "If $x$ is a number, then $x \\le \\operatorname{succ}(x)$.":
+ "Si $x$ est un nombre, alors $x \\le \\operatorname{succ}(x)$.",
+ "If $x$ is a number, then $0 \\le x$.":
+ "Si $x$ est un nombre, alors $0 \\le x$.",
+ "If $x$ and $y$ are numbers, then either $x \\leq y$ or $y \\leq x$.":
+ "Si $x$ et $y$ sont des nombres, alors soit $x \\leq y$ soit $y \\leq x$.",
+ "If $x$ and $y$ are natural numbers, and $y = x + 7$, then $2y = 2(x + 7)$.":
+ "Si $x$ et $y$ sont des nombres naturels, et $y = x + 7$, alors $2y = 2(x + 7)$.",
+ "If $x$ and $q$ are arbitrary natural numbers, then $37x+q=37x+q.$":
+ "Si $x$ et $q$ sont des nombres naturels arbitraires, alors $37x+q=37x+q.$",
+ "If $x \\leq y$ and $y \\leq z$, then $x \\leq z$.":
+ "Si $x \\leq y$ et $y \\leq z$, alors $x \\leq z$.",
+ "If $x \\leq y$ and $y \\leq x$, then $x = y$.":
+ "Si $x \\leq y$ et $y \\leq x$, alors $x = y$.",
+ "If $x \\leq 2$ then $x = 0$ or $1$ or $2$.":
+ "Si $x \\leq 2$ alors $x = 0$ ou $1$ ou $2$.",
+ "If $x \\leq 1$ then either $x = 0$ or $x = 1$.":
+ "Si $x \\leq 1$ alors soit $x = 0$ soit $x = 1$.",
+ "If $x \\leq 0$, then $x=0$.": "Si $x \\leq 0$, alors $x=0$.",
+ "If $a, b,\\ldots h$ are arbitrary natural numbers, we have\n$(d + f) + (h + (a + c)) + (g + e + b) = a + b + c + d + e + f + g + h$.":
+ "Si $a, b,\\ldots h$ sont des nombres naturels arbitraires, nous avons\n$(d + f) + (h + (a + c)) + (g + e + b) = a + b + c + d + e + f + g + h$.",
+ "If $a, b, c$ are numbers, then $a+(b+c)=b+(a+c)$.":
+ "Si $a, b, c$ sont des nombres, alors $a+(b+c)=b+(a+c)$.",
+ "If $a, b$, $c$ and $d$ are numbers, we have\n$(a + b) + (c + d) = ((a + c) + d) + b.$":
+ "Si $a, b$, $c$ et $d$ sont des nombres, nous avons\n$(a + b) + (c + d) = ((a + c) + d) + b.$",
+ "If $a, b$ and $c$ are arbitrary natural numbers, we have\n$(a + b) + c = (a + c) + b$.":
+ "Si $a, b$ et $c$ sont des nombres naturels arbitraires, nous avons\n$(a + b) + c = (a + c) + b$.",
+ "If $a+b=0$ then $b=0$.": "Si $a+b=0$ alors $b=0$.",
+ "If $a+b=0$ then $a=0$.": "Si $a+b=0$ alors $a=0$.",
+ "If $a \\neq b$ then $\\operatorname{succ}(a) \\neq\\operatorname{succ}(b)$.":
+ "Si $a \\neq b$ alors $\\operatorname{succ}(a) \\neq\\operatorname{succ}(b)$.",
+ "If $\\operatorname{succ}(x) \\leq \\operatorname{succ}(y)$ then $x \\leq y$.":
+ "Si $\\operatorname{succ}(x) \\leq \\operatorname{succ}(y)$ alors $x \\leq y$.",
+ "If $\\operatorname{succ}(a)=\\operatorname{succ}(b)$ then $a=b$.":
+ "Si $\\operatorname{succ}(a)=\\operatorname{succ}(b)$ alors $a=b$.",
+ "How should we define `37 * x`? Just like addition, we need to give definitions\nwhen $x=0$ and when $x$ is a successor.\n\nThe zero case is easy: we define `37 * 0` to be `0`. Now say we know\n`37 * d`. What should `37 * succ d` be? Well, that's $(d+1)$ $37$s,\nso it should be `37 * d + 37`.\n\nHere are the definitions in Lean.\n\n  * `mul_zero a : a * 0 = 0`\n  * `mul_succ a d : a * succ d = a * d + a`\n\nIn this world, we must not only prove facts about multiplication like `a * b = b * a`,\nwe must also prove facts about how multiplication interacts with addition, like `a * (b + c) = a * b + a * c`.\nLet's get started.":
+ "Comment devrions-nous définir `37 * x` ? Tout comme pour l'addition, nous devons donner des définitions\nlorsque $x=0$ et lorsque $x$ est un successeur.\n\nLe cas zéro est facile : nous définissons `37 * 0` comme `0`. Maintenant, disons que nous connaissons\n`37 * d`. Que devrait être `37 * succ d` ? Eh bien, c'est $(d+1)$ fois $37$,\ndonc cela devrait être `37 * d + 37`.\n\nVoici les définitions dans Lean.\n\n  * `mul_zero a : a * 0 = 0`\n  * `mul_succ a d : a * succ d = a * d + a`\n\nDans ce monde, nous devons non seulement prouver des faits sur la multiplication comme `a * b = b * a`,\nmais aussi des faits sur la façon dont la multiplication interagit avec l'addition, comme `a * (b + c) = a * b + a * c`.\nCommençons.",
+ "How about this for a proof:\n```\nrepeat rw [add_comm n]\nexact add_right_cancel a b n\n```":
+ "Que pensez-vous de cette preuve :\n```\nrepeat rw [add_comm n]\nexact add_right_cancel a b n\n```",
+ "How about this for a proof:\n\n```\nrw [add_comm]\nexact add_right_eq_zero b a\n```\n\nThat's the end of Advanced Addition World! You'll need these theorems\nfor the next world, `≤` World. Click on \"Home\" to access it.":
+ "Que pensez-vous de cette preuve :\n\n```\nrw [add_comm]\nexact add_right_eq_zero b a\n```\n\nC'est la fin du monde de l'Addition Avancée ! Vous aurez besoin de ces théorèmes\npour le prochain monde, le monde `≤`. Cliquez sur \"Quitter le monde\" pour y accéder.",
+ "Here's what I was thinking of:\n```\napply mul_left_ne_zero at h\napply one_le_of_ne_zero at h\napply mul_le_mul_right 1 b a at h\nrw [one_mul, mul_comm] at h\nexact h\n```":
+ "Voici ce que j'avais en tête :\n```\napply mul_left_ne_zero at h\napply one_le_of_ne_zero at h\napply mul_le_mul_right 1 b a at h\nrw [one_mul, mul_comm] at h\nexact h\n```",
+ "Here's the short proof:\n```\nhave h2 := mul_ne_zero a b\ntauto\n```\nThis works because, given `mul_ne_zero a b`,\nthe argument is reduced to pure logic.":
+ "Voici la preuve courte :\n```\nhave h2 := mul_ne_zero a b\ntauto\n```\nCela fonctionne car, étant donné `mul_ne_zero a b`,\nl'argument se réduit à de la pure logique.",
+ "Here's my solution:\n```\nrw [two_eq_succ_one, succ_mul, one_mul]\nrfl\n```":
+ "Voici ma solution :\n```\nrw [two_eq_succ_one, succ_mul, one_mul]\nrfl\n```",
+ "Here's my solution:\n```\nrw [mul_comm, mul_one]\nrfl\n```":
+ "Voici ma solution :\n```\nrw [mul_comm, mul_one]\nrfl\n```",
+ "Here's my solution:\n```\ninduction c with d hd\nrw [add_zero, mul_zero, add_zero]\nrfl\nrw [add_succ, mul_succ, hd, mul_succ, add_assoc]\nrfl\n```\n\nInducting on `a` or `b` also works, but might take longer.":
+ "Voici ma solution :\n```\ninduction c with d hd\nrw [add_zero, mul_zero, add_zero]\nrfl\nrw [add_succ, mul_succ, hd, mul_succ, add_assoc]\nrfl\n```\n\nL'induction sur `a` ou `b` fonctionne aussi, mais pourrait prendre plus de temps à écrire.",
+ "Here's my proof:\n```\nrw [mul_comm, mul_add]\nrepeat rw [mul_comm c]\nrfl\n```":
+ "Voici ma preuve :\n```\nrw [mul_comm, mul_add]\nrepeat rw [mul_comm c]\nrfl\n```",
+ "Here's my proof:\n```\nintro h\nrw [add_succ, add_succ, add_zero] at h\nrepeat apply succ_inj at h\napply zero_ne_succ at h\nexact h\n```\n\nEven though Lean is a theorem prover, right now it's pretty clear that we have not\ndeveloped enough material to make it an adequate calculator. In Algorithm\nWorld, a more computer-sciency world, we will develop machinery which makes\nquestions like this much easier, and goals like $20 + 20 ≠ 41$ feasible.\nAlternatively you can do more mathematics in Advanced Addition World, where we prove\nthe lemmas needed to get a working theory of inequalities. Click \"Home\" and\ndecide your route.":
+ "Voici ma preuve :\n```\nintro h\nrw [add_succ, add_succ, add_zero] at h\nrepeat apply succ_inj at h\napply zero_ne_succ at h\nexact h\n```\n\nBien que Lean soit un prouveur de théorèmes, il est clair que nous n'avons pas\ndéveloppé suffisamment de matériel pour en faire une calculatrice adéquate. Dans le monde Algorithmique,\nun monde plus informatique, nous développerons des mécanismes qui rendent\ndes questions comme celle-ci beaucoup plus faciles, et des buts comme $20 + 20 ≠ 41$ réalisables.\nAlternativement, vous pouvez faire plus de mathématiques dans le monde de l'Addition Avancée, où nous prouvons\nles lemmes nécessaires pour obtenir une théorie opérationnelle des inégalités. Cliquez sur \"Quitter le monde\" et\ndécidez de votre route.",
+ "Here's my proof:\n```\ncases x with y\nleft\nrfl\nrw [one_eq_succ_zero] at hx ⊢\napply succ_le_succ at hx\napply le_zero at hx\nrw [hx]\nright\nrfl\n```\n\nIf you solved this level then you should be fine with the next level!":
+ "Voici ma preuve :\n```\ncases x with y\nleft\nrfl\nrw [one_eq_succ_zero] at hx ⊢\napply succ_le_succ at hx\napply le_zero at hx\nrw [hx]\nright\nrfl\n```\n\nSi vous avez résolu ce niveau, vous devriez vous en sortir avec le niveau suivant !",
+ "Here's my proof:\n```\ncases hxy with a ha\ncases hyx with b hb\nrw [ha]\nrw [ha, add_assoc] at hb\nsymm at hb\napply add_right_eq_self at hb\napply add_right_eq_zero at hb\nrw [hb, add_zero]\nrfl\n```\n\nA passing mathematician remarks that with antisymmetry as well,\nyou have proved that `≤` is a *partial order* on `ℕ`.\n\nThe boss level of this world is to prove\nthat `≤` is a total order. Let's learn two more easy tactics\nfirst.":
+ "Voici ma preuve :\n```\ncases hxy with a ha\ncases hyx with b hb\nrw [ha]\nrw [ha, add_assoc] at hb\nsymm at hb\napply add_right_eq_self at hb\napply add_right_eq_zero at hb\nrw [hb, add_zero]\nrfl\n```\n\nUn mathématicien de passage remarque qu'avec l'antisymétrie aussi,\nvous avez prouvé que `≤` est un *ordre partiel* sur `ℕ`.\n\nLe niveau boss de ce monde est de prouver\nque `≤` est un ordre total. Apprenons d'abord deux autres tactiques faciles.",
+ "Here's my proof:\n```\ncases hx with d hd\nuse d\nrw [succ_add] at hd\napply succ_inj at hd\nexact hd\n```":
+ "Voici ma preuve :\n```\ncases hx with d hd\nuse d\nrw [succ_add] at hd\napply succ_inj at hd\nexact hd\n```",
+ "Here's a two-liner:\n```\nuse 1\nexact succ_eq_add_one x\n```\n\nThis works because `succ_eq_add_one x` is a proof of `succ x = x + 1`.":
+ "Voici une solution en deux lignes :\n```\nuse 1\nexact succ_eq_add_one x\n```\n\nCela fonctionne car `succ_eq_add_one x` est une preuve de `succ x = x + 1`.",
+ "Here's a two-line proof:\n```\nrepeat rw [zero_add] at h\nexact h\n```":
+ "Voici une preuve en deux lignes :\n```\nrepeat rw [zero_add] at h\nexact h\n```",
+ "Here's a proof using `add_left_eq_self`:\n```\nrw [add_comm]\nintro h\napply add_left_eq_self at h\nexact h\n```\n\nand here's an even shorter one using the same idea:\n```\nrw [add_comm]\nexact add_left_eq_self y x\n```\n\nAlternatively you can just prove it by induction on `x`:\n\n```\ninduction x with d hd\nintro h\nrw [zero_add] at h\nexact h\nintro h\nrw [succ_add] at h\napply succ_inj at h\napply hd at h\nexact h\n```":
+ "Voici une preuve utilisant `add_left_eq_self` :\n```\nrw [add_comm]\nintro h\napply add_left_eq_self at h\nexact h\n```\n\net en voici une encore plus courte utilisant la même idée :\n```\nrw [add_comm]\nexact add_left_eq_self y x\n```\n\nAlternativement, vous pouvez simplement le prouver par induction sur `x` :\n\n```\ninduction x with d hd\nintro h\nrw [zero_add] at h\nexact h\nintro h\nrw [succ_add] at h\napply succ_inj at h\napply hd at h\nexact h\n```",
+ "Here's a completely backwards proof:\n```\nintro h\napply succ_inj\nrepeat rw [succ_eq_add_one]\nexact h\n```":
+ "Voici une preuve complètement à l'envers :\n```\nintro h\napply succ_inj\nrepeat rw [succ_eq_add_one]\nexact h\n```",
+ "Here we want to deal with the cases `b = 0` and `b ≠ 0` separately,\nso start with `cases b with d`.":
+ "Ici, nous voulons traiter les cas `b = 0` et `b ≠ 0` séparément,\ndonc commencez par `cases b with d`.",
+ "Here we begin to\ndevelop an algorithm which, given two naturals `a` and `b`, returns the answer\nto \"does `a = b`?\"\n\nHere is the algorithm. First note that `a` and `b` are numbers, and hence\nare either `0` or successors.\n\n*) If `a` and `b` are both `0`, return \"yes\".\n\n*) If one is `0` and the other is `succ n`, return \"no\".\n\n*) If `a = succ m` and `b = succ n`, then return the answer to \"does `m = n`?\"\n\nOur job now is to *prove* that this algorithm always gives the correct answer. The proof that\n`0 = 0` is `rfl`. The proof that `0 ≠ succ n` is `zero_ne_succ n`, and the proof\nthat `succ m ≠ 0` is `succ_ne_zero m`. The proof that if `h : m = n` then\n`succ m = succ n` is `rw [h]` and then `rfl`. This level is a proof of the one\nremaining job we have to do: if `a ≠ b` then `succ a ≠ succ b`.":
+ "Ici, nous commençons à\ndévelopper un algorithme qui, étant donnés deux naturels `a` et `b`, renvoie la réponse\nà \"`a = b` ?\"\n\nVoici l'algorithme. D'abord, notez que `a` et `b` sont des nombres, et donc\nsont soit `0` soit des successeurs.\n\n*) Si `a` et `b` sont tous deux `0`, renvoyer \"oui\".\n\n*) Si l'un est `0` et l'autre est `succ n`, renvoyer \"non\".\n\n*) Si `a = succ m` et `b = succ n`, alors renvoyer la réponse à \"`m = n` ?\"\n\nNotre travail maintenant est de *prouver* que cet algorithme donne toujours la bonne réponse. La preuve de\n`0 = 0` est `rfl`. La preuve que `0 ≠ succ n` est `zero_ne_succ n`, et la preuve\nque `succ m ≠ 0` est `succ_ne_zero m`. La preuve que si `h : m = n` alors\n`succ m = succ n` est `rw [h]` puis `rfl`. Ce niveau est une preuve de la seule\ntâche restante que nous devons faire : si `a ≠ b` alors `succ a ≠ succ b`.",
+ "Here is an example proof of 2+2=4 showing off various techniques.\n\n```lean\nnth_rewrite 2 [two_eq_succ_one] -- only change the second `2` to `succ 1`.\nrw [add_succ]\nrw [one_eq_succ_zero]\nrw [add_succ, add_zero] -- two rewrites at once\nrw [← three_eq_succ_two] -- change `succ 2` to `3`\nrw [← four_eq_succ_three]\nrfl\n```\n\nOptional extra: you can run this proof yourself. Switch the game into \"Editor mode\" by clicking\non the `</>` button in the top right. You can now see your proof\nwritten as several lines of code. Move your cursor between lines to see\nthe goal state at any point. Now cut and paste your code elsewhere if you\nwant to save it, and paste the above proof in instead. Move your cursor\naround to investigate. When you've finished, click the `>_` button in the top right to\nmove back into \"Typewriter mode\".\n\nYou have finished tutorial world!\nClick \"Home\" to go back to the\noverworld, and select Addition World, where you will learn\nabout the `induction` tactic.":
+ "Voici un exemple de preuve de 2+2=4 montrant diverses techniques.\n\n```lean\nnth_rewrite 2 [two_eq_succ_one] -- ne change que le deuxième `2` en `succ 1`\nrw [add_succ]\nrw [one_eq_succ_zero]\nrw [add_succ, add_zero] -- deux réécritures en une fois\nrw [← three_eq_succ_two] -- change `succ 2` en `3`\nrw [← four_eq_succ_three]\nrfl\n```\n\nOption supplémentaire : vous pouvez exécuter cette preuve vous-même. Passez le jeu en \"Mode Éditeur\" en cliquant\nsur le bouton `</>` en haut à droite. Vous pouvez maintenant voir votre preuve\nécrite sous forme de plusieurs lignes de code. Déplacez votre curseur entre les lignes pour voir\nl'état du but à tout moment. Maintenant, copiez et collez votre code ailleurs si vous\nvoulez le sauvegarder, et collez la preuve ci-dessus à la place. Déplacez votre curseur\nautour pour examiner. Lorsque vous avez terminé, cliquez sur le bouton `>_` en haut à droite pour\nrevenir en \"Mode Machine à écrire\".\n\nVous avez terminé le monde tutoriel !\nCliquez sur \"Quitter le monde\" pour revenir au\nmonde principal, et sélectionnez Addition World, où vous apprendrez\nla tactique `induction`.",
+ "Having to rearrange variables manually using commutativity and\nassociativity is very tedious. We start by reminding you of this. `add_left_comm`\nis a key component in the first algorithm which we'll explain, but we need\nto prove it manually.\n\nRemember that you can do precision commutativity rewriting\nwith things like `rw [add_comm b c]`. And remember that\n`a + b + c` means `(a + b) + c`.":
+ "Devoir réarranger manuellement les variables en utilisant la commutativité et\nl'associativité est très fastidieux. Nous commençons par vous le rappeler. `add_left_comm`\nest un composant clé du premier algorithme que nous expliquerons, mais nous devons\nd'abord le prouver manuellement.\n\nRappelez-vous que vous pouvez faire des réécritures de commutativité précises\navec des choses comme `rw [add_comm b c]`. Et rappelez-vous que\n`a + b + c` signifie `(a + b) + c`.",
+ "Good luck!\n\n  One last hint. If `h : X = Y` then `rw [h]` will change *all* `X`s into `Y`s.\n  If you only want to change one of them, say the 3rd one, then use\n  `nth_rewrite 3 [h]`.":
+ "Bonne chance !\n\n  Un dernier indice. Si `h : X = Y` alors `rw [h]` changera *tous* les `X` en `Y`.\n  Si vous ne voulez en changer qu'un seul, disons le 3ème, alors utilisez\n  `nth_rewrite 3 [h]`.",
+ "For any natural number $m$, we have $ m \\times 1 = m$.":
+ "Pour tout nombre naturel $m$, nous avons $ m \\times 1 = m$.",
+ "For any natural number $m$, we have $ 2 \\times m = m+m$.":
+ "Pour tout nombre naturel $m$, nous avons $ 2 \\times m = m+m$.",
+ "For any natural number $m$, we have $ 1 \\times m = m$.":
+ "Pour tout nombre naturel $m$, nous avons $ 1 \\times m = m$.",
+ "For all numbers $m$, $0 ^{\\operatorname{succ} (m)} = 0$.":
+ "Pour tous les nombres $m$, $0 ^{\\operatorname{succ} (m)} = 0$.",
+ "For all numbers $a$ and $b$, we have\n$$(a+b)^2=a^2+b^2+2ab.$$":
+ "Pour tous les nombres $a$ et $b$, nous avons\n$$(a+b)^2=a^2+b^2+2ab.$$",
+ "For all naturals $m$, $1 ^ m = 1$.":
+ "Pour tous les naturels $m$, $1 ^ m = 1$.",
+ "For all naturals $a$, $m$, $n$, we have $a^{m + n} = a ^ m  a ^ n$.":
+ "Pour tous les naturels $a$, $m$, $n$, nous avons $a^{m + n} = a ^ m  a ^ n$.",
+ "For all naturals $a$, $m$, $n$, we have $(a ^ m) ^ n = a ^ {mn}$.":
+ "Pour tous les naturels $a$, $m$, $n$, nous avons $(a ^ m) ^ n = a ^ {mn}$.",
+ "For all naturals $a$, $b$, $n$, we have $(ab) ^ n = a ^ nb ^ n$.":
+ "Pour tous les naturels $a$, $b$, $n$, nous avons $(ab) ^ n = a ^ nb ^ n$.",
+ "For all naturals $a$, $a ^ 2 = a \\times a$.":
+ "Pour tous les naturels $a$, $a ^ 2 = a \\times a$.",
+ "For all naturals $a$, $a ^ 1 = a$.":
+ "Pour tous les naturels $a$, $a ^ 1 = a$.",
+ "For all naturals $a$ $b$ $c$ and $n$, we have\n$$(a+1)^{n+3}+(b+1)^{n+3}\\not=(c+1)^{n+3}.$$":
+ "Pour tous les naturels $a$ $b$ $c$ et $n$, nous avons\n$$(a+1)^{n+3}+(b+1)^{n+3}\\not=(c+1)^{n+3}.$$",
+ "For all natural numbers $n$, we have $0 + n = n$.":
+ "Pour tous les nombres naturels $n$, nous avons $0 + n = n$.",
+ "For all natural numbers $m$, we have $ 0 \\times m = 0$.":
+ "Pour tous les nombres naturels $m$, nous avons $ 0 \\times m = 0$.",
+ "For all natural numbers $a, b$, we have\n$ \\operatorname{succ}(a) + b = \\operatorname{succ}(a + b)$.":
+ "Pour tous les nombres naturels $a, b$, nous avons\n$ \\operatorname{succ}(a) + b = \\operatorname{succ}(a + b)$.",
+ "For all natural numbers $a$, we have $\\operatorname{succ}(a) = a+1$.":
+ "Pour tout nombre naturel $a$, nous avons $\\operatorname{succ}(a) = a+1$.",
+ "For all natural numbers $a$ and $b$, we have\n$(\\operatorname{succ}\\ a) \\times b = a\\times b + b$.":
+ "Pour tous les nombres naturels $a$ et $b$, nous avons\n$(\\operatorname{succ}\\ a) \\times b = a\\times b + b$.",
+ "First execute `rw [h]` to replace the `y` with `x + 7`.":
+ "Commencez par exécuter `rw [h]` pour remplacer `y` par `x + 7`.",
+ "Finally use a targeted `add_comm` to switch `b` and `d`":
+ "Enfin, utilisez un `add_comm` ciblé pour échanger `b` et `d`",
+ "Fermat's Last Theorem": "Grand théorème de Fermat",
+ "Every number in Lean is either $0$ or a successor. We know how to add $0$,\nbut we need to figure out how to add successors. Let's say we already know\nthat `37 + d = q`. What should the answer to `37 + succ d` be? Well,\n`succ d` is one bigger than `d`, so `37 + succ d` should be `succ q`,\nthe number one bigger than `q`. More generally `x + succ d` should\nbe `succ (x + d)`. Let's add this as a lemma.\n\n* `add_succ x d : x + succ d = succ (x + d)`\n\nIf you ever see `... + succ ...` in your goal, `rw [add_succ]` is\nnormally a good idea.\n\nLet's now prove that `succ n = n + 1`. Figure out how to get `+ succ` into\nthe picture, and then `rw [add_succ]`. Switch between the `+` (addition) and\n`012` (numerals) tabs under \"Theorems\" on the right to\nsee which proofs you can rewrite.":
+ "Chaque nombre dans Lean est soit $0$, soit un successeur. Nous savons comment ajouter $0$,\nmais nous devons comprendre comment ajouter des successeurs. Disons que nous savons déjà\nque `37 + d = q`. Que devrait être la réponse à `37 + succ d` ? Eh bien,\n`succ d` est un de plus que `d`, donc `37 + succ d` devrait être `succ q`,\nle nombre un de plus que `q`. Plus généralement, `x + succ d` devrait\nêtre `succ (x + d)`. Ajoutons cela comme lemme.\n\n* `add_succ x d : x + succ d = succ (x + d)`\n\nSi vous voyez `... + succ ...` dans votre but, `rw [add_succ]` est\ngénéralement une bonne idée.\n\nProuvons maintenant que `succ n = n + 1`. Trouvez comment introduire `+ succ`\ndans notre situation, puis `rw [add_succ]`. Alternez entre les onglets `+` (addition) et\n`012` (numéraux) sous \"Théorèmes\" à droite pour\nvoir quelles preuves vous pouvez réécrire.",
+ "Do that again!\n\n`rw [zero_add] at «{h}»` tries to fill in\nthe arguments to `zero_add` (finding `«{x}»`) then it replaces all occurrences of\n`0 + «{x}»` it finds. Therefor, it did not rewrite `0 + «{y}»`, yet.":
+ "Faites-le encore !\n\n`rw [zero_add] at «{h}»` essaie de remplir\nles arguments de `zero_add` (trouvant `«{x}»`) puis remplace toutes les occurrences de\n`0 + «{x}»` qu'il trouve. Par conséquent, il n'a pas réécrit `0 + «{y}»` pour l'instant.",
+ "Did you use induction on `y`?\nHere's a two-line proof of `add_left_eq_self` which uses `add_right_cancel`.\nIf you want to inspect it, you can go into editor mode by clicking `</>` in the top right\nand then just cut and paste the proof and move your cursor around it\nto see the hypotheses and goal at any given point\n(although you'll lose your own proof this way). Click `>_` to get\nback to command line mode.\n```\nnth_rewrite 2 [← zero_add y]\nexact add_right_cancel x 0 y\n```":
+ "Avez-vous utilisé l'induction sur `y` ?\nVoici une preuve en deux lignes de `add_left_eq_self` qui utilise `add_right_cancel`.\nSi vous voulez l'inspecter, vous pouvez passer en mode éditeur en cliquant sur `</>` en haut à droite\npuis copier et coller la preuve et déplacer votre curseur autour\npour voir les hypothèses et le but à n'importe quel point\n(bien que vous perdiez ainsi votre propre preuve). Cliquez sur `>_` pour\nrevenir en mode ligne de commande.\n```\nnth_rewrite 2 [← zero_add y]\nexact add_right_cancel x 0 y\n```",
+ "Dealing with `or`": "Gérer `or`",
+ "Congratulations! You've finished Algorithm World. These algorithms\nwill be helpful for you in Even-Odd World (when someone gets around to\nimplementing it).":
+ "Félicitations ! Vous avez terminé le monde Algorithmique. Ces algorithmes\nvous seront utiles dans le monde Pair-Impair (quand quelqu'un trouvera le temps\nde l'implémenter).",
+ "Congratulations! You have proved Fermat's Last Theorem!\n\nEither that, or you used magic...":
+ "Félicitations ! Vous avez prouvé le dernier théorème de Fermat !\n\nSoit cela, soit vous avez utilisé de la magie...",
+ "Congratulations! You completed your first verified proof!\n\nRemember that `rfl` is a *tactic*. If you ever want information about the `rfl` tactic,\nyou can click on `rfl` in the list of tactics on the right.\n\nNow click on \"Next\" to learn about the `rw` tactic.":
+ "Félicitations ! Vous avez complété votre première preuve vérifiée !\n\nRappelez-vous que `rfl` est une *tactique*. Si vous voulez des informations sur la tactique `rfl`,\nvous pouvez cliquer sur `rfl` dans la liste des tactiques à droite.\n\nCliquez maintenant sur \"Suivant\" pour apprendre la tactique `rw`.",
+ "Concretely: `rw [← succ_eq_add_one] at h`.":
+ "Concrètement : `rw [← succ_eq_add_one] at h`.",
+ "Can you take it from here? Click on \"Show more help!\" if you need a hint.":
+ "Pouvez-vous continuer ? Cliquez sur \"Afficher plus d'aide !\" si vous avez besoin d'un indice.",
+ "Can you take it from here? (note: if you try `contrapose! h` again, it will\ntake you back to where you started!)":
+ "Pouvez-vous continuer ? (note : si vous essayez `contrapose! h` à nouveau, cela vous\nramènera à votre point de départ !)",
+ "Can you take it from here?": "Pouvez-vous continuer ?",
+ "Can you now change the goal into `2 = 2`?":
+ "Pouvez-vous maintenant changer le but en `2 = 2` ?",
+ "At this point you see the term `0 + «{d}»`, so you can use the\ninduction hypothesis with `rw [«{hd}»]`.":
+ "À ce stade, vous voyez le terme `0 + «{d}»`, donc vous pouvez utiliser\nl'hypothèse d'induction avec `rw [«{hd}»]`.",
+ "Assuming $x+y=37$ and $3x+z=42$, we have $x+y=37$.":
+ "En supposant $x+y=37$ et $3x+z=42$, nous avons $x+y=37$.",
+ "Assuming $0+x=(0+y)+2$, we have $x=y+2$.":
+ "En supposant $0+x=(0+y)+2$, nous avons $x=y+2$.",
+ "As warm-up for `2 + 2 ≠ 5` let's prove `0 ≠ 1`. To do this we need to\nintroduce Peano's last axiom `zero_ne_succ n`, a proof that `0 ≠ succ n`.\nTo learn about this result, click on it in the list of lemmas on the right.":
+ "Comme échauffement pour `2 + 2 ≠ 5`, prouvons `0 ≠ 1`. Pour cela, nous devons\nintroduire le dernier axiome de Peano `zero_ne_succ n`, une preuve que `0 ≠ succ n`.\nPour en savoir plus sur ce résultat, cliquez dessus dans la liste des lemmes à droite.",
+ "Arguing backwards": "Argumenter à l'envers",
+ "Applying a proof of $P\\implies Q$ to the *goal* changes $Q$ to $P$.\nNow try `rw [succ_eq_add_one]` to make the goal more like the hypothesis.":
+ "Appliquer une preuve de $P\\implies Q$ au *but* change $Q$ en $P$.\nEssayez maintenant `rw [succ_eq_add_one]` pour rendre le but plus semblable à l'hypothèse.",
+ "And now we've deduced what we wanted to prove: the goal is one of our assumptions.\nFinish the level with `exact h`.":
+ "Et maintenant nous avons déduit ce que nous voulions prouver : le but est une de nos hypothèses.\nTerminez le niveau avec `exact h`.",
+ "And now `rw [add_zero]`": "Et maintenant `rw [add_zero]`",
+ "And finally `rfl`.": "Et enfin `rfl`.",
+ "An algorithm for equality": "Un algorithme pour l'égalité",
+ "Although $0^0=1$ in this game, $0^n=0$ if $n>0$, i.e., if\n$n$ is a successor.":
+ "Bien que $0^0=1$ dans ce jeu, $0^n=0$ si $n>0$, c'est-à-dire si\n$n$ est un successeur.",
+ "Algorithm World": "Monde Algorithmique",
+ "Advanced Multiplication World": "Monde de la Multiplication Avancée",
+ "Advanced Addition World": "Monde de l'Addition Avancée",
+ "Advanced *Addition* World proved various implications\ninvolving addition, such as `x + y = 0 → x = 0` and `x + y = x → y = 0`.\nThese lemmas were used to prove basic facts about ≤ in ≤ World.\n\nIn Advanced Multiplication World we prove analogous\nfacts about multiplication, such as `x * y = 1 → x = 1`, and\n`x * y = x → y = 1` (assuming `x ≠ 0` in the latter result). This will prepare\nus for Divisibility World.\n\nMultiplication World is more complex than Addition World. In the same\nway, Advanced Multiplication world is more complex than Advanced Addition\nWorld. One reason for this is that certain intermediate results are only\ntrue under the additional hypothesis that one of the variables is non-zero.\nThis causes some unexpected extra twists.":
+ "Le Monde de l'Addition Avancée a prouvé diverses implications\nimpliquant l'addition, telles que `x + y = 0 → x = 0` et `x + y = x → y = 0`.\nCes lemmes ont été utilisés pour prouver des faits de base sur ≤ dans le Monde ≤.\n\nDans le Monde de la Multiplication Avancée, nous prouvons des résultats\nanalogues sur la multiplication, tels que `x * y = 1 → x = 1`, et\n`x * y = x → y = 1` (en supposant `x ≠ 0` pour ce dernier résultat). Cela nous préparera\nau Monde de la Divisibilité.\n\nLe Monde de la Multiplication est plus complexe que le Monde de l'Addition. De la même\nmanière, le Monde de la Multiplication Avancée est plus complexe que le Monde de l'Addition Avancée.\nUne raison est que certains résultats intermédiaires ne sont vrais\nque sous l'hypothèse supplémentaire qu'une des variables est non nulle.\nCela crée des complications inattendues.",
+ "Addition is distributive over multiplication.\nIn other words, for all natural numbers $a$, $b$ and $c$, we have\n$(a + b) \\times c = ac + bc$.":
+ "L'addition est distributive sur la multiplication.\nAutrement dit, pour tous les nombres naturels $a$, $b$ et $c$, nous avons\n$(a + b) \\times c = ac + bc$.",
+ "Addition World": "Monde de l'Addition",
+ "Adding zero": "Ajouter zéro",
+ "A two-line proof is\n\n```\nnth_rewrite 2 [← mul_one a] at h\nexact mul_left_cancel a b 1 ha h\n```\n\nWe now have all the tools necessary to set up the basic theory of divisibility of naturals.":
+ "Une preuve en deux lignes est :\n\n```\nnth_rewrite 2 [← mul_one a] at h\nexact mul_left_cancel a b 1 ha h\n```\n\nNous avons maintenant tous les outils nécessaires pour établir la théorie de base sur la divisibilité des entiers naturels.",
+ "A proof that $a+b=0 \\implies b=0$.": "Une preuve que $a+b=0 \\implies b=0$.",
+ "A proof that $a+b=0 \\implies a=0$.": "Une preuve que $a+b=0 \\implies a=0$.",
+ "A passing mathematician remarks that with reflexivity and transitivity out of the way,\nyou have proved that `≤` is a *preorder* on `ℕ`.":
+ "Un mathématicien de passage remarque qu'avec la réflexivité et la transitivité,\n vous avez prouvé que `≤` est un *préordre* sur `ℕ`.",
+ "A passing mathematician notes that you've proved\nthat the natural numbers are a commutative semiring.\n\nIf you want to begin your journey to the final boss, head for Power World.":
+ "Un mathématicien de passage vous félicite d'avoir prouvé\nque les nombres naturels forment un semi-anneau commutatif.\n\nSi vous voulez commencer votre voyage vers le boss final, dirigez-vous vers le monde des Puissances.",
+ "A passing mathematician congratulates you on proving that naturals\nare an additive commutative monoid.\n\nLet's practice using `add_assoc` and `add_comm` in one more level,\nbefore we leave addition world.":
+ "Un mathématicien de passage vous félicite d'avoir prouvé que les entiers naturels\nforment un monoïde commutatif additif.\n\nSi vous voulez vous entraîner à utiliser `add_assoc` et `add_comm` dans un niveau supplémentaire,\navant de quitter le monde de l'addition.",
+ "2+2=4": "2+2=4",
+ "2 + 2 ≠ 5 is boring to prove in full, given only the tools we have currently.\nTo make it a bit less painful, I have unfolded all of the numerals for you.\nSee if you can use `zero_ne_succ` and `succ_inj` to prove this.":
+ "2 + 2 ≠ 5 est ennuyeux à prouver entièrement, avec les seuls outils dont nous disposons actuellement.\nPour le rendre un peu moins pénible, j'ai développé tous les entiers pour vous.\nVoyez si vous pouvez utiliser `zero_ne_succ` et `succ_inj` pour le prouver.",
+ "2 + 2 ≠ 5": "2 + 2 ≠ 5",
+ "1 ≠ 0": "1 ≠ 0",
+ "0 ≤ x": "0 ≤ x",
+ "*Game version: 4.3*\n\n*Recent additions: bug fixes*\n\n## Progress saving\n\nThe game stores your progress in your local browser storage.\nIf you delete it, your progress will be lost!\n\nWarning: In most browsers, deleting cookies will also clear the local storage\n(or \"local site data\"). Make sure to download your game progress first!\n\n## Credits\n\n* **Creators:** Kevin Buzzard, Jon Eugster\n* **Original Lean3-version:** Kevin Buzzard, Mohammad Pedramfar\n* **Game Engine:** Alexander Bentkamp, Jon Eugster, Patrick Massot\n* **Additional levels:** Sian Carey, Ivan Farabella, Archie Browne.\n* **Additional thanks:** All the student beta testers, all the schools\nwho invited Kevin to speak, and all the schoolkids who asked him questions\nabout the material.\n\n## Resources\n\n* The [Lean Zulip chat](https://leanprover.zulipchat.com/) forum\n* [Original Lean3 version](https://github.com/ImperialCollegeLondon/natural_number_game/) (no longer maintained)\n\n## Problems?\n\nPlease ask any questions about this game in the\n[Lean Zulip chat](https://leanprover.zulipchat.com/) forum, for example in\nthe stream \"New Members\". The community will happily help. Note that\nthe Lean Zulip chat is a professional research forum.\nPlease use your full real name there, stay on topic, and be nice. If you're\nlooking for somewhere less formal (e.g. you want to post natural number\ngame memes) then head on over to the [Lean Discord](https://discord.gg/WZ9bs9UCvx).\n\nAlternatively, if you experience issues / bugs you can also open github issues:\n\n* For issues with the game engine, please open an\n[issue at the lean4game](https://github.com/leanprover-community/lean4game/issues) repo.\n* For issues about the game's content, please open an\n[issue at the NNG](https://github.com/hhu-adam/NNG4/issues) repo.":
+ "*Version du jeu : 4.3*\n\n*Ajouts récents : corrections de bugs*\n\n## Sauvegarde de la progression\n\nLe jeu stocke votre progression dans le stockage local de votre navigateur.\nSi vous le supprimez, votre progression sera perdue !\n\nAvertissement : Dans la plupart des navigateurs, supprimer les cookies effacera également le stockage local\n(ou \"données locales du site\"). Assurez-vous de télécharger d'abord votre progression dans le jeu !\n\n## Crédits\n\n* **Créateurs :** Kevin Buzzard, Jon Eugster\n* **Version Lean3 originale :** Kevin Buzzard, Mohammad Pedramfar\n* **Moteur de jeu :** Alexander Bentkamp, Jon Eugster, Patrick Massot\n* **Niveaux supplémentaires :** Sian Carey, Ivan Farabella, Archie Browne.\n* **Remerciements supplémentaires :** Tous les bêta-testeurs étudiants, toutes les écoles\nqui ont invité Kevin à parler, et tous les écoliers qui lui ont posé des questions\nsur le contenu.\n\n## Ressources\n\n* Le forum [Lean Zulip chat](https://leanprover.zulipchat.com/)\n* [Version Lean3 originale](https://github.com/ImperialCollegeLondon/natural_number_game/) (non maintenue)\n\n## Problèmes ?\n\nVeuillez poser toute question sur ce jeu dans le forum\n[Lean Zulip chat](https://leanprover.zulipchat.com/), par exemple dans\nle flux \"New Members\". La communauté se fera un plaisir d'aider. Notez que\nle chat Lean Zulip est un forum de recherche professionnel.\nVeuillez utiliser votre vrai nom complet, rester sur le sujet et être courtois. Si vous\ncherchez un endroit moins formel (par exemple pour poster des mèmes sur le jeu des nombres naturels),\nrendez-vous sur le [Discord Lean](https://discord.gg/WZ9bs9UCvx).\n\nAlternativement, si vous rencontrez des problèmes/bugs, vous pouvez ouvrir des issues GitHub :\n\n* Pour les problèmes liés au moteur de jeu, veuillez ouvrir une issue\n[sur le dépôt lean4game](https://github.com/leanprover-community/lean4game/issues).\n* Pour les problèmes liés au contenu du jeu, veuillez ouvrir une issue\n[sur le dépôt NNG](https://github.com/hhu-adam/NNG4/issues).",
+ "$x=37\\implies x=37$.": "$x=37\\implies x=37$.",
+ "$x+y=x\\implies y=0$.": "$x+y=x\\implies y=0$.",
+ "$x+1=y+1 \\implies x=y$.": "$x+1=y+1 \\implies x=y$.",
+ "$x + y = y\\implies x=0.$": "$x + y = y\\implies x=0.$",
+ "$n+a=n+b\\implies a=b$.": "$n+a=n+b\\implies a=b$.",
+ "$a+n=b+n\\implies a=b$.": "$a+n=b+n\\implies a=b$.",
+ "$a+(b+0)+(c+0)=a+b+c.$": "$a+(b+0)+(c+0)=a+b+c.$",
+ "$\\operatorname{succ}(a) \\neq 0$.": "$\\operatorname{succ}(a) \\neq 0$.",
+ "$20+20=40$.": "$20+20=40$.",
+ "$2+2≠5$.": "$2+2≠5$.",
+ "$2+2=4$.": "$2+2=4$.",
+ "$2+2 \\neq 5.$": "$2+2 \\neq 5.$",
+ "$2$ is the number after the number after $0$.":
+ "$2$ est le nombre après le nombre après $0$.",
+ "$1\\neq0$.": "$1\\neq0$.",
+ "$0\\neq1$.": "$0\\neq1$.",
+ "$0 ^ 0 = 1$": "$0 ^ 0 = 1$",
+ "## The birth of number.\n\nNumbers in Lean are defined by two rules.\n\n* `0` is a number.\n* If `n` is a number, then the *successor* `succ n` of `n` is a number.\n\nThe successor of `n` means the number after `n`. Let's learn to\ncount, and name a few small numbers.\n\n## Counting to four.\n\n`0` is a number, so `succ 0` is a number. Let's call this new number `1`.\nSimilarly let's define `2 = succ 1`, `3 = succ 2` and `4 = succ 3`.\nThis gives us plenty of numbers to be getting along with.\n\nThe *proof* that `2 = succ 1` is called `two_eq_succ_one`.\nCheck out the \"012\" tab in the list of lemmas on the right\nfor this and other proofs.\n\nLet's prove that $2$ is the number after the number after zero.":
+ "## La naissance des nombres.\n\nLes nombres dans Lean sont définis par deux règles.\n\n* `0` est un nombre.\n* Si `n` est un nombre, alors le *successeur* `succ n` de `n` est un nombre.\n\nLe successeur de `n` signifie le nombre après `n`. Apprenons à\ncompter et nommons quelques petits nombres.\n\n## Compter jusqu'à quatre.\n\n`0` est un nombre, donc `succ 0` est un nombre. Appelons ce nouveau nombre `1`.\nDe même, définissons `2 = succ 1`, `3 = succ 2` et `4 = succ 3`.\nCela nous donne suffisamment de nombres pour commencer.\n\nLa *preuve* que `2 = succ 1` s'appelle `two_eq_succ_one`.\nConsultez l'onglet \"012\" dans la liste des lemmes à droite\npour cette preuve et d'autres.\n\nProuvons que $2$ est le nombre après le nombre après zéro.",
+ "## Summary\n\n`rfl` proves goals of the form `X = X`.\n\nIn other words, the `rfl` tactic will close any goal of the\nform `A = B` if `A` and `B` are *identical*.\n\n`rfl` is short for \\\"reflexivity (of equality)\\\".\n\n## Example:\n\nIf the goal looks like this:\n\n```\nx + 37 = x + 37\n```\n\nthen `rfl` will close it. But if it looks like `0 + x = x` then `rfl` won't work, because even\nthough $0+x$ and $x$ are always equal as *numbers*, they are not equal as *terms*.\nThe only term which is identical to `0 + x` is `0 + x`.\n\n## Details\n\n`rfl` is short for \\\"reflexivity of equality\\\".\n\n## Game Implementation\n\n*Note that our `rfl` is weaker than the version used in core Lean and `mathlib`,\nfor pedagogical purposes; mathematicians do not distinguish between propositional\nand definitional equality because they think about definitions in a different way\nto type theorists (`zero_add` and `add_zero` are both \\\"facts\\\" as far\nas mathematicians are concerned, and who cares what the definition of addition is).*":
+ "## Résumé\n\n`rfl` prouve les buts de la forme `X = X`.\n\nAutrement dit, la tactique `rfl` fermera tout but de la\nforme `A = B` si `A` et `B` sont *identiques*.\n\n`rfl` est l'abréviation de \"réflexivité (de l'égalité)\".\n\n## Exemple :\n\nSi le but ressemble à ceci :\n\n```\nx + 37 = x + 37\n```\n\nalors `rfl` le fermera. Mais s'il ressemble à `0 + x = x`, alors `rfl` ne fonctionnera pas, car même si\n$0+x$ et $x$ sont toujours égaux en tant que *nombres*, ils ne sont pas égaux en tant que *termes*.\nLe seul terme identique à `0 + x` est `0 + x`.\n\n## Détails\n\n`rfl` est l'abréviation de \"réflexivité de l'égalité\".\n\n## Implémentation dans le jeu\n\n*Notez que, pour des raisons pédagogiques, notre `rfl` est plus faible que la version utilisée dans Lean et `mathlib`,\n ; les mathématiciens ne distinguent pas l'égalité propositionnelle\net l'égalité définitionnelle car ils pensent aux définitions d'une manière différente\ndes théoriciens des types (`zero_add` et `add_zero` sont tous deux des \"faits\"\npour les mathématiciens, et qui se soucie de la définition de l'addition ?).*",
+ "## Summary\n\n`repeat t` repeatedly applies the tactic `t`\nto the goal. You don't need to use this\ntactic, it just speeds things up sometimes.\n\n## Example\n\n`repeat rw [add_zero]` will turn the goal\n`a + 0 + (0 + (0 + 0)) = b + 0 + 0`\ninto the goal\n`a = b`.\n\"\n\nTacticDoc nth_rewrite \"\n## Summary\n\nIf `h : X = Y` and there are several `X`s in the goal, then\n`nth_rewrite 3 [h]` will just change the third `X` to a `Y`.\n\n## Example\n\nIf the goal is `2 + 2 = 4` then `nth_rewrite 2 [two_eq_succ_one]`\nwill change the goal to `2 + succ 1 = 4`. In contrast, `rw [two_eq_succ_one]`\nwill change the goal to `succ 1 + succ 1 = 4`.":
+ "## Résumé\n\n`repeat t` applique répétitivement la tactique `t`\nau but. Vous n'avez pas besoin d'utiliser cette\ntactique, elle accélère simplement les choses parfois.\n\n## Exemple\n\n`repeat rw [add_zero]` transformera le but\n`a + 0 + (0 + (0 + 0)) = b + 0 + 0`\nen le but\n`a = b`.\n\"\n\nTacticDoc nth_rewrite \"\n## Résumé\n\nSi `h : X = Y` et qu'il y a plusieurs `X` dans le but, alors\n`nth_rewrite 3 [h]` ne changera que le troisième `X` en `Y`.\n\n## Exemple\n\nSi le but est `2 + 2 = 4` alors `nth_rewrite 2 [two_eq_succ_one]`\nchangera le but en `2 + succ 1 = 4`. En revanche, `rw [two_eq_succ_one]`\nchangera le but en `succ 1 + succ 1 = 4`.",
+ "## Summary\n\n`repeat t` repeatedly applies the tactic `t`\nto the goal. You don't need to use this\ntactic, it just speeds things up sometimes.\n\n## Example\n\n`repeat rw [add_zero]` will turn the goal\n`a + 0 + (0 + (0 + 0)) = b + 0 + 0`\ninto the goal\n`a = b`.":
+ "## Résumé\n\n`repeat t` applique répétitivement la tactique `t`\nau but. Vous n'avez pas besoin d'utiliser cette\ntactique, elle accélère simplement les choses parfois.\n\n## Exemple\n\n`repeat rw [add_zero]` transformera le but\n`a + 0 + (0 + (0 + 0)) = b + 0 + 0`\nen le but\n`a = b`.",
+ "## Summary\n\nThe `use` tactic makes progress with goals which claim something *exists*.\nIf the goal claims that some `x` exists with some property, and you know\nthat `x = 37` will work, then `use 37` will make progress.\n\nBecause `a ≤ b` is notation for \\\"there exists `c` such that `b = a + c`\\\",\nyou can make progress on goals of the form `a ≤ b` by `use`ing the\nnumber which is morally `b - a` (i.e. `use b - a`)\n\nAny of the following examples is possible assuming the type of the argument passed to the `use` function is accurate:\n\n- `use 37`\n- `use a`\n- `use a * a + 1`":
+ "## Résumé\n\nLa tactique `use` fait progresser les buts qui affirment que quelque chose *existe*.\nSi le but affirme qu'un certain `x` existe avec une certaine propriété, et que vous savez\nque `x = 37` fonctionnera, alors `use 37` fera progresser.\n\nComme `a ≤ b` est une notation pour \"il existe `c` tel que `b = a + c`\",\nvous pouvez faire progresser les buts de la forme `a ≤ b` en utilisant `use` avec le\nnombre qui moralement est `b - a` (c'est-à-dire `use b - a`)\n\nTous les exemples suivants sont possibles en supposant que le type de l'argument passé à la fonction `use` est correct :\n\n- `use 37`\n- `use a`\n- `use a * a + 1`",
+ "## Summary\n\nThe `symm` tactic will change a goal or hypothesis of\nthe form `X = Y` to `Y = X`. It will also work on `X ≠ Y`\nand on `X ↔ Y`.\n\n### Example\n\nIf the goal is `2 + 2 = 4` then `symm` will change it to `4 = 2 + 2`.\n\n### Example\n\nIf `h : 2 + 2 ≠ 5` then `symm at h` will change `h` to `5 ≠ 2 + 2`.":
+ "## Résumé\n\nLa tactique `symm` changera un but ou une hypothèse de\nla forme `X = Y` en `Y = X`. Elle fonctionnera aussi sur `X ≠ Y`\net sur `X ↔ Y`.\n\n### Exemple\n\nSi le but est `2 + 2 = 4` alors `symm` le changera en `4 = 2 + 2`.\n\n### Exemple\n\nSi `h : 2 + 2 ≠ 5` alors `symm at h` changera `h` en `5 ≠ 2 + 2`.",
+ "## Summary\n\nIf the goal is a statement `P`, then `exact h` will close the goal if `h` is a proof of `P`.\n\n### Example\n\nIf the goal is `x = 37` and you have a hypothesis `h : x = 37`\nthen `exact h` will solve the goal.\n\n### Example\n\nIf the goal is `x + 0 = x` then `exact add_zero x` will close the goal.\n\n### Exact needs to be exactly right\n\nNote that `exact add_zero` will *not work* in the previous example;\nfor `exact h` to work, `h` has to be *exactly* a proof of the goal.\n`add_zero` is a proof of `∀ n, n + 0 = n` or, if you like,\na proof of `? + 0 = ?` where `?` needs to be supplied by the user.\nThis is in contrast to `rw` and `apply`, which will \\\"guess the inputs\\\"\nif necessary. If the goal is `x + 0 = x` then `rw [add_zero]`\nand `rw [add_zero x]` will both change the goal to `x = x`,\nbecause `rw` guesses the input to the function `add_zero`.":
+ "## Résumé\n\nSi le but est un énoncé `P`, alors `exact h` fermera le but si `h` est une preuve de `P`.\n\n### Exemple\n\nSi le but est `x = 37` et que vous avez une hypothèse `h : x = 37`\nalors `exact h` résoudra le but.\n\n### Exemple\n\nSi le but est `x + 0 = x` alors `exact add_zero x` fermera le but.\n\n### Exact doit être exactement juste\n\nNotez que `exact add_zero` ne *fonctionnera pas* dans l'exemple précédent ;\npour que `exact h` fonctionne, `h` doit être *exactement* une preuve du but.\n`add_zero` est une preuve de `∀ n, n + 0 = n` ou, si vous préférez,\nune preuve de `? + 0 = ?` où `?` doit être fourni par l'utilisateur.\nCela contraste avec `rw` et `apply`, qui \"devineront les entrées\"\nsi nécessaire. Si le but est `x + 0 = x` alors `rw [add_zero]`\net `rw [add_zero x]` changeront tous deux le but en `x = x`,\ncar `rw` devine l'entrée de la fonction `add_zero`.",
+ "## Summary\n\nIf the goal is `P → Q`, then `intro h` will introduce `h : P` as a hypothesis,\nand change the goal to `Q`. Mathematically, it says that to prove $P \\implies Q$,\nwe can assume $P$ and then prove $Q$.\n\n### Example:\n\nIf your goal is `x + 1 = y + 1 → x = y` (the way Lean writes $x+1=y+1 \\implies x=y$)\nthen `intro h` will give you a hypothesis $x+1=y+1$ named `h`, and the goal\nwill change to $x=y$.":
+ "## Résumé\n\nSi le but est `P → Q`, alors `intro h` introduira `h : P` comme hypothèse,\net changera le but en `Q`. Mathématiquement, cela signifie que pour prouver $P \\implies Q$,\nnous pouvons supposer $P$ et ensuite prouver $Q$.\n\n### Exemple :\n\nSi votre but est `x + 1 = y + 1 → x = y` (la façon dont Lean écrit $x+1=y+1 \\implies x=y$)\nalors `intro h` vous donnera une hypothèse $x+1=y+1$ nommée `h`, et le but\nchangera en $x=y$.",
+ "## Summary\n\nIf `t : P → Q` is a proof that $P \\implies Q$, and `h : P` is a proof of `P`,\nthen `apply t at h` will change `h` to a proof of `Q`. The idea is that if\nyou know `P` is true, then you can deduce from `t` that `Q` is true.\n\nIf the *goal* is `Q`, then `apply t` will \\\"argue backwards\\\" and change the\ngoal to `P`. The idea here is that if you want to prove `Q`, then by `t`\nit suffices to prove `P`, so you can reduce the goal to proving `P`.\n\n### Example:\n\n`succ_inj x y` is a proof that `succ x = succ y → x = y`.\n\nSo if you have a hypothesis `h : succ (a + 37) = succ (b + 42)`\nthen `apply succ_inj at h` will change `h` to `a + 37 = b + 42`.\nYou could write `apply succ_inj (a + 37) (b + 42) at h`\nbut Lean is smart enough to figure out the inputs to `succ_inj`.\n\n### Example\n\nIf the goal is `a * b = 7`, then `apply succ_inj` will turn the\ngoal into `succ (a * b) = succ 7`.":
+ "## Résumé\n\nSi `t : P → Q` est une preuve que $P \\implies Q$, et `h : P` est une preuve de `P`,\nalors `apply t at h` changera `h` en une preuve de `Q`. L'idée est que si\nvous savez que `P` est vrai, alors vous pouvez déduire de `t` que `Q` est vrai.\n\nSi le *but* est `Q`, alors `apply t` \"argumentera à l'envers\" et changera le\nbut en `P`. L'idée ici est que si vous voulez prouver `Q`, alors par `t`\nil suffit de prouver `P`, donc vous pouvez réduire le but à prouver `P`.\n\n### Exemple :\n\n`succ_inj x y` est une preuve que `succ x = succ y → x = y`.\n\nAinsi, si vous avez une hypothèse `h : succ (a + 37) = succ (b + 42)`\nalors `apply succ_inj at h` changera `h` en `a + 37 = b + 42`.\nVous pourriez écrire `apply succ_inj (a + 37) (b + 42) at h`\nmais Lean est assez intelligent pour trouver les entrées de `succ_inj`.\n\n### Exemple\n\nSi le but est `a * b = 7`, alors `apply succ_inj` transformera le\nbut en `succ (a * b) = succ 7`.",
+ "## Summary\n\nIf `n` is a number, then `cases n with d` will break the goal into two goals,\none with `n = 0` and the other with `n = succ d`.\n\nIf `h` is a proof (for example a hypothesis), then `cases h with...` will break the\nproof up into the pieces used to prove it.\n\n## Example\n\nIf `n : ℕ` is a number, then `cases n with d` will break the goal into two goals,\none with `n` replaced by 0 and the other with `n` replaced by `succ d`. This\ncorresponds to the mathematical idea that every natural number is either `0`\nor a successor.\n\n## Example\n\nIf `h : P ∨ Q` is a hypothesis, then `cases h with hp hq` will turn one goal\ninto two goals, one with a hypothesis `hp : P` and the other with a\nhypothesis `hq : Q`.\n\n## Example\n\nIf `h : False` is a hypothesis, then `cases h` will turn one goal into no goals,\nbecause there are no ways to make a proof of `False`! And if you have no goals left,\nyou have finished the level.\n\n## Example\n\nIf `h : a ≤ b` is a hypothesis, then `cases h with c hc` will create a new number `c`\nand a proof `hc : b = a + c`. This is because the *definition* of `a ≤ b` is\n`∃ c, b = a + c`.":
+ "## Résumé\n\nSi `n` est un nombre, `cases n with d` scindera le but en deux sous-buts :\nun avec `n = 0` et l'autre avec `n = succ d`.\n\nSi `h` est une preuve (par exemple une hypothèse), `cases h with...` décomposera\nla preuve en ses éléments constitutifs.\n\n## Exemple\n\nSi `n : ℕ` est un nombre, `cases n with d` scindera le but en deux sous-buts :\nun où `n` est remplacé par 0 et l'autre où `n` est remplacé par `succ d`.\nCela correspond à l'idée mathématique que tout nombre naturel est soit `0`\nsoit un successeur.\n\n## Exemple\n\nSi `h : P ∨ Q` est une hypothèse, `cases h with hp hq` transformera un but\nen deux buts : un avec l'hypothèse `hp : P` et l'autre avec l'hypothèse `hq : Q`.\n\n## Exemple\n\nSi `h : False` est une hypothèse, `cases h` fera disparaître le but actuel,\ncar il n'existe aucun moyen de construire une preuve de `False` ! Et s'il ne reste\naucun but, vous avez terminé le niveau.\n\n## Exemple\n\nSi `h : a ≤ b` est une hypothèse, `cases h with c hc` créera un nouveau nombre `c`\net une preuve `hc : b = a + c`. Ceci parce que la *définition* de `a ≤ b` est\n`∃ c, b = a + c`.",
+ "## Summary\n\nIf `n : ℕ` is an object, and the goal mentions `n`, then `induction n with d hd`\nattempts to prove the goal by induction on `n`, with the inductive\nvariable in the successor case being `d`, and the inductive hypothesis being `hd`.\n\n### Example:\nIf the goal is\n```\n0 + n = n\n```\n\nthen\n\n`induction n with d hd`\n\nwill turn it into two goals. The first is `0 + 0 = 0`;\nthe second has an assumption `hd : 0 + d = d` and goal\n`0 + succ d = succ d`.\n\nNote that you must prove the first\ngoal before you can access the second one.":
+ "## Résumé\n\nSi `n : ℕ` est un objet, et que le but mentionne `n`, alors `induction n with d hd`\ntente de prouver le but par induction sur `n` (c'est-à-dire par récurrence sur `n`). avec la variable inductive\ndans le cas successeur étant `d`, et l'hypothèse inductive étant `hd`.\n\n### Exemple :\nSi le but est\n```\n0 + n = n\n```\n\nalors\n\n`induction n with d hd`\n\nle transformera en deux buts. Le premier est `0 + 0 = 0` ;\nle second a une hypothèse `hd : 0 + d = d` et un but\n`0 + succ d = succ d`.\n\nNotez que vous devez prouver le premier\nbut avant de pouvoir accéder au second.",
+ "## Summary\n\nIf `h` is a proof of an equality `X = Y`, then `rw [h]` will change\nall `X`s in the goal to `Y`s. It's the way to \\\"substitute in\\\".\n\n## Variants\n\n* `rw [← h]` (changes `Y`s to `X`s; get the back arrow by typing `\\left ` or `\\l`.)\n\n* `rw [h1, h2]` (a sequence of rewrites)\n\n* `rw [h] at h2` (changes `X`s to `Y`s in hypothesis `h2`)\n\n* `rw [h] at h1 h2 ⊢` (changes `X`s to `Y`s in two hypotheses and the goal;\nget the `⊢` symbol with `\\|-`.)\n\n* `repeat rw [add_zero]` will keep changing `? + 0` to `?`\nuntil there are no more matches for `? + 0`.\n\n* `nth_rewrite 2 [h]` will change only the second `X` in the goal to `Y`.\n\n### Example:\n\nIf you have the assumption `h : x = y + y` and your goal is\n```\nsucc (x + 0) = succ (y + y)\n```\n\nthen\n\n`rw [add_zero]`\n\nwill change the goal into `succ x = succ (y + y)`, and then\n\n`rw [h]`\n\nwill change the goal into `succ (y + y) = succ (y + y)`, which\ncan be solved with `rfl`.\n\n### Example:\n\nYou can use `rw` to change a hypothesis as well.\nFor example, if you have two hypotheses\n```\nh1 : x = y + 3\nh2 : 2 * y = x\n```\nthen `rw [h1] at h2` will turn `h2` into `h2 : 2 * y = y + 3`.\n\n## Common errors\n\n* You need the square brackets. `rw h` is never correct.\n\n* If `h` is not a *proof* of an *equality* (a statement of the form `A = B`),\nfor example if `h` is a function or an implication,\nthen `rw` is not the tactic you want to use. For example,\n`rw [P = Q]` is never correct: `P = Q` is the theorem *statement*,\nnot the proof. If `h : P = Q` is the proof, then `rw [h]` will work.\n\n## Details\n\nThe `rw` tactic is a way to do \\\"substituting in\\\". There\nare two distinct situations where you can use this tactic.\n\n1) Basic usage: if `h : A = B` is an assumption or\nthe proof of a theorem, and if the goal contains one or more `A`s, then `rw [h]`\nwill change them all to `B`s. The tactic will error\nif there are no `A`s in the goal.\n\n2) Advanced usage: Assumptions coming from theorem proofs\noften have missing pieces. For example `add_zero`\nis a proof that `? + 0 = ?` because `add_zero` really is a function,\nand `?` is the input. In this situation `rw` will look through the goal\nfor any subterm of the form `x + 0`, and the moment it\nfinds one it fixes `?` to be `x` then changes all `x + 0`s to `x`s.\n\nExercise: think about why `rw [add_zero]` changes the term\n`(0 + 0) + (x + 0) + (0 + 0) + (x + 0)` to\n`0 + (x + 0) + 0 + (x + 0)`\n\nIf you can't remember the name of the proof of an equality, look it up in\nthe list of lemmas on the right.\n\n## Targeted usage\n\nIf your goal is `b + c + a = b + (a + c)` and you want to rewrite `a + c`\nto `c + a`, then `rw [add_comm]` will not work because Lean finds another\naddition first and swaps those inputs instead. Use `rw [add_comm a c]` to\nguarantee that Lean rewrites `a + c` to `c + a`. This works because\n`add_comm` is a proof that `?1 + ?2 = ?2 + ?1`, `add_comm a` is a proof\nthat `a + ? = ? + a`, and `add_comm a c` is a proof that `a + c = c + a`.\n\nIf `h : X = Y` then `rw [h]` will turn all `X`s into `Y`s.\nIf you only want to change the 37th occurrence of `X`\nto `Y` then do `nth_rewrite 37 [h]`.":
+ "## Résumé\n\nSi `h` est une preuve d'une égalité `X = Y`, alors `rw [h]` changera\ntous les `X` du but en `Y`. `rw` est l’abréviation de \"rewrite\". C'est la manière de \"substituer\".\n\n## Variantes\n\n* `rw [← h]` (change les `Y` en `X` ; obtenez la flèche gauche en tapant `\\left ` ou `\\l`.)\n\n* `rw [h1, h2]` (une séquence de réécritures)\n\n* `rw [h] at h2` (change les `X` en `Y` dans l'hypothèse `h2`)\n\n* `rw [h] at h1 h2 ⊢` (change les `X` en `Y` dans deux hypothèses et le but ;\nobtenez le symbole `⊢` avec `\\|-`.)\n\n* `repeat rw [add_zero]` continuera à changer `? + 0` en `?`\njusqu'à ce qu'il n'y ait plus de correspondances pour `? + 0`.\n\n* `nth_rewrite 2 [h]` ne changera que le deuxième `X` du but en `Y`.\n\n### Exemple :\n\nSi vous avez l'hypothèse `h : x = y + y` et que votre but est\n```\nsucc (x + 0) = succ (y + y)\n```\n\nalors\n\n`rw [add_zero]`\n\nchangera le but en `succ x = succ (y + y)`, puis\n\n`rw [h]`\n\nchangera le but en `succ (y + y) = succ (y + y)`, ce qui\npeut être résolu avec `rfl`.\n\n### Exemple :\n\nVous pouvez également utiliser `rw` pour changer une hypothèse.\nPar exemple, si vous avez deux hypothèses\n```\nh1 : x = y + 3\nh2 : 2 * y = x\n```\nalors `rw [h1] at h2` transformera `h2` en `h2 : 2 * y = y + 3`.\n\n## Erreurs courantes\n\n* Vous avez besoin des crochets. `rw h` n'est jamais valide.\n\n* Si `h` n'est pas une *preuve* d'une *égalité* (un énoncé de la forme `A = B`),\npar exemple si `h` est une fonction ou une implication,\nalors `rw` n'est pas la tactique que vous voulez utiliser. Par exemple,\n`rw [P = Q]` n'est jamais correct : `P = Q` est l'*énoncé* du théorème,\npas la preuve. Si `h : P = Q` est la preuve, alors `rw [h]` fonctionnera.\n\n## Détails\n\nLa tactique `rw` est un moyen de faire une \"substitution\". Il y a\ndeux situations distinctes où vous pouvez utiliser cette tactique.\n\n1) Utilisation basique : si `h : A = B` est une hypothèse ou\nla preuve d'un théorème, et si le but contient un ou plusieurs `A`, alors `rw [h]`\nles changera tous en `B`. La tactique échouera\ns'il n'y a pas de `A` dans le but.\n\n2) Utilisation avancée : Les hypothèses provenant de preuves de théorèmes\nont souvent des parties manquantes. Par exemple, `add_zero`\nest une preuve que `? + 0 = ?` car `add_zero` est en fait une fonction,\net `?` est l'entrée. Dans cette situation, `rw` parcourra le but\nà la recherche de tout sous-terme de la forme `x + 0`, et dès qu'il\nen trouve un, il fixe `?` à `x` puis change tous les `x + 0` en `x`.\n\nExercice : réfléchissez à pourquoi `rw [add_zero]` change le terme\n`(0 + 0) + (x + 0) + (0 + 0) + (x + 0)` en\n`0 + (x + 0) + 0 + (x + 0)`\n\nSi vous ne vous souvenez pas du nom de la preuve d'une égalité, cherchez-la dans\nla liste des lemmes à droite.\n\n## Utilisation ciblée\n\nSi votre but est `b + c + a = b + (a + c)` et que vous voulez réécrire `a + c`\nen `c + a`, alors `rw [add_comm]` ne fonctionnera pas car Lean trouve d'abord\nune autre addition et échange ces entrées à la place. Utilisez `rw [add_comm a c]` pour\ngarantir que Lean réécrit `a + c` en `c + a`. Cela fonctionne car\n`add_comm` est une preuve que `?1 + ?2 = ?2 + ?1`, `add_comm a` est une preuve\nque `a + ? = ? + a`, et `add_comm a c` est une preuve que `a + c = c + a`.\n\nSi `h : X = Y` alors `rw [h]` transformera tous les `X` en `Y`.\nSi vous voulez seulement changer la 37ème occurrence de `X`\nen `Y`, alors faites `nth_rewrite 37 [h]`.",
+ "## Summary\n\nIf `h : X = Y` and there are several `X`s in the goal, then\n`nth_rewrite 3 [h]` will just change the third `X` to a `Y`.\n\n## Example\n\nIf the goal is `2 + 2 = 4` then `nth_rewrite 2 [two_eq_succ_one]`\nwill change the goal to `2 + succ 1 = 4`. In contrast, `rw [two_eq_succ_one]`\nwill change the goal to `succ 1 + succ 1 = 4`.":
+ "## Résumé\n\nSi `h : X = Y` et qu'il y a plusieurs `X` dans le but, alors\n`nth_rewrite 3 [h]` ne changera que le troisième `X` en `Y`.\n\n## Exemple\n\nSi le but est `2 + 2 = 4` alors `nth_rewrite 2 [two_eq_succ_one]`\nchangera le but en `2 + succ 1 = 4`. En revanche, `rw [two_eq_succ_one]`\nchangera le but en `succ 1 + succ 1 = 4`.",
+ "## Precision rewriting\n\nIn the last level, there was `b + 0` and `c + 0`,\nand `rw [add_zero]` changed the first one it saw,\nwhich was `b + 0`. Let's learn how to tell Lean\nto change `c + 0` first by giving `add_zero` an\nexplicit input.":
+ "## Réécriture de précision\n\nDans le niveau précédent, il y avait `b + 0` et `c + 0`,\net `rw [add_zero]` a changé le premier qu'il a vu,\nqui était `b + 0`. Apprenons à dire à Lean\nde changer `c + 0` en premier en donnant à `add_zero` une\nentrée explicite.",
+ "# Welcome to the Natural Number Game\n#### An introduction to mathematical proof.\n\nIn this game, we will build the basic theory of the natural\nnumbers `{0,1,2,3,4,...}` from scratch. Our first goal is to prove\nthat `2 + 2 = 4`. Next we'll prove that `x + y = y + x`.\nAnd at the end we'll see if we can prove Fermat's Last Theorem.\nWe'll do this by solving levels of a computer puzzle game called Lean.\n\n# Read this.\n\nLearning how to use an interactive theorem prover takes time.\nTests show that the people who get the most out of this game are\nthose who read the help texts like this one.\n\nTo start, click on \"Tutorial World\".\n\nNote: this is a new Lean 4 version of the game containing several\nworlds which were not present in the old Lean 3 version. More new worlds\nsuch as Strong Induction World, Even/Odd World and Prime Number World\nare in development; if you want to see their state or even help out, checkout\nout the [issues in the github repo](https://github.com/leanprover-community/NNG4/issues).\n\n## More\n\nClick on the three lines in the top right and select \"Game Info\" for resources,\nlinks, and ways to interact with the Lean community.":
+ "# Bienvenue dans le Jeu des Nombres Naturels\n#### Une introduction aux preuves mathématiques.\n\nDans ce jeu, nous construirons la théorie de base des nombres\nnaturels `{0,1,2,3,4,...}` à partir de zéro. Notre premier objectif est de prouver\nque `2 + 2 = 4`. Ensuite, nous prouverons que `x + y = y + x`.\nEt à la fin, nous verrons si nous pouvons prouver le Grand Théorème de Fermat.\nNous allons résoudre les niveaux d'un jeu de puzzle informatique appelé Lean.\n\n# Lisez ceci.\n\nApprendre à utiliser un assistant de preuve interactif prend du temps.\nDes tests montrent que les personnes qui tirent le meilleur parti de ce jeu sont\ncelles qui lisent les textes d'aide comme celui-ci.\n\nPour commencer, cliquez sur \"Monde Tutoriel\".\n\nNote : ceci est une nouvelle version Lean 4 du jeu contenant plusieurs\nmondes absents de l'ancienne version Lean 3. D'autres nouveaux mondes\ntels que le Monde de l'Induction Forte, le Monde Pair/Impair et le Monde des Nombres Premiers\nsont en développement ; si vous souhaitez voir leur état ou même aider, consultez\nles [problèmes dans le dépôt github](https://github.com/leanprover-community/NNG4/issues).\n\n## En savoir plus\n\nCliquez sur les trois lignes en haut à droite et sélectionnez \"Infos du jeu\" pour les ressources,\nliens et moyens d'interagir avec la communauté Lean.",
+ "# Summary\nThe `right` tactic changes a goal of `P ∨ Q` into a goal of `Q`.\nUse it when your hypotheses guarantee that the reason that `P ∨ Q`\nis true is because in fact `Q` is true.\n\nInternally this tactic is just `apply`ing a theorem\nsaying that $Q \\implies P \\lor Q.$\n\nNote that this tactic can turn a solvable goal into an unsolvable\none.":
+ "# Résumé\nLa tactique `right` change un but `P ∨ Q` en un but `Q`.\nUtilisez-la lorsque vos hypothèses garantissent que la raison pour laquelle `P ∨ Q`\nest vrai est qu'en fait `Q` est vrai.\n\nEn interne, cette tactique applique simplement un théorème\ndisant que $Q \\implies P \\lor Q.$\n\nNotez que cette tactique peut transformer un but résoluble en un but insoluble.",
+ "# Summary\nThe `left` tactic changes a goal of `P ∨ Q` into a goal of `P`.\nUse it when your hypotheses guarantee that the reason that `P ∨ Q`\nis true is because in fact `P` is true.\n\nInternally this tactic is just `apply`ing a theorem\nsaying that $P \\implies P \\lor Q.$\n\nNote that this tactic can turn a solvable goal into an unsolvable\none.":
+ "# Résumé\nLa tactique `left` change un but `P ∨ Q` en un but `P`.\nUtilisez-la lorsque vos hypothèses garantissent que la raison pour laquelle `P ∨ Q`\nest vrai est qu'en fait `P` est vrai.\n\nEn interne, cette tactique applique simplement un théorème\ndisant que $P \\implies P \\lor Q.$\n\nNotez que cette tactique peut transformer un but résoluble en un but insoluble.",
+ "# Summary\n\n`trivial` will solve the goal `True`.":
+ "# Résumé\n\n`trivial` résoudra le but `True`.",
+ "# Summary\n\n`decide` will attempt to solve a goal if it can find an algorithm which it\ncan run to solve it.\n\n## Example\n\nA term of type `DecidableEq ℕ` is an algorithm to decide whether two naturals\nare equal or different. Hence, once this term is made and made into an `instance`,\nthe `decide` tactic can use it to solve goals of the form `a = b` or `a ≠ b`.":
+ "# Résumé\n\n`decide` essaiera de résoudre un but s'il peut trouver un algorithme qu'il\npeut exécuter pour le résoudre.\n\n## Exemple\n\nUn terme de type `DecidableEq ℕ` est un algorithme pour décider si deux entiers naturels\nsont égaux ou différents. Ainsi, une fois ce terme créé et transformé en `instance`,\nla tactique `decide` peut l'utiliser pour résoudre des buts de la forme `a = b` ou `a ≠ b`.",
+ "# Summary\n\nThe `tauto` tactic will solve any goal which can be solved purely by logic (that is, by\ntruth tables).\n\n## Details\n\n`tauto` *does not do magic*! It doesn't know *anything* about addition or multiplication,\nit doesn't even know `add_zero`. The only things that `tauto` knows about numbers\nare firstly that `a = a` and secondly that `0 ≠ 1`, `0 ≠ 2`, `1 ≠ 2` and so on.\nWhat `tauto`'s strength is, is *logic*. If you have a hypothesis `x < 37`\nand another hypothesis `x < 37 → y + z = 42` and your goal is `y + z = 42` then `tauto` will\nsolve this goal, because to solve that goal you don't need to know any facts\nabout inequalities or addition, all you need to know is the rules of logic.\n\n## Example\n\nIf you have `False` as a hypothesis, then `tauto` will solve\nthe goal. This is because a false hypothesis implies any hypothesis.\n\n## Example\n\nIf your goal is `True`, then `tauto` will solve the goal.\n\n## Example\n\nIf you have two hypotheses `h1 : a = 37` and `h2 : a ≠ 37` then `tauto` will\nsolve the goal because it can prove `False` from your hypotheses, and thus\nprove the goal (as `False` implies anything).\n\n## Example\n\nIf you have one hypothesis `h : a ≠ a` then `tauto` will solve the goal because\n`tauto` is smart enough to know that `a = a` is true, which gives the contradiction we seek.\n\n## Example\n\nIf you have a hypothesis `h : 0 = 1` then `tauto` will solve the goal, because\n`tauto` knows `0 ≠ 1` and this is enough to prove `False`, which implies any goal.\n\n## Example\n\nIf you have a hypothesis of the form `a = 0 → a * b = 0` and your goal is `a * b ≠ 0 → a ≠ 0`, then\n`tauto` will solve the goal, because the goal is logically equivalent to the hypothesis.\nIf you switch the goal and hypothesis in this example, `tauto` would solve it too.":
+ "# Résumé\n\nLa tactique `tauto` résoudra tout but qui peut être résolu purement par logique (c'est-à-dire par\ntables de vérité).\n\n## Détails\n\n`tauto` *ne fait pas de magie* ! Il ne sait *rien* sur l'addition ou la multiplication,\nil ne connaît même pas `add_zero`. Les seules choses que `tauto` sait sur les nombres\nsont premièrement que `a = a` et deuxièmement que `0 ≠ 1`, `0 ≠ 2`, `1 ≠ 2`, etc.\nLa force de `tauto` est la *logique*. Si vous avez une hypothèse `x < 37`\net une autre hypothèse `x < 37 → y + z = 42` et que votre but est `y + z = 42`, alors `tauto`\nrésoudra ce but, car pour résoudre ce but, vous n'avez pas besoin de connaître des faits\nsur les inégalités ou l'addition, tout ce que vous devez savoir ce sont les règles de la logique.\n\n## Exemple\n\nSi vous avez `False` comme hypothèse, alors `tauto` résoudra\nle but. C'est parce qu'une hypothèse fausse implique n'importe quelle hypothèse.\n\n## Exemple\n\nSi votre but est `True`, alors `tauto` résoudra le but.\n\n## Exemple\n\nSi vous avez deux hypothèses `h1 : a = 37` et `h2 : a ≠ 37` alors `tauto`\nrésoudra le but car il peut prouver `False` à partir de vos hypothèses, et ainsi\nprouver le but (car `False` implique n'importe quoi).\n\n## Exemple\n\nSi vous avez une hypothèse `h : a ≠ a` alors `tauto` résoudra le but car\n`tauto` est assez intelligent pour savoir que `a = a` est vrai, ce qui donne la contradiction que nous cherchons.\n\n## Exemple\n\nSi vous avez une hypothèse `h : 0 = 1` alors `tauto` résoudra le but, car\n`tauto` sait que `0 ≠ 1` et cela suffit à prouver `False`, ce qui implique n'importe quel but.\n\n## Exemple\n\nSi vous avez une hypothèse de la forme `a = 0 → a * b = 0` et que votre but est `a * b ≠ 0 → a ≠ 0`, alors\n`tauto` résoudra le but, car le but est logiquement équivalent à l'hypothèse.\nSi vous échangez le but et l'hypothèse dans cet exemple, `tauto` le résoudrait aussi.",
+ "# Summary\n\nThe `have` tactic can be used to add new hypotheses to a level, but of course\nyou have to prove them.\n\n\n## Example\n\nThe simplest usage is like this. If you have `a` in your context and you execute\n\n`have ha : a = 0`\n\nthen you will get a new goal `a = 0` to prove, and after you've proved\nit you will have a new hypothesis `ha : a = 0` in your original goal.\n\n## Example\n\nIf you already have a proof of what you want to `have`, you\ncan just create it immediately. For example, if you have `a` and `b`\nnumber objects, then\n\n`have h2 : succ a = succ b → a = b := succ_inj a b`\n\nwill directly add a new hypothesis `h2 : succ a = succ b → a = b`\nto the context, because you just supplied the proof of it (`succ_inj a b`).\n\n## Example\n\nIf you have a proof to hand, then you don't even need to state what you\nare proving. For example\n\n`have h2 := succ_inj a b`\n\nwill add `h2 : succ a = succ b → a = b` as a hypothesis.":
+ "# Résumé\n\nLa tactique `have` permet d'ajouter de nouvelles hypothèses à un niveau, mais vous devez bien sûr\nles prouver.\n\n\n## Exemple\n\nL'utilisation la plus simple est la suivante. Si vous avez `a` dans votre contexte et que vous exécutez\n\n`have ha : a = 0`\n\nalors vous obtiendrez un nouveau but `a = 0` à prouver, et après l'avoir prouvé\nvous aurez une nouvelle hypothèse `ha : a = 0` dans votre but initial.\n\n## Exemple\n\nSi vous avez déjà une preuve de ce que vous voulez obtenir avec `have`, vous\npouvez la créer immédiatement. Par exemple, si vous avez des objets numériques `a` et `b`,\nalors\n\n`have h2 : succ a = succ b → a = b := succ_inj a b`\n\najoutera directement une nouvelle hypothèse `h2 : succ a = succ b → a = b`\ndans le contexte, car vous avez fourni sa preuve (`succ_inj a b`).\n\n## Exemple\n\nSi vous avez une preuve sous la main, vous n'avez même pas besoin d'énoncer ce que vous\nprouvez. Par exemple\n\n`have h2 := succ_inj a b`\n\najoutera `h2 : succ a = succ b → a = b` comme hypothèse.",
+ "# Summary\n\nIf you have a hypothesis\n\n`h : a ≠ b`\n\nand goal\n\n`c ≠ d`\n\nthen `contrapose! h` replaces the set-up with its so-called \\\"contrapositive\\\":\na hypothesis\n\n`h : c = d`\n\nand goal\n\n`a = b`.":
+ "# Résumé\n\nSi vous avez une hypothèse\n\n`h : a ≠ b`\n\net un but\n\n`c ≠ d`\n\nalors `contrapose! h` remplace la proposition par sa dénommée \"contraposée\" :\nc'est-à-dire une hypothèse\n\n`h : c = d`\n\net un but\n\n`a = b`.",
+ "# Statement\n\nIf $a$ and $b$ are numbers, then\n`succ_inj a b` is the proof that\n$ (\\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\n## More technical details\n\nThere are other ways to think about `succ_inj`.\n\nYou can think about `succ_inj` itself as a function which takes two\nnumbers $$a$$ and $$b$$ as input, and outputs a proof of\n$ ( \\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\nYou can think of `succ_inj` itself as a proof; it is the proof\nthat `succ` is an injective function. In other words,\n`succ_inj` is a proof of\n$\\forall a, b \\in  \\mathbb{N}, ( \\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\n`succ_inj` was postulated as an axiom by Peano, but\nin Lean it can be proved using `pred`, a mathematically\npathological function.":
+ "# Énoncé\n\nSi $a$ et $b$ sont des nombres, alors\n`succ_inj a b` est la preuve que\n$ (\\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\n## Plus de détails techniques\n\nIl y a d'autres façons de penser à `succ_inj`.\n\nVous pouvez considérer `succ_inj` comme une fonction qui prend deux\nnombres $$a$$ et $$b$$ en entrée, et produit une preuve de\n$ ( \\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\nVous pouvez aussi considérer `succ_inj` comme une preuve ; c'est la preuve\nque `succ` est une fonction injective. Autrement dit,\n`succ_inj` est une preuve de\n$\\forall a, b \\in  \\mathbb{N}, ( \\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\n`succ_inj` a été postulé comme axiome par Peano, mais\ndans Lean, il peut être prouvé en utilisant `pred`, une fonction\nmathématiquement pathologique.",
+ "# Read this first\n\nEach level in this game involves proving a mathematical theorem (the \"Goal\").\nThe goal will be a statement about *numbers*. Some numbers in this game have known values.\nThose numbers have names like $37$. Other numbers will be secret. They're called things\nlike $x$ and $q$. We know $x$ is a number, we just don't know which one.\n\nIn this first level we're going to prove the theorem that $37x + q = 37x + q$.\nYou can see `x q : ℕ` in the *Objects* below, which means that `x` and `q`\nare numbers.\n\nWe solve goals in Lean using *Tactics*, and the first tactic we're\ngoing to learn is called `rfl`, which proves all theorems of the form $X = X$.\n\nProve that $37x+q=37x+q$ by executing the `rfl` tactic.":
+ "# Lisez ceci d'abord\n\nChaque niveau de ce jeu consiste à prouver un théorème mathématique (le \"But\").\nLe but sera un énoncé sur des *nombres*. Certains nombres dans ce jeu ont des valeurs connues.\nCes nombres ont des noms comme $37$. D'autres nombres seront secrets. Ils sont appelés\n$x$ et $q$. Nous savons que $x$ est un nombre, nous ne savons juste pas lequel.\n\nDans ce premier niveau, nous allons prouver le théorème que $37x + q = 37x + q$.\nVous pouvez voir `x q : ℕ` dans les *Objets* ci-dessous, ce qui signifie que `x` et `q`\nsont des nombres.\n\nNous résolvons les buts dans Lean en utilisant des *Tactiques*, et la première tactique que nous\nallons apprendre s'appelle `rfl`, qui prouve tous les théorèmes de la forme $X = X$.\n\nProuvez que $37x+q=37x+q$ en exécutant la tactique `rfl`.",
+ "# Overview\n\nOur home-made tactic `simp_add` will solve arbitrary goals of\nthe form `a + (b + c) + (d + e) = e + (d + (c + b)) + a`.":
+ "# Aperçu\n\nNotre tactique maison `simp_add` résoudra tout but de\nla forme `a + (b + c) + (d + e) = e + (d + (c + b)) + a`.",
+ "# Overview\n\nLean's simplifier, `simp`, will rewrite every lemma\ntagged with `simp` and every lemma fed to it by the user, as much as it can.\nFurthermore, it will attempt to order variables into an internal order if fed\nlemmas such as `add_comm`, so that it does not go into an infinite loop.":
+ "# Aperçu\n\nLe simplificateur de Lean, `simp`, réécrira chaque lemme\nmarqué `simp` et chaque lemme fourni par l'utilisateur, autant que possible.\nDe plus, il tentera d'ordonner les variables dans un ordre interne si on lui donne\ndes lemmes comme `add_comm`, afin de ne pas tomber dans une boucle infinie."}

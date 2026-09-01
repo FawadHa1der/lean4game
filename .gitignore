@@ -14,3 +14,4 @@ wasm/out/
 wasm/snapshots/
 .lake/
 dist/
+games-src/

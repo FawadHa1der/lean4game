@@ -1,0 +1,872 @@
+{"≤ World": "Світ ≤",
+ "≠": "≠",
+ "zero_pow_zero": "zero_pow_zero",
+ "zero_pow_succ": "zero_pow_succ",
+ "zero_ne_succ": "zero_ne_succ",
+ "zero_mul": "zero_mul",
+ "zero_add": "zero_add",
+ "x ≤ y or y ≤ x": "x ≤ y або y ≤ x",
+ "x ≤ y and y ≤ z implies x ≤ z": "x ≤ y і y ≤ z означає x ≤ z",
+ "x ≤ y and y ≤ x implies x = y": "Із x ≤ y і y ≤ x випливає, що x = y",
+ "x ≤ succ x": "x ≤ succ x",
+ "x ≤ 1": "x ≤ 1",
+ "x ≤ 0 → x = 0": "x ≤ 0 → x = 0",
+ "two_mul": "two_mul",
+ "try rewriting `add_zero`.": "спробуйте переписати `add_zero`.",
+ "the simplest approach": "найпростіший підхід",
+ "the rw tactic": "тактика rw",
+ "succ_mul": "succ_mul",
+ "succ_inj : the successor function is injective":
+ "succ_inj : функція наступника ін’єктивна",
+ "succ_add": "succ_add",
+ "succ x ≤ succ y → x ≤ y": "succ x ≤ succ y → x ≤ y",
+ "rewriting backwards": "переписуючи задом наперед",
+ "pred": "pred",
+ "pow_two": "pow_two",
+ "pow_pow": "pow_pow",
+ "pow_one": "pow_one",
+ "pow_add": "pow_add",
+ "one_pow": "one_pow",
+ "one_mul": "one_mul",
+ "one_le_of_ne_zero": "one_le_of_ne_zero",
+ "mul_right_eq_self": "mul_right_eq_self",
+ "mul_right_eq_one": "mul_right_eq_one",
+ "mul_pow": "mul_pow",
+ "mul_one": "mul_one",
+ "mul_ne_zero": "mul_ne_zero",
+ "mul_left_ne_zero": "mul_left_not_zero",
+ "mul_left_cancel": "mul_left_cancel",
+ "mul_le_mul_right": "mul_le_mul_right",
+ "mul_eq_zero": "mul_eq_zero",
+ "mul_comm": "mul_comm",
+ "mul_assoc": "mul_assoc",
+ "mul_add": "mul_add",
+ "making life simple": "зробимо життя простим",
+ "making life easier": "зробимо життя легшим",
+ "level completed! 🎉": "рівень завершено! 🎉",
+ "level completed with warnings… 🎭": "рівень завершено з попередженнями... 🎭",
+ "le_two": "le_two",
+ "le_mul_right": "le_mul_right",
+ "is_zero": "is_zero",
+ "intro practice": "Практика intro",
+ "intro": "intro",
+ "intermediate goal solved! 🎉": "проміжну мету вирішено! 🎉",
+ "eq_succ_of_ne_zero": "eq_succ_of_ne_zero",
+ "decide again": "decide ще раз",
+ "decide": "decide",
+ "add_succ": "add_succ",
+ "add_sq": "add_sq",
+ "add_right_eq_zero": "add_right_eq_zero",
+ "add_right_eq_self": "add_right_eq_self",
+ "add_right_comm": "add_right_comm",
+ "add_right_cancel": "add_right_cancel",
+ "add_mul": "add_mul",
+ "add_left_eq_zero": "add_left_eq_zero",
+ "add_left_eq_self": "add_left_eq_self",
+ "add_left_comm": "add_left_comm",
+ "add_left_cancel": "add_left_cancel",
+ "add_comm (level boss)": "add_comm (бос рівня)",
+ "add_assoc (associativity of addition)":
+ "add_assoc (асоціативність додавання)",
+ "`ℕ` is the natural numbers, just called \\\"numbers\\\" in this game. It's\ndefined via two rules:\n\n* `0 : ℕ` (zero is a number)\n* `succ (n : ℕ) : ℕ` (the successor of a number is a number)\n\n## Game Implementation\n\n*The game uses its own copy of the natural numbers, called `MyNat` with notation `ℕ`.\nIt is distinct from the Lean natural numbers `Nat`, which should hopefully\nnever leak into the natural number game.*":
+ "`ℕ` — це натуральні числа, які в цій грі просто називаються \\\"числа\\\". Вони\nвизначається двома правилами:\n\n* `0 : ℕ` (нуль - це число)\n* `succ (n : ℕ) : ℕ` (наступник числа є числом)\n\n## Реалізація у гри\n\n*У грі використовується власна копія натуральних чисел, яка називається `MyNat` з позначенням `ℕ`.\nВона відрізняється від натуральних чисел Lean `Nat`, які, сподіваємося, не повинні\nніколи просочуйтеся в гру натуральних чисел.*",
+ "`zero_ne_succ n` is the proof that `0 ≠ succ n`.\n\nIn Lean, `a ≠ b` is *defined to mean* `a = b → False`. Hence\n`zero_ne_succ n` is really a proof of `0 = succ n → False`.\nHere `False` is a generic false statement. This means that\nyou can `apply zero_ne_succ at h` if `h` is a proof of `0 = succ n`.":
+ "`zero_ne_succ n` є доказом того, що `0 ≠ succ n`.\n\nУ Lean `a ≠ b` *визначено означати* `a = b → False`. Отже\n`zero_ne_succ n` насправді є доказом `0 = succ n → False`.\nТут `False` — це загальне хибне твердження. Це означає, що\nви можете `apply zero_ne_succ at h`, якщо `h` є доказом `0 = succ n`.",
+ "`zero_ne_one` is a proof of `0 ≠ 1`.": "`zero_ne_one` є доказом `0 ≠ 1`.",
+ "`zero_mul m` is the proof that `0 * m = 0`.\n\nNote: `zero_mul` is a `simp` lemma.":
+ "`zero_mul m` є доказом того, що `0 * m = 0`.\n\nПримітка: `zero_mul` - це `simp` лема.",
+ "`zero_le x` is a proof that `0 ≤ x`.":
+ "`zero_le x` є доказом того, що `0 ≤ x`.",
+ "`zero_add n` is the proof of `0 + n = n`.\n\n`zero_add` is a `simp` lemma, because replacing `0 + n` by `n`\nis almost always what you want to do if you're simplifying an expression.":
+ "`zero_add n` є доказом що`0 + n = n`.\n\n`zero_add` є лемою `simp`, оскільки заміна `0 + n` на `n`\nмайже завжди те, що ви хочете зробити, якщо ви спрощуєте вираз.",
+ "`xyzzy` is an ancient magic spell, believed to be the origin of the\nmodern word `sorry`. The game won't complain - or notice - if you\nprove anything with `xyzzy`.":
+ "`xyzzy` — стародавнє магічне заклинання, яке, як вважають, походить від\nсучасне слово `sorry`. Гра не поскаржиться - або не помітить - якщо ви\nдоведете будь-що за допомогою `xyzzy`.",
+ "`two_mul m` is the proof that `2 * m = m + m`.":
+ "`two_mul m` є доказом того, що `2 * m = m + m`.",
+ "`two_eq_succ_one` is a proof of `2 = succ 1`.":
+ "`two_eq_succ_one` є доказом `2 = succ 1`.",
+ "`three_eq_succ_two` is a proof of `3 = succ 2`.":
+ "`three_eq_succ_two` є доказом `3 = succ 2`.",
+ "`tauto` is good enough to solve this goal.":
+ "`tauto` достатньо хорош для вирішення цієї мети.",
+ "`succ_ne_zero a` is a proof of `succ a ≠ 0`.":
+ "`succ_ne_zero a` є доказом `succ a ≠ 0`.",
+ "`succ_ne_succ m n` is the proof that `m ≠ n → succ m ≠ succ n`.":
+ "`succ_ne_succ m n` є доказом того, що `m ≠ n → succ m ≠ succ n`.",
+ "`succ_mul a b` is the proof that `succ a * b = a * b + b`.\n\nIt could be deduced from `mul_succ` and `mul_comm`, however this argument\nwould be circular because the proof of `mul_comm` uses `mul_succ`.":
+ "`succ_mul a b` є доказом того, що `succ a * b = a * b + b`.\n\nЙого можна вивести із `mul_succ` та `mul_comm`, однак цей аргумент\nбуде циклічним, тому що доказ `mul_comm` використовує `mul_succ`.",
+ "`succ_le_succ x y` is a proof that if `succ x ≤ succ y` then `x ≤ y`.":
+ "`succ_le_succ x y` є доказом того, що якщо `succ x ≤ succ y`, то `x ≤ y`.",
+ "`succ_eq_add_one n` is the proof that `succ n = n + 1`.":
+ "`succ_eq_add_one n` є доказом того, що `succ n = n + 1`.",
+ "`succ_add a b` is a proof that `succ a + b = succ (a + b)`.":
+ "`succ_add a b` є доказом того, що `succ a + b = succ (a + b)`.",
+ "`rw [one_eq_succ_zero]` will do this.":
+ "`rw [one_eq_succ_zero]` допоможе у цьому.",
+ "`rw [add_zero]` will change `b + 0` into `b`.":
+ "`rw [add_zero]` замінить `b + 0` на `b`.",
+ "`rw [add_comm b d]`.": "`rw [add_comm b d]`.",
+ "`pred_succ n` is a proof of `pred (succ n) = n`.":
+ "`pred_succ n` є доказом `pred (succ n) = n`.",
+ "`pow_zero a : a ^ 0 = 1` is one of the two axioms\ndefining exponentiation in this game.":
+ "`pow_zero a : a ^ 0 = 1` є однією з двох аксіом\nвизначення ступеня в цій грі.",
+ "`pow_two a` says that `a ^ 2 = a * a`.":
+ "`pow_two a` говорить, що `a ^ 2 = a * a`.",
+ "`pow_succ a b : a ^ (succ b) = a ^ b * a` is one of the\ntwo axioms defining exponentiation in this game.":
+ "`pow_succ a b : a ^ (succ b) = a ^ b * a` є однією із\nдвох аксіом, що визначають піднесення до ступеня в цій грі.",
+ "`pow_pow a m n` is a proof that $(a^m)^n=a^{mn}.$":
+ "`pow_pow a m n` є доказом того, що $(a^m)^n=a^{mn}.$",
+ "`pow_one a` says that `a ^ 1 = a`.\n\nNote that this is not quite true by definition: `a ^ 1` is\ndefined to be `a ^ 0 * a` so it's `1 * a`, and to prove\nthat this is equal to `a` you need to use induction somewhere.":
+ "`pow_one a` говорить, що `a ^ 1 = a`.\n\nЗверніть увагу, що це не зовсім так за визначенням: `a ^ 1` є\nвизначеним як `a ^ 0 * a`, тому це `1 * a`, і щоб довести\nщо це дорівнює `a`, вам потрібно десь використати індукцію.",
+ "`pow_add a m n` is a proof that $a^{m+n}=a^ma^n.$":
+ "`pow_add a m n` є доказом того, що $a^{m+n}=a^ma^n.$",
+ "`one_pow n` is a proof that $1^n=1$.":
+ "`one_pow n` є доказом того, що $1^n=1$.",
+ "`one_ne_zero` is a proof that `1 ≠ 0`.":
+ "`one_ne_zero` є доказом того, що `1 ≠ 0`.",
+ "`one_mul m` is the proof `1 * m = m`.": "`one_mul m` є доказом `1 * m = m`.",
+ "`one_le_of_ne_zero a` is a proof that `a ≠ 0 → 1 ≤ a`.":
+ "`one_le_of_ne_zero a` це доказ того, що `a ≠ 0 → 1 ≤ a`.",
+ "`one_eq_succ_zero` is a proof of `1 = succ 0`.":
+ "`one_eq_succ_zero` є доказом `1 = succ 0`.",
+ "`nth_rewrite 2 [two_eq_succ_one]` is I think quicker than `rw [two_eq_succ_one]`.":
+ "я думаю, `nth_rewrite 2 [two_eq_succ_one]` швидше, ніж `rw [two_eq_succ_one]`.",
+ "`mul_zero m` is the proof that `m * 0 = 0`.":
+ "`mul_zero m` є доказом того, що `m * 0 = 0`.",
+ "`mul_succ a b` is the proof that `a * succ b = a * b + a`.":
+ "`mul_succ a b` є доказом того, що `a * succ b = a * b + a`.",
+ "`mul_right_eq_self a b` is a proof that if `a ≠ 0` and `a * b = a` then `b = 1`.":
+ "`mul_right_eq_self a b` є доказом того, що якщо `a ≠ 0` і `a * b = a`, то `b = 1`.",
+ "`mul_right_eq_one a b` is a proof that `a * b = 1 → a = 1`.":
+ "`mul_right_eq_one a b` є доказом того, що `a * b = 1 → a = 1`.",
+ "`mul_pow a b n` is a proof that $(ab)^n=a^nb^n.$":
+ "`mul_pow a b n` є доказом того, що $(ab)^n=a^nb^n.$",
+ "`mul_one m` is the proof that `m * 1 = m`.":
+ "`mul_one m` є доказом того, що `m * 1 = m`.",
+ "`mul_ne_zero a b` is a proof that if `a ≠ 0` and `b ≠ 0` then `a * b ≠ 0`.":
+ "`mul_ne_zero a b` є доказом того, що якщо `a ≠ 0` і `b ≠ 0`, то `a * b ≠ 0`.",
+ "`mul_left_ne_zero a b` is a proof that `a * b ≠ 0 → b ≠ 0`.":
+ "`mul_left_ne_zero a b` є доказом того, що `a * b ≠ 0 → b ≠ 0`.",
+ "`mul_left_cancel a b c` is a proof that if `a ≠ 0` and `a * b = a * c` then `b = c`.":
+ "`mul_left_cancel a b c` є доказом того, що якщо `a ≠ 0` і `a * b = a * c`, то `b = c`.",
+ "`mul_le_mul_right a b t` is a proof that `a ≤ b → a * t ≤ b * t`.":
+ "`mul_le_mul_right a b t` є доказом того, що `a ≤ b → a * t ≤ b * t`.",
+ "`mul_eq_zero a b` is a proof that if `a * b = 0` then `a = 0` or `b = 0`.":
+ "`mul_eq_zero a b` є доказом того, що якщо `a * b = 0`, то `a = 0` або `b = 0`.",
+ "`mul_comm` is the proof that multiplication is commutative. More precisely,\n`mul_comm a b` is the proof that `a * b = b * a`.":
+ "`mul_comm` є доказом того, що множення комутативне. Точніше,\n`mul_comm a b` є доказом того, що `a * b = b * a`.",
+ "`mul_assoc a b c` is a proof that `(a * b) * c = a * (b * c)`.\n\nNote that when Lean says `a * b * c` it means `(a * b) * c`.\n\nNote that `(a * b) * c = a * (b * c)` cannot be proved by \\\"pure thought\\\":\nfor example subtraction is not associative, as `(6 - 2) - 1` is not\nequal to `6 - (2 - 1)`.":
+ "`mul_assoc a b c` є доказом того, що `(a * b) * c = a * (b * c)`.\n\nЗауважте, що коли Lean каже `a * b * c`, це означає `(a * b) * c`.\n\nЗауважте, що `(a * b) * c = a * (b * c)` не можна довести \\\"лише подумки\\\":\nнаприклад, віднімання не є асоціативним, як то `(6 - 2) - 1` не\nдорівнює `6 - (2 - 1)`.",
+ "`le_zero x` is a proof of the implication `x ≤ 0 → x = 0`.":
+ "`le_zero x` є доказом імплікації `x ≤ 0 → x = 0`.",
+ "`le_zero x` is a proof of `x ≤ 0 → x = 0`.":
+ "`le_zero x` є доказом `x ≤ 0 → x = 0`.",
+ "`le_two x` is a proof that if `x ≤ 2` then `x = 0` or `x = 1` or `x = 2`.":
+ "`le_two x` є доказом того, що якщо `x ≤ 2`, то `x = 0` або `x = 1` або `x = 2`.",
+ "`le_trans x y z` is a proof that if `x ≤ y` and `y ≤ z` then `x ≤ z`.\nMore precisely, it is a proof that `x ≤ y → (y ≤ z → x ≤ z)`. In words,\nIf $x \\le y$ then (pause) if $y \\le z$ then $x \\le z$.\n\n## A note on associativity\n\nIn Lean, `a + b + c` means `(a + b) + c`, because `+` is left associative. However\n`→` is right associative. This means that `x ≤ y → y ≤ z → x ≤ z` in Lean means\nexactly that `≤` is transitive. This is different to how mathematicians use\n$P \\implies Q \\implies R$; for them, this usually means that $P \\implies Q$\nand $Q \\implies R$.":
+ "`le_trans x y z` є доказом того, що якщо `x ≤ y` і `y ≤ z`, то `x ≤ z`.\nТочніше, це доказ того, що `x ≤ y → (y ≤ z → x ≤ z)`. Словами,\nякщо $x \\le y$ тоді (пауза) якщо $y \\le z$ тоді $x \\le z$.\n\n## Пам'ятка про асоціативність\n\nУ Lean `a + b + c` означає `(a + b) + c`, тому що `+` є лівим асоціативним. Проте\n`→` є правоасоціативним. Це означає, що `x ≤ y → y ≤ z → x ≤ z` в Lean означає\nсаме те, що `≤` є транзитивним. Це відрізняється від того, як використовують математики\n$P \\implies Q \\implies R$; для них це зазвичай означає, що $P \\implies Q$\nі $Q \\implies R$.",
+ "`le_total x y` is a proof that `x ≤ y` or `y ≤ x`.":
+ "`le_total x y` є доказом того, що `x ≤ y` або `y ≤ x`.",
+ "`le_succ_self x` is a proof that `x ≤ succ x`.":
+ "`le_succ_self x` є доказом того, що `x ≤ succ x`.",
+ "`le_refl x` is a proof of `x ≤ x`.\n\nThe reason for the name is that this lemma is \"reflexivity of $\\le$\"":
+ "`le_refl x` є доказом `x ≤ x`.\n\nПричина такої назви полягає в тому, що ця лема означає «рефлексивність $\\le$»",
+ "`le_one x` is a proof that if `x ≤ 1` then `x = 0` or `x = 1`.":
+ "`le_one x` є доказом того, що якщо `x ≤ 1`, тоді `x = 0` або `x = 1`.",
+ "`le_mul_right a b` is a proof that `a * b ≠ 0 → a ≤ a * b`.\n\nIt's one way of saying that a divisor of a positive number\nhas to be at most that number.":
+ "`le_mul_right a b` є доказом того, що `a * b ≠ 0 → a ≤ a * b`.\n\nЦе один із способів сказати, що дільник додатного числа\nмає бути не більше цього числа.",
+ "`le_antisymm x y` is a proof that if `x ≤ y` and `y ≤ x` then `x = y`.":
+ "`le_antisymm x y` є доказом того, що якщо `x ≤ y` і `y ≤ x`, то `x = y`.",
+ "`is_zero_zero` is a proof of `is_zero 0 = True`.":
+ "`is_zero_zero` є доказом `is_zero 0 = True`.",
+ "`is_zero_succ a` is a proof of `is_zero (succ a) = False`.":
+ "`is_zero_succ a` є доказом `is_zero (succ a) = False`.",
+ "`four_eq_succ_three` is a proof of `4 = succ 3`.":
+ "`four_eq_succ_three` є доказом `4 = succ 3`.",
+ "`exact` practice.": "Практика `exact`.",
+ "`eq_succ_of_ne_zero a` is a proof that `a ≠ 0 → ∃ n, a = succ n`.":
+ "`eq_succ_of_ne_zero a` є доказом того, що `a ≠ 0 → ∃ n, a = succ n`.",
+ "`add_zero c` is a proof of `c + 0 = c` so that was what got rewritten.\nYou can now change `b + 0` to `b` with `rw [add_zero]` or `rw [add_zero b]`. You\ncan usually stick to `rw [add_zero]` unless you need real precision.":
+ "`add_zero c` є доказом `c + 0 = c`, отже, це те, що буде перезаписано.\nТепер ви можете змінити `b + 0` на `b` за допомогою `rw [add_zero]` або `rw [add_zero b]`. Ви\nзазвичай можете використовувати `rw [add_zero]`, якщо вам не потрібна справжня точність.",
+ "`add_zero a` is a proof that `a + 0 = a`.\n\n## Summary\n\n`add_zero` is really a function, which\neats a number, and returns a proof of a theorem\nabout that number. For example `add_zero 37` is\na proof that `37 + 0 = 37`.\n\nThe `rw` tactic will accept `rw [add_zero]`\nand will try to figure out which number you omitted\nto input.\n\n## Details\n\nA mathematician sometimes thinks of `add_zero`\nas \\\"one thing\\\", namely a proof of $\\forall n ∈ ℕ, n + 0 = n$.\nThis is just another way of saying that it's a function which\ncan eat any number n and will return a proof that `n + 0 = n`.":
+ "`add_zero a` є доказом того, що `a + 0 = a`.\n\n## Резюме\n\n`add_zero` насправді є функцією, яка\nз’їдає число та повертає доказ теореми\nпро це число. Наприклад, `add_zero 37` є\nдоказом того, що `37 + 0 = 37`.\n\nТактика `rw` приймає `rw [add_zero]`\nі пробує з’ясувати, яке число ви пропустили\nяк параметр.\n\n## Деталі\n\nМатематик іноді думає про `add_zero`\nяк \\\"одну річ\\\", а саме доказ $\\forall n ∈ ℕ, n + 0 = n$.\nЦе просто інший спосіб сказати, що це функція, яка\nможе з’їсти будь-яке число n і поверне доказ того, що `n + 0 = n`.",
+ "`add_succ a b` is the proof of `a + succ b = succ (a + b)`.":
+ "`add_succ a b` є доказом `a + succ b = succ (a + b)`.",
+ "`add_sq a b` is the statement that $(a+b)^2=a^2+b^2+2ab.$":
+ "`add_sq a b` це твердження, що $(a+b)^2=a^2+b^2+2ab.$",
+ "`add_right_eq_self x y` is the theorem that $x + y = x\\implies y=0.$\nTwo ways to do it spring to mind; I'll mention them when you've solved it.":
+ "`add_right_eq_self x y` це теорема про те, що $x + y = x\\implies y=0.$\nДва способи довести це спадають на думку; Я згадаю їх, коли ви її розв’яжете.",
+ "`add_right_eq_self x y` is the theorem that $x + y = x \\implies y=0.$":
+ "`add_right_eq_self x y` це теорема про те, що $x + y = x \\implies y=0.$",
+ "`add_right_comm a b c` is a proof that `(a + b) + c = (a + c) + b`\n\nIn Lean, `a + b + c` means `(a + b) + c`, so this result gets displayed\nas `a + b + c = a + c + b`.":
+ "`add_right_comm a b c` є доказом того, що `(a + b) + c = (a + c) + b`\n\nУ Lean `a + b + c` означає `(a + b) + c`, тому цей результат відображається\nяк `a + b + c = a + c + b`.",
+ "`add_right_cancel a b n` is the theorem that $a+n=b+n \\implies a=b.$":
+ "`add_right_cancel a b n` це теорема про те, що $a+n=b+n \\implies a=b.$",
+ "`add_mul` is just as fiddly to prove by induction; but there's a trick\nwhich avoids it. Can you spot it?":
+ "`add_mul` так само муторно довести індукцією; але є хитрість\nяка уникає її. Чи ви помітите цю хитрість?",
+ "`add_mul a b c` is a proof that $(a+b)c=ac+bc$.":
+ "`add_mul a b c` є доказом того, що $(a+b)c=ac+bc$.",
+ "`add_left_eq_self x y` is the theorem that $x + y = y\\implies x=0.$":
+ "`add_left_eq_self x y` це теорема про те, що $x + y = y\\implies x=0.$",
+ "`add_left_eq_self x y` is the theorem that $x + y = y \\implies x=0.$":
+ "`add_left_eq_self x y` це теорема про те, що $x + y = y \\implies x=0.$",
+ "`add_left_comm a b c` is a proof that `a + (b + c) = b + (a + c)`.":
+ "`add_left_comm a b c` є доказом того, що `a + (b + c) = b + (a + c)`.",
+ "`add_left_cancel a b n` is the theorem that $n+a=n+b\\implies a=b$.\nYou can prove it by induction on `n` or you can deduce it from `add_right_cancel`.":
+ "`add_left_cancel a b n` це теорема про те, що $n+a=n+b\\implies a=b$.\nВи можете довести її за допомогою індукції по `n` або ви можете вивести це з `add_right_cancel`.",
+ "`add_left_cancel a b n` is the theorem that $n+a=n+b \\implies a=b.$":
+ "`add_left_cancel a b n` це теорема про те, що $n+a=n+b \\implies a=b.$",
+ "`add_comm a b` is a proof of `a + b = b + a`.":
+ "`add_comm a b` є доказом `a + b = b + a`.",
+ "`add_comm b c` is a proof that `b + c = c + b`. But if your goal\nis `a + b + c = a + c + b` then `rw [add_comm b c]` will not\nwork! Because the goal means `(a + b) + c = (a + c) + b` so there\nis no `b + c` term *directly* in the goal.\n\nUse associativity and commutativity to prove `add_right_comm`.\nYou don't need induction. `add_assoc` moves brackets around,\nand `add_comm` moves variables around.\n\nRemember that you can do more targeted rewrites by\nadding explicit variables as inputs to theorems. For example `rw [add_comm b]`\nwill only do rewrites of the form `b + ? = ? + b`, and `rw [add_comm b c]`\nwill only do rewrites of the form `b + c = c + b`.":
+ "`add_comm b c` є доказом того, що `b + c = c + b`. Але якщо ваша мета\nце `a + b + c = a + c + b`, тоді `rw [add_comm b c]` неспрацює!\nТому що мета означає `(a + b) + c = (a + c) + b` так що в меті\n*безпосередньо* немає члена `b + c`.\n\nВикористовуйте асоціативність і комутативність, щоб підтвердити `add_right_comm`.\nВам не потрібна індукція. `add_assoc` пересуває дужки,\nа `add_comm` переміщує змінні.\n\nПам’ятайте, що ви можете робити більш цілеспрямовані перезаписи за допомогою\nдодавання явних змінних як вхідних даних до теорем. Наприклад `rw [add_comm b]`\nвиконуватиме лише перезапис у формі `b + ? = ? + b` і `rw [add_comm b c]`\nвиконуватиме лише перезапис у формі `b + c = c + b`.",
+ "`add_assoc a b c` is a proof\nthat `(a + b) + c = a + (b + c)`. Note that in Lean `(a + b) + c` prints\nas `a + b + c`, because the notation for addition is defined to be left\nassociative.":
+ "`add_assoc a b c` є доказом\nщо `(a + b) + c = a + (b + c)`. Зверніть увагу, що в Lean друкується `(a + b) + c`\nяк `a + b + c`, тому що нотація для додавання визначена ліво-\nасоціативно.",
+ "`a ≤ b` is *notation* for `∃ c, b = a + c`. This \"backwards E\"\nmeans \"there exists\". So `a ≤ b` means that there exists\na number `c` such that `b = a + c`. This definition works\nbecause there are no negative numbers in this game.\n\nTo *prove* an \"exists\" statement, use the `use` tactic.\nLet's see an example.":
+ "`a ≤ b` є *нотацією* для `∃ c, b = a + c`. Це \"записне у зворотньому напрямку E\"\nозначає «існує». Отже, `a ≤ b` означає, що існує\nчисло `c` таке, що `b = a + c`. Це визначення працює\nтому що в цій грі немає від'ємних чисел.\n\nЩоб *довести* твердження «існує», використовуйте тактику `use`.\nДавайте розглянемо приклад.",
+ "`a ≤ b` is *notation* for `∃ c, b = a + c`.\n\nBecause this game doesn't have negative numbers, this definition\nis mathematically valid.\n\nThis means that if you have a goal of the form `a ≤ b` you can\nmake progress with the `use` tactic, and if you have a hypothesis\n`h : a ≤ b`, you can make progress with `cases h with c hc`.":
+ "`a ≤ b` є *нотацією* для `∃ c, b = a + c`.\n\nТомущо ця гра не має від’ємних чисел, це визначення\nє математично дійсним.\n\nЦе означає, що якщо у вас є ціль у формі `a ≤ b`, ви можете\nпросунутися за допомогою тактики `use`, а також якщо у вас є гіпотеза\n`h : a ≤ b`, ви можете досягти прогресу з `cases h with c hc`.",
+ "`a ≠ b` is *notation* for `(a = b) → False`.\n\nThe reason this is mathematically\nvalid is that if `P` is a true-false statement then `P → False`\nis the logical opposite of `P`. Indeed `True → False` is false,\nand `False → False` is true!\n\nThe upshot of this is that you can treat `a ≠ b` in exactly\nthe same way as you treat any implication `P → Q`. For example,\nif your *goal* is of the form `a ≠ b` then you can make progress\nwith `intro h`, and if you have a hypothesis `h` of the\nform `a ≠ b` then you can `apply h at h1` if `h1` is a proof\nof `a = b`.":
+ "`a ≠ b` — це *нотація* для `(a = b) → False`.\n\nПричина що це математично\nкоректно є те, що якщо `P` є булевим твердженням правда-хибно, тоді `P → False`\nє логічною протилежністю `P`. Дійсно, `True → False` є хибним,\nа `False → False` є правдою!\n\nРезультатом цього є те, що ви можете обробити `a ≠ b` точно\nтак само, як ви обробляєте будь-яку імплікацію `P → Q`. Наприклад,\nякщо ваша *мета* має форму `a ≠ b`, то ви можете досягти прогресу\nз `intro h`, і якщо у вас є гіпотеза `h`\nу формі `a ≠ b`, тоді ви можете `apply h at h1`, якщо `h1` є доказом\nщо `a = b`.",
+ "`Pow a b`, with notation `a ^ b`, is the usual\n  exponentiation of natural numbers. Internally it is\n  defined via two axioms:\n\n  * `pow_zero a : a ^ 0 = 1`\n\n  * `pow_succ a b : a ^ succ b = a ^ b * a`\n\nNote in particular that `0 ^ 0 = 1`.":
+ "`Pow a b` із нотацією `a ^ b` є звичайним\n  піднесення натуральних чисел до ступеня. Всередині це так\n  визначається за допомогою двох аксіом:\n\n  * `pow_zero a : a ^ 0 = 1`\n\n  * `pow_succ a b : a ^ succ b = a ^ b * a`\n\nЗокрема, зауважте, що `0 ^ 0 = 1`.",
+ "`Mul a b`, with notation `a * b`, is the usual\n  product of natural numbers. Internally it is\n  via two axioms:\n\n  * `mul_zero a : a * 0 = 0`\n\n  * `mul_succ a b : a * succ b = a * b + a`\n\nOther theorems about naturals, such as `zero_mul`,\nare proved by induction from these two basic theorems.":
+ "`Mul a b` із нотацією `a * b` є звичайним\n  добуток натуральних чисел. Всередині це зроблено\n  через дві аксіоми:\n\n  * `mul_zero a : a * 0 = 0`\n\n  * `mul_succ a b : a * succ b = a * b + a`\n\nІнші теореми про натуральні числа, такі як `zero_mul`,\nдоводяться індукцією з цих двох основних теорем.",
+ "`Add a b`, with notation `a + b`, is\nthe usual sum of natural numbers. Internally it is defined\nvia the following two hypotheses:\n\n* `add_zero a : a + 0 = a`\n\n* `add_succ a b : a + succ b = succ (a + b)`\n\nOther theorems about naturals, such as `zero_add a : 0 + a = a`, are proved\nby induction using these two basic theorems.":
+ "`Add a b` із нотацією `a + b` є\nзвичайною сумою натуральних чисел. Внутрішньо це визначається\nчерез такі дві гіпотези:\n\n* `add_zero a : a + 0 = a`\n\n* `add_succ a b : a + succ b = succ (a + b)`\n\nІнші теореми про натуральні числа, такі як `zero_add a : 0 + a = a`, доводяться\nшляхом індукції із використанням цих двох основних теорем.",
+ "[final boss music]": "[музика фінального боса]",
+ "[dramatic music]. Now are you ready to face the first boss of the game?":
+ "[драматична музика]. Тепер ви готові зустрітися з першим босом у грі?",
+ "[boss battle music]\n\nLook in your inventory to see the proofs you have available.\nThese should be enough.":
+ "[музика битви із босом]\n\nПодивіться у свій інвентар, щоб побачити доступні докази.\nЦього має бути достатньо.",
+ "You've now seen all the tactics you need to beat the final boss of the game.\nYou can begin the journey towards this boss by entering Multiplication World.\n\nOr you can go off the beaten track and learn some new tactics in Implication\nWorld. These tactics let you prove more facts about addition, such as\nhow to deduce `a = 0` from `x + a = x`.\n\nClick \"Home\" and make your choice.":
+ "Тепер ви побачили всі тактики, необхідні для перемоги над фінальним босом у грі.\nВи можете розпочати подорож до цього боса, увійшовши у Світ множення.\n\nАбо ви можете зійти з проторених шляхів і вивчити нову тактику в Світі\nімплікацій. Ці тактики дозволяють доводити більше фактів про додавання, наприклад\nяк вивести `a = 0` з `x + a = x`.\n\nНатисніть «Покинути світ» і зробіть свій вибір.",
+ "You want to use `add_right_eq_zero`, which you already\nproved, but you'll have to start with `symm at` your hypothesis.":
+ "Ви хочете використовувати `add_right_eq_zero`, який ви вже\nдовели, але вам доведеться почати з `symm at` вашої гіпотези.",
+ "You still don't know which way to go, so do `cases «{e}» with a`.":
+ "Ви все ще не знаєте, що робити, тому `cases «{e}» with a`.",
+ "You now know enough tactics to prove `2 + 2 = 4`! Let's begin the journey.":
+ "Тепер ви знаєте достатньо тактик, щоб довести `2 + 2 = 4`! Почнемо подорож.",
+ "You might want to think about whether induction\non `a` or `b` is the best idea.":
+ "Ви можете подумати про те, яка індукція\nчи по `a` чи `b` буде кращою ідеєю.",
+ "You can use `rw [zero_add] at «{h}»` to rewrite at `«{h}»` instead\nof at the goal.":
+ "Ви можете використовувати `rw [zero_add] at «{h}»`, щоб переписати в `«{h}»` замість перезапису\nв меті.",
+ "You can start a proof by induction on `n` by typing:\n`induction n with d hd`.":
+ "Ви можете почати доведення індукцією по `n`, ввівши:\n`induction n with d hd`.",
+ "You can read more about the `decide` tactic by clicking\non it in the top right.":
+ "Ви можете прочитати більше про тактику  `decide`, натиснувши\nна неї вгорі праворуч.",
+ "You can put a `←` in front of any theorem provided to `rw` to rewrite\nthe other way around. Look at the docs for `rw` for an explanation. Type `←` with `\\l`.":
+ "Ви можете поставити `←` перед будь-якою теоремою, переданою до `rw`, щоб переписати її\nу зворотньому напрямку. Перегляньте документацію для `rw` для пояснення. Введіть `←` за допомогою `\\l`.",
+ "You can prove $1\\times m=m$ in at least three ways.\nEither by induction, or by using `succ_mul`, or\nby using commutativity. Which do you think is quickest?":
+ "Ви можете довести $1\\times m=m$ принаймні трьома способами.\nАбо шляхом індукції, або за допомогою `succ_mul`, або\nза допомогою комутативності. Як ви думаєте, який буде найшвидший?",
+ "You can probably take it from here.":
+ "Ймовірно, ви можете продовжити звідси.",
+ "You can now finish with `exact h`.":
+ "Тепер ви можете закінчити із `exact h`.",
+ "You can now `apply mul_left_cancel at h`":
+ "Тепер ви можете виконати `apply mul_left_cancel at h`",
+ "You can make your own tactics in Lean.\nThis code here\n```\nmacro \"simp_add\" : tactic => `(tactic|(\n  simp only [add_assoc, add_left_comm, add_comm]))\n```\nwas used to create a new tactic `simp_add`, which runs\n`simp only [add_assoc, add_left_comm, add_comm]`.\nTry running `simp_add` to solve this level!":
+ "Ви можете створити власні тактики в Lean.\nЦей код нижче\n```\nmacro \"simp_add\" : tactic => `(tactic|(\n  simp only [add_assoc, add_left_comm, add_comm]))\n```\nбуло використано для створення нової тактики `simp_add`, яка запускає\n`simp only [add_assoc, add_left_comm, add_comm]`.\nСпробуйте запустити `simp_add`, щоб вирішити цей рівень!",
+ "You can just mimic the previous proof to do this one -- or you can figure out a way\nof using it.":
+ "Ви можете просто імітувати попередній доказ, щоб виконати це завдання -- або ви можете знайти спосіб\nвикористати його.",
+ "You can do induction on any of the three variables. Some choices\nare harder to push through than others. Can you do the inductive step in\n5 rewrites only?":
+ "Ви можете провести індукцію по будь-якій із трьох змінних. Через деякі варіанти\nважче продертися, ніж через інші. Чи можете ви виконати індуктивний крок лише за\n5 перезаписів?",
+ "Why did we not just define `succ n` to be `n + 1`? Because we have not\neven *defined* addition yet! We'll do that in the next level.":
+ "Чому ми просто не визначили `succ n` як `n + 1`? Тому що ми не маємо\nще навіть *визначення* додаванню! Ми зробимо це на наступному рівні.",
+ "What do you think of this two-liner:\n```\nsymm\nexact zero_ne_one\n```\n\n`exact` doesn't just take hypotheses, it will eat any proof which exists\nin the system.":
+ "Що ви думаєте про цей дворядковий доказ:\n```\nsymm\nexact zero_ne_one\n```\n\n`exact` не просто приймає гіпотези, він з'їдає будь-які наявні докази\nв системі.",
+ "Well done! You now have enough tools to tackle the main boss of this level.":
+ "Гарна робота! Тепер у вас достатньо інструментів, щоб боротися з головним босом цього рівня.",
+ "Well done!": "Гарна робота!",
+ "Welcome to tutorial world! In this world we learn the basics\nof proving theorems. The boss level of this world\nis the theorem `2 + 2 = 4`.\n\nYou prove theorems by solving puzzles using tools called *tactics*.\nThe aim is to prove the theorem by applying tactics\nin the right order.\n\nLet's learn some basic tactics. Click on \"Start\" below\nto begin your quest.":
+ "Ласкаво просимо до навчального світу! У цьому світі ми вивчаємо основи\nдоведення теорем. Рівневим босом цього світу\nє теорема `2 + 2 = 4`.\n\nВи доводите теореми, вирішуючи головоломки за допомогою інструментів під назвою *тактики*.\nМета полягає в тому, щоб довести теорему шляхом застосування тактики\nу правильному порядку.\n\nДавайте навчимося деяким основним тактикам. Натисніть «Почати» нижче\nщоб почати свою пригоду.",
+ "Welcome to Addition World! In this world we'll learn the `induction` tactic.\nThis will enable us to defeat the boss level of this world, namely `x + y = y + x`.\n\nThe tactics `rw`, `rfl` and `induction` are the only tactics you'll need to\nbeat all the levels in Addition World, Multiplication World, and Power World.\nPower World contains the final boss of the game.\n\nThere are plenty more tactics in this game, but you'll only need to know them if you\nwant to explore the game further (for example if you decide to 100%\nthe game).":
+ "Ласкаво просимо до Світу додавання! У цьому світі ми навчимося тактиці `induction`.\nЦе дозволить нам перемогти босовий рівень цього світу, а саме `x + y = y + x`.\n\nТактики `rw`, `rfl` та `induction` — єдині тактики, які вам знадобляться, щоб\nподолати всі рівні у Світі додавання, Світі множення та Світі ступенів.\nСвіт ступенів містить фінального боса гри.\n\nУ цій грі є ще багато тактик, але вам потрібно знати лише їх, якщо ви\nхочете вивчити гру далі (наприклад, якщо ви вирішите на 100%\nгру).",
+ "We've seen `le_zero`, the proof that if `x ≤ 0` then `x = 0`.\nNow we'll prove that if `x ≤ 1` then `x = 0` or `x = 1`.":
+ "Ми зробили `le_zero`, доказ того, що якщо `x ≤ 0`, тоді `x = 0`.\nТепер ми доведемо, що якщо `x ≤ 1`, тоді `x = 0` або `x = 1`.",
+ "We've proved that `x ≤ 0` implies `x = 0`. The last two levels\nin this world will prove which numbers are `≤ 1` and `≤ 2`.\nThis lemma will be helpful for them.":
+ "Ми довели, що `x ≤ 0` означає `x = 0`. Останні два рівні\nу цьому світі доведуть, які числа є `≤ 1` і `≤ 2`.\nЦя лема буде там у нагоді.",
+ "We've proved that $2+2=4$; in Implication World we'll learn\nhow to prove $2+2\\neq 5$.\n\nIn Addition World we proved *equalities* like $x + y = y + x$.\nIn this second tutorial world we'll learn some new tactics,\nenabling us to prove *implications*\nlike $x+1=4 \\implies x=3.$\n\nWe'll also learn two new fundamental facts about\nnatural numbers, which Peano introduced as axioms.\n\nClick on \"Start\" to proceed.":
+ "Ми довели, що $2+2=4$; у Світі імплікацій ми навчимося\nяк довести $2+2\\neq 5$.\n\nУ Світі додавання ми довели *рівності* такі як $x + y = y + x$.\nУ цьому другому навчальному курсі ми навчимося деяких нових тактик,\nщо дозволяє нам довести *імплікації*\nтакі як $x+1=4 \\implies x=3.$\n\nМи також дізнаємося про два нових фундаментальних факта про\nнатуральні числа, які Пеано ввів як аксіоми.\n\nНатисніть «Почати», щоб продовжити.",
+ "We've just seen that `0 ^ 0 = 1`, but if `n`\nis a successor, then `0 ^ n = 0`. We prove that here.":
+ "Ми щойно бачили, що `0 ^ 0 = 1`, але якщо `n`\nє наступником, тоді `0 ^ n = 0`. Ми доведемо це тут.",
+ "We've been adding up two numbers; in this level we will add up three.\n\n  What does $x+y+z$ *mean*? It could either mean $(x+y)+z$, or it\n  could mean $x+(y+z)$. In Lean, $x+y+z$ means $(x+y)+z$.\n\n  But why do we care which one it means; $(x+y)+z$ and $x+(y+z)$ are *equal*!\n\n  That's true, but we didn't prove it yet. Let's prove it now by induction.":
+ "Ми складали два числа; на цьому рівні ми будемо додавати три.\n\n  Що $x+y+z$ *означає*? Це може означати або $(x+y)+z$, або це\n  може означати $x+(y+z)$. У Lean $x+y+z$ означає $(x+y)+z$.\n\n  Але чому нас хвилює, що це означає; $(x+y)+z$ і $x+(y+z)$ *рівні*!\n\n  Це правда, але ми цього ще не довели. Доведемо це тепер індукцією.",
+ "We're going to change that `False` into `True`. Start by changing it into\n`is_zero (succ a)` by executing `rw [← is_zero_succ a]`.":
+ "Ми збираємося змінити це `False` на `True`. Почніть із зміни його на\n`is_zero (succ a)`, виконавши `rw [← is_zero_succ a]`.",
+ "We'll need this lemma to prove that two is prime!\n\nYou'll need to know that `∨` is right associative. This means that\n`x = 0 ∨ x = 1 ∨ x = 2` actually means `x = 0 ∨ (x = 1 ∨ x = 2)`.\nThis affects how `left` and `right` work.":
+ "Нам знадобиться ця лема, щоб довести, що два є простим числом!\n\nВам потрібно знати, що `∨` є право-асоціативно. Це означає, що\n`x = 0 ∨ x = 1 ∨ x = 2` насправді означає `x = 0 ∨ (x = 1 ∨ x = 2)`.\nЦе впливає на роботу `left` та `right`.",
+ "We'd like to prove `2 + 2 = 4` but right now\nwe can't even *state* it\nbecause we haven't yet defined addition.\n\n## Defining addition.\n\nHow are we going to add $37$ to an arbitrary number $x$? Well,\nthere are only two ways to make numbers in this game: $0$\nand successors. So to define `37 + x` we will need\nto know what `37 + 0` is and what `37 + succ x` is.\nLet's start with adding `0`.\n\n### Adding 0\n\nTo make addition agree with our intuition, we should *define* `37 + 0`\nto be `37`. More generally, we should define `a + 0` to be `a` for\nany number `a`. The name of this proof in Lean is `add_zero a`.\nFor example `add_zero 37` is a proof of `37 + 0 = 37`,\n`add_zero x` is a proof of `x + 0 = x`, and `add_zero` is a proof\nof `? + 0 = ?`.\n\nWe write `add_zero x : x + 0 = x`, so `proof : statement`.":
+ "Ми хотіли б довести, що `2 + 2 = 4`, але прямо зараз\nми навіть не можемо *заявити* про це\nоскільки ми ще не визначили додавання.\n\n## Визначення додавання.\n\nЯк ми збираємося додати $37$ до довільного числа $x$? добре,\nу цій грі є лише два способи робити числа: $0$\nта наступники. Отже, щоб визначити `37 + x`, нам знадобиться\nщоб знати, що таке `37 + 0` і що таке `37 + succ x`.\nПочнемо з додавання `0`.\n\n### Додавання 0\n\nЩоб додавання узгоджувалося з нашою інтуїцією, ми повинні *визначити* `37 + 0`\nяк `37`. Загалом, ми повинні визначити `a + 0` як `a` для\nбудь-якого числа `а`. Назва цього доказу в Lean це `add_zero a`.\nНаприклад, `add_zero 37` є доказом `37 + 0 = 37`,\n`add_zero x` є доказом `x + 0 = x`, а `add_zero` є доказом\nз `? + 0 = ?`.\n\nМи пишемо `add_zero x : x + 0 = x`, отже `доказ : твердження`.",
+ "We want to use `le_mul_right`, but we need a hypothesis `x * y ≠ 0`\nwhich we don't have. Yet. Execute `have h2 : x * y ≠ 0` (you can type `≠` with `\\ne`).\nYou'll be asked to\nprove it, and then you'll have a new hypothesis which you can apply\n`le_mul_right` to.":
+ "Ми хочемо використовувати `le_mul_right`, але нам потрібна гіпотеза `x * y ≠ 0`\nякої у нас ще немає. Виконайте `have h2 : x * y ≠ 0` (ви можете ввести `≠` як `\\ne`).\nВас попросять\nдоведіть це, і тоді у вас буде нова гіпотеза, яку ви зможете застосувати\nдо `le_mul_right`.",
+ "We want to reduce this to a hypothesis `b = 0` and a goal `a * b = 0`,\nwhich is logically equivalent but much easier to prove. Remember that `X ≠ 0`\nis notation for `X = 0 → False`. Click on `Show more help!` if you need hints.":
+ "Ми хочемо звести це до гіпотези `b = 0` і мети `a * b = 0`,\nщо логічно еквівалентно, але набагато легше довести. Пам’ятайте, що `X ≠ 0`\nце позначення для `X = 0 → False`. Натисніть `Показати більше допомоги!`, якщо вам потрібні підказки.",
+ "We still can't prove `2 + 2 ≠ 5` because we have not talked about the\ndefinition of `≠`. In Lean, `a ≠ b` is *notation* for `a = b → False`.\nHere `False` is a generic false proposition, and `→` is Lean's notation\nfor \"implies\". In logic we learn\nthat `True → False` is false, but `False → False` is true. Hence\n`X → False` is the logical opposite of `X`.\n\nEven though `a ≠ b` does not look like an implication,\nyou should treat it as an implication. The next two levels will show you how.\n\n`False` is a goal which you cannot deduce from a consistent set of assumptions!\nSo if your goal is `False` then you had better hope that your hypotheses\nare contradictory, which they are in this level.":
+ "Ми все ще не можемо довести, що `2 + 2 ≠ 5`, тому що ми не говорили про\nвизначення `≠`. У Lean `a ≠ b` є *нотацією* для `a = b → False`.\nТут `False` є загальним хибним твердженням, а `→` є позначенням Lean\nдля \"припускає\". На логіці ми дізналися що\nщо `True → False` є хибним, але `False → False` є істинним. Отже\n`X → False` є логічною протилежністю `X`.\n\nНезважаючи на те, що `a ≠ b` не виглядає імплікацією,\nви повинні розглядати її саме так Наступні два рівні покажуть вам, як на це дивитися.\n\n`False` - це мета, яку ви не можете вивести із послідовного набору припущень!\nОтже, якщо ваша мета `False`, то вам краще сподіватися, що ваші гіпотези\nє протиречивими, і вони саме такі на цьому рівні.",
+ "We now start work on an algorithm to do addition more efficiently. Recall that\nwe defined addition by recursion, saying what it did on `0` and successors.\nIt is an axiom of Lean that recursion is a valid\nway to define functions from types such as the naturals.\n\nLet's define a new function `pred` from the naturals to the naturals, which\nattempts to subtract 1 from the input. The definition is this:\n\n```\npred 0 := 37\npred (succ n) := n\n```\n\nWe cannot subtract one from 0, so we just return a junk value. As well as this\ndefinition, we also create a new lemma `pred_succ`, which says that `pred (succ n) = n`.\nLet's use this lemma to prove `succ_inj`, the theorem which\nPeano assumed as an axiom and which we have already used extensively without justification.":
+ "Тепер ми починаємо роботу над алгоритмом для більш ефективної роботи із додаванням. Згадайте що\nми визначили додавання за допомогою рекурсії, сказавши, що воно робить при `0` і при наступниках.\nЦе аксіома Lean, що рекурсія є дійсною\nспосіб визначення функцій із типів, таких як натуральні числа.\n\nДавайте визначимо нову функцію `pred` із натуральних в натуральні, яка\nнамагається відняти 1 із вхідних даних. Визначення таке:\n\n```\npred 0 := 37\npred (succ n) := n\n```\n\nМи не можемо відняти одиницю від 0, тому ми просто повертаємо мусорне значення. Як і це\nвизначення, ми також створюємо нову лему `pred_succ`, яка говорить, що `pred (succ n) = n`.\nСкористаємося цією лемою, щоб довести `succ_inj`, теорему яку\nПеано вважав за аксіому, і яку ми вже широко використовували без пояснення.",
+ "We now have enough to state a mathematically accurate, but slightly\nclunky, version of Fermat's Last Theorem.\n\nFermat's Last Theorem states that if $x,y,z>0$ and $m \\geq 3$ then $x^m+y^m\\not =z^m$.\nIf you didn't do inequality world yet then we can't talk about $m \\geq 3$,\nso we have to resort to the hack of using `n + 3` for `m`,\nwhich guarantees it's big enough. Similarly instead of `x > 0` we\nuse `a + 1`.\n\nThis level looks superficially like other levels we have seen,\nbut the shortest solution known to humans would translate into\nmany millions of lines of Lean code. The author of this game,\nKevin Buzzard, is working on translating the proof by Wiles\nand Taylor into Lean, although this task will take many years.\n\n## CONGRATULATIONS!\n\nYou've finished the main quest of the natural number game!\nIf you would like to learn more about how to use Lean to\nprove theorems in mathematics, then take a look\nat [Mathematics In Lean](https://leanprover-community.github.io/mathematics_in_lean/),\nan interactive textbook which you can read in your browser,\nand which explains how to work with many more mathematical concepts in Lean.":
+ "У нас тепер достатньо, щоб стверджувати математично точну, але трішки\nнезграбну версію останньої теореми Ферма.\n\nОстання теорема Ферма стверджує, що якщо $x,y,z>0$ і $m \\geq 3$, то $x^m+y^m\\not =z^m$.\nЯкщо ви ще не вивчали світ нерівності, ми не можемо говорити про $m \\geq 3$,\nтому ми змушені вдатися до хитрощів, використовуючи `n + 3` для `m`,\nщо гарантує, що він достатньо великий. Так само замість `x > 0` ми\nвикористовуємо `a + 1`.\n\nЦей рівень на перший погляд схожий на інші рівні, які ми бачили,\nале найкоротше рішення, відоме людям, переведеться на\nбагато мільйонів рядків коду Lean. Автор цієї гри,\nКевін Баззард працює над перекладом доказу Вайлза\nі Тейлора в Lean, хоча це завдання займе багато років.\n\n## ВІТАЄМО!\n\nВи закінчили головний квест гри з натуральними числами!\nЯкщо ви хочете дізнатися більше про те, як використовувати Lean to\nдоведіть теореми з математики, потім подивіться\nна інтерактивний підручник [Mathematics In Lean](https://leanprover-community.github.io/mathematics_in_lean/),\nякий ви можете читати у своєму браузері,\nі який пояснює, як працювати з багатьма іншими математичними концепціями в Lean.",
+ "We now have enough to prove that multiplication is associative,\nthe boss level of multiplication world. Good luck!":
+ "Тепер у нас достатньо всього, щоб довести, що множення асоціативне,\nбосовий рівень світу множення. Удачі!",
+ "We know `zero_ne_succ n` is a proof of `0 = succ n → False` -- but what\nif we have a hypothesis `succ n = 0`? It's the wrong way around!\n\nThe `symm` tactic changes a goal `x = y` to `y = x`, and a goal `x ≠ y`\nto `y ≠ x`. And `symm at h`\ndoes the same for a hypothesis `h`. We've proved $0 \\neq 1$ and called\nthe proof `zero_ne_one`; now try proving $1 \\neq 0$.":
+ "Ми знаємо, що `zero_ne_succ n` є доказом `0 = succ n → False` -- але що\nякщо ми маємо гіпотезу `succ n = 0`? Це неправильний шлях!\n\nТактика `symm` змінює ціль `x = y` на `y = x`, а ціль `x ≠ y`\nна `y ≠ x`. І `symm у h`\nробить те саме для гіпотези `h`. Ми довели $0 \\neq 1$ і назвали\nдоказ `zero_ne_one`; тепер спробуйте довести $1 \\neq 0$.",
+ "We have seen how to `apply` theorems and assumptions\nof the form `P → Q`. But what if our *goal* is of the form `P → Q`?\nTo prove this goal, we need to know how to say \"let's assume `P` and deduce `Q`\"\nin Lean. We do this with the `intro` tactic.":
+ "Ми побачили, як `apply`-іти теореми та припущення\nвиду `P → Q`. Але що, якщо наша *мета* має форму `P → Q`?\nЩоб підтвердити цю мету, нам потрібно знати, як сказати \"давайте припустимо `P` і виведемо `Q`\"\nв Lean. Ми робимо це за допомогою тактики `intro`.",
+ "We gave a pretty unsatisfactory proof of `2 + 2 ≠ 5` earlier on; now give a nicer one.":
+ "Раніше ми надали досить незадовільний доказ `2 + 2 ≠ 5`; тепер давайте зробимо кращій.",
+ "We don't know whether to go left or right yet. So start with `cases «{h}» with hx hy`.":
+ "Ми ще не знаємо куда питі, ліворуч чи праворуч. Тож почніть із `cases «{h}» with hx hy`.",
+ "We define a function `is_zero` thus:\n\n```\nis_zero 0 := True\nis_zero (succ n) := False\n```\n\nWe also create two lemmas, `is_zero_zero` and `is_zero_succ n`, saying that `is_zero 0 = True`\nand `is_zero (succ n) = False`. Let's use these lemmas to prove `succ_ne_zero`, Peano's\nLast Axiom. Actually, we have been using `zero_ne_succ` before, but it's handy to have\nthis opposite version too, which can be proved in the same way. Note: you can\ncheat here by using `zero_ne_succ` but the point of this world is to show\nyou how to *prove* results like that.\n\nIf you can turn your goal into `True`, then the `trivial` tactic will solve it.":
+ "Ми визначаємо функцію `is_zero` так:\n\n```\nis_zero 0 := True\nis_zero (succ n) := False\n```\n\nМи також створюємо дві леми, `is_zero_zero` і `is_zero_succ n`, кажучи, що `is_zero 0 = True`\nі `is_zero (succ n) = False`. Давайте використаємо ці леми, щоб довести `succ_ne_zero`, Останню\nаксіому Пеано. Фактично, ми використовували `zero_ne_succ` раніше, але зручно мати\nцю протилежна версія також, яку можна довести таким же чином. Примітка: можна\nсхитрити тут, використовуючи `zero_ne_succ`, але сенс цього світу - показати\nвам як *доводити* такі результати.\n\nЯкщо ви можете перетворити свою мету на `True`, тоді тактика `trivial` її вирішить.",
+ "Very well done.\n\nA passing mathematician remarks that with you've just proved that `ℕ` is totally\nordered.\n\nThe final few levels in this world are much easier.":
+ "Дуже добре зроблено.\n\nПерехожий математик зауважує, що ви щойно довели, що `ℕ` тотально\nвпорядковане.\n\nКілька останніх рівнів у цьому світі набагато легші.",
+ "Use the previous lemma with `apply eq_succ_of_ne_zero at ha`.":
+ "Використовуйте попередню лему з `apply eq_succ_of_ne_zero at ha`.",
+ "Use `mul_eq_zero` and remember that `tauto` will solve a goal\nif there are hypotheses `a = 0` and `a ≠ 0`.":
+ "Використовуйте `mul_eq_zero` і пам’ятайте, що `tauto` вирішить ціль\nякщо є гіпотези `a = 0` і `a ≠ 0`.",
+ "Use `add_succ`.": "Використайте `add_succ`.",
+ "Tutorial World": "Навчальний світ",
+ "Try `rw [← one_eq_succ_zero]` to change `succ 0` into `1`.":
+ "Спробуйте `rw [← one_eq_succ_zero]`, щоб змінити `succ 0` на `1`.",
+ "Try `rw [add_zero c]`.": "Спробуйте `rw [add_zero c]`.",
+ "Try `cases «{hd}» with h1 h2`.": "Спробуйте `cases «{hd}» with h1 h2`.",
+ "Totality of `≤` is the boss level of this world, and it's coming up next. It says that\nif `a` and `b` are naturals then either `a ≤ b` or `b ≤ a`.\nBut we haven't talked about `or` at all. Here's a run-through.\n\n1) The notation for \"or\" is `∨`. You won't need to type it, but you can\ntype it with `\\or`.\n\n2) If you have an \"or\" statement in the *goal*, then two tactics made\nprogress: `left` and `right`. But don't choose a direction unless your\nhypotheses guarantee that it's the correct one.\n\n3) If you have an \"or\" statement as a *hypothesis* `h`, then\n`cases h with h1 h2` will create two goals, one where you went left,\nand the other where you went right.":
+ "Тотальність `≤` — це рівень боса цього світу, і він наступний. Він говорить, що\nякщо `a` і `b` є натуральними, тоді або `a ≤ b`, або `b ≤ a`.\nАле ми взагалі не говорили про `or`. Ось швидкий огляд.\n\n1) Нотація для \"або\" це `∨`. Вам не потрібно буде ввести цей символ, але ви можете\nнабрати його за допомогою `\\or`.\n\n2) Якщо у *мети* є твердження «або», то дві тактики\nроблять прогрес: `left` і `right`. Але не вибирайте напрямок, якщо ваша\nгіпотези не гарантує, що вона правильна.\n\n3) Якщо у вас є твердження \"або\" як *гіпотеза* `h`, тоді\n`cases h with h1 h2` створить дві цілі: одну, де ви пішли ліворуч,\nі іншу там, де ви пішли праворуч.",
+ "To solve this level, you need to `use` a number `c` such that `x = 0 + c`.":
+ "Щоб розв’язати цей рівень, вам потрібно `use` таке число `c`, щоб `x = 0 + c`.",
+ "Those of you interested in speedrunning the game may want to know\nthat `repeat rw [add_zero]` will do both rewrites at once.":
+ "Ті з вас, хто цікавиться швидким проходженням гри, можливо, захочуть знати\nщо `repeat rw [add_zero]` виконає обидва перезаписи одночасно.",
+ "This world introduces exponentiation. If you want to define `37 ^ n`\nthen, as always, you will need to know what `37 ^ 0` is, and\nwhat `37 ^ (succ d)` is, given only `37 ^ d`.\n\nYou can probably guess the names of the general theorems:\n\n  * `pow_zero (a : ℕ) : a ^ 0 = 1`\n  * `pow_succ (a b : ℕ) : a ^ succ b = a ^ b * a`\n\nUsing only these, can you get past the final boss level?\n\nThe levels in this world were designed by Sian Carey, a UROP student\nat Imperial College London, funded by a Mary Lister McCammon Fellowship\nin the summer of 2019. Thanks to Sian and also thanks to Imperial\nCollege for funding her.":
+ "Цей світ вводить піднесення до ступеня. Якщо ви хочете визначити `37 ^ n`\nтоді, як завжди, вам потрібно буде знати, що таке `37 ^ 0`, і\nщо таке `37 ^ (succ d)`, враховуючи лише `37 ^ d`.\n\nНазви загальних теорем ви, напевно, вгадаєте:\n\n  * `pow_zero (a : ℕ) : a ^ 0 = 1`\n  * `pow_succ (a b : ℕ) : a ^ succ b = a ^ b * a`\n\nВикористовуючи лише це, чи зможете ви пройти фінальний рівень боса?\n\nРівні в цьому світі були розроблені Сіан Кері, студенткою UROP\nв Імперському коледжі Лондона, що фінансується стипендією Мері Лістер МакКаммон\nвлітку 2019. Спасибі Сіан, а також Імперському\nколеджу за її фінансування.",
+ "This time, use the `left` tactic.":
+ "Цього разу використовуйте тактику `left`.",
+ "This state is not provable! Did you maybe use `rw [add_left_eq_self] at h`\ninstead of `apply [add_left_eq_self] at h`? You can complare the two in the inventory.":
+ "Цей стан не піддається доведенню! Можливо, ви використали `rw [add_left_eq_self] у h`\nзамість `apply [add_left_eq_self] at h`? Ви можете порівняти це дві штуки в інвентарі.",
+ "This level proves that if `a ≠ 0` and `b ≠ 0` then `a * b ≠ 0`. One strategy\nis to write both `a` and `b` as `succ` of something, deduce that `a * b` is\nalso `succ` of something, and then `apply zero_ne_succ`.":
+ "Цей рівень доводить, що якщо `a ≠ 0` і `b ≠ 0`, то `a * b ≠ 0`. Одна стратегія\nце записати як `a`, так і `b` як `succ` чогось, зробити висновок, що `a * b` є\nтакож `succ` чогось, а потім `apply zero_ne_succ`.",
+ "This level proves that if `a * b = 0` then `a = 0` or `b = 0`. It is\nlogically equivalent to the last level, so there is a very short proof.":
+ "Цей рівень доводить, що якщо `a * b = 0`, то `a = 0` або `b = 0`. Це\nлогічно еквівалентно попередньому рівню, тому дуже короткий доказ.",
+ "This level proves `x * y = 1 → x = 1`, the multiplicative analogue of Advanced Addition\nWorld's `x + y = 0 → x = 0`. The strategy is to prove that `x ≤ 1` and then use the\nlemma `le_one` from `≤` world.\n\nWe'll prove it using a new and very useful tactic called `have`.":
+ "Цей рівень доводить `x * y = 1 → x = 1`, мультиплікативний аналог для `x + y = 0 → x = 0`\nіз Світу розширеного додавання. Стратегія полягає в тому, щоб довести, що `x ≤ 1`, а потім використати\nлема `le_one` зі світу `≤`.\n\nМи доведемо це за допомогою нової та дуже корисної тактики під назвою `have`.",
+ "This level is more important than you think; it plays\na useful role when battling a big boss later on.":
+ "Цей рівень важливіший, ніж ви думаєте; він грає\nважливу роль у подальшій боротьбі з великим босом.",
+ "This level asks you to prove *antisymmetry* of $\\leq$.\nIn other words, if $x \\leq y$ and $y \\leq x$ then $x = y$.\nIt's the trickiest one so far. Good luck!":
+ "На цьому рівні вам потрібно довести *антисиметричність* $\\leq$.\nІншими словами, якщо $x \\leq y$ і $y \\leq x$, то $x = y$.\nЦе найскладніше завдання наразі. Удачі!",
+ "This lemma would have been easy if we had known that `x + y = y + x`. That theorem\n  is called `add_comm` and it is *true*, but unfortunately its proof *uses* both\n  `add_zero` and `zero_add`!\n\n  Let's continue on our journey to `add_comm`, the proof of `x + y = y + x`.":
+ "Ця лема була б легкою, якби ми знали, що `x + y = y + x`. Ця теорема\n  називається `add_comm` і вона є *істіною*, але, на жаль, її доказ *використовує* як\n  `add_zero` так і `zero_add`!\n\n  Давайте продовжимо нашу подорож до `add_comm`, доказу `x + y = y + x`.",
+ "This is I think the toughest level yet. Tips: if `a` is a number\nthen `cases a with b` will split into cases `a = 0` and `a = succ b`.\nAnd don't go left or right until your hypotheses guarantee that\nyou can prove the resulting goal!\n\nI've left hidden hints; if you need them, retry from the beginning\nand click on \"Show more help!\"":
+ "Я вважаю, що це найскладніший рівень. Підказки: якщо `a` є числом\nтоді `cases a with b` розділяться на випадки `a = 0` і `a = succ b`.\nІ не йдіть ні вліво, ні вправо, доки ваші гіпотези не підтвердять що\nви можете довести кінцеву мету!\n\nЯ залишив приховані підказки; якщо вони вам потрібні, повторіть спробу з самого початку\nі натисніть «Показати додаткову допомогу!»",
+ "The way to start this proof is `induction b with d hd generalizing c`.":
+ "Спосіб розпочати це доведення – `induction b with d hd generalizing c`.",
+ "The rfl tactic": "Тактика rfl",
+ "The reason `«{x}» ≤ «{x}»` is because `«{x}» = «{x}» + 0`.\nSo you should start this proof with `use 0`.":
+ "Причина `«{x}» ≤ «{x}»` полягає в тому, що `«{x}» = «{x}» + 0`.\nОтже, ви повинні почати це доведення з `use 0`.",
+ "The previous lemma can be used to prove this one.":
+ "Можна використати попередню лему для доведення цієї.",
+ "The next result we'll need in `≤` World is that if `a + b = 0` then `a = 0` and `b = 0`.\nLet's prove one of these facts in this level, and the other in the next.\n\n## A new tactic: `cases`\n\nThe `cases` tactic will split an object or hypothesis up into the possible ways\nthat it could have been created.\n\nFor example, sometimes you want to deal with the two cases `b = 0` and `b = succ d` separately,\nbut don't need the inductive hypothesis `hd` that comes with `induction b with d hd`.\nIn this situation you can use `cases b with d` instead. There are two ways to make\na number: it's either zero or a successor. So you will end up with two goals, one\nwith `b = 0` and one with `b = succ d`.\n\nAnother example: if you have a hypothesis `h : False` then you are done, because a false statement implies\nany statement. Here `cases h` will close the goal, because there are *no* ways to\nmake a proof of `False`! So you will end up with no goals, meaning you have proved everything.":
+ "Наступним результатом, який нам знадобиться в Світі `≤`, буде те, що якщо `a + b = 0`, то `a = 0` і `b = 0`.\nДавайте доведемо один із цих фактів на цьому рівні, а інший – на наступному.\n\n## Нова тактика: `cases`.\n\nТактика `cases` розбиває об’єкт або гіпотезу на можливі шляхи\nякими його можна було створити.\n\nНаприклад, іноді ви хочете мати справу з двома випадками `b = 0` і `b = succ d` окремо,\nале не потрібна індуктивна гіпотеза `hd`, яка постачається з `induction b with d hd`.\nУ цій ситуації замість цього можна використовувати `cases b with d`. Є два способи зробити\nчисло: або нуль, або наступник. Таким чином, ви матимете дві мети, одну\nз `b = 0` і одну з `b = succ d`.\n\nІнший приклад: якщо у вас є гіпотеза `h : False`, тоді ви закінчили, оскільки хибне твердження передбачає\nбудь-яке твердження. Тут `cases h` закриють мету, тому що *немає* способів\nзробіть доказ `False`! Таким чином, ви залишитеся без цілей, тобто ви все довели.",
+ "The music gets ever more dramatic, as we explore\nthe interplay between exponentiation and multiplication.\n\nIf you're having trouble exchanging the right `a * b`\nbecause `rw [mul_comm]` swaps the wrong multiplication,\nthen read the documentation of `rw` for tips on how to fix this.":
+ "Музика стає все більш драматичною, оскільки ми досліджуємо\nвзаємодію між піднесенням до ступеня та множенням.\n\nЯкщо у вас виникли проблеми з заміною правильного `a * b`\nтому що `rw [mul_comm]` замінює неправильне множення,\nтоді прочитайте документацію `rw`, щоб дізнатися, як це виправити.",
+ "The music dies down. Is that it?\n\nCourse it isn't, you can\nclearly see that there are two levels left.\n\nA passing mathematician says that mathematicians don't have a name\nfor the structure you just constructed. You feel cheated.\n\nSuddenly the music starts up again. This really is the final boss.":
+ "Музика стихає. Це все?\n\nЗвичайно ні, ви можете\nчітко бачити, що залишилося ще два рівні.\n\nМатематик, який проходив повз, каже, що у математиків немає імені\nдля структури, яку ви щойно побудували. Ви відчуваєте себе обдуреним.\n\nРаптом знову починає звучати музика. Це дійсно фінальний бос.",
+ "The lemma proved in the final level of this world will be helpful\nin Divisibility World.":
+ "Лема, доведена на останньому рівні цього світу, буде корисною\nу Світі подільності.",
+ "The inductive hypothesis `hd` is \"For all natural numbers `c`, `a * d = a * c → d = c`\".\nYou can `apply` it `at` any hypothesis of the form `a * d = a * ?`.":
+ "Індуктивна гіпотеза `hd` така: «Для всіх натуральних чисел `c`, `a * d = a * c → d = c`».\nВи можете `apply` її `at` будь-якої гіпотези у вигляді `a * d = a * ?`.",
+ "The goal in this level is one of our hypotheses. Solve the goal by executing `exact h1`.":
+ "Мета на цьому рівні є однією з наших гіпотез. Вирішіть ціль, виконавши `exact h1`.",
+ "The first sub-boss of Multiplication World is `mul_comm x y : x * y = y * x`.\n\nWhen you've proved this theorem we will have \"spare\" proofs\nsuch as `zero_mul`, which is now easily deducible from `mul_zero`.\nBut we'll keep hold of these proofs anyway, because it's convenient\nto have exactly the right tool for a job.":
+ "Перший підбос у Світі множення — `mul_comm x y : x * y = y * x`.\n\nКоли ви доведете цю теорему, ми матимемо «запасні» докази\nнаприклад `zero_mul`, який тепер легко вивести з `mul_zero`.\nАле ми все одно збережемо ці докази, тому що це зручно\nмати правильний інструмент для роботи.",
+ "The classical introduction game for Lean.": "Класична вступна гра для Lean.",
+ "The `use` tactic": "Тактика `use`",
+ "The `exact` tactic": "Тактика `exact`",
+ "The `apply` tactic.": "Тактика `apply`.",
+ "Start with induction on `n`.": "Почніть з індукції по `n`.",
+ "Start with `rw [← pred_succ a]` and take it from there.":
+ "Почніть із `rw [← pred_succ a]` і продовжіть звідти.",
+ "Start with `rw [two_eq_succ_one]` to begin to break `2` down into its definition.":
+ "Почніть із `rw [two_eq_succ_one]`, щоб розділити `2` згідно його визначення.",
+ "Start with `repeat rw [add_assoc]` to push all the brackets to the right.":
+ "Почніть із `repeat rw [add_assoc]`, щоб перемістити всі дужки вправо.",
+ "Start with `intro hb`.": "Почніть із `intro hb`.",
+ "Start with `intro h`.": "Почніть із `intro h`.",
+ "Start with `intro h` to assume the hypothesis.":
+ "Почніть із `intro h`, щоб припустити гіпотезу.",
+ "Start with `intro h` to assume the hypothesis and call its proof `h`.":
+ "Почніть із `intro h`, щоб припустити гіпотезу та назвати її доказ `h`.",
+ "Start with `intro h` (remembering that `X ≠ Y` is just notation\nfor `X = Y → False`).":
+ "Почніть із `intro h` (пам’ятаючи, що `X ≠ Y` це лише позначення\nдля `X = Y → False`).",
+ "Start with `induction «{y}» with d hd`.":
+ "Почніть з `induction «{y}» with d hd`.",
+ "Start with `have h2 := mul_ne_zero a b`.":
+ "Почніть із `have h2 := mul_ne_zero a b`.",
+ "Start with `contrapose! h`, to change the goal into its\ncontrapositive, namely a hypothesis of `succ m = succ n` and a goal of `m = n`.":
+ "Почніть із `contrapose! h`, щоб змінити мету на її\nконтрапозицію, а саме гіпотезу `succ m = succ n` і мету `m = n`.",
+ "Start with `cases «{hxy}» with a ha`.":
+ "Почніть із `cases «{hxy}» with a ha`.",
+ "Start with `cases a with d` to do a case split on `a = 0` and `a = succ d`.":
+ "Почніть із `cases a with d`, щоб розділити випадки на `a = 0` і `a = succ d`.",
+ "Start with `apply succ_inj` to apply `succ_inj` to the *goal*.":
+ "Почніть із `apply succ_inj`, щоб застосувати `succ_inj` до *мети*.",
+ "Start with `apply h2 at h1`. This will change `h1` to `y = 42`.":
+ "Почніть із `apply h2 at h1`. Це змінить `h1` на `y = 42`.",
+ "Start with `apply eq_succ_of_ne_zero at ha` and `... at hb`":
+ "Почніть із `apply eq_succ_of_ne_zero at ha` і `... at hb`",
+ "Start by unravelling the `1`.": "Почніть із рокривання `1`.",
+ "Split into cases `c = 0` and `c = succ e` with `cases c with e`.":
+ "Розділити на випадки `c = 0` і `c = succ e` з `cases c with e`.",
+ "Solve this level in one line with `simp only [add_assoc, add_left_comm, add_comm]`":
+ "Вирішіть цей рівень одним рядком за допомогою `simp only [add_assoc, add_left_comm, add_comm]`",
+ "So that's the algorithm: now let's use automation to perform it\nautomatically.":
+ "Ось алгоритм: давайте використаємо автоматизацію для його автоматичного\nвиконання.",
+ "Similarly we have `mul_succ`\nbut we're going to need `succ_mul` (guess what it says -- maybe you\nare getting the hang of Lean's naming conventions).\n\nThe last level from addition world might help you in this level.\nIf you can't remember what it is, you can go back to the\nhome screen by clicking the house icon and then taking a look.\nYou won't lose any progress.":
+ "Так само ми маємо `mul_succ`\nале нам знадобиться `succ_mul` (вгадайте, що вона стверджує - можливо, ви\nвже опановуєте правила іменування Lean).\n\nОстанній рівень зі світу додавання може допомогти вам на цьому рівні.\nЯкщо ви не можете згадати, що там було, ви можете повернутися до\nголовного екрану, клацнувши піктограму будинку, а потім вибрати рівень.\nВи не втратите свій прогрес тут.",
+ "See the new \"*\" tab in your lemmas, containing `mul_zero` and `mul_succ`.\nRight now these are the only facts we know about multiplication.\nLet's prove nine more.\n\nLet's start with a warm-up: no induction needed for this one,\nbecause we know `1` is a successor.":
+ "Перегляньте нову вкладку «*» у своїх лемах, яка містить `mul_zero` і `mul_succ`.\nЗараз це єдині факти, які ми знаємо про множення.\nДоведемо ще дев'ять.\n\nПочнемо з розминки: індукція для неї не потрібна,\nоскільки ми знаємо, що `1` є наступним значенням.",
+ "See if you can take it from here. Look at the new lemmas and tactic\navailable on the right.":
+ "Подивіться, чи можете ви продовжити звідси. Подивіться на нові леми та тактику\nдоступні праворуч.",
+ "Remember, `x ≠ y` is *notation* for `x = y → False`.":
+ "Пам’ятайте, що `x ≠ y` є *нотацією* для `x = y → False`.",
+ "Remember that when Lean writes `a + b + c`, it means `(a + b) + c`.\nIf you are not sure where the brackets are in an expression, just hover\nyour cursor over it and look at what gets highlighted. For example,\nhover over both `+` symbols on the left hand side of the goal and\nyou'll see where the invisible brackets are.":
+ "Пам’ятайте, що коли в Lean пишете `a + b + c`, це означає `(a + b) + c`.\nЯкщо ви не впевнені, де знаходяться дужки у виразі, просто наведіть\nна нього курсор і подивіться, що буде виділено. Наприклад,\nнаведіть курсор миші на обидва символи `+` ліворуч від мети і\nви побачите, де знаходяться невидимі дужки.",
+ "Remember that `h2` is a proof of `x = y → False`. Try\n`apply`ing `h2` either `at h1` or directly to the goal.":
+ "Пам’ятайте, що `h2` є доказом `x = y → False`. Спробуй\n`apply`-їти `h2` або `at h1` або безпосередньо до мети.",
+ "Reduce to the previous lemma with `nth_rewrite 2 [← mul_one a] at h`":
+ "Зведіть до попередньої леми за допомогою `nth_rewrite 2 [← mul_one a] at h`",
+ "Ready for the boss level of this world?": "Готові до рівня боса цього світу?",
+ "Proofs like $2+2=4$ and $a+b+c+d+e=e+d+c+b+a$ are very tedious to do by hand.\nIn Algorithm World we learn how to get the computer to do them for us.\n\nClick on \"Start\" to proceed.":
+ "Такі докази, як $2+2=4$ і $a+b+c+d+e=e+d+c+b+a$, дуже нудно робити вручну.\nУ Світі Алгорітмів ми дізнаємося, як змусити комп’ютер робити це за нас.\n\nНатисніть «Почати», щоб продовжити.",
+ "Precision rewriting": "Точний перезапис",
+ "Power World": "Світ ступеней",
+ "Our next goal is \"left and right distributivity\",\nmeaning $a(b+c)=ab+ac$ and $(b+c)a=ba+ca$. Rather than\nthese slightly pompous names, the name of the proofs\nin Lean are descriptive. Let's start with\n`mul_add a b c`, the proof of `a * (b + c) = a * b + a * c`.\nNote that the left hand side contains a multiplication\nand then an addition.":
+ "Наша наступна мета — «ліва та права дистрибутивність»,\nщо означає $a(b+c)=ab+ac$ і $(b+c)a=ba+ca$. Замість\nцих дещо пихатих назв, назви доказів\nв Lean є описовими. Почнемо із\n`mul_add a b c`, доказ того що `a * (b + c) = a * b + a * c`.\nЗверніть увагу, що ліва частина містить множення\nа потім додавання.",
+ "Our first challenge is `mul_comm x y : x * y = y * x`,\nand we want to prove it by induction. The zero\ncase will need `mul_zero` (which we have)\nand `zero_mul` (which we don't), so let's\nstart with this.":
+ "Нашою першою місією є `mul_comm x y : x * y = y * x`,\nі ми хочемо довести це індукцією. Нульовий\nвипадок буде потребувати `mul_zero` (який у нас є)\nі `zero_mul` (якого ми не маємо), тож давайте\nпонемо з нього.",
+ "One of the best named levels in the game, a savage `pow_pow`\nsub-boss appears as the music reaches a frenzy. What\nelse could there be to prove about powers after this?":
+ "Один із найкращих іменованих рівнів у грі, дикий `pow_pow`\nпідбос з'являється у той час коли музика досягає піку. Що\nще можна було б довести про ступені після цього?",
+ "One day this game will have a Prime Number World, with a final boss\nof proving that $2$ is prime.\nTo do this, we will have to rule out things like $2 = 37 × 42.$\nWe will do this by proving that any factor of $2$ is at most $2$,\nwhich we will do using this lemma. The proof I have in mind manipulates the hypothesis\nuntil it becomes the goal, using `mul_left_ne_zero`, `one_le_of_ne_zero` and\n`mul_le_mul_right`.":
+ "Одного разу в цій грі з’явиться світ простих чисел із останнім босом\nдоведення того, що $2$ є простим числом.\nДля цього нам доведеться виключити такі речі, як $2 = 37 × 42.$\nМи зробимо це, довівши, що будь-який множник $2$ не перевищує $2$,\nщо ми зробимо, використовуючи цю лему. Доказ, який я маю на увазі, маніпулює гіпотезою\nпоки це не стане метою, використовуючи `mul_left_ne_zero`, `one_le_of_ne_zero` та\n`mul_le_mul_right`.",
+ "On the set of natural numbers, addition is commutative.\nIn other words, if `a` and `b` are arbitrary natural numbers, then\n$a + b = b + a$.":
+ "На множині натуральних чисел додавання комутативне.\nІншими словами, якщо `a` і `b` це довільні натуральні числа, то\n$a + b = b + a$.",
+ "On the set of natural numbers, addition is associative.\nIn other words, if $a, b$ and $c$ are arbitrary natural numbers, we have\n$ (a + b) + c = a + (b + c). $":
+ "На множині натуральних чисел додавання є асоціативним.\nІншими словами, якщо $a, b$ і $c$ це довільні натуральні числа, ми маємо що\n$ (a + b) + c = a + (b + c). $",
+ "Oh no! On the way to `add_comm`, a wild `succ_add` appears. `succ_add a b`\nis the proof that `(succ a) + b = succ (a + b)` for `a` and `b` numbers.\nThis result is what's standing in the way of `x + y = y + x`. Again\nwe have the problem that we are adding `b` to things, so we need\nto use induction to split into the cases where `b = 0` and `b` is a successor.":
+ "О ні! На шляху до `add_comm` з'являється дикий `succ_add`. `succ_add a b`\nце доказ того, що `(succ a) + b = succ (a + b)` для чисел `a` і `b`.\nЦей результат є тим, що стоїть на шляху до `x + y = y + x`. Знову\nу нас є проблема, що ми додаємо `b` до речей, тому нам потрібно\nвикористовувати індукцію для розбиття на випадки, коли `b = 0` і `b` є наступним значенням.",
+ "Numbers": "Числа",
+ "Now you need to figure out which number to `use`. See if you can take it from here.":
+ "Тепер вам потрібно визначити, яке число `use`-ати. Подивіться, чи можете продовжити звідси.",
+ "Now you have two goals. Once you proved the first, you will jump to the second one.\nThis first goal is the base case $n = 0$.\n\nRecall that you can rewrite the proof of any lemma which is visible\nin your inventory, or of any assumption displayed above the goal,\nas long as it is of the form `X = Y`.":
+ "Тепер у вас є дві мети. Довівши першу, ви переходите до другої.\nЦя перша мета є базовим варіантом $n = 0$.\n\nПам’ятайте, що ви можете переписати доказ будь-якої видимої леми\nу вашому інвентарі чи будь-яке припущення, що відображається над метою,\nдоки вони мають форму `X = Y`.",
+ "Now you could finish with `rw [«{h}»]` then `rfl`, but `exact «{h}»`\ndoes it in one line.":
+ "Тепер ви можете закінчити доказ `rw [«{h}»]`, потім `rfl`, але `exact «{h}»`\nробить це у один рядок.",
+ "Now you can `rw [add_succ]`": "Тепер ви можете зробити `rw [add_succ]`",
+ "Now you can `apply zero_ne_succ at h`.":
+ "Тепер ви можете `apply zero_ne_succ at h`.",
+ "Now you can `apply le_mul_right at h2`.":
+ "Тепер ви можете `apply le_mul_right at h2`.",
+ "Now we can prove the `or` statement by proving the statement on the right,\nso use the `right` tactic.":
+ "Тепер ми можемо довести твердження `or`, довівши твердження праворуч,\nтому використовуйте тактику `right`.",
+ "Now use `rw [add_left_comm b c]` to switch `b` and `c` on the left\nhand side.":
+ "Тепер використовуйте `rw [add_left_comm b c]`, щоб поміняти `b` і `c` з лівого\nбоку.",
+ "Now the goal can be deduced from `h2` by pure logic, so use the `tauto`\ntactic.":
+ "Тепер мету можна вивести з `h2` чистою логікою, тому використовуйте тактику\n`tauto`.",
+ "Now take apart the existence statement with `cases ha with n hn`.":
+ "Тепер розберіть твердження існування за допомогою `cases ha with n hn`.",
+ "Now rewrite `succ_eq_add_one` backwards at `h`\nto get the right hand side.":
+ "Тепер перепишіть `succ_eq_add_one` у зворотньому напрямку в `h`\nщоб отримати праву сторону.",
+ "Now rewrite `four_eq_succ_three` backwards to make the goal\nequal to the hypothesis.":
+ "Тепер перепишіть `four_eq_succ_three` задом наперед, щоб мати мету\nдорівнюючою гіпотезі.",
+ "Now let's `apply` our new theorem. Execute `apply succ_inj at h`\nto change `h` to a proof of `x = 3`.":
+ "Тепер давайте `apply` нашу нову теорему. Виконайте `apply succ_inj at h`\nщоб змінити `h` на доказ `x = 3`.",
+ "Now for to the second goal. Here you have the induction hypothesis\n`«{hd}» : 0 + «{d}» = «{d}»`, and you need to prove that `0 + succ «{d}» = succ «{d}»`.":
+ "Перейдемо до другої мети. Ось вам індукційна гіпотеза\n`«{hd}» : 0 + «{d}» = «{d}»`, і вам потрібно довести, що `0 + succ «{d}» = succ «{d}»`.",
+ "Now finish using the `exact` tactic.":
+ "Тепер закінчіть доведення використовуючи тактику `exact`.",
+ "Now finish the job with `rfl`.": "Тепер завершіть роботу за допомогою `rfl`.",
+ "Now finish in one line.": "Тепер закінчіть в один рядок.",
+ "Now change `1` to `succ 0` in `h`.": "Тепер змініть `1` на `succ 0` у `h`.",
+ "Now `«{ha}»` is a proof that `«{y}» = «{x}» + «{a}»`, and `hxy` has vanished. Similarly, you can destruct\n`«{hyz}»` into its parts with `cases «{hyz}» with b hb`.":
+ "Тепер `«{ha}»` є доказом того, що `«{y}» = «{x}» + «{a}»`, а `hxy` зник. Так само можна розібрати\n`«{hyz}»` на частини із `cases «{hyz}» with b hb`.",
+ "Now `rw [← two_eq_succ_one]` will change `succ 1` into `2`.":
+ "Тепер `rw [← two_eq_succ_one]` змінить `succ 1` на `2`.",
+ "Now `rw [«{h}»] at «{h2}»` so you can `apply le_one at «{h2}»`.":
+ "Тепер `rw [«{h}»] at «{h2}»», щоб ви могли `apply le_one at «{h2}»`.",
+ "Now `rw [h]` then `rfl` works, but `exact h` is quicker.":
+ "Тепер `rw [h]`, тоді запрацює `rfl`, але `exact h` швидше.",
+ "Now `rw [add_zero]` will change `c + 0` into `c`.":
+ "Тепер `rw [add_zero]` замінить `c + 0` на `c`.",
+ "Now `rfl` will work.": "Тепер `rfl` запрацює.",
+ "Now `repeat rw [← succ_eq_add_one] at h` is the quickest way to\nchange `h` to `succ x = succ y`.":
+ "Тепер виконайте `repeat rw [← succ_eq_add_one] at h` — це найшвидший спосіб\nзмініти `h` на `succ x = succ y`.",
+ "Now `exact h` finishes the job.": "Тепер `exact h` завершить роботу.",
+ "Now `cases «{h2}» with e he`.": "Тепер `cases «{h2}» with e he`.",
+ "Now `cases h2 with h0 h1` and deal with the two\ncases separately.":
+ "Тепер `cases h2 with h0 h1` і розберемося з двома\nвипадками окремо.",
+ "Now `apply succ_inj at h` to cancel the `succ`s.":
+ "Тепер `apply succ_inj at h`, щоб скасувати `succ`-и.",
+ "Now `apply h` and you can probably take it from here.":
+ "Тепер `apply h`, і ви, ймовірно, зможете продовжити звідси.",
+ "Note: this lemma will be useful for the final boss!":
+ "Примітка: ця лема буде корисною для фінального боса!",
+ "Note that you can do `rw [two_eq_succ_one, one_eq_succ_zero]`\nand then `rfl` to solve this level in two lines.":
+ "Зауважте, що ви можете зробити `rw [two_eq_succ_one, one_eq_succ_zero]`\nа потім `rfl`, щоб вирішити цей рівень у два рядки.",
+ "Note that `succ a + «{d}»` means `(succ a) + «{d}»`. Put your cursor\non any `succ` in the goal or assumptions to see what exactly it's eating.":
+ "Зверніть увагу, що `succ a + «{d}»` означає `(succ a) + «{d}»`. Помістіть курсор\nна будь-якому `succ` у меті чи припущенні, щоб побачити, що саме він з'їдає.",
+ "Nice! You've proved `succ_inj`!\nLet's now prove Peano's other axiom, that successors can't be $0$.":
+ "Гарно! Ви довели `succ_inj`!\nДавайте тепер доведемо іншу аксіому Пеано, що наступники не можуть бути $0$.",
+ "Nice!\n\nThe next step in the development of order theory is to develop\nthe theory of the interplay between `≤` and multiplication.\nIf you've already done Multiplication World, you're now ready for\nAdvanced Multiplication World. Click on \"Home\" to access it.":
+ "Гарно!\n\nНаступним кроком у розвитку теорії порядку є розробка\nтеорія взаємодії між `≤` і множенням.\nЯкщо ви вже працювали зі Світом множення, тепер ви готові\nдо Розширеного світу множення. Натисніть «Залишити світ», щоб отримати до нього доступ.",
+ "Nice!": "Гарно!",
+ "Next turn `1` into `succ 0` with `rw [one_eq_succ_zero]`.":
+ "Потім перетворіть `1` на `succ 0` за допомогою `rw [one_eq_succ_zero]`.",
+ "Natural Number Game": "Гра «Натуральні числа»",
+ "My proof:\n```\ncases h with d hd\nuse d * t\nrw [hd, add_mul]\nrfl\n```":
+ "Мій доказ:\n```\ncases h with d hd\nuse d * t\nrw [hd, add_mul]\nrfl\n```",
+ "Multiplication usually makes a number bigger, but multiplication by zero can make\nit smaller. Thus many lemmas about inequalities and multiplication need the\nhypothesis `a ≠ 0`. Here is a key lemma that enables us to use this hypothesis.\nTo help us with the proof, we can use the `tauto` tactic. Click on the tactic's name\non the right to see what it does.":
+ "Множення зазвичай збільшує число, але множення на нуль може зробити\nйого меншим. Тому багато лем про нерівності та множення потребують\nгіпотези `a ≠ 0`. Ось ключова лема, яка дозволяє нам використовувати цю гіпотезу.\nЩоб допомогти нам із доказом, ми можемо використати тактику `tauto`. Натисніть на назву тактики\nправоруч, щоб побачити, що вона робить.",
+ "Multiplication is distributive over addition on the left.\nIn other words, for all natural numbers $a$, $b$ and $c$, we have\n$a(b + c) = ab + ac$.":
+ "Множення дістрібутивно над додаванням зліва.\nІншими словами, для всіх натуральних чисел $a$, $b$ і $c$ маємо\n$a(b + c) = ab + ac$.",
+ "Multiplication is commutative.": "Множення комутативне.",
+ "Multiplication is associative.\nIn other words, for all natural numbers $a$, $b$ and $c$, we have\n$(ab)c = a(bc)$.":
+ "Множення асоціативне.\nІншими словами, для всіх натуральних чисел $a$, $b$ і $c$ маємо\n$(ab)c = a(bc)$.",
+ "Multiplication distributes\nover addition on the left.\n\n`mul_add a b c` is the proof that `a * (b + c) = a * b + a * c`.":
+ "Множення дістрібутивно\nнад додаванням зліва.\n\n`mul_add a b c` є доказом того, що `a * (b + c) = a * b + a * c`.",
+ "Multiplication World": "Світ множення",
+ "Mathematicians sometimes debate what `0 ^ 0` is;\nthe answer depends, of course, on your definitions. In this\ngame, `0 ^ 0 = 1`. See if you can prove it.\n\nCheck out the *Pow* tab in your list of theorems\nto see the new proofs which are available.":
+ "Математики іноді сперечаються, що таке `0 ^ 0`;\nвідповідь залежить, звичайно, від ваших визначень. У цієй\nгрі, `0 ^ 0 = 1`. Подивіться, чи зможете ви це довести.\n\nПерегляньте вкладку *Ступінь* у списку теорем\nщоб побачити нові доступні докази.",
+ "Mathematicians sometimes argue that `0 ^ 0 = 0` is also\na good convention. But it is not a good convention in this\ngame; all the later levels come out beautifully with the\nconvention that `0 ^ 0 = 1`.":
+ "Математики іноді сперечаються, що `0 ^ 0 = 0` теж є\nхороша конвенція. Але це не є хорошою конвенцією в цій\nгрі; всі подальші рівні виконуються чудово з\nконвенцією, що `0 ^ 0 = 1`.",
+ "Many people find `apply t at h` easy, but some find `apply t` confusing.\nIf you find it confusing, then just argue forwards.\n\nYou can read more about the `apply` tactic in its documentation, which you can view by\nclicking on the tactic in the list on the right.":
+ "Багато людей вважають `apply t at h` зрозумілим, хтось вважає `apply t` незрозумілим.\nЯкщо вас вони плутають, тоді просто рухайтесь вперед.\n\nВи можете прочитати більше про тактику `apply` в її документації, яку ви можете переглянути\nнатиснувши на тактику в списку праворуч.",
+ "Let's warm up with an easy one, which works even if `t = 0`.":
+ "Давайте розігріємося із легкою задачею, яка працює, навіть якщо `t = 0`.",
+ "Let's see if you can use the tactics we've learnt to prove $x+1=y+1\\implies x=y$.\nTry this one by yourself; if you need help then click on \"Show more help!\".":
+ "Давайте подивимося, чи зможете ви застосувати тактики, яких ми навчилися, щоб довести, що $x+1=y+1\\implies x=y$.\nСпробуйте це самостійно; якщо вам потрібна допомога, натисніть «Показати більше допомоги!».",
+ "Let's now move on to a more efficient approach to questions\ninvolving numerals, such as `20 + 20 = 40`.":
+ "Тепер перейдемо до більш ефективного підходу до питань\nза участю чисел, наприклад `20 + 20 = 40`.",
+ "Let's now make our own tactic to do this.":
+ "Давайте зробимо власну тактику для цього.",
+ "Let's now learn about Peano's second axiom for addition, `add_succ`.":
+ "Давайте тепер дізнаємося про другу аксіому Пеано для додавання, `add_succ`.",
+ "Let's now begin our approach to the final boss,\nby proving some more subtle facts about powers.":
+ "Давайте почнемо наш підхід до фінального боса,\nдоводячи деякі більш тонкі факти про ступені.",
+ "Let's first get `h` into the form `succ x = succ 3` so we can\napply `succ_inj`. First execute `rw [four_eq_succ_three] at h`\nto change the 4 on the right hand side.":
+ "Давайте спочатку переведемо `h` у форму `succ x = succ 3`, щоб ми могли\nзастосувати `succ_inj`. Спочатку виконайте `rw [four_eq_succ_three] at h`\nщоб змінити 4 з правого боку.",
+ "Lean's simplifier, `simp`, is \"`rw` on steroids\". It will rewrite every lemma\ntagged with `simp` and every lemma fed to it by the user, as much as it can.\n\nThis level is not a level which you want to solve by hand.\nGet the simplifier to solve it for you.":
+ "Спрощувач Lean, `simp`, це \"`rw` на стероїдах\". Він перепише кожну лему\nз тегом `simp` і кожною лемою, наданою користувачем, наскільки це можливо.\n\nЦей рівень не є рівнем, який ви хочете вирішити вручну.\nВізьміть спрощувач, щоб він вирішити рівень за вас.",
+ "It's all over! You have proved a theorem which has tripped up\nschoolkids for generations (some of them think $(a+b)^2=a^2+b^2$:\nthis is \"the freshman's dream\").\n\nHow many rewrites did you use? I can do it in 12.\n\nBut wait! This boss is stirring...and mutating into a second more powerful form!":
+ "Все закінчилося! Ви довели теорему, об яку спотикалися\nшколярі поколіннями (деякі з них думають, що $(a+b)^2=a^2+b^2$:\nце \"мрія першокурсника\").\n\nСкільки перезаписів ви використали? Я зможу це зробити за 12.\n\nАле зачекайте! Цей бос ворушиться... і мутує в другу більш могутню форму!",
+ "It's \"intuitively obvious\" that there are no numbers less than zero,\nbut to prove it you will need a result which you showed in advanced\naddition world.":
+ "Це «інтуїтивно очевидно», що не існує чисел, менших за нуль,\nале щоб довести це вам знадобиться результат, який ви показали в\nСвіті розширеного додавання.",
+ "Induction on `a` will not work here. You are still stuck with an `+ b`.\nI suggest you delete this line and try a different approach.":
+ "Індукція по `а` тут не працюватиме. Ви все ще застрягли із `+ b`.\nЯ пропоную вам видалити цей рядок і спробувати інший підхід.",
+ "Induction on `a` or `b` -- it's all the same in this one.":
+ "Індукція по `a` або `b` -- у цьому випадку буде різниці.",
+ "Induction on `a` is the most troublesome, then `b`,\nand `c` is the easiest.":
+ "Індукція по `a` є найбільш клопітною, потім по `b`,\nі індукція по `c` є найпростішою.",
+ "In this world we'll learn how to prove theorems of the form $P\\implies Q$.\nIn other words, how to prove theorems of the form \"if $P$ is true, then $Q$ is true.\"\nTo do that we need to learn some more tactics.\n\nThe `exact` tactic can be used to close a goal which is exactly one of\nthe hypotheses. It takes the name of the hypothesis as argument: `exact h`.":
+ "У цьому світі ми навчимося доводити теореми виду $P\\implies Q$.\nІншими словами, як довести теореми виду «якщо $P$ істинно, то $Q$ істинно».\nДля цього нам потрібно вивчити ще кілька тактик.\n\nТактику `exact` можна використати, щоб закрити мету, яка є точно однією із\nгіпотез. Вона приймає назву гіпотези як аргумент: `exact h`.",
+ "In this world we define `a ≤ b` and prove standard facts\nabout it, such as \"if `a ≤ b` and `b ≤ c` then `a ≤ c`.\"\n\nThe definition of `a ≤ b` is \"there exists a number `c`\nsuch that `b = a + c`. \" So we're going to have to learn\na tactic to prove \"exists\" theorems, and another one\nto use \"exists\" hypotheses.\n\nClick on \"Start\" to proceed.":
+ "У цьому світі ми визначаємо `a ≤ b` і доводимо стандартні факти\nпро нерівність, наприклад «якщо `a ≤ b` і `b ≤ c`, то `a ≤ c`».\n\nВизначення `a ≤ b` таке: «існує число `c`\nтаке, що `b = a + c`. «Тож нам доведеться навчитися\nтактик доведення теорем «існування» та інших\nвикористовуючи гіпотези «існує».\n\nНатисніть «Почати», щоб продовжити.",
+ "In this world I will mostly leave you on your own.\n\n`add_right_cancel a b n` is the theorem that $a+n=b+n\\implies a=b$.":
+ "У цьому світі я здебільшого залишу вас самих.\n\n`add_right_cancel a b n` це теорема про те, що $a+n=b+n\\implies a=b$.",
+ "In this level, we see inequalities as *hypotheses*. We have not seen this before.\nThe `cases` tactic can be used to take `hxy` apart.":
+ "На цьому рівні ми розглядаємо нерівності як *гіпотези*. Такого ми ще не бачили.\nТактику `cases` можна використати, щоб розібрати `hxy` на частини.",
+ "In this level, the hypotheses `h2` is an *implication*. It says\nthat *if* `x = 37` *then* `y = 42`. We can use this\nhypothesis with the `apply` tactic. Remember you can click on\n`apply` or any other tactic on the right to see a detailed explanation\nof what it does, with examples.":
+ "В цьому рівні гіпотеза `h2` є *імплікацією*. Вона каже\nщо *якщо* `x = 37` *тоді* `y = 42`. Ми можемо скористатися цією\nгіпотезою за допомогою тактики `apply`. Пам’ятайте, що ви можете натиснути\n`apply` або будь-яку іншу тактику праворуч, щоб переглянути детальне пояснення\nтого, що вона робить, ще із прикладами.",
+ "In this level we're going to prove that $0+n=n$, where $n$ is a secret natural number.\n\nWait, don't we already know that? No! We know that $n+0=n$, but that's `add_zero`.\nThis is `zero_add`, which is different.\n\nThe difficulty with proving `0 + n = n` is that we do not have a *formula* for\n`0 + n` in general, we can only use `add_zero` and `add_succ` once\nwe know whether `n` is `0` or a successor. The `induction` tactic splits into these two cases.\n\nThe base case will require us to prove `0 + 0 = 0`, and the inductive step\nwill ask us to show that if `0 + d = d` then `0 + succ d = succ d`. Because\n`0` and successor are the only way to make numbers, this will cover all the cases.\n\nSee if you can do your first induction proof in Lean.\n\n(By the way, if you are still in the \"Editor mode\" from the last world, you can swap\nback to \"Typewriter mode\" by clicking the `>_` button in the top right.)":
+ "На цьому рівні ми збираємося довести, що $0+n=n$, де $n$ це секретне натуральне число.\n\nПочекайте, хіба ми цього вже не знаємо? Ні! Ми знаємо, що $n+0=n$, але це `add_zero`.\nА це `zero_add`, вони відрізняються.\n\nСкладність під час доведення `0 + n = n` полягає в тому, що ми не маємо *формули* для\n`0 + n` загалом, ми можемо використовувати `add_zero` і `add_succ` лише один раз\nми знаємо, чи є `n` `0` чи наступником. Тактика `induction` поділяється на ці два випадки.\n\nБазовий варіант вимагатиме від нас доведення `0 + 0 = 0` та індуктивний крок\nпопросить нас показати, що якщо `0 + d = d`, то `0 + succ d = succ d`. Тому що\n`0` і наступне значення є єдиним способом створення чисел, це охопить усі випадки.\n\nПодивіться, чи зможете ви виконати свій перший індукційний доказ в Lean.\n\n(До речі, якщо ви ще в «Режимі редактора» з минулого світу, ви можете поміняти місцями\nповернутися до «Режиму друку», натиснувши кнопку `>_` у верхньому правому куті.)",
+ "In this level we prove that if `a * b = a * c` and `a ≠ 0` then `b = c`. It is tricky, for\nseveral reasons. One of these is that\nwe need to introduce a new idea: we will need to understand the concept of\nmathematical induction a little better.\n\nStarting with `induction b with d hd` is too naive, because in the inductive step\nthe hypothesis is `a * d = a * c → d = c` but what we know is `a * succ d = a * c`,\nso the induction hypothesis does not apply!\n\nAssume `a ≠ 0` is fixed. The actual statement we want to prove by induction on `b` is\n\"for all `c`, if `a * b = a * c` then `b = c`\". This *can* be proved by induction,\nbecause we now have the flexibility to change `c`.":
+ "На цьому рівні ми доведемо, що якщо `a * b = a * c` і `a ≠ 0`, то `b = c`. Це складно, через\nкілька причин. Одна з них це що\nнам потрібно представити нову ідею: нам потрібно буде зрозуміти концепцію\nматематична індукція трохи краще.\n\nПочинати з `induction b with d hd` надто наївно, тому що в індуктивному кроці\nгіпотеза `a * d = a * c → d = c`, але те, що ми знаємо, це `a * succ d = a * c`,\nтому індуктивна гіпотеза не діє!\n\nПрипустимо, що `a ≠ 0` фіксовано. Справжнє твердження, яке ми хочемо довести індукцією по `b`, таке\n\"для всіх `c`, якщо `a * b = a * c`, тоді `b = c`\". Це *можна* довести індукцією,\nтому що ми тепер маємо можливість змінити `c`.",
+ "In this level the *goal* is $2y=2(x+7)$ but to help us we\nhave an *assumption* `h` saying that $y = x + 7$. Check that you can see `h` in\nyour list of assumptions. Lean thinks of `h` as being a secret proof of the\nassumption, rather like `x` is a secret number.\n\nBefore we can use `rfl`, we have to \"substitute in for $y$\".\nWe do this in Lean by *rewriting* the proof `h`,\nusing the `rw` tactic.":
+ "На цьому рівні *мета* це $2y=2(x+7)$, але щоб допомогти нам, ми\nмаємо *припущення* `h`, що $y = x + 7$. Переконайтеся, що ви бачите `h` в\nвашому списку припущень. Lean вважає `h` секретним доказом\nприпущення, схожим на те, як `x` є секретним числом.\n\nПерш ніж ми зможемо використовувати `rfl`, ми повинні \"замінити всередині $y$\".\nМи робимо це в Lean, *переписуючи* доказ `h`,\nвикористовуючи тактику `rw`.",
+ "In this game you recreate the natural numbers $\\mathbb{N}$ from the Peano axioms,\nlearning the basics about theorem proving in Lean.\n\nThis is a good first introduction to Lean!":
+ "У цій грі ви відтворюєте натуральні числа $\\mathbb{N}$ із аксіом Пеано,\nвивчаючи основи доведення теорем в Lean.\n\nЦе хороший перший крок у Lean!",
+ "In the next level, we'll do the same proof but backwards.":
+ "На наступному рівні ми виконаємо той самий доказ, але в зворотному напрямку.",
+ "In the last level, we manipulated the hypothesis `x + 1 = 4`\n  until it became the goal `x = 3`. In this level we'll manipulate\n  the goal until it becomes our hypothesis! In other words, we\n  will \"argue backwards\". The `apply` tactic can do this too.\n  Again I will walk you through this one (assuming you're in\n  command line mode).":
+ "На останньому рівні ми маніпулювали гіпотезою `x + 1 = 4`\n  поки вона не стало метою `x = 3`. На цьому рівні ми будемо маніпулювати\n  мету, поки вона не стане нашою гіпотезою! Іншими словами, ми\n  буде «аргументувати у зворотньому напрямку». Тактика `apply` також може це зробити.\n  Я знову проведу вас через цей шлях (якщо ви в\n  режимі командного рядка).",
+ "In the \"base case\" we have a hypothesis `ha : 0 ≠ 0`, and you can deduce anything\nfrom a false statement. The `tauto` tactic will close this goal.":
+ "У «базовому випадку» ми маємо гіпотезу `ha : 0 ≠ 0`, і ви можете вивести будь-що\nіз хибного твердження. Тактика `tauto` закриє цю мету.",
+ "In some later worlds, we're going to see some much nastier levels,\nlike `(a + a + 1) + (b + b + 1) = (a + b + 1) + (a + b + 1)`.\nBrackets need to be moved around, and variables need to be swapped.\n\nIn this level, `(a + b) + (c + d) = ((a + c) + d) + b`,\nlet's forget about the brackets and just think about\nthe variable order.\nTo turn `a+b+c+d` into `a+c+d+b` we need to swap `b` and `c`,\nand then swap `b` and `d`. But this is easier than you\nthink with `add_left_comm`.":
+ "У деяких подальших світах ми побачимо набагато жахливіші рівні,\nнаприклад `(a + a + 1) + (b + b + 1) = (a + b + 1) + (a + b + 1)`.\nДужки потрібно пересунути, а змінні поміняти місцями.\n\nНа цьому рівні `(a + b) + (c + d) = ((a + c) + d) + b`,\nдавайте забудемо про дужки і просто подумаємо про\nпорядок змінних.\nЩоб перетворити `a+b+c+d` на `a+c+d+b`, нам потрібно поміняти місцями `b` і `c`,\nа потім поміняйте `b` і `d`. Але це легше, ніж вам\nздається із `add_left_comm`.",
+ "In order to use the tactic `rfl` you can enter it in the text box\nunder the goal and hit \"Execute\".":
+ "Щоб використати тактику `rfl`, ви можете ввести її в текстове поле\nпід метою та натисніть «Виконати».",
+ "In Advanced Addition World we will prove some basic\naddition facts such as $x+y=x\\implies y=0$. The theorems\nproved in this world will be used to build\na theory of inequalities in `≤` World.\n\nClick on \"Start\" to proceed.":
+ "У Світі розширеного додавання ми доведемо деякі базові\nфакти додавання, як $x+y=x\\implies y=0$. Теореми\nдоведені в цьому світі будуть використані для будівництва\nтеорія нерівностей у Світі `≤`.\n\nНатисніть «Почати», щоб продовжити.",
+ "Implication World": "Світ імплікацій",
+ "Implementing the algorithm for equality of naturals, and the proof that it is correct,\nlooks like this:\n\n```\ninstance instDecidableEq : DecidableEq ℕ\n| 0, 0 => isTrue <| by\n  show 0 = 0\n  rfl\n| succ m, 0 => isFalse <| by\n  show succ m ≠ 0\n  exact succ_ne_zero m\n| 0, succ n => isFalse <| by\n  show 0 ≠ succ n\n  exact zero_ne_succ n\n| succ m, succ n =>\n  match instDecidableEq m n with\n  | isTrue (h : m = n) => isTrue <| by\n    show succ m = succ n\n    rw [h]\n    rfl\n  | isFalse (h : m ≠ n) => isFalse <| by\n    show succ m ≠ succ n\n    exact succ_ne_succ m n h\n```\n\nThis Lean code is a formally verified algorithm for deciding equality\nbetween two naturals. I've typed it in already, behind the scenes.\nBecause the algorithm is formally verified to be correct, we can\nuse it in Lean proofs. You can run the algorithm with the `decide` tactic.":
+ "Реалізація алгоритму рівності натуральних і доказ його правильності,\nвиглядає так:\n\n```\n\ninstance instDecidableEq : DecidableEq ℕ\n| 0, 0 => isTrue <| by\n  show 0 = 0\n  rfl\n| succ m, 0 => isFalse <| by\n  show succ m ≠ 0\n  exact succ_ne_zero m\n| 0, succ n => isFalse <| by\n  show 0 ≠ succ n\n  exact zero_ne_succ n\n| succ m, succ n =>\n  match instDecidableEq m n with\n  | isTrue (h : m = n) => isTrue <| by\n    show succ m = succ n\n    rw [h]\n    rfl\n  | isFalse (h : m ≠ n) => isFalse <| by\n    show succ m ≠ succ n\n    exact succ_ne_succ m n h\n```\n\nЦей код Lean є формально веріфікованим алгоритмом для визначення рівності\nміж двома натуральними. Я вже ввів це, за кадром.\nОскільки формально перевірено правильність алгоритму, ми можемо\nвикористовуйте його в доказах Lean. Ви можете запустити алгоритм за допомогою тактики `decide`.",
+ "If you have completed Algorithm World then you can use the `contrapose!` tactic\nhere. If not then I'll talk you through a manual approach.":
+ "Якщо ви завершили Світ алгоритмів, ви можете використовувати тактику `contrapose!`\nтут. Якщо ні, я покажу вам ручний підхід.",
+ "If you `use` the wrong number, you get stuck with a goal you can't prove.\nWhat number will you `use` here?":
+ "Якщо ви `use` неправильне число, ви застрягнете з метою, яку не зможете довести.\nЯке число ви за-`use`-аєте тут?",
+ "If the goal is not *exactly* a hypothesis, we can sometimes\nuse rewrites to fix things up.":
+ "Якщо мета не *точно* є гіпотезою, іноді ми можемо\nвикористовуйте переписування, щоб виправити ситуацію.",
+ "If `h` is a proof of `X = Y` then `rw [h]` will\nturn `X`s into `Y`s. But what if we want to\nturn `Y`s into `X`s? To tell the `rw` tactic\nwe want this, we use a left arrow `←`. Type\n`\\l` and then hit the space bar to get this arrow.\n\nLet's prove that $2$ is the number after the number\nafter $0$ again, this time by changing `succ (succ 0)`\ninto `2`.":
+ "Якщо `h` є доказом `X = Y`, тоді `rw [h]` буде\nперетворювати `X` на `Y`. Але що, якщо ми хочемо\nперетворити `Y` на `X`? Шоб сказати тактиці `rw`\nщо ми хочемо цього, ми використовуємо стрілку вліво `←`. Напечатайте\n`\\l`, а потім натисніть пробіл, щоб отримати цю стрілку.\n\nДавайте доведемо, що $2$ є числом після числа\nпісля $0$, цього разу змінивши `succ (succ 0)`\nна \"2\".",
+ "If `a` and `b` are numbers, then `succ_inj a b` is a proof\nthat `succ a = succ b` implies `a = b`. Click on this theorem in the *Peano*\ntab for more information.\n\nPeano had this theorem as an axiom, but in Algorithm World\nwe will show how to prove it in Lean. Right now let's just assume it,\nand let's prove $x+1=4 \\implies x=3$ using it. Again, we will proceed\nby manipulating our hypothesis until it becomes the goal. I will\nwalk you through this level.":
+ "Якщо `a` і `b` є числами, то `succ_inj a b` є доказом\nщо із `succ a = succ b` виходить `a = b`. Натисніть на цю теорему в *Peano*\nвкладинці для отримання додаткової інформації.\n\nПеано мав цю теорему як аксіому, але в Світі Алгорітмів\nми покажемо, як це довести в Lean. Прямо зараз давайте просто припустимо,\nі давайте доведемо $x+1=4 \\implies x=3$ за допомогою неї. Знову, продовжимо\nманіпулюючи нашою гіпотезою, поки вона не стане метою. я\nпроведу вас через цей рівень.",
+ "If $x=y$ and $x \\neq y$ then we can deduce a contradiction.":
+ "Якщо $x=y$ і $x \\neq y$, то ми можемо вивести протиріччя.",
+ "If $x=37$ or $y=42$, then $y=42$ or $x=37$.":
+ "Якщо $x=37$ або $y=42$, то $y=42$ або $x=37$.",
+ "If $x=37$ and we know that $x=37\\implies y=42$ then we can deduce $y=42$.":
+ "Якщо $x=37$ і ми знаємо, що $x=37\\implies y=42$, тоді ми можемо вивести $y=42$.",
+ "If $x+1=4$ then $x=3$.": "Якщо $x+1=4$, то $x=3$.",
+ "If $x$ is a number, then $x \\le x$.": "Якщо $x$ є числом, то $x \\le x$.",
+ "If $x$ is a number, then $x \\le \\operatorname{succ}(x)$.":
+ "Якщо $x$ є числом, то $x \\le \\operatorname{succ}(x)$.",
+ "If $x$ is a number, then $0 \\le x$.": "Якщо $x$ є числом, тоді $0 \\le x$.",
+ "If $x$ and $y$ are numbers, then either $x \\leq y$ or $y \\leq x$.":
+ "Якщо $x$ і $y$ є числами, то або $x \\leq y$, або $y \\leq x$.",
+ "If $x$ and $y$ are natural numbers, and $y = x + 7$, then $2y = 2(x + 7)$.":
+ "Якщо $x$ і $y$ це натуральні числа, а $y = x + 7$, тоді $2y = 2(x + 7)$.",
+ "If $x$ and $q$ are arbitrary natural numbers, then $37x+q=37x+q.$":
+ "Якщо $x$ і $q$ довільні натуральні числа, то $37x+q=37x+q.$",
+ "If $x \\leq y$ and $y \\leq z$, then $x \\leq z$.":
+ "Якщо $x \\leq y$ і $y \\leq z$, то $x \\leq z$.",
+ "If $x \\leq y$ and $y \\leq x$, then $x = y$.":
+ "Якщо $x \\leq y$ і $y \\leq x$, то $x = y$.",
+ "If $x \\leq 2$ then $x = 0$ or $1$ or $2$.":
+ "Якщо $x \\leq 2$, то $x = 0$ або $1$ або $2$.",
+ "If $x \\leq 1$ then either $x = 0$ or $x = 1$.":
+ "Якщо $x \\leq 1$, то $x = 0$ або $x = 1$.",
+ "If $x \\leq 0$, then $x=0$.": "Якщо $x \\leq 0$, то $x=0$.",
+ "If $a, b,\\ldots h$ are arbitrary natural numbers, we have\n$(d + f) + (h + (a + c)) + (g + e + b) = a + b + c + d + e + f + g + h$.":
+ "Якщо $a, b,\\ldots h$ довільні натуральні числа, ми маємо\n$(d + f) + (h + (a + c)) + (g + e + b) = a + b + c + d + e + f + g + h$.",
+ "If $a, b, c$ are numbers, then $a+(b+c)=b+(a+c)$.":
+ "Якщо $a, b, c$ - числа, то $a+(b+c)=b+(a+c)$.",
+ "If $a, b$, $c$ and $d$ are numbers, we have\n$(a + b) + (c + d) = ((a + c) + d) + b.$":
+ "Якщо $a, b$, $c$ і $d$ є числами, ми маємо\n$(a + b) + (c + d) = ((a + c) + d) + b.$",
+ "If $a, b$ and $c$ are arbitrary natural numbers, we have\n$(a + b) + c = (a + c) + b$.":
+ "Якщо $a, b$ і $c$ довільні натуральні числа, тоді маємо\n$(a + b) + c = (a + c) + b$.",
+ "If $a+b=0$ then $b=0$.": "Якщо $a+b=0$, то $b=0$.",
+ "If $a+b=0$ then $a=0$.": "Якщо $a+b=0$, тоді $a=0$.",
+ "If $a \\neq b$ then $\\operatorname{succ}(a) \\neq\\operatorname{succ}(b)$.":
+ "Якщо $a \\neq b$, тоді $\\operatorname{succ}(a) \\neq\\operatorname{succ}(b)$.",
+ "If $\\operatorname{succ}(x) \\leq \\operatorname{succ}(y)$ then $x \\leq y$.":
+ "Якщо $\\operatorname{succ}(x) \\leq \\operatorname{succ}(y)$, тоді $x \\leq y$.",
+ "If $\\operatorname{succ}(a)=\\operatorname{succ}(b)$ then $a=b$.":
+ "Якщо $\\operatorname{succ}(a)=\\operatorname{succ}(b)$, тоді $a=b$.",
+ "How should we define `37 * x`? Just like addition, we need to give definitions\nwhen $x=0$ and when $x$ is a successor.\n\nThe zero case is easy: we define `37 * 0` to be `0`. Now say we know\n`37 * d`. What should `37 * succ d` be? Well, that's $(d+1)$ $37$s,\nso it should be `37 * d + 37`.\n\nHere are the definitions in Lean.\n\n  * `mul_zero a : a * 0 = 0`\n  * `mul_succ a d : a * succ d = a * d + a`\n\nIn this world, we must not only prove facts about multiplication like `a * b = b * a`,\nwe must also prove facts about how multiplication interacts with addition, like `a * (b + c) = a * b + a * c`.\nLet's get started.":
+ "Як нам визначити `37 * x`? Як і додавання, нам потрібно дати визначення\nколи $x=0$ і коли $x$ є наступником.\n\nНульовий випадок простий: ми визначаємо `37 * 0` як `0`. Тепер скажіть, що ми знаємо\n`37 * d`. Чим має бути `37 * succ d`? Ну, це $(d+1)$ $37$s,\nтому має бути `37 * d + 37`.\n\nОсь визначення в Lean.\n\n  * `mul_zero a : a * 0 = 0`\n  * `mul_succ a d : a * succ d = a * d + a`\n\nУ цьому світі ми повинні не лише доводити такі факти про множення, як `a * b = b * a`,\nми також повинні довести факти про те, як множення взаємодіє з додаванням, наприклад `a * (b + c) = a * b + a * c`.\nДавайте почнемо.",
+ "How about this for a proof:\n```\nrepeat rw [add_comm n]\nexact add_right_cancel a b n\n```":
+ "Як щодо цього як доказ:\n```\nrepeat rw [add_comm n]\nexact add_right_cancel a b n\n```",
+ "How about this for a proof:\n\n```\nrw [add_comm]\nexact add_right_eq_zero b a\n```\n\nThat's the end of Advanced Addition World! You'll need these theorems\nfor the next world, `≤` World. Click on \"Home\" to access it.":
+ "Як щодо цього доказу:\n\n```\nrw [add_comm]\nexact add_right_eq_zero b a\n```\n\nОсь і кінець Світу розширеного додавання! Вам знадобляться ці теореми\nдля наступного світу, Світу `≤`. Натисніть «Залишити світ», щоб отримати до нього доступ.",
+ "Here's what I was thinking of:\n```\napply mul_left_ne_zero at h\napply one_le_of_ne_zero at h\napply mul_le_mul_right 1 b a at h\nrw [one_mul, mul_comm] at h\nexact h\n```":
+ "Ось про що я думав:\n```\napply mul_left_ne_zero at h\napply one_le_of_ne_zero at h\napply mul_le_mul_right 1 b a at h\nrw [one_mul, mul_comm] at h\nexact h\n```",
+ "Here's the short proof:\n```\nhave h2 := mul_ne_zero a b\ntauto\n```\nThis works because, given `mul_ne_zero a b`,\nthe argument is reduced to pure logic.":
+ "Ось короткий доказ:\n```\nhave h2 := mul_ne_zero a b\ntauto\n```\nЦе працює, тому що, маючи `mul_ne_zero a b`,\nаргументація зводиться до чистої логіки.",
+ "Here's my solution:\n```\nrw [two_eq_succ_one, succ_mul, one_mul]\nrfl\n```":
+ "Ось моє рішення:\n```\nrw [two_eq_succ_one, succ_mul, one_mul]\nrfl\n```",
+ "Here's my solution:\n```\nrw [mul_comm, mul_one]\nrfl\n```":
+ "Ось моє рішення:\n```\nrw [mul_comm, mul_one]\nrfl\n```",
+ "Here's my solution:\n```\ninduction c with d hd\nrw [add_zero, mul_zero, add_zero]\nrfl\nrw [add_succ, mul_succ, hd, mul_succ, add_assoc]\nrfl\n```\n\nInducting on `a` or `b` also works, but might take longer.":
+ "Ось моє рішення:\n```\ninduction c with d hd\nrw [add_zero, mul_zero, add_zero]\nrfl\nrw [add_succ, mul_succ, hd, mul_succ, add_assoc]\nrfl\n```\n\nІндукція по `a` або `b` також буде працювати, але це може зайняти більше часу.",
+ "Here's my proof:\n```\nrw [mul_comm, mul_add]\nrepeat rw [mul_comm c]\nrfl\n```":
+ "Ось мій доказ:\n```\nrw [mul_comm, mul_add]\nrepeat rw [mul_comm c]\nrfl\n```",
+ "Here's my proof:\n```\nintro h\nrw [add_succ, add_succ, add_zero] at h\nrepeat apply succ_inj at h\napply zero_ne_succ at h\nexact h\n```\n\nEven though Lean is a theorem prover, right now it's pretty clear that we have not\ndeveloped enough material to make it an adequate calculator. In Algorithm\nWorld, a more computer-sciency world, we will develop machinery which makes\nquestions like this much easier, and goals like $20 + 20 ≠ 41$ feasible.\nAlternatively you can do more mathematics in Advanced Addition World, where we prove\nthe lemmas needed to get a working theory of inequalities. Click \"Home\" and\ndecide your route.":
+ "Ось мій доказ:\n```\nintro h\nrw [add_succ, add_succ, add_zero] at h\nrepeat apply succ_inj at h\napply zero_ne_succ at h\nexact h\n```\n\nНезважаючи на те, що Lean є інструментом доказу теорем, наразі цілком зрозуміло, що ми не\nрозробили достатньо матеріалу, щоб зробити його адекватним калькулятором. В Світі\nАлгоритмів, більш комп’ютерно-науковому світі, ми будемо розробляти машинерію, яка зробить\nподібні запитання набагато простішими, а таку мета, як $20 + 20 ≠ 41$, здійсненною.\nКрім того, ви можете робити більше математики в Світі продвинотого додавання, де ми перевіряємо\nлеми, необхідні для отримання робочої теорії нерівностей. Натисніть «Залишити світ» і\nвиріште свій подальшій маршрут.",
+ "Here's my proof:\n```\ncases x with y\nleft\nrfl\nrw [one_eq_succ_zero] at hx ⊢\napply succ_le_succ at hx\napply le_zero at hx\nrw [hx]\nright\nrfl\n```\n\nIf you solved this level then you should be fine with the next level!":
+ "Ось мій доказ:\n```\n\ncases x with y\nleft\nrfl\nrw [one_eq_succ_zero] at hx ⊢\napply succ_le_succ at hx\napply le_zero at hx\nrw [hx]\nright\nrfl\n```\n\nЯкщо ви вирішите цей рівень, то у вас буде все добре з наступним рівнем!",
+ "Here's my proof:\n```\ncases hxy with a ha\ncases hyx with b hb\nrw [ha]\nrw [ha, add_assoc] at hb\nsymm at hb\napply add_right_eq_self at hb\napply add_right_eq_zero at hb\nrw [hb, add_zero]\nrfl\n```\n\nA passing mathematician remarks that with antisymmetry as well,\nyou have proved that `≤` is a *partial order* on `ℕ`.\n\nThe boss level of this world is to prove\nthat `≤` is a total order. Let's learn two more easy tactics\nfirst.":
+ "Ось мій доказ:\n```\n\ncases hxy with a ha\ncases hyx with b hb\nrw [ha]\nrw [ha, add_assoc] at hb\nsymm at hb\napply add_right_eq_self at hb\napply add_right_eq_zero at hb\nrw [hb, add_zero]\nrfl\n```\n\nПерехожий математик зауважує, що з антисиметрією також,\nви довели, що `≤` є *частковим порядком* на `ℕ`.\n\nРівень боса цього світу - довести\nщо `≤` є тотальним порядком. Давайте вивчимо ще дві прості тактики\nпершими.",
+ "Here's my proof:\n```\ncases hx with d hd\nuse d\nrw [succ_add] at hd\napply succ_inj at hd\nexact hd\n```":
+ "Ось мій доказ:\n```\ncases hx with d hd\nuse d\nrw [succ_add] at hd\napply succ_inj at hd\nexact hd\n```",
+ "Here's a two-liner:\n```\nuse 1\nexact succ_eq_add_one x\n```\n\nThis works because `succ_eq_add_one x` is a proof of `succ x = x + 1`.":
+ "Ось два рядки:\n```\nuse 1\nexact succ_eq_add_one x\n```\n\nЦе працює, оскільки `succ_eq_add_one x` є доказом `succ x = x + 1`.",
+ "Here's a two-line proof:\n```\nrepeat rw [zero_add] at h\nexact h\n```":
+ "Ось дворядковий доказ:\n```\nrepeat rw [zero_add] at h\nexact h\n```",
+ "Here's a proof using `add_left_eq_self`:\n```\nrw [add_comm]\nintro h\napply add_left_eq_self at h\nexact h\n```\n\nand here's an even shorter one using the same idea:\n```\nrw [add_comm]\nexact add_left_eq_self y x\n```\n\nAlternatively you can just prove it by induction on `x`:\n\n```\ninduction x with d hd\nintro h\nrw [zero_add] at h\nexact h\nintro h\nrw [succ_add] at h\napply succ_inj at h\napply hd at h\nexact h\n```":
+ "Ось доказ за допомогою `add_left_eq_self`:\n```\n\nrw [add_comm]\nintro h\napply add_left_eq_self at h\nexact h\n```\n\nа ось ще коротший із використанням тієї ж ідеї:\n```\nrw [add_comm]\nexact add_left_eq_self y x\n```\n\nКрім того, ви можете просто довести це індукцією по `x`:\n\n```\n\ninduction x with d hd\nintro h\nrw [zero_add] at h\nexact h\nintro h\nrw [succ_add] at h\napply succ_inj at h\napply hd at h\nexact h\n```",
+ "Here's a completely backwards proof:\n```\nintro h\napply succ_inj\nrepeat rw [succ_eq_add_one]\nexact h\n```":
+ "Ось повний доказ у зворотньому напрямку:\n```\nintro h\napply succ_inj\nrepeat rw [succ_eq_add_one]\nexact h\n```",
+ "Here we want to deal with the cases `b = 0` and `b ≠ 0` separately,\nso start with `cases b with d`.":
+ "Тут ми хочемо розглянути випадки `b = 0` і `b ≠ 0` окремо,\nтому почніть із `cases b with d`.",
+ "Here we begin to\ndevelop an algorithm which, given two naturals `a` and `b`, returns the answer\nto \"does `a = b`?\"\n\nHere is the algorithm. First note that `a` and `b` are numbers, and hence\nare either `0` or successors.\n\n*) If `a` and `b` are both `0`, return \"yes\".\n\n*) If one is `0` and the other is `succ n`, return \"no\".\n\n*) If `a = succ m` and `b = succ n`, then return the answer to \"does `m = n`?\"\n\nOur job now is to *prove* that this algorithm always gives the correct answer. The proof that\n`0 = 0` is `rfl`. The proof that `0 ≠ succ n` is `zero_ne_succ n`, and the proof\nthat `succ m ≠ 0` is `succ_ne_zero m`. The proof that if `h : m = n` then\n`succ m = succ n` is `rw [h]` and then `rfl`. This level is a proof of the one\nremaining job we have to do: if `a ≠ b` then `succ a ≠ succ b`.":
+ "Ось ми і починаємо\nрозробити алгоритм, який, маючи два натуральних числа `a` і `b`, повертає відповідь\nна \"чи `a = b`?\"\n\nОсь алгоритм. Спочатку зауважте, що `a` і `b` є числами, а отже\nвони або `0`, або наступники.\n\n*) Якщо `a` і `b` обидва є `0`, поверніть \"yes\".\n\n*) Якщо один це `0`, а інший це `succ n`, поверніть \"ні\".\n\n*) Якщо `a = succ m` і `b = succ n`, тоді повертається відповідь на питання \"чи `m = n`?\"\n\nЗараз наше завдання - *довести*, що цей алгоритм завжди дає правильну відповідь. Доказ що\n`0 = 0` це `rfl`. Доказом того, що `0 ≠ succ n` є `zero_ne_succ n`, і доказом\nщо `succ m ≠ 0` є `succ_ne_zero m`. Доказ того, що якщо `h : m = n`, то\n`succ m = succ n` — це `rw [h]`, а потім `rfl`. Цей рівень є доказом єдиної\nзалишившийся роботи, яку ми маємо виконати: якщо `a ≠ b`, тоді `succ a ≠ succ b`.",
+ "Here is an example proof of 2+2=4 showing off various techniques.\n\n```lean\nnth_rewrite 2 [two_eq_succ_one] -- only change the second `2` to `succ 1`.\nrw [add_succ]\nrw [one_eq_succ_zero]\nrw [add_succ, add_zero] -- two rewrites at once\nrw [← three_eq_succ_two] -- change `succ 2` to `3`\nrw [← four_eq_succ_three]\nrfl\n```\n\nOptional extra: you can run this proof yourself. Switch the game into \"Editor mode\" by clicking\non the `</>` button in the top right. You can now see your proof\nwritten as several lines of code. Move your cursor between lines to see\nthe goal state at any point. Now cut and paste your code elsewhere if you\nwant to save it, and paste the above proof in instead. Move your cursor\naround to investigate. When you've finished, click the `>_` button in the top right to\nmove back into \"Typewriter mode\".\n\nYou have finished tutorial world!\nClick \"Home\" to go back to the\noverworld, and select Addition World, where you will learn\nabout the `induction` tactic.":
+ "Ось приклад доказу 2+2=4 із демонстрацією різних технік.\n\n```lean\nnth_rewrite 2 [two_eq_succ_one] -- змінює лише другий `2` на `succ 1`.\nrw [add_succ]\nrw [one_eq_succ_zero]\nrw [add_succ, add_zero] -- два перезаписи одночасно\nrw [← three_eq_succ_two] -- змінює `succ 2` на `3`\nrw [← four_eq_succ_three]\nrfl\n```\n\nДодатково: ви можете виконати цей доказ самостійно. Переведіть гру в «Режим редактора», клацнувши\nна кнопці `</>` у верхньому правому куті. Тепер ви можете побачити свій доказ\nнаписаний у вигляді декількох рядків коду. Переміщуйте курсор між рядками, щоб побачити\nцільовий стан у будь-якій точці. Тепер виріжте та вставте свій код в іншому місці, якщо ви\nхочете зберегти його та вставте натомість наведене вище підтвердження. Перемістіть курсор\nнавколо, щоб дослідити. Коли ви закінчите, натисніть кнопку `>_` у верхньому правому куті, щоб\nповернутися назад у «Режим друку».\n\nВи закінчили навчальний світ!\nНатисніть «Залишити світ», щоб повернутися до\nвсесвіту і виберіть Світ додавання, де ви дізнаєтесь\nпро тактику `induction`.",
+ "Having to rearrange variables manually using commutativity and\nassociativity is very tedious. We start by reminding you of this. `add_left_comm`\nis a key component in the first algorithm which we'll explain, but we need\nto prove it manually.\n\nRemember that you can do precision commutativity rewriting\nwith things like `rw [add_comm b c]`. And remember that\n`a + b + c` means `(a + b) + c`.":
+ "Потреба переставляти змінні вручну за допомогою комутативності та\nасоціативність дуже нудна. Ми починаємо з нагадування вам про це. `add_left_comm`\nє ключовим компонентом у першому алгоритмі, як саме ми пояснимо далі, але його нам потрібно\nдовести вручну.\n\nПам’ятайте, що ви можете виконувати точне перезаписування комутативності\nз такими речами, як `rw [add_comm b c]`. І пам'ятайте що\n`a + b + c` означає `(a + b) + c`.",
+ "Good luck!\n\n  One last hint. If `h : X = Y` then `rw [h]` will change *all* `X`s into `Y`s.\n  If you only want to change one of them, say the 3rd one, then use\n  `nth_rewrite 3 [h]`.":
+ "Удачі!\n\n  Остання підказка. Якщо `h : X = Y`, то `rw [h]` змінить *усі* `X` на `Y`.\n  Якщо ви хочете змінити лише один із них, скажімо, 3-й, тоді використовуйте\n  `nth_rewrite 3 [h]`.",
+ "For any natural number $m$, we have $ m \\times 1 = m$.":
+ "Для будь-якого натурального числа $m$ ми маємо $ m \\times 1 = m$.",
+ "For any natural number $m$, we have $ 2 \\times m = m+m$.":
+ "Для будь-якого натурального числа $m$ ми маємо $2 \\times m = m+m$.",
+ "For any natural number $m$, we have $ 1 \\times m = m$.":
+ "Для будь-якого натурального числа $m$ ми маємо $1 \\times m = m$.",
+ "For all numbers $m$, $0 ^{\\operatorname{succ} (m)} = 0$.":
+ "Для всіх чисел $m$ $0 ^{\\operatorname{succ} (m)} = 0$.",
+ "For all numbers $a$ and $b$, we have\n$$(a+b)^2=a^2+b^2+2ab.$$":
+ "Для всіх чисел $a$ і $b$ маємо\n$$(a+b)^2=a^2+b^2+2ab.$$",
+ "For all naturals $m$, $1 ^ m = 1$.":
+ "Для всіх натуральних чисел $m$ $1 ^ m = 1$.",
+ "For all naturals $a$, $m$, $n$, we have $a^{m + n} = a ^ m  a ^ n$.":
+ "Для всіх натуральних чисел $a$, $m$, $n$ маємо $a^{m + n} = a ^ m a ^ n$.",
+ "For all naturals $a$, $m$, $n$, we have $(a ^ m) ^ n = a ^ {mn}$.":
+ "Для всіх натуральних чисел $a$, $m$, $n$ маємо $(a ^ m) ^ n = a ^ {mn}$.",
+ "For all naturals $a$, $b$, $n$, we have $(ab) ^ n = a ^ nb ^ n$.":
+ "Для всіх натуральних чисел $a$, $b$, $n$ маємо $(ab) ^ n = a ^ nb ^ n$.",
+ "For all naturals $a$, $a ^ 2 = a \\times a$.":
+ "Для всіх натуральних чисел $a$ $a ^ 2 = a \\times a$.",
+ "For all naturals $a$, $a ^ 1 = a$.":
+ "Для всіх натуральних чисел $a$ $a ^ 1 = a$.",
+ "For all naturals $a$ $b$ $c$ and $n$, we have\n$$(a+1)^{n+3}+(b+1)^{n+3}\\not=(c+1)^{n+3}.$$":
+ "Для всіх натуральних чисел $a$ $b$ $c$ і $n$ маємо\n$$(a+1)^{n+3}+(b+1)^{n+3}\\not=(c+1)^{n+3}.$$",
+ "For all natural numbers $n$, we have $0 + n = n$.":
+ "Для всіх натуральних чисел $n$ маємо $0 + n = n$.",
+ "For all natural numbers $m$, we have $ 0 \\times m = 0$.":
+ "Для всіх натуральних чисел $m$ ми маємо $ 0 \\times m = 0$.",
+ "For all natural numbers $a, b$, we have\n$ \\operatorname{succ}(a) + b = \\operatorname{succ}(a + b)$.":
+ "Для всіх натуральних чисел $a, b$ маємо\n$ \\operatorname{succ}(a) + b = \\operatorname{succ}(a + b)$.",
+ "For all natural numbers $a$, we have $\\operatorname{succ}(a) = a+1$.":
+ "Для всіх натуральних чисел $a$ маємо $\\operatorname{succ}(a) = a+1$.",
+ "For all natural numbers $a$ and $b$, we have\n$(\\operatorname{succ}\\ a) \\times b = a\\times b + b$.":
+ "Для всіх натуральних чисел $a$ і $b$ маємо\n$(\\operatorname{succ}\\ a) \\times b = a\\times b + b$.",
+ "First execute `rw [h]` to replace the `y` with `x + 7`.":
+ "Спочатку виконайте `rw [h]`, щоб замінити `y` на `x + 7`.",
+ "Finally use a targeted `add_comm` to switch `b` and `d`":
+ "Нарешті використовуйте націлений `add_comm`, щоб переключити `b` і `d`",
+ "Fermat's Last Theorem": "Остання теорема Ферма",
+ "Every number in Lean is either $0$ or a successor. We know how to add $0$,\nbut we need to figure out how to add successors. Let's say we already know\nthat `37 + d = q`. What should the answer to `37 + succ d` be? Well,\n`succ d` is one bigger than `d`, so `37 + succ d` should be `succ q`,\nthe number one bigger than `q`. More generally `x + succ d` should\nbe `succ (x + d)`. Let's add this as a lemma.\n\n* `add_succ x d : x + succ d = succ (x + d)`\n\nIf you ever see `... + succ ...` in your goal, `rw [add_succ]` is\nnormally a good idea.\n\nLet's now prove that `succ n = n + 1`. Figure out how to get `+ succ` into\nthe picture, and then `rw [add_succ]`. Switch between the `+` (addition) and\n`012` (numerals) tabs under \"Theorems\" on the right to\nsee which proofs you can rewrite.":
+ "Кожне число в Lean є або $0$, або наступним значенням (наступником). Ми знаємо, як додати $0$,\nале нам потрібно зрозуміти, як додати наступників. Скажімо, ми вже знаємо\nщо `37 + d = q`. Якою має бути відповідь на `37 + succ d`? Гаразд,\n`succ d` на одиницю більший за `d`, тому `37 + succ d` має бути `succ q`,\nчисло на один більше за `q`. Більш загально `x + succ d` повинен\nбути `succ (x + d)`. Додамо це як лему.\n\n* `add_succ x d : x + succ d = succ (x + d)`\n\nЯкщо ви побачите `... + succ ...` у своїй меті, `rw [add_succ]`\nзазвичай хороша ідея.\n\nДавайте тепер доведемо, що `succ n = n + 1`. З’ясуйте, як додати `+ succ`\nу фокус, а потім зробіть `rw [add_succ]`. Перемикайте між вкладками `+` (додавання) і\n`012` (цифри) у розділі \"Теореми\" праворуч\nі подивіться, які докази ви можете переписати.",
+ "Do that again!\n\n`rw [zero_add] at «{h}»` tries to fill in\nthe arguments to `zero_add` (finding `«{x}»`) then it replaces all occurrences of\n`0 + «{x}»` it finds. Therefor, it did not rewrite `0 + «{y}»`, yet.":
+ "Зробіть це ще раз!\n\n`rw [zero_add] в «{h}»` намагається заповнити\nаргументи `zero_add` (знаходження `«{x}»`), потім вона замінює всі знайдені входження\n`0 + «{x}»`. Таким чином тактика не переписує `0 + «{y}»`.",
+ "Did you use induction on `y`?\nHere's a two-line proof of `add_left_eq_self` which uses `add_right_cancel`.\nIf you want to inspect it, you can go into editor mode by clicking `</>` in the top right\nand then just cut and paste the proof and move your cursor around it\nto see the hypotheses and goal at any given point\n(although you'll lose your own proof this way). Click `>_` to get\nback to command line mode.\n```\nnth_rewrite 2 [← zero_add y]\nexact add_right_cancel x 0 y\n```":
+ "Ви використовували індукцію на `y`?\nОсь дворядковий доказ `add_left_eq_self`, який використовує `add_right_cancel`.\nЯкщо ви хочете перевірити його, ви можете перейти в режим редактора, натиснувши `</>` у верхньому правому куті\nа потім просто виріжте та вставте доказ і перемістіть курсор навколо нього\nщоб побачити гіпотези та мету в будь-якій точці\n(хоча таким чином ви втратите свій власний доказ). Натисніть `>_`, щоб\nповернутися назад до режиму командного рядка.\n```\nnth_rewrite 2 [← zero_add y]\nexact add_right_cancel x 0 y\n```",
+ "Dealing with `or`": "Робота з `or`",
+ "Congratulations! You've finished Algorithm World. These algorithms\nwill be helpful for you in Even-Odd World (when someone gets around to\nimplementing it).":
+ "Щиро вітаю! Ви закінчили Світ Алгорітмів. Ці алгоритми\nбуде корисним для вас у Парно-непарному світі (коли хтось знайде час на\nйого реалізацію).",
+ "Congratulations! You have proved Fermat's Last Theorem!\n\nEither that, or you used magic...":
+ "Щиро вітаю! Ви довели останню теорему Ферма!\n\nАбо це, або ви використали магію...",
+ "Congratulations! You completed your first verified proof!\n\nRemember that `rfl` is a *tactic*. If you ever want information about the `rfl` tactic,\nyou can click on `rfl` in the list of tactics on the right.\n\nNow click on \"Next\" to learn about the `rw` tactic.":
+ "Вітаю! Ви завершили свій перший перевірений доказ!\n\nПам’ятайте, що `rfl` - це *тактика*. Якщо вам колись знадобиться інформація про тактику `rfl`,\nви можете натиснути `rfl` у списку тактик праворуч.\n\nТепер натисніть «Далі», щоб дізнатися про тактику `rw`.",
+ "Concretely: `rw [← succ_eq_add_one] at h`.":
+ "Конкретно: `rw [← succ_eq_add_one] at h`.",
+ "Can you take it from here? Click on \"Show more help!\" if you need a hint.":
+ "Чи можете ви продовжити доказ звідси? Натисніть «Показати додаткову довідку!» якщо вам потрібна підказка.",
+ "Can you take it from here? (note: if you try `contrapose! h` again, it will\ntake you back to where you started!)":
+ "Чи ви можете продовжити звідси? (примітка: якщо ви знову спробуєте `contrapose! h`, це\nповерне вас туди, звідки ви починали!)",
+ "Can you take it from here?": "Ви можете продовжити рішення звідси?",
+ "Can you now change the goal into `2 = 2`?":
+ "Чи можете ви тепер перетворити мету на `2 = 2`?",
+ "At this point you see the term `0 + «{d}»`, so you can use the\ninduction hypothesis with `rw [«{hd}»]`.":
+ "На цьому етапі ви бачите термін `0 + «{d}»`, тому ви можете використовувати\nіндукційну гіпотезу із допомогою `rw [«{hd}»]`.",
+ "Assuming $x+y=37$ and $3x+z=42$, we have $x+y=37$.":
+ "Якщо припустити, що $x+y=37$ і $3x+z=42$, ми маємо $x+y=37$.",
+ "Assuming $0+x=(0+y)+2$, we have $x=y+2$.":
+ "Припускаючи, що $0+x=(0+y)+2$, ми маємо $x=y+2$.",
+ "As warm-up for `2 + 2 ≠ 5` let's prove `0 ≠ 1`. To do this we need to\nintroduce Peano's last axiom `zero_ne_succ n`, a proof that `0 ≠ succ n`.\nTo learn about this result, click on it in the list of lemmas on the right.":
+ "Для розминки перед `2 + 2 ≠ 5` давайте доведемо `0 ≠ 1`. Для цього нам потрібно\nпредставити останню аксіому Пеано `zero_ne_succ n`, доказ того, що `0 ≠ succ n`.\nЩоб дізнатися про цей результат, натисніть на нього в списку лем праворуч.",
+ "Arguing backwards": "Аргументування у зворотньому напрямку",
+ "Applying a proof of $P\\implies Q$ to the *goal* changes $Q$ to $P$.\nNow try `rw [succ_eq_add_one]` to make the goal more like the hypothesis.":
+ "Застосування доказу $P\\implies Q$ до *мети* змінює $Q$ на $P$.\nТепер спробуйте `rw [succ_eq_add_one]`, щоб зробити мету більш схожою на гіпотезу.",
+ "And now we've deduced what we wanted to prove: the goal is one of our assumptions.\nFinish the level with `exact h`.":
+ "І тепер ми дійшли висновку, який ми хотіли довести: мета є одним із наших припущень.\nЗавершіть рівень через `exact h`.",
+ "And now `rw [add_zero]`": "А тепер `rw [add_zero]`",
+ "And finally `rfl`.": "І нарешті `rfl`.",
+ "An algorithm for equality": "Алгоритм рівності",
+ "Although $0^0=1$ in this game, $0^n=0$ if $n>0$, i.e., if\n$n$ is a successor.":
+ "Хоча $0^0=1$ у цій грі, $0^n=0$, якщо $n>0$, тобто якщо\n$n$ є наступником.",
+ "Algorithm World": "Світ алгоритмів",
+ "Advanced Multiplication World": "Світ розширеного множення",
+ "Advanced Addition World": "Світ розширеного додавання",
+ "Advanced *Addition* World proved various implications\ninvolving addition, such as `x + y = 0 → x = 0` and `x + y = x → y = 0`.\nThese lemmas were used to prove basic facts about ≤ in ≤ World.\n\nIn Advanced Multiplication World we prove analogous\nfacts about multiplication, such as `x * y = 1 → x = 1`, and\n`x * y = x → y = 1` (assuming `x ≠ 0` in the latter result). This will prepare\nus for Divisibility World.\n\nMultiplication World is more complex than Addition World. In the same\nway, Advanced Multiplication world is more complex than Advanced Addition\nWorld. One reason for this is that certain intermediate results are only\ntrue under the additional hypothesis that one of the variables is non-zero.\nThis causes some unexpected extra twists.":
+ "Світ розширенного *додаванн* довів різні імплікації\nвключаючі додавання, наприклад `x + y = 0 → x = 0` і `x + y = x → y = 0`.\nЦі леми були використані для доведення основних фактів про ≤ у Світі ≤.\n\nУ Світі розширенного множення ми доводимо аналогічни\nфакти про множення, наприклад `x * y = 1 → x = 1`, і\n`x * y = x → y = 1` (припускаючи, що `x ≠ 0` в останньому результаті). Це підготує\nнас для світу ділення.\n\nСвіт множення складніший за світ додавання. У тому самому\nсенсі, світ розширеного множення є складнішим, ніж світ розширеного додавання.\nОднією з причин цього є те, що є лише певні проміжні результати\nє вірними лише за умови додаткової гіпотези, що одна зі змінних не дорівнює нулю.\nЦе викликає деякі несподівані додаткові повороти.",
+ "Addition is distributive over multiplication.\nIn other words, for all natural numbers $a$, $b$ and $c$, we have\n$(a + b) \\times c = ac + bc$.":
+ "Додавання діє дістрібутивно над множенням.\nІншими словами, для всіх натуральних чисел $a$, $b$ і $c$ маємо\n$(a + b) \\times c = ac + bc$.",
+ "Addition World": "Світ додавання",
+ "Adding zero": "Додавання нуля",
+ "A two-line proof is\n\n```\nnth_rewrite 2 [← mul_one a] at h\nexact mul_left_cancel a b 1 ha h\n```\n\nWe now have all the tools necessary to set up the basic theory of divisibility of naturals.":
+ "Дворядковий доказ\n\n```\nnth_rewrite 2 [← mul_one a] at h\nexact mul_left_cancel a b 1 ha h\n```\n\nТепер у нас є всі інструменти, необхідні для створення базової теорії подільності натуральних чисел.",
+ "A proof that $a+b=0 \\implies b=0$.": "Доказ того, що $a+b=0 \\implies b=0$.",
+ "A proof that $a+b=0 \\implies a=0$.": "Доказ того, що $a+b=0 \\implies a=0$.",
+ "A passing mathematician remarks that with reflexivity and transitivity out of the way,\nyou have proved that `≤` is a *preorder* on `ℕ`.":
+ "Математик, який проходив повз, зауважує, що, коли рефлексивність і транзитивність усунені,\nви довели, що `≤` є *предпорядок* на `ℕ`.",
+ "A passing mathematician notes that you've proved\nthat the natural numbers are a commutative semiring.\n\nIf you want to begin your journey to the final boss, head for Power World.":
+ "Математик, який проходив повз, зазначає, що ви довели\nщо натуральні числа є комутативним півкільцем.\n\nЯкщо ви хочете розпочати свою подорож до фінального боса, вирушайте до Світу ступеней.",
+ "A passing mathematician congratulates you on proving that naturals\nare an additive commutative monoid.\n\nLet's practice using `add_assoc` and `add_comm` in one more level,\nbefore we leave addition world.":
+ "Математик, який проходив повз, вітає вас із доведенням що натуральні числа\nє адитивним комутативним моноїдом.\n\nДавайте потренуємося використовувати `add_assoc` і `add_comm` на ще одному рівні,\nперш ніж залишити світ додавання.",
+ "2+2=4": "2+2=4",
+ "2 + 2 ≠ 5 is boring to prove in full, given only the tools we have currently.\nTo make it a bit less painful, I have unfolded all of the numerals for you.\nSee if you can use `zero_ne_succ` and `succ_inj` to prove this.":
+ "2 + 2 ≠ 5 нудно доводити повністю, використовуючи лише ті інструменти, які ми маємо на даний момент.\nЩоб було трохи менше болісно, я розгорнув для вас усі цифри.\nПодивіться, чи можете ви довести це використовуючи `zero_ne_succ` і `succ_inj`.",
+ "2 + 2 ≠ 5": "2 + 2 ≠ 5",
+ "1 ≠ 0": "1 ≠ 0",
+ "0 ≤ x": "0 ≤ x",
+ "*Game version: 4.3*\n\n*Recent additions: bug fixes*\n\n## Progress saving\n\nThe game stores your progress in your local browser storage.\nIf you delete it, your progress will be lost!\n\nWarning: In most browsers, deleting cookies will also clear the local storage\n(or \"local site data\"). Make sure to download your game progress first!\n\n## Credits\n\n* **Creators:** Kevin Buzzard, Jon Eugster\n* **Original Lean3-version:** Kevin Buzzard, Mohammad Pedramfar\n* **Game Engine:** Alexander Bentkamp, Jon Eugster, Patrick Massot\n* **Additional levels:** Sian Carey, Ivan Farabella, Archie Browne.\n* **Additional thanks:** All the student beta testers, all the schools\nwho invited Kevin to speak, and all the schoolkids who asked him questions\nabout the material.\n\n## Resources\n\n* The [Lean Zulip chat](https://leanprover.zulipchat.com/) forum\n* [Original Lean3 version](https://github.com/ImperialCollegeLondon/natural_number_game/) (no longer maintained)\n\n## Problems?\n\nPlease ask any questions about this game in the\n[Lean Zulip chat](https://leanprover.zulipchat.com/) forum, for example in\nthe stream \"New Members\". The community will happily help. Note that\nthe Lean Zulip chat is a professional research forum.\nPlease use your full real name there, stay on topic, and be nice. If you're\nlooking for somewhere less formal (e.g. you want to post natural number\ngame memes) then head on over to the [Lean Discord](https://discord.gg/WZ9bs9UCvx).\n\nAlternatively, if you experience issues / bugs you can also open github issues:\n\n* For issues with the game engine, please open an\n[issue at the lean4game](https://github.com/leanprover-community/lean4game/issues) repo.\n* For issues about the game's content, please open an\n[issue at the NNG](https://github.com/hhu-adam/NNG4/issues) repo.":
+ "*Версія гри: 4.3*\n\n*Останні доповнення: виправлення помилок*\n\n## Збереження прогресу\n\nГра зберігає ваш прогрес у локальному сховищі браузера.\nЯкщо ви видалите його, ваш прогрес буде втрачено!\n\nПопередження: у більшості браузерів видалення файлів cookie також очищає локальне сховище\n(або «дані локального сайту»). Обов’язково спершу скачайте свій прогрес гри!\n\n## Подяки\n\n* **Творці:** Кевін Баззард, Джон Югстер\n* **Оригінальна версія Lean3:** Кевін Баззард, Мохаммад Педрамфар\n* **Ігровий рушій:** Олександр Бенткамп, Джон Югстер, Патрік Массо\n* **Додаткові рівні:** Сіан Кері, Іван Фарабелла, Арчі Браун.\n* **Додаткова подяка:** Усім учням-бета-тестерам, усім школам\nякі запросли Кевіна виступити, і всіх школярів, які ставили йому запитання\nпро матеріал.\n\n## Ресурси\n\n* Форум [Lean Zulip chat](https://leanprover.zulipchat.com/).\n* [Оригінальна версія Lean3](https://github.com/ImperialCollegeLondon/natural_number_game/) (більше не підтримується)\n\n## Проблеми?\n\nБудь ласка, задавайте будь-які запитання щодо цієї гри на\nфорумі [Zulip чату Lean](https://leanprover.zulipchat.com/), наприклад у\nпотік «New Members». Громада з радістю допоможе. Зауважте, що\nчат Lean Zulip — це професійний дослідницький форум.\nБудь ласка, використовуйте тут своє повне справжнє ім’я, не відривайтесь від теми та будьте чемними. Якщо ви\nшукаєте десь менш формальне (наприклад, ви хочете опублікувати меми гри в натуральні числа),\nто перейдіть до [Lean діскорду](https://discord.gg/WZ9bs9UCvx).\n\nКрім того, якщо у вас виникли проблеми / помилки, ви також можете відкрити проблеми на github:\n\n* Якщо у вас виникли проблеми з ігровим двигуном, відкрийте\n[проблема в репозиторії lean4game](https://github.com/leanprover-community/lean4game/issues).\n* Якщо у вас виникли питання щодо вмісту гри, відкрийте\n[проблема в NNG](https://github.com/hhu-adam/NNG4/issues) репі.",
+ "$x=37\\implies x=37$.": "$x=37\\implies x=37$.",
+ "$x+y=x\\implies y=0$.": "$x+y=x\\implies y=0$.",
+ "$x+1=y+1 \\implies x=y$.": "$x+1=y+1 \\implies x=y$.",
+ "$x + y = y\\implies x=0.$": "$x + y = y\\implies x=0.$",
+ "$n+a=n+b\\implies a=b$.": "$n+a=n+b\\implies a=b$.",
+ "$a+n=b+n\\implies a=b$.": "$a+n=b+n\\implies a=b$.",
+ "$a+(b+0)+(c+0)=a+b+c.$": "$a+(b+0)+(c+0)=a+b+c.$",
+ "$\\operatorname{succ}(a) \\neq 0$.": "$\\operatorname{succ}(a) \\neq 0$.",
+ "$20+20=40$.": "$20+20=40$.",
+ "$2+2≠5$.": "$2+2≠5$.",
+ "$2+2=4$.": "$2+2=4$.",
+ "$2+2 \\neq 5.$": "$2+2 \\neq 5.$",
+ "$2$ is the number after the number after $0$.":
+ "$2$ – це число після числа після $0$.",
+ "$1\\neq0$.": "$1\\neq0$.",
+ "$0\\neq1$.": "$0\\neq1$.",
+ "$0 ^ 0 = 1$": "$0 ^ 0 = 1 $",
+ "## The birth of number.\n\nNumbers in Lean are defined by two rules.\n\n* `0` is a number.\n* If `n` is a number, then the *successor* `succ n` of `n` is a number.\n\nThe successor of `n` means the number after `n`. Let's learn to\ncount, and name a few small numbers.\n\n## Counting to four.\n\n`0` is a number, so `succ 0` is a number. Let's call this new number `1`.\nSimilarly let's define `2 = succ 1`, `3 = succ 2` and `4 = succ 3`.\nThis gives us plenty of numbers to be getting along with.\n\nThe *proof* that `2 = succ 1` is called `two_eq_succ_one`.\nCheck out the \"012\" tab in the list of lemmas on the right\nfor this and other proofs.\n\nLet's prove that $2$ is the number after the number after zero.":
+ "## Народження числа.\n\nЧисла в Lean визначаються двома правилами.\n\n* `0` - це число.\n* Якщо `n` є числом, то *наступник* `succ n` числа `n` також є числом.\n\nНаступник `n` означає число після `n`. Давайте навчимося\nрахувати і дамо назви декільком маленьким числам.\n\n## Порахувати до чотирьох.\n\n`0` є числом, тому `succ 0` є числом. Назвемо це нове число `1`.\nПодібним чином визначимо `2 = succ 1`, `3 = succ 2` і `4 = succ 3`.\nЦе дає нам багато чисел, з якими можна мати справи.\n\n*Доказ* того, що `2 = succ 1` називається `two_eq_succ_one`.\nПерегляньте вкладку \"012\" у списку лем праворуч\nдля цього та інших доказів.\n\nДоведемо, що $2$ — це число після числа після нуля.",
+ "## Summary\n\n`rfl` proves goals of the form `X = X`.\n\nIn other words, the `rfl` tactic will close any goal of the\nform `A = B` if `A` and `B` are *identical*.\n\n`rfl` is short for \\\"reflexivity (of equality)\\\".\n\n## Example:\n\nIf the goal looks like this:\n\n```\nx + 37 = x + 37\n```\n\nthen `rfl` will close it. But if it looks like `0 + x = x` then `rfl` won't work, because even\nthough $0+x$ and $x$ are always equal as *numbers*, they are not equal as *terms*.\nThe only term which is identical to `0 + x` is `0 + x`.\n\n## Details\n\n`rfl` is short for \\\"reflexivity of equality\\\".\n\n## Game Implementation\n\n*Note that our `rfl` is weaker than the version used in core Lean and `mathlib`,\nfor pedagogical purposes; mathematicians do not distinguish between propositional\nand definitional equality because they think about definitions in a different way\nto type theorists (`zero_add` and `add_zero` are both \\\"facts\\\" as far\nas mathematicians are concerned, and who cares what the definition of addition is).*":
+ "## Резюме\n\n`rfl` доводить мету у вигляді `X = X`.\n\nІншими словами, тактика `rfl` закриє будь-яку мету у\nформі `A = B`, якщо `A` і `B` *ідентичні*.\n\n`rfl` є скороченням від \\\"reflexivity (of equality)\\\".\n\n## Приклад:\n\nЯкщо мета виглядає так:\n\n```\nх + 37 = х + 37\n```\n\nтоді `rfl` закриє її. Але якщо мета виглядає як `0 + x = x`, тоді `rfl` не cпрацює, тому що навіть\nХоча $0+x$ і $x$ завжди рівні як *числа*, вони не рівні як *терми*.\nЄдиний терм, який ідентичний `0 + x`, це `0 + x`.\n\n## Подробиці\n\n`rfl` є скороченням від \\\"reflexivity of equality\\\".\n\n## Реалізація гри\n\n*Зверніть увагу, що наш `rfl` слабший, ніж версія, яка використовується в базовому Lean і `mathlib`,\nзадля педагогічних цілей; математики не розрізняють між пропозиційною рівністю\nі рівністю визначень, оскільки вони думають про визначення відмінно\nвід теоретиків типів (`zero_add` і `add_zero` є \\\"фактами\\\"\nіз точки зору математиків, і кого хвилює, яке визначення додавання).*",
+ "## Summary\n\n`repeat t` repeatedly applies the tactic `t`\nto the goal. You don't need to use this\ntactic, it just speeds things up sometimes.\n\n## Example\n\n`repeat rw [add_zero]` will turn the goal\n`a + 0 + (0 + (0 + 0)) = b + 0 + 0`\ninto the goal\n`a = b`.\n\"\n\nTacticDoc nth_rewrite \"\n## Summary\n\nIf `h : X = Y` and there are several `X`s in the goal, then\n`nth_rewrite 3 [h]` will just change the third `X` to a `Y`.\n\n## Example\n\nIf the goal is `2 + 2 = 4` then `nth_rewrite 2 [two_eq_succ_one]`\nwill change the goal to `2 + succ 1 = 4`. In contrast, `rw [two_eq_succ_one]`\nwill change the goal to `succ 1 + succ 1 = 4`.":
+ "## Резюме\n\n`repeat t` повторно застосовує тактику `t`\nдо мети. Вам не потрібно користуватися\nцією тактикою, іноді вона просто прискорює події.\n\n## Приклад\n\n`repeat rw [add_zero]` перетворить мету\n`a + 0 + (0 + (0 + 0)) = b + 0 + 0`\nв мету\n`a = b`.\n\"\n\nTacticDoc nth_rewrite \"\n## Резюме\n\nЯкщо `h : X = Y` і є кілька `X` у меті, тоді\n`nth_rewrite 3 [h]` просто змінить трете `X` на `Y`.\n\n## Приклад\n\nЯкщо ціль `2 + 2 = 4`, то `nth_rewrite 2 [two_eq_succ_one]`\nзмінить ціль на `2 + succ 1 = 4`.\nНа відміну від цього, `rw [two_eq_succ_one]`\nзмінить ціль на `succ 1 + succ 1 = 4`.",
+ "## Summary\n\n`repeat t` repeatedly applies the tactic `t`\nto the goal. You don't need to use this\ntactic, it just speeds things up sometimes.\n\n## Example\n\n`repeat rw [add_zero]` will turn the goal\n`a + 0 + (0 + (0 + 0)) = b + 0 + 0`\ninto the goal\n`a = b`.":
+ "## Резюме\n\n`repeat t` неодноразово застосовує тактику `t`\nдо мети. Вам не потрібно використовувати цю\nтактику, іноді вона просто прискорює речі.\n\n## Приклад\n\n`repeat rw [add_zero]` перетворить мету\n`a + 0 + (0 + (0 + 0)) = b + 0 + 0`\nв мету\n`a = b`.",
+ "## Summary\n\nThe `use` tactic makes progress with goals which claim something *exists*.\nIf the goal claims that some `x` exists with some property, and you know\nthat `x = 37` will work, then `use 37` will make progress.\n\nBecause `a ≤ b` is notation for \\\"there exists `c` such that `b = a + c`\\\",\nyou can make progress on goals of the form `a ≤ b` by `use`ing the\nnumber which is morally `b - a` (i.e. `use b - a`)\n\nAny of the following examples is possible assuming the type of the argument passed to the `use` function is accurate:\n\n- `use 37`\n- `use a`\n- `use a * a + 1`":
+ "## Резюме\n\nТактика `use` сприяє досягненню тієї мети, яка стверджують, що щось *існує*.\nЯкщо мета стверджує, що деякий `x` існує з певною властивістю, і ви знаєте\nщо `x = 37` буде працювати, тоді `use 37` досягне успіху.\n\nОскільки `a ≤ b` є записом для \\\"існує `c` таке, що `b = a + c`\\\",\nви можете прогресувати у досягненні цілей виду `a ≤ b`, `use`-аючи`\nчисло, яке морально є `b - a` (тобто `use b - a`)\n\nБудь-який із наведених нижче прикладів можливий за умови, що тип аргументу, переданого функції `use`, правильний:\n\n- `use 37`\n- `use a`\n- `use a * a + 1`",
+ "## Summary\n\nThe `symm` tactic will change a goal or hypothesis of\nthe form `X = Y` to `Y = X`. It will also work on `X ≠ Y`\nand on `X ↔ Y`.\n\n### Example\n\nIf the goal is `2 + 2 = 4` then `symm` will change it to `4 = 2 + 2`.\n\n### Example\n\nIf `h : 2 + 2 ≠ 5` then `symm at h` will change `h` to `5 ≠ 2 + 2`.":
+ "## Резюме\n\nТактика `symm` змінить мету або гіпотезу\nформи `X = Y` на `Y = X`. Вона також працюватиме на `X ≠ Y`\nі на `X ↔ Y`.\n\n### Приклад\n\nЯкщо мета `2 + 2 = 4`, тоді `symm` змінить її на `4 = 2 + 2`.\n\n### Приклад\n\nЯкщо `h : 2 + 2 ≠ 5`, то `symm at h` змінить `h` на `5 ≠ 2 + 2`.",
+ "## Summary\n\nIf the goal is a statement `P`, then `exact h` will close the goal if `h` is a proof of `P`.\n\n### Example\n\nIf the goal is `x = 37` and you have a hypothesis `h : x = 37`\nthen `exact h` will solve the goal.\n\n### Example\n\nIf the goal is `x + 0 = x` then `exact add_zero x` will close the goal.\n\n### Exact needs to be exactly right\n\nNote that `exact add_zero` will *not work* in the previous example;\nfor `exact h` to work, `h` has to be *exactly* a proof of the goal.\n`add_zero` is a proof of `∀ n, n + 0 = n` or, if you like,\na proof of `? + 0 = ?` where `?` needs to be supplied by the user.\nThis is in contrast to `rw` and `apply`, which will \\\"guess the inputs\\\"\nif necessary. If the goal is `x + 0 = x` then `rw [add_zero]`\nand `rw [add_zero x]` will both change the goal to `x = x`,\nbecause `rw` guesses the input to the function `add_zero`.":
+ "## Резюме\n\nЯкщо метою є твердження `P`, тоді `exact h` закриє мету, якщо `h` є доказом `P`.\n\n### Приклад\n\nЯкщо мета `x = 37` і у вас є гіпотеза `h : x = 37`\nтоді `exact h` вирішить мету.\n\n### Приклад\n\nЯкщо мета `x + 0 = x`, тоді `exact add_zero x` закриє ціль.\n\n### Exact має бути ідеально точним\n\nЗауважте, що `exact add_zero` *не працюватиме* у попередньому прикладі;\nщоб `exact h` працював, `h` має бути *точнісінько* доказом мети.\n`add_zero` є доказом `∀ n, n + 0 = n` або, якщо хочете,\nдоказом `? + 0 = ?`, де `?` має бути введений користувачем.\nЦе дуже відрізняється від `rw` і `apply`, які \\\"вгадують вхідні дані\\\"\nпри необхідності. Якщо мета `x + 0 = x`, то `rw [add_zero]`\nі `rw [add_zero x]` змінять мету на `x = x`,\nоскільки `rw` вгадує вхідні дані функції `add_zero`.",
+ "## Summary\n\nIf the goal is `P → Q`, then `intro h` will introduce `h : P` as a hypothesis,\nand change the goal to `Q`. Mathematically, it says that to prove $P \\implies Q$,\nwe can assume $P$ and then prove $Q$.\n\n### Example:\n\nIf your goal is `x + 1 = y + 1 → x = y` (the way Lean writes $x+1=y+1 \\implies x=y$)\nthen `intro h` will give you a hypothesis $x+1=y+1$ named `h`, and the goal\nwill change to $x=y$.":
+ "## Резюме\n\nЯкщо мета `P → Q`, тоді `intro h` введе `h : P` як гіпотезу,\nі змініть ціль на `Q`. Математично це говорить, що для доведення $P \\implies Q$,\nми можемо припустити $P$ і потім довести $Q$.\n\n### Приклад:\n\nЯкщо ваша мета це `x + 1 = y + 1 → x = y` (як пишеться у Lean $x+1=y+1 \\implies x=y$)\nтоді `intro h` дасть вам гіпотезу $x+1=y+1$ під назвою `h`, а мета\nзміниться на $x=y$.",
+ "## Summary\n\nIf `t : P → Q` is a proof that $P \\implies Q$, and `h : P` is a proof of `P`,\nthen `apply t at h` will change `h` to a proof of `Q`. The idea is that if\nyou know `P` is true, then you can deduce from `t` that `Q` is true.\n\nIf the *goal* is `Q`, then `apply t` will \\\"argue backwards\\\" and change the\ngoal to `P`. The idea here is that if you want to prove `Q`, then by `t`\nit suffices to prove `P`, so you can reduce the goal to proving `P`.\n\n### Example:\n\n`succ_inj x y` is a proof that `succ x = succ y → x = y`.\n\nSo if you have a hypothesis `h : succ (a + 37) = succ (b + 42)`\nthen `apply succ_inj at h` will change `h` to `a + 37 = b + 42`.\nYou could write `apply succ_inj (a + 37) (b + 42) at h`\nbut Lean is smart enough to figure out the inputs to `succ_inj`.\n\n### Example\n\nIf the goal is `a * b = 7`, then `apply succ_inj` will turn the\ngoal into `succ (a * b) = succ 7`.":
+ "## Резюме\n\nЯкщо `t : P → Q` є доказом того, що $P \\implies Q$, а `h : P` є доказом `P`,\nтоді `apply t at h` змінить `h` на доказ `Q`. Ідея полягає в тому, що якщо\nякщо ви знаєте, що `P` істинне, тоді ви можете зробити висновок із `t`, що `Q` істинне.\n\nЯкщо *мета* це `Q`, тоді `apply t` \\\"аргументуватиме у звороньому порядку\\\" і змінить\nмету на `P`. Ідея полягає в тому, що якщо ви хочете довести `Q`, то за допомогою `t`\nдостатньо довести `P`, тому ви можете звести ціль до доведення `P`.\n\n### Приклад:\n\n`succ_inj x y` є доказом того, що `succ x = succ y → x = y`.\n\nОтже, якщо у вас є гіпотеза `h : succ (a + 37) = succ (b + 42)`\nтоді `apply succ_inj at h` змінить `h` на `a + 37 = b + 42`.\nВи можете написати `apply succ_inj (a + 37) (b + 42) at h`\nале Lean достатньо розумний, щоб визначити вхідні дані для `succ_inj`.\n\n### Приклад\n\nЯкщо ціль `a * b = 7`, тоді `apply succ_inj` змінить\nмету на `succ (a * b) = succ 7`.",
+ "## Summary\n\nIf `n` is a number, then `cases n with d` will break the goal into two goals,\none with `n = 0` and the other with `n = succ d`.\n\nIf `h` is a proof (for example a hypothesis), then `cases h with...` will break the\nproof up into the pieces used to prove it.\n\n## Example\n\nIf `n : ℕ` is a number, then `cases n with d` will break the goal into two goals,\none with `n` replaced by 0 and the other with `n` replaced by `succ d`. This\ncorresponds to the mathematical idea that every natural number is either `0`\nor a successor.\n\n## Example\n\nIf `h : P ∨ Q` is a hypothesis, then `cases h with hp hq` will turn one goal\ninto two goals, one with a hypothesis `hp : P` and the other with a\nhypothesis `hq : Q`.\n\n## Example\n\nIf `h : False` is a hypothesis, then `cases h` will turn one goal into no goals,\nbecause there are no ways to make a proof of `False`! And if you have no goals left,\nyou have finished the level.\n\n## Example\n\nIf `h : a ≤ b` is a hypothesis, then `cases h with c hc` will create a new number `c`\nand a proof `hc : b = a + c`. This is because the *definition* of `a ≤ b` is\n`∃ c, b = a + c`.":
+ "## Резюме\n\nЯкщо `n` є числом, тоді `cases n with d` розділять мету на дві,\nодна із `n = 0`, а інша з `n = succ d`.\n\nЯкщо `h` є доказом (наприклад, гіпотезою), то `cases h with...` розіб'є\nдокази на частини, які будуть використовуватися для доказу.\n\n## Приклад\n\nЯкщо `n : ℕ` є числом, тоді `cases n with d` розділять мету на дві мети,\nодна із `n`, заміненим на 0, а інша із `n`, заміненим на `succ d`. Це\nвідповідає математичній ідеї, що кожне натуральне число дорівнює або `0`\nабо наступнику.\n\n## Приклад\n\nЯкщо `h : P ∨ Q` є гіпотезою, то `cases h with hp hq` перетворять одну мету\nна дві мети, одна з гіпотезою `hp : P`, а інша з a\nгіпотезою `hq : Q`.\n\n## Приклад\n\nЯкщо `h : False` є гіпотезою, то `cases h` перетворять одну мету на відсутність мети,\nтому що немає способів зробити доказ `False`! І якщо у вас не залишилося мети,\nви закінчили рівень.\n\n## Приклад\n\nЯкщо `h : a ≤ b` є гіпотезою, то `cases h with c hc` створять нове число `c`\nі доказ `hc : b = a + c`. Це тому, що *визначення* `a ≤ b` таке\n`∃ c, b = a + c`.",
+ "## Summary\n\nIf `n : ℕ` is an object, and the goal mentions `n`, then `induction n with d hd`\nattempts to prove the goal by induction on `n`, with the inductive\nvariable in the successor case being `d`, and the inductive hypothesis being `hd`.\n\n### Example:\nIf the goal is\n```\n0 + n = n\n```\n\nthen\n\n`induction n with d hd`\n\nwill turn it into two goals. The first is `0 + 0 = 0`;\nthe second has an assumption `hd : 0 + d = d` and goal\n`0 + succ d = succ d`.\n\nNote that you must prove the first\ngoal before you can access the second one.":
+ "## Резюме\n\nЯкщо `n : ℕ` є об'єктом, а мета згадує `n`, тоді `induction n with d hd`\nспробує довести мету індукцією по `n`, з індуктивною\nзмінною у випадку наступника із іменем `d`, та індуктивною гіпотезою — `hd`.\n\n### Приклад:\nЯкщо є мета\n```\n0 + n = n\n```\n\nтоді\n\n`induction n with d hd`\n\nперетворить твердження на дві мети. Перша: `0 + 0 = 0`;\nдруга має припущення `hd : 0 + d = d` і мету\n`0 + succ d = succ d`.\n\nЗверніть увагу, що ви повинні спочатку довести першу\nмету, перед тим як ви зможете отримати доступ до другої.",
+ "## Summary\n\nIf `h` is a proof of an equality `X = Y`, then `rw [h]` will change\nall `X`s in the goal to `Y`s. It's the way to \\\"substitute in\\\".\n\n## Variants\n\n* `rw [← h]` (changes `Y`s to `X`s; get the back arrow by typing `\\left ` or `\\l`.)\n\n* `rw [h1, h2]` (a sequence of rewrites)\n\n* `rw [h] at h2` (changes `X`s to `Y`s in hypothesis `h2`)\n\n* `rw [h] at h1 h2 ⊢` (changes `X`s to `Y`s in two hypotheses and the goal;\nget the `⊢` symbol with `\\|-`.)\n\n* `repeat rw [add_zero]` will keep changing `? + 0` to `?`\nuntil there are no more matches for `? + 0`.\n\n* `nth_rewrite 2 [h]` will change only the second `X` in the goal to `Y`.\n\n### Example:\n\nIf you have the assumption `h : x = y + y` and your goal is\n```\nsucc (x + 0) = succ (y + y)\n```\n\nthen\n\n`rw [add_zero]`\n\nwill change the goal into `succ x = succ (y + y)`, and then\n\n`rw [h]`\n\nwill change the goal into `succ (y + y) = succ (y + y)`, which\ncan be solved with `rfl`.\n\n### Example:\n\nYou can use `rw` to change a hypothesis as well.\nFor example, if you have two hypotheses\n```\nh1 : x = y + 3\nh2 : 2 * y = x\n```\nthen `rw [h1] at h2` will turn `h2` into `h2 : 2 * y = y + 3`.\n\n## Common errors\n\n* You need the square brackets. `rw h` is never correct.\n\n* If `h` is not a *proof* of an *equality* (a statement of the form `A = B`),\nfor example if `h` is a function or an implication,\nthen `rw` is not the tactic you want to use. For example,\n`rw [P = Q]` is never correct: `P = Q` is the theorem *statement*,\nnot the proof. If `h : P = Q` is the proof, then `rw [h]` will work.\n\n## Details\n\nThe `rw` tactic is a way to do \\\"substituting in\\\". There\nare two distinct situations where you can use this tactic.\n\n1) Basic usage: if `h : A = B` is an assumption or\nthe proof of a theorem, and if the goal contains one or more `A`s, then `rw [h]`\nwill change them all to `B`s. The tactic will error\nif there are no `A`s in the goal.\n\n2) Advanced usage: Assumptions coming from theorem proofs\noften have missing pieces. For example `add_zero`\nis a proof that `? + 0 = ?` because `add_zero` really is a function,\nand `?` is the input. In this situation `rw` will look through the goal\nfor any subterm of the form `x + 0`, and the moment it\nfinds one it fixes `?` to be `x` then changes all `x + 0`s to `x`s.\n\nExercise: think about why `rw [add_zero]` changes the term\n`(0 + 0) + (x + 0) + (0 + 0) + (x + 0)` to\n`0 + (x + 0) + 0 + (x + 0)`\n\nIf you can't remember the name of the proof of an equality, look it up in\nthe list of lemmas on the right.\n\n## Targeted usage\n\nIf your goal is `b + c + a = b + (a + c)` and you want to rewrite `a + c`\nto `c + a`, then `rw [add_comm]` will not work because Lean finds another\naddition first and swaps those inputs instead. Use `rw [add_comm a c]` to\nguarantee that Lean rewrites `a + c` to `c + a`. This works because\n`add_comm` is a proof that `?1 + ?2 = ?2 + ?1`, `add_comm a` is a proof\nthat `a + ? = ? + a`, and `add_comm a c` is a proof that `a + c = c + a`.\n\nIf `h : X = Y` then `rw [h]` will turn all `X`s into `Y`s.\nIf you only want to change the 37th occurrence of `X`\nto `Y` then do `nth_rewrite 37 [h]`.":
+ "## Резюме\n\nЯкщо `h` є доказом рівності `X = Y`, то `rw [h]` зміниться\nвсі `X` у меті на `Y`. Це спосіб \\\"заміни всередині\\\".\n\n## Варіанти\n\n* `rw [← h]` (змінює `Y` на `X`; щоб отримати стрілку назад, ввівши `\\left ` або `\\l`.)\n\n* `rw [h1, h2]` (послідовність перезаписів)\n\n* `rw [h] at h2` (змінює `X` на `Y` в гіпотезі `h2`)\n\n* `rw [h] at h1 h2 ⊢` (змінює `X` на `Y` у двох гіпотезах і меті;\nотримайте символ `⊢` за допомогою `\\|-`.)\n\n* `repeat rw [add_zero]` постійно змінюватиметься `? + 0` до `?`\nпоки не буде більше співпадінь для `? + 0`.\n\n* `nth_rewrite 2 [h]` змінить лише другий `X` у меті на `Y`.\n\n### Приклад:\n\nЯкщо у вас є припущення `h : x = y + y` і ваша мета\n```\nsucc (x + 0) = succ (y + y)\n```\n\nтоді\n\n`rw [add_zero]`\n\nзмінить мету на `succ x = succ (y + y)`, а потім\n\n`rw [h]`\n\nзмінить мету на `succ (y + y) = succ (y + y)`, що\nможна вирішити за допомогою `rfl`.\n\n### Приклад:\n\nВи також можете використовувати `rw`, щоб змінити і гіпотезу також.\nНаприклад, якщо у вас є дві гіпотези\n```\nh1 : x = y + 3\nh2 : 2 * y = x\n```\nтоді `rw [h1] at h2` перетворить `h2` на `h2 : 2 * y = y + 3`.\n\n## Типові помилки\n\n* Вам потрібні квадратні дужки. `rw h` ніколи не буде правильним записом.\n\n* Якщо `h` не є *доказом* *рівності* (твердження у формі `A = B`),\nнаприклад, якщо `h` є функцією або імплікацією,\nтоді `rw` - це не та тактика, яку вам потрібно використовувати. Наприклад,\n`rw [P = Q]` ніколи не буде правильним записом: `P = Q` - *твердження* теореми,\nне доказ. Якщо `h : P = Q` є доказом, то `rw [h]` буде працювати.\n\n## Подробиці\n\nТактика `rw` - це спосіб зробити \\\"заміну всередині\\\". там\nє дві різні ситуації, коли ви можете використовувати цю тактику.\n\n1) Базове використання: якщо `h : A = B` є припущенням або\nдоказом теореми, а якщо ціль містить одну або більше літер `A`, тоді rw [h]\nзмінить їх усіх на `B`. Тактика дасть помилку\nякщо в меті відсутнє`A`.\n\n2) Розширене використання: припущення, що випливають із доказів теорем\nчасто мають відсутні частини. Наприклад `add_zero`\nє доказом того, що `? + 0 = ?`, оскільки `add_zero` насправді є функцією,\nі `?` є вхідним параметром. У цій ситуації `rw` буде дивитися скрізь мету\nу пошуках будь-якого підтерму виду `x + 0`, і у момент коли\nзнаходить один, вона виправляє `?` на `x`, а потім змінює всі `x + 0` на `x`.\n\nВправа: подумайте, чому `rw [add_zero]` змінює терм\n`(0 + 0) + (x + 0) + (0 + 0) + (x + 0)` на\n`0 + (x + 0) + 0 + (x + 0)`\n\nЯкщо ви не пам’ятаєте назву доказу рівності, знайдіть його в\nсписку лем праворуч.\n\n## Цільове використання\n\nЯкщо вашою метою є `b + c + a = b + (a + c)`, і ви хочете переписати `a + c`\nна `c + a`, тоді `rw [add_comm]` не працюватиме, оскільки Lean знаходить спочатку інше\nдодавання та замінює ці вхідні дані замість бажаного. Використовуйте `rw [add_comm a c]` для\nгарантій, що Lean переписує `a + c` на `c + a`. Це працює, тому що\n`add_comm` є доказом того, що `?1 + ?2 = ?2 + ?1`, `add_comm a` є доказом\nщо `a + ? = ? + a`, а `add_comm a c` є доказом того, що `a + c = c + a`.\n\nЯкщо `h : X = Y`, то `rw [h]` перетворить усі `X` на `Y`.\nЯкщо ви хочете змінити лише 37-е входження `X`\nна `Y`, тоді виконайте `nth_rewrite 37 [h]`.",
+ "## Summary\n\nIf `h : X = Y` and there are several `X`s in the goal, then\n`nth_rewrite 3 [h]` will just change the third `X` to a `Y`.\n\n## Example\n\nIf the goal is `2 + 2 = 4` then `nth_rewrite 2 [two_eq_succ_one]`\nwill change the goal to `2 + succ 1 = 4`. In contrast, `rw [two_eq_succ_one]`\nwill change the goal to `succ 1 + succ 1 = 4`.":
+ "## Резюме\n\nЯкщо `h : X = Y` і є кілька `X` у меті, тоді\n`nth_rewrite 3 [h]` просто змінить третій `X` на `Y`.\n\n## Приклад\n\nЯкщо ціль `2 + 2 = 4`, тоді `nth_rewrite 2 [two_eq_succ_one]`\nзмінить мету на `2 + succ 1 = 4`. На відміну від цього, `rw [two_eq_succ_one]`\nзмінить мету на `succ 1 + succ 1 = 4`.",
+ "## Precision rewriting\n\nIn the last level, there was `b + 0` and `c + 0`,\nand `rw [add_zero]` changed the first one it saw,\nwhich was `b + 0`. Let's learn how to tell Lean\nto change `c + 0` first by giving `add_zero` an\nexplicit input.":
+ "## Точний перезапис\n\nНа останньому рівні були твердження `b + 0` і `c + 0`,\nі `rw [add_zero]` змінив перше побачене твердження,\nяким було `b + 0`. Давайте дізнаємося, як сказати Lean\nщоб спочатку змінити `c + 0`, передавши `add_zero`\nявний параметр.",
+ "# Welcome to the Natural Number Game\n#### An introduction to mathematical proof.\n\nIn this game, we will build the basic theory of the natural\nnumbers `{0,1,2,3,4,...}` from scratch. Our first goal is to prove\nthat `2 + 2 = 4`. Next we'll prove that `x + y = y + x`.\nAnd at the end we'll see if we can prove Fermat's Last Theorem.\nWe'll do this by solving levels of a computer puzzle game called Lean.\n\n# Read this.\n\nLearning how to use an interactive theorem prover takes time.\nTests show that the people who get the most out of this game are\nthose who read the help texts like this one.\n\nTo start, click on \"Tutorial World\".\n\nNote: this is a new Lean 4 version of the game containing several\nworlds which were not present in the old Lean 3 version. More new worlds\nsuch as Strong Induction World, Even/Odd World and Prime Number World\nare in development; if you want to see their state or even help out, checkout\nout the [issues in the github repo](https://github.com/leanprover-community/NNG4/issues).\n\n## More\n\nClick on the three lines in the top right and select \"Game Info\" for resources,\nlinks, and ways to interact with the Lean community.":
+ "# Ласкаво просимо до гри натуральних чисел\n#### Вступ до математичних доказів.\n\nУ цій грі ми побудуємо базову теорію натуральних\nчисел `{0,1,2,3,4,...}` з нуля. Наша перша мета – довести\nщо `2 + 2 = 4`. Далі ми доведемо, що `x + y = y + x`.\nІ в кінці ми побачимо, чи зможемо довести останню теорему Ферма.\nМи зробимо це, розв’язуючи рівні комп’ютерної гри-головоломки під назвою Lean.\n\n# Прочитайте це.\n\nЩоб навчитися використовувати інтерактивний засіб доказування теорем, потрібен час.\nТести показують, що люди, які отримують від цієї гри найбільше\nтих, хто читає довідкові тексти, як наприклад цей.\n\nЩоб почати, натисніть «Світ введення».\n\nПримітка: це нова версія гри Lean 4, яка містить декілька\nсвіти, яких не було в старій версії Lean 3. Більше нових світів\nнаприклад світ сильної індукції, світ парних/непарних і світ простих чисел\nзнаходяться в розробці; якщо ви хочете побачити їхній стан або навіть допомогти, перевірте\n[проблеми в сховищі github](https://github.com/leanprover-community/NNG4/issues).\n\n## Більше\n\nНатисніть на три рядки у верхньому правому куті та виберіть «Інформація про гру» для ресурсів,\nпосилання та способи взаємодії зі спільнотою Lean.",
+ "# Summary\nThe `right` tactic changes a goal of `P ∨ Q` into a goal of `Q`.\nUse it when your hypotheses guarantee that the reason that `P ∨ Q`\nis true is because in fact `Q` is true.\n\nInternally this tactic is just `apply`ing a theorem\nsaying that $Q \\implies P \\lor Q.$\n\nNote that this tactic can turn a solvable goal into an unsolvable\none.":
+ "# Резюме\nТактика `right` змінює мету `P ∨ Q` на мету `Q`\n\n.\nВикористовуйте її, коли ваші гіпотези гарантують, що причина чому `P ∨ Q`\nє істинним тому, що насправді `Q` є істинним.\n\nВнутрішньо ця тактика є лише `apply`-ікацією теореми\nкажучи, що $Q \\implies P \\or Q.$\n\nЗауважте, що ця тактика може перетворити вирішувану мету на нерозв’язувану\nмету.",
+ "# Summary\nThe `left` tactic changes a goal of `P ∨ Q` into a goal of `P`.\nUse it when your hypotheses guarantee that the reason that `P ∨ Q`\nis true is because in fact `P` is true.\n\nInternally this tactic is just `apply`ing a theorem\nsaying that $P \\implies P \\lor Q.$\n\nNote that this tactic can turn a solvable goal into an unsolvable\none.":
+ "# Резюме\nТактика `left` змінює мету `P ∨ Q` на мету `P`.\nВикористовуйте її, коли ваші гіпотези гарантують, що причина чому `P ∨ Q`\nє істинним тому, що насправді `P` є істинним.\n\nВнутрішньо ця тактика є лише `apply`-ікацією теореми\nяка каже що $P \\implies P \\or Q.$\n\nЗауважте, що ця тактика може перетворити вирішувану мету на нерозв’язувану\nмету.",
+ "# Summary\n\n`trivial` will solve the goal `True`.":
+ "# Резюме\n\n`trivial` вирішить мету `True`.",
+ "# Summary\n\n`decide` will attempt to solve a goal if it can find an algorithm which it\ncan run to solve it.\n\n## Example\n\nA term of type `DecidableEq ℕ` is an algorithm to decide whether two naturals\nare equal or different. Hence, once this term is made and made into an `instance`,\nthe `decide` tactic can use it to solve goals of the form `a = b` or `a ≠ b`.":
+ "# Резюме\n\n`decide` спробує розв’язати мету, якщо зможе знайти алгоритм\nякий вона може виконати, щоб вирішити її.\n\n## Приклад\n\nТермін типу `DecidableEq ℕ` є алгоритмом для визначення того, чи два натуральні числа\nрівні або різні. Отже, щойно цей термін створено та перетворено на `instance`,\nтактика `decide` може використовувати його для вирішення цілей у формі `a = b` або `a ≠ b`.",
+ "# Summary\n\nThe `tauto` tactic will solve any goal which can be solved purely by logic (that is, by\ntruth tables).\n\n## Details\n\n`tauto` *does not do magic*! It doesn't know *anything* about addition or multiplication,\nit doesn't even know `add_zero`. The only things that `tauto` knows about numbers\nare firstly that `a = a` and secondly that `0 ≠ 1`, `0 ≠ 2`, `1 ≠ 2` and so on.\nWhat `tauto`'s strength is, is *logic*. If you have a hypothesis `x < 37`\nand another hypothesis `x < 37 → y + z = 42` and your goal is `y + z = 42` then `tauto` will\nsolve this goal, because to solve that goal you don't need to know any facts\nabout inequalities or addition, all you need to know is the rules of logic.\n\n## Example\n\nIf you have `False` as a hypothesis, then `tauto` will solve\nthe goal. This is because a false hypothesis implies any hypothesis.\n\n## Example\n\nIf your goal is `True`, then `tauto` will solve the goal.\n\n## Example\n\nIf you have two hypotheses `h1 : a = 37` and `h2 : a ≠ 37` then `tauto` will\nsolve the goal because it can prove `False` from your hypotheses, and thus\nprove the goal (as `False` implies anything).\n\n## Example\n\nIf you have one hypothesis `h : a ≠ a` then `tauto` will solve the goal because\n`tauto` is smart enough to know that `a = a` is true, which gives the contradiction we seek.\n\n## Example\n\nIf you have a hypothesis `h : 0 = 1` then `tauto` will solve the goal, because\n`tauto` knows `0 ≠ 1` and this is enough to prove `False`, which implies any goal.\n\n## Example\n\nIf you have a hypothesis of the form `a = 0 → a * b = 0` and your goal is `a * b ≠ 0 → a ≠ 0`, then\n`tauto` will solve the goal, because the goal is logically equivalent to the hypothesis.\nIf you switch the goal and hypothesis in this example, `tauto` would solve it too.":
+ "# Резюме\n\nТактика `tauto` вирішить будь-яку мету, яка може бути розв’язана чисто логічно (тобто\nчерез таблиці істинності).\n\n## Подробиці\n\n`tauto` *не робить магії*! Він не знає *нічого* про додавання чи множення,\nвін навіть не знає `add_zero`. Єдине, що `tauto` знає про числа\nпо-перше, що `a = a`, а по-друге, `0 ≠ 1`, `0 ≠ 2`, `1 ≠ 2` і так далі.\nСила `tauto` полягає в *логіці*. Якщо у вас є гіпотеза `x < 37`\nі інша гіпотеза `x < 37 → y + z = 42` і ваша мета `y + z = 42` тоді `tauto`\nвирішить цю мету, тому що для вирішення цієї мети вам не потрібно знати жодних фактів\nпро нерівності чи додавання все, що вам потрібно знати, це правила логіки.\n\n## Приклад\n\nЯкщо у вас є `False` як гіпотеза, `tauto` вирішить\nмету. Це тому, що хибна гіпотеза передбачає будь-яку гіпотезу.\n\n## Приклад\n\nЯкщо ваша мета `True`, тоді `tauto` вирішить мету.\n\n## Приклад\n\nЯкщо у вас є дві гіпотези `h1 : a = 37` і `h2 : a ≠ 37`, тоді `tauto`\nрозв’яже ціль, тому що він може вивести `False` із вашої гіпотези, і таким чином\nдоведе мету (оскільки `False` означає будь-що).\n\n## Приклад\n\nЯкщо у вас є одна гіпотеза `h : a ≠ a`, тоді `tauto` вирішить мету, оскільки\n`tauto` достатньо розумний, щоб знати, що `a = a` є істинним, що створює суперечність, яку ми шукаємо.\n\n## Приклад\n\nЯкщо у вас є гіпотеза `h : 0 = 1`, то `tauto` вирішить мету, оскільки\n`tauto` знає `0 ≠ 1`, і цього достатньо, щоб довести `False`, що передбачає будь-яку мету.\n\n## Приклад\n\nЯкщо у вас є гіпотеза у вигляді `a = 0 → a * b = 0` і ваша мета `a * b ≠ 0 → a ≠ 0`, то\n`tauto` вирішить мету, оскільки мета логічно еквівалентна гіпотезі.\nЯкщо ви поміняєте мету і гіпотезу в цьому прикладі, `tauto` також вирішить це.",
+ "# Summary\n\nThe `have` tactic can be used to add new hypotheses to a level, but of course\nyou have to prove them.\n\n\n## Example\n\nThe simplest usage is like this. If you have `a` in your context and you execute\n\n`have ha : a = 0`\n\nthen you will get a new goal `a = 0` to prove, and after you've proved\nit you will have a new hypothesis `ha : a = 0` in your original goal.\n\n## Example\n\nIf you already have a proof of what you want to `have`, you\ncan just create it immediately. For example, if you have `a` and `b`\nnumber objects, then\n\n`have h2 : succ a = succ b → a = b := succ_inj a b`\n\nwill directly add a new hypothesis `h2 : succ a = succ b → a = b`\nto the context, because you just supplied the proof of it (`succ_inj a b`).\n\n## Example\n\nIf you have a proof to hand, then you don't even need to state what you\nare proving. For example\n\n`have h2 := succ_inj a b`\n\nwill add `h2 : succ a = succ b → a = b` as a hypothesis.":
+ "# Резюме\n\nТактику `have` можна використовувати для додавання нових гіпотез до рівня, але звичайно\nви повинні довести їх.\n\n\n## Приклад\n\nНайпростіше використання таке. Якщо у вашому контексті є `a` і ви виконуєте\n\n`have ha : a = 0`\n\nтоді ви отримаєте нову ціль `a = 0`, щоб довести, і після того, як ви доведете її\nви матимете нову гіпотезу `ha : a = 0` у вашій початковій меті.\n\n## Приклад\n\nЯкщо у вас уже є доказ того, що ви хочете \"мати\", ви\nможна просто створити його негайно. Наприклад, якщо у вас є `a` і `b`\nчисло предметів, то\n\n`have h2 : succ a = succ b → a = b := succ_inj a b`\n\nбезпосередньо додасть нову гіпотезу `h2 : succ a = succ b → a = b`\nдо контексту, оскільки ви щойно надали доказ цього (`succ_inj a b`).\n\n## Приклад\n\nЯкщо у вас під рукою є докази, то вам навіть не потрібно вказувати, що ви\nдоводите. Наприклад\n\n`have h2 := succ_inj a b`\n\nдодасть `h2 : succ a = succ b → a = b` як гіпотезу.",
+ "# Summary\n\nIf you have a hypothesis\n\n`h : a ≠ b`\n\nand goal\n\n`c ≠ d`\n\nthen `contrapose! h` replaces the set-up with its so-called \\\"contrapositive\\\":\na hypothesis\n\n`h : c = d`\n\nand goal\n\n`a = b`.":
+ "# Резюме\n\nЯкщо у вас є гіпотеза\n\n`h : a ≠ b`\n\nі мета\n\n`c ≠ d`\n\nтоді `contrapose! h` замінює налаштування на так звану \\\"контрапозитивну\\\":\nгіпотезу\n\n`h : c = d`\n\nі мету\n\n`a = b`.",
+ "# Statement\n\nIf $a$ and $b$ are numbers, then\n`succ_inj a b` is the proof that\n$ (\\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\n## More technical details\n\nThere are other ways to think about `succ_inj`.\n\nYou can think about `succ_inj` itself as a function which takes two\nnumbers $$a$$ and $$b$$ as input, and outputs a proof of\n$ ( \\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\nYou can think of `succ_inj` itself as a proof; it is the proof\nthat `succ` is an injective function. In other words,\n`succ_inj` is a proof of\n$\\forall a, b \\in  \\mathbb{N}, ( \\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\n`succ_inj` was postulated as an axiom by Peano, but\nin Lean it can be proved using `pred`, a mathematically\npathological function.":
+ "# Твердження\n\nЯкщо $a$ і $b$ це числа, то\n`succ_inj a b` є доказом що\n$ (\\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\n## Більше технічних деталей\n\nЄ інші способи думати про `succ_inj`.\n\nВи можете розглядати `succ_inj` як функцію, яка приймає два\nчисла $$a$$ і $$b$$ як вхідні дані та виводить підтвердження\n$ ( \\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\nВи можете розглядати саму `succ_inj` як доказ; це доказ\nщо `succ` є ін'єктивною функцією. Іншими словами,\n`succ_inj` є доказом\n$\\forall a, b \\in \\mathbb{N}, ( \\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\n`succ_inj` було постульовано як аксіому Пеано, але\nв Lean це можна довести за допомогою `pred`, математично\nпатологічнії функції.",
+ "# Read this first\n\nEach level in this game involves proving a mathematical theorem (the \"Goal\").\nThe goal will be a statement about *numbers*. Some numbers in this game have known values.\nThose numbers have names like $37$. Other numbers will be secret. They're called things\nlike $x$ and $q$. We know $x$ is a number, we just don't know which one.\n\nIn this first level we're going to prove the theorem that $37x + q = 37x + q$.\nYou can see `x q : ℕ` in the *Objects* below, which means that `x` and `q`\nare numbers.\n\nWe solve goals in Lean using *Tactics*, and the first tactic we're\ngoing to learn is called `rfl`, which proves all theorems of the form $X = X$.\n\nProve that $37x+q=37x+q$ by executing the `rfl` tactic.":
+ "# Спочатку прочитайте це\n\nКожен рівень цієї гри передбачає доведення математичної теореми («Мети»).\nМетою буде твердження про *числа*. Деякі числа в цій грі мають відомі значення.\nЦі числа мають такі назви, як $37$. Інші цифри будуть секретними. Їх називають такими\nштуками як $x$ і $q$. Ми знаємо, що $x$ — це число, але ми не знаємо, яке саме.\n\nНа першому рівні ми доведемо теорему, що $37x + q = 37x + q$.\nВи можете побачити `x q : ℕ` в *Об'єктах* нижче, що означає, що `x` і `q`\nце числа.\n\nМи досягаємо мети в Lean, використовуючи *Тактики*, і це перша тактика\nяку ми вивчимо називається `rfl`, який доводить усі теореми виду $X = X$.\n\nДоведіть, що $37x+q=37x+q$, виконавши тактику `rfl`.",
+ "# Overview\n\nOur home-made tactic `simp_add` will solve arbitrary goals of\nthe form `a + (b + c) + (d + e) = e + (d + (c + b)) + a`.":
+ "# Огляд\n\nНаша саморобна тактика `simp_add` вирішить довільні цілі\nу формі `a + (b + c) + (d + e) = e + (d + (c + b)) + a`.",
+ "# Overview\n\nLean's simplifier, `simp`, will rewrite every lemma\ntagged with `simp` and every lemma fed to it by the user, as much as it can.\nFurthermore, it will attempt to order variables into an internal order if fed\nlemmas such as `add_comm`, so that it does not go into an infinite loop.":
+ "# Огляд\n\nСпрощувач Lean, `simp`, перепише кожну лему\nз тегом `simp` і кожну лему, надану користувачем, настількі, наскільки це можливо.\nКрім того, він намагатиметься впорядкувати змінні у внутрішньому порядку, якщо йому буде скормлено\nлеми, такі як `add_comm`, щоб він не перейшов в нескінченний цикл."}

@@ -41,12 +41,22 @@ export interface GameDataBundle {
   rawFiles: { name: string; text: string }[];
 }
 
-/** Base URL for the game's static gamedata (mirrors relay's /data route). */
-const GAMEDATA_BASE = "/data/g/test/TestGame";
-const GAME_SNAPSHOT = "testgame";
+/** The game bound to this page load, parsed from the SPA route
+ * (#/g/{owner}/{repo}/...). One wasm session hosts one game environment —
+ * every game package is rooted at `Game`, so their snapshots share an env
+ * cache key and cannot coexist in a worker. Navigating to a DIFFERENT game
+ * reloads the page (see the guard in bootGameRuntime). */
+function currentGameId(): { gameId: string; snapshot: string } | null {
+  const m = /#\/(g\/[^/]+\/[^/]+)/.exec(window.location.hash);
+  if (!m) return null;
+  const gameId = m[1];
+  return { gameId, snapshot: gameId.split("/")[2].toLowerCase() };
+}
 /** Worker cwd is /workspace (lean.worker.js boots there); Runner reads
  * `./.lake/gamedata/...` relative to it. */
 const WORKER_GAMEDATA_DIR = "/workspace/.lake/gamedata";
+
+let boundGame: { gameId: string; snapshot: string } | null = null;
 
 async function fetchJson(url: string): Promise<any> {
   const r = await fetch(url);
@@ -55,7 +65,8 @@ async function fetchJson(url: string): Promise<any> {
 }
 
 export async function fetchGameData(): Promise<GameDataBundle> {
-  const game = await fetchJson(`${GAMEDATA_BASE}/game.json`);
+  const base = `/data/${boundGame!.gameId}`;
+  const game = await fetchJson(`${base}/game.json`);
   const rawFiles: { name: string; text: string }[] = [
     { name: "game.json", text: JSON.stringify(game) },
   ];
@@ -66,7 +77,7 @@ export async function fetchGameData(): Promise<GameDataBundle> {
     Object.keys(worldSize).flatMap((w) => {
       const size = worldSize[w] ?? 0;
       return Array.from({ length: size }, (_, i) => i + 1).map(async (l) => {
-        const data = await fetchJson(`${GAMEDATA_BASE}/level__${w}__${l}.json`);
+        const data = await fetchJson(`/data/${boundGame!.gameId}/level__${w}__${l}.json`);
         levels.set(`${w}/${l}`, data);
         rawFiles.push({ name: `level__${w}__${l}.json`, text: JSON.stringify(data) });
       });
@@ -123,6 +134,18 @@ const consoleSink: StatusSink = {
 };
 
 export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRuntime> {
+  const here = currentGameId();
+  if (here && boundGame && boundGame.gameId !== here.gameId) {
+    // The wasm session is bound to another game's environment; a clean
+    // reload rebinds everything (snapshots reload from OPFS in seconds).
+    console.warn(`[game-boot] switching game ${boundGame.gameId} → ${here.gameId}: reloading`);
+    window.location.reload();
+  }
+  if (!bootPromise && !here) {
+    // Landing page: defer binding until a game route is visited.
+    return new Promise<GameRuntime>(() => {});
+  }
+  boundGame ??= here;
   bootPromise ??= (async () => {
     const translation = ensureTranslation();
     const bundle = await ensureBundle();
@@ -141,7 +164,7 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     let shimRef: WatchdogShim | null = null;
     const makeSession = async (): Promise<Qed64Session> => {
       const qs = await newSession(artifacts, ui, () => void shimRef?.handleWorkerDeath(), {});
-      await loadSnapshotByName(artifacts, qs, GAME_SNAPSHOT, ui);
+      await loadSnapshotByName(artifacts, qs, boundGame!.snapshot, ui);
       await writeGamedataToWorker(qs, bundle);
       return qs;
     };
@@ -152,11 +175,13 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
       // is covered by the game snapshot's baked environment — no packs, no
       // file imports, no warm compile.
       coveringSnapshotFor: (header) =>
-        /^\s*import\s+(Game\b|Game\.|GameServer)/m.test(header) ? GAME_SNAPSHOT : null,
+        /^\s*import\s+(Game\b|Game\.|GameServer)/m.test(header) ? boundGame!.snapshot : null,
     });
     shimRef = shim;
     translation.attachServer(shim.clientPort);
     ui.idle("Lean ready");
+    // Test hooks and status displays key off this.
+    (globalThis as { qed64GameReady?: boolean }).qed64GameReady = true;
     return { translation, shim, bundle };
   })();
   return bootPromise;

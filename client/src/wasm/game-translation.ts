@@ -206,6 +206,7 @@ export class GameTranslation {
 
   /** relay: server → client rewrites. */
   private toClient(message: JsonRpc): JsonRpc {
+
     shiftLines(message, -PROOF_START_LINE);
     replaceUri(message, `file:///${this.worldId}/${this.levelId}.lean`);
 
