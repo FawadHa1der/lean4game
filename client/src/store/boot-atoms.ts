@@ -41,3 +41,31 @@ export function formatProgress(s: BootStatus): string | null {
   }
   return `${s.loaded} / ${s.total}${s.unit ? ` ${s.unit}` : ""}`;
 }
+
+/** Coarse checker activity, published on EVERY status event (unlike the
+ * banner's filtered view): drives input gating. `switching` covers boot and
+ * level/import switches — the states where typed tactics would race a
+ * session replacement — but not routine per-step elaboration, which the
+ * typewriter's own processing gate already handles. */
+export interface CheckerActivity {
+  busy: boolean;
+  switching: boolean;
+  label: string;
+}
+
+export const checkerActivityAtom = atom<CheckerActivity>({
+  busy: false,
+  switching: false,
+  label: "",
+});
+
+const SWITCHING_RE =
+  /starting the Lean|checking the new imports|imports changed|restarting the checker|preparing the header|loading the .* environment|environment snapshot|downloading|unpacking|installing|Mounting|Verifying|starting Lean/i;
+
+export function publishCheckerActivity(state: "busy" | "ready", label: string): void {
+  getDefaultStore().set(checkerActivityAtom, {
+    busy: state === "busy",
+    switching: state === "busy" && SWITCHING_RE.test(label),
+    label,
+  });
+}

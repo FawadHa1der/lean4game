@@ -32,7 +32,7 @@ import { WatchdogShim } from "qed64/frontend/src/watchdog-shim";
 import { getDefaultStore } from "jotai";
 import { difficultyAtom, progressAtom } from "../store/progress-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
-import { publishBootStatus } from "../store/boot-atoms";
+import { publishBootStatus, publishCheckerActivity } from "../store/boot-atoms";
 
 export interface GameDataBundle {
   gameName: string;
@@ -136,18 +136,21 @@ let bootFinishedOnce = false;
 const consoleSink: StatusSink = {
   busy: (label) => {
     console.info(`[game-boot] ⏳ ${label}`);
+    publishCheckerActivity("busy", label);
     if (!bootFinishedOnce || !ROUTINE_BUSY.test(label)) {
       publishBootStatus({ state: "busy", label });
     }
   },
   progress: (label, info) => {
     console.debug(`[game-boot] … ${label}`, info ?? "");
+    publishCheckerActivity("busy", label);
     if (!bootFinishedOnce || !ROUTINE_BUSY.test(label)) {
       publishBootStatus({ state: "busy", label, loaded: info?.loaded, total: info?.total, unit: info?.unit });
     }
   },
   idle: (label) => {
     console.info(`[game-boot] ✔ ${label}`);
+    publishCheckerActivity("ready", label);
     publishBootStatus({ state: "ready", label });
   },
 };

@@ -28,7 +28,9 @@ import { MonacoEditorContext } from './context';
 import { Typewriter, getInteractiveDiagsAt, hasInteractiveErrors } from './typewriter';
 import { Button } from '../button';
 import { CircularProgress } from '@mui/material';
-import { bootStatusAtom, formatProgress } from '../../store/boot-atoms';
+import { bootStatusAtom, checkerActivityAtom, formatProgress } from '../../store/boot-atoms';
+import { selectAtom } from 'jotai/utils';
+import '../../css/boot_banner.css';
 import { GameHint, InteractiveGoalsWithHints, ProofState } from './rpc_api';
 import { Hint, Hints, MoreHelpButton, filterHints } from '../hints';
 import { DocumentPosition } from '../../../../node_modules/vscode-lean4/lean4-infoview/src/infoview/util';
@@ -551,18 +553,45 @@ export function TypewriterInterface() {
   }, [selectedStep])
 
   // TODO: superfluous, can be replaced with `withErr` from above
-  /** The level pane's waiting state: a labeled, determinate-when-possible
+  /** switching-only view of checker activity: flips twice per boot/switch,
+ * never per progress tick — anything gating the input must subscribe to
+ * THIS, not the raw activity atom (per-tick re-renders above the monaco
+ * input ate keystrokes; cypress caught it as 8 failing typing tests). */
+const checkerSwitchingAtom = selectAtom(checkerActivityAtom, (a) => a.switching)
+
+/** Gate v4, after three failed wrapper designs: the upstream Typewriter is
+ * rendered byte-identically (any wrapper/memo/prop composition around it
+ * ate keystrokes — 8 cypress typing tests each time), and the gate is a
+ * SIBLING overlay that physically covers the input area while the checker
+ * boots or replaces sessions. It blocks pointer interaction and explains
+ * the wait; it cannot perturb the input's React subtree because it is not
+ * part of it. */
+function LeanGateOverlay() {
+  const [switching] = useAtom(checkerSwitchingAtom)
+  const [activity] = useAtom(checkerActivityAtom)
+  if (!switching) return null
+  return <div className="lean-gate-overlay">
+    Lean is {/download|unpack|install/i.test(activity.label) ? 'downloading' : 'loading'} —
+    the input unlocks when it&apos;s ready{activity.label ? ` (${activity.label})` : ''}
+  </div>
+}
+
+/** The level pane's waiting state: a labeled, determinate-when-possible
  * loader driven by the wasm boot status — a bare spinner reads as "hung"
  * during the first-visit kernel download. */
 function LevelLoadingIndicator() {
   const [status] = useAtom(bootStatusAtom)
+  const [activity] = useAtom(checkerActivityAtom)
   const progress = formatProgress(status)
   return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
     <CircularProgress />
-    <div style={{ color: '#555', fontSize: '0.9rem', textAlign: 'center' }}>
+    <div style={{ color: '#555', fontSize: '0.9rem', textAlign: 'center', maxWidth: '28rem' }}>
       {status.state === 'busy'
-        ? <>Lean is starting in your browser — {status.label}{progress ? ` · ${progress}` : ''}</>
-        : <>Loading the level…</>}
+        ? <>Lean is starting in your browser — {status.label}{progress ? ` · ${progress}` : ''}.<br/>
+            First visit downloads the game environment once; afterwards it&apos;s cached.</>
+        : activity.busy
+          ? <>Preparing this level — {activity.label}…</>
+          : <>Loading the level…</>}
     </div>
   </div>
 }
@@ -698,6 +727,7 @@ let lastStepErrors = proof?.steps.length ? hasInteractiveErrors(getInteractiveDi
       </div>
     </div>
     <Typewriter disabled={disableInput || crashed}/>
+    <LeanGateOverlay />
     </RpcContext.Provider>
   </div>
 }

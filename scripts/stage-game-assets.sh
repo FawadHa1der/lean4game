@@ -45,6 +45,16 @@ fs.writeFileSync(path.join(here, "client/public/api/games"), JSON.stringify(out)
 
 # substrate: worker + core profile from qed64; runtime via chunk-runtime.mjs
 cp "$QED64/public/workers/lean.worker.js" "$PUB/workers/"
+# the disposable-prefetch boot (qed64 b00cba3) spawns a second worker
+cp "$QED64/public/workers/snapshot-prefetch.worker.js" "$PUB/workers/"
+# i18next probes every configured language; a missing file must yield JSON,
+# not the SPA-fallback HTML (the uncaught SyntaxError wedged cypress runs)
+for G in "g/test/TestGame" "g/hhu-adam/NNG4"; do
+  mkdir -p "$PUB/i18n/$G"
+  for L in en de fr it uk zh; do
+    if [ ! -f "$PUB/i18n/$G/$L" ]; then printf '{}' > "$PUB/i18n/$G/$L"; fi
+  done
+done
 cp "$QED64"/public/profiles/index.json "$QED64"/public/profiles/lean-core.manifest.json \
    "$QED64"/public/profiles/lean-core.pack.gzip.* "$PUB/profiles/"
 

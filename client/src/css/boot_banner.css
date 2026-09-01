@@ -36,3 +36,46 @@ body.lean-boot-banner-visible .app {
   padding-bottom: 46px;
   box-sizing: border-box;
 }
+
+/* Note shown above the locked tactic input while Lean boots or switches. */
+.lean-gate-note {
+  background: #fff8e1;
+  border-top: 1px solid #e2c76b;
+  color: #6b5900;
+  font-size: 0.85rem;
+  padding: 0.3rem 1rem;
+}
+
+.lean-gate-note-hidden {
+  display: none;
+}
+
+/* Block interaction with the tactic input while the checker switches
+   sessions — the input itself is untouched (no rebuild, no hiding). */
+.lean-input-locked {
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+/* Gate v4: sibling overlay covering the tactic input during boot/switches.
+   Not an ancestor of the input — it cannot disturb typing when absent. */
+.typewriter-interface {
+  position: relative;
+}
+.lean-gate-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 248, 225, 0.96);
+  border-top: 1px solid #e2c76b;
+  color: #6b5900;
+  font-size: 0.9rem;
+  padding: 0.4rem 1rem;
+  z-index: 20;
+  text-align: center;
+}
