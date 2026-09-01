@@ -32,6 +32,7 @@ import { WatchdogShim } from "qed64/frontend/src/watchdog-shim";
 import { getDefaultStore } from "jotai";
 import { difficultyAtom, progressAtom } from "../store/progress-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
+import { publishBootStatus } from "../store/boot-atoms";
 
 export interface GameDataBundle {
   gameName: string;
@@ -126,11 +127,29 @@ function ensureTranslation(): GameTranslation {
   return translationSingleton;
 }
 
+
+/** Post-boot, routine checker chatter (per-edit elaboration, import probes)
+ * must not resurrect the boot banner — only real boot/restart stages do. */
+const ROUTINE_BUSY = /elaborating|checking the new imports|imports changed/i;
+let bootFinishedOnce = false;
+
 const consoleSink: StatusSink = {
-  busy: (label) => console.info(`[game-boot] ⏳ ${label}`),
-  progress: (label, info) =>
-    console.debug(`[game-boot] … ${label}`, info ?? ""),
-  idle: (label) => console.info(`[game-boot] ✔ ${label}`),
+  busy: (label) => {
+    console.info(`[game-boot] ⏳ ${label}`);
+    if (!bootFinishedOnce || !ROUTINE_BUSY.test(label)) {
+      publishBootStatus({ state: "busy", label });
+    }
+  },
+  progress: (label, info) => {
+    console.debug(`[game-boot] … ${label}`, info ?? "");
+    if (!bootFinishedOnce || !ROUTINE_BUSY.test(label)) {
+      publishBootStatus({ state: "busy", label, loaded: info?.loaded, total: info?.total, unit: info?.unit });
+    }
+  },
+  idle: (label) => {
+    console.info(`[game-boot] ✔ ${label}`);
+    publishBootStatus({ state: "ready", label });
+  },
 };
 
 export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRuntime> {
@@ -182,6 +201,7 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     ui.idle("Lean ready");
     // Test hooks and status displays key off this.
     (globalThis as { qed64GameReady?: boolean }).qed64GameReady = true;
+    bootFinishedOnce = true;
     return { translation, shim, bundle };
   })();
   return bootPromise;

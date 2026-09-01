@@ -15,6 +15,7 @@ import { leanMonacoAtom, leanMonacoOptionsAtom } from './store/editor-atoms';
 import { LeanMonaco } from 'lean4monaco';
 import { preferencesAtom } from './store/preferences-atoms';
 import { bootGameRuntime } from './wasm/game-boot';
+import { BootBanner } from './components/boot_banner';
 
 // Start the in-tab Lean runtime immediately: the multi-hundred-MB artifact
 // download and snapshot load overlap the user reading the world map. The
@@ -65,6 +66,7 @@ function App({ children }: { children?: React.ReactNode }) {
         {children}
       </React.Suspense>
       <Popup />
+      <BootBanner />
     </div>
   )
 }

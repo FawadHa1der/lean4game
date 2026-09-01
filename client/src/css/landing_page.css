@@ -239,3 +239,10 @@ footer .link {
 .info .languages span + span {
   margin-left: .5em;
 }
+
+/* wasm build: expectation-setting for the in-browser kernel download */
+header .wasm-notice {
+  margin-top: 0.75rem;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}

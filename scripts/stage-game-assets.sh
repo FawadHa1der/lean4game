@@ -32,8 +32,9 @@ fi
 node -e '
 const fs = require("fs"), path = require("path");
 const here = process.argv[1];
-const games = [["test","TestGame", path.join(here, "cypress/TestGame/.lake/gamedata/game.json")],
-               ["hhu-adam","NNG4", path.join(here, "games-src/NNG4/.lake/gamedata/game.json")]];
+// TestGame stays reachable at /#/g/test/TestGame for the cypress suite but
+// is not advertised on the landing page.
+const games = [["hhu-adam","NNG4", path.join(here, "games-src/NNG4/.lake/gamedata/game.json")]];
 const out = [];
 for (const [owner, game, p] of games) {
   try { out.push({ owner, game, tile: JSON.parse(fs.readFileSync(p, "utf8")).tile }); } catch {}

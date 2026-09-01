@@ -120,6 +120,11 @@ function LandingPage() {
             }}
           />
         </p>
+        <p className="wasm-notice">
+          Games run <strong>fully in your browser</strong> — no server. The first
+          visit downloads the Lean kernel and game environment (~600&nbsp;MB,
+          cached by your browser); later visits start in seconds.
+        </p>
       </div>
     </header>
     <div className="game-list">

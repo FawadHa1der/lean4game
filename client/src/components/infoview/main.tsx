@@ -28,6 +28,7 @@ import { MonacoEditorContext } from './context';
 import { Typewriter, getInteractiveDiagsAt, hasInteractiveErrors } from './typewriter';
 import { Button } from '../button';
 import { CircularProgress } from '@mui/material';
+import { bootStatusAtom, formatProgress } from '../../store/boot-atoms';
 import { GameHint, InteractiveGoalsWithHints, ProofState } from './rpc_api';
 import { Hint, Hints, MoreHelpButton, filterHints } from '../hints';
 import { DocumentPosition } from '../../../../node_modules/vscode-lean4/lean4-infoview/src/infoview/util';
@@ -550,7 +551,23 @@ export function TypewriterInterface() {
   }, [selectedStep])
 
   // TODO: superfluous, can be replaced with `withErr` from above
-  let lastStepErrors = proof?.steps.length ? hasInteractiveErrors(getInteractiveDiagsAt(proof, proof?.steps.length)) : false
+  /** The level pane's waiting state: a labeled, determinate-when-possible
+ * loader driven by the wasm boot status — a bare spinner reads as "hung"
+ * during the first-visit kernel download. */
+function LevelLoadingIndicator() {
+  const [status] = useAtom(bootStatusAtom)
+  const progress = formatProgress(status)
+  return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
+    <CircularProgress />
+    <div style={{ color: '#555', fontSize: '0.9rem', textAlign: 'center' }}>
+      {status.state === 'busy'
+        ? <>Lean is starting in your browser — {status.label}{progress ? ` · ${progress}` : ''}</>
+        : <>Loading the level…</>}
+    </div>
+  </div>
+}
+
+let lastStepErrors = proof?.steps.length ? hasInteractiveErrors(getInteractiveDiagsAt(proof, proof?.steps.length)) : false
 
 
   useServerNotificationEffect("$/game/loading", (params : any) => {
@@ -672,7 +689,7 @@ export function TypewriterInterface() {
               </div>
             }
           </> :
-          <CircularProgress />
+          <LevelLoadingIndicator />
           // <CircularProgress variant="determinate" value={100*(1 - 1.024 ** (- Math.max(loadingProgress, 1)))} />
         // note: since we don't know the total number of files,
         // we use a function which strictly monotonely increases towards `100` as `x → ∞`
