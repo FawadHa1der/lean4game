@@ -2,6 +2,7 @@ import * as React from 'react'
 import { useRef, useState, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons'
+import { CircularProgress } from '@mui/material'
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js'
 import { DiagnosticSeverity, PublishDiagnosticsParams, DocumentUri } from 'vscode-languageserver-protocol';
 import { useServerNotificationEffect } from '../../../../node_modules/vscode-lean4/lean4-infoview/src/infoview/util';
@@ -39,6 +40,17 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
   const [oneLineEditor, setOneLineEditor] = useState<monaco.editor.IStandaloneCodeEditor>()
   const oneLineEditorRef = useRef<monaco.editor.IStandaloneCodeEditor>(null)
   const [processing, setProcessing] = useState(false)
+  /** The command whose verdict is pending — shown in the checking overlay. */
+  const lastSubmitted = useRef<string>('')
+  /** While set, only a proof state whose LAST step carries this command is
+   * the verdict. Proof states from requests that were in flight before the
+   * submit (the level's initial load, a session reconnect) come back with
+   * the pre-edit document's steps and must not unlock the input. */
+  const awaitedCommand = useRef<string | null>(null)
+  /** Set at submit; the proof state is requested only once the server has
+   * acknowledged the new document version (its first publishDiagnostics),
+   * so the request cannot be answered from the pre-edit document. */
+  const awaitingVerdict = useRef(false)
 
   const [typewriter, setTypewriter] = useAtom(typewriterContentAtom)
 
@@ -62,6 +74,8 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
 
     const pos = editor.getPosition()
     if (typewriter) {
+      lastSubmitted.current = typewriter.trim()
+      awaitedCommand.current = typewriter.trim()
       setProcessing(true)
       editor.executeEdits("typewriter", [{
         range: monaco.Selection.fromPositions(
@@ -72,12 +86,14 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
         forceMoveMarkers: false
       }])
       setTypewriter('')
-      // Load proof after executing edits
-      loadGoals(rpcSess, uri, worldId!, levelId!, setProof, setCrashed)
+      // The proof state is loaded from the publishDiagnostics handler below:
+      // requesting it here, synchronously, let the request overtake the
+      // didChange and come back with the PRE-edit state (traced under wasm).
+      awaitingVerdict.current = true
     }
 
     editor.setPosition(pos)
-  }, [typewriter, editor])
+  }, [typewriter, editor, processing])
 
   const [{ isSuggestionsMobileMode }] = useAtom(preferencesAtom)
 
@@ -96,10 +112,35 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
     }
   }, [oneLineEditor, hasEditor, isSuggestionsMobileMode, editor])
 
-  /** If the last step has an error, add the command to the typewriter. */
+  /** If the last step has an error, add the command to the typewriter — and
+   * park the editor cursor at the START of that failed line so the next
+   * command REPLACES it (the "will be removed on the next try" contract).
+   *
+   * Placing the cursor here, from the authoritative proof state, rather than
+   * only in the publishDiagnostics handler, makes the replacement robust to
+   * the server's publish cadence: the wasm worker publishes an interim
+   * error-free diagnostics set before the real one for the same version, and
+   * the handler's "no errors → cursor to end" fired on the interim, so the
+   * next tactic was appended after the failed one (level could never
+   * complete). Native Lean happened to publish the errored set first. */
   useEffect(() => {
+    if (!proof || !hasEditor) return
+    // The proof state is the verdict on the submitted command: only now is
+    // it safe to accept the next one (see the publishDiagnostics note) —
+    // unless it answers a request that predates the edit (traced on NNG4:
+    // the level's initial state at ~0.2 s, the real verdict at ~2 s).
+    if (awaitedCommand.current !== null) {
+      const lastCmd = proof.steps[proof.steps.length - 1]?.command ?? ''
+      if (!lastCmd.includes(awaitedCommand.current)) return
+      awaitedCommand.current = null
+    }
+    setProcessing(false)
     if (lastStepHasErrors(proof)) {
-      setTypewriter(proof?.steps[proof?.steps.length - 1].command)
+      const last = proof.steps.length - 1
+      setTypewriter(proof.steps[last].command)
+      editor.setPosition({ lineNumber: last, column: 1 })
+    } else {
+      editor.setPosition(editor.getModel().getFullModelRange().getEndPosition())
     }
   }, [proof])
 
@@ -109,7 +150,17 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
       return
     }
     if (params.uri == uri) {
-      setProcessing(false)
+      if (awaitingVerdict.current) {
+        // First diagnostics for the edited document: the server is on the
+        // new version now, and getProofState waits for its elaboration.
+        awaitingVerdict.current = false
+        loadGoals(rpcSess, uri, worldId!, levelId!, setProof, setCrashed)
+      }
+      // NOTE: `processing` is NOT released here. The wasm worker publishes
+      // an interim, error-free diagnostics set for a version before the
+      // real one; releasing on it let a second Enter land (and the input
+      // be edited, then clobbered by the failed-command refill) before the
+      // verdict existed. The proof-state effect releases it instead.
 
       const seriousDiags = params.diagnostics.filter(diag =>
         diag.severity === DiagnosticSeverity.Error || diag.severity === DiagnosticSeverity.Warning
@@ -129,7 +180,7 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
     // TODO: This is the wrong place apparently. Where do wee need to load them?
     // TODO: instead of loading all goals every time, we could only load the last one
     // loadAllGoals()
-  }, [uri, hasEditor, editor]);
+  }, [uri, hasEditor, editor, rpcSess, worldId, levelId]);
 
   // // React when answer from the server comes back
   // useServerNotificationEffect('$/game/publishDiagnostics', (params: GameDiagnosticsParams) => {
@@ -253,6 +304,30 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
   //   // TODO: loadAllGoals()
   // }, [rpcSess])
 
+  // Lock the one-line editor while the checker works on the last command.
+  // Under wasm a step takes 1–3 s (vs ~0.6 s server-side); text typed into
+  // an editable input during that window was silently replaced by the
+  // failed-command refill when the step failed.
+  useEffect(() => {
+    if (!oneLineEditor) return
+    oneLineEditor.updateOptions({
+      readOnly: processing,
+      readOnlyMessage: { value: t("Lean is still checking your previous step…") },
+    })
+  }, [oneLineEditor, processing])
+
+  // Safety valves: a crash (no proof state will come) or a lost response
+  // must not leave the input locked.
+  useEffect(() => {
+    if (!processing) return
+    const timer = setTimeout(() => setProcessing(false), 60000)
+    return () => clearTimeout(timer)
+  }, [processing])
+  const [crashed] = useAtom(crashedAtom)
+  useEffect(() => {
+    if (crashed) setProcessing(false)
+  }, [crashed])
+
   /** Process the entered command */
   const handleSubmit : React.FormEventHandler<HTMLFormElement> = (ev) => {
     ev.preventDefault()
@@ -260,15 +335,23 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
   }
 
   // do not display if the proof is completed (with potential warnings still present)
-  return <div className={`typewriter${proof?.completedWithWarnings ? ' hidden' : ''}${disabled ? ' disabled' : ''}`}>
+  return <div className={`typewriter${proof?.completedWithWarnings && !lastStepHasErrors(proof) ? ' hidden' : ''}${disabled ? ' disabled' : ''}`}>
       <form onSubmit={handleSubmit}>
         <div className="typewriter-input-wrapper">
           <div ref={inputRef} className="typewriter-input" />
         </div>
         <button type="submit" disabled={processing} className="btn btn-inverted">
-          <FontAwesomeIcon icon={faWandMagicSparkles} />&nbsp;{t("Execute")}
+          {processing
+            ? <><CircularProgress size={14} thickness={5} color="inherit" />&nbsp;{t("Checking…")}</>
+            : <><FontAwesomeIcon icon={faWandMagicSparkles} />&nbsp;{t("Execute")}</>}
         </button>
       </form>
+      {processing &&
+        <div className="lean-checking-note" role="status" aria-live="polite">
+          <CircularProgress size={12} thickness={5} color="inherit" />
+          <span>{t("Checking")} <code>{lastSubmitted.current}</code> …</span>
+        </div>
+      }
     </div>
 }
 

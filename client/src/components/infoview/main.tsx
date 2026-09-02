@@ -483,6 +483,14 @@ export function TypewriterInterface() {
     loadGoals(rpcSess, effectiveUri, worldId!, levelId!, setProof, setCrashed)
   }, [rpcSess, effectiveUri, worldId, levelId, setProof, setCrashed])
 
+  // Clear the previous level's steps while the new one is prepared —
+  // otherwise they sit under the new statement for the whole switch. Keyed
+  // on the level only: the rpc session also changes after every edit, and a
+  // reset there blanked the pane mid-proof.
+  React.useEffect(() => {
+    setProof(undefined)
+  }, [worldId, levelId, setProof])
+
   /** Delete all proof lines starting from a given line.
   * Note that the first line (i.e. deleting everything) is `1`!
   */
@@ -584,7 +592,9 @@ function LevelLoadingIndicator() {
   const [activity] = useAtom(checkerActivityAtom)
   const progress = formatProgress(status)
   return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
-    <CircularProgress />
+    {/* explicit size + static position: the pane's spinner rule shifts it
+        off-centre and it collapsed to a dot in the level-switch state */}
+    <CircularProgress size={40} style={{ position: 'static', margin: 0 }} />
     <div style={{ color: '#555', fontSize: '0.9rem', textAlign: 'center', maxWidth: '28rem' }}>
       {status.state === 'busy'
         ? <>Lean is starting in your browser — {status.label}{progress ? ` · ${progress}` : ''}.<br/>

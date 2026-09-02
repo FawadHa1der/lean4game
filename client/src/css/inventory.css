@@ -11,6 +11,12 @@
   height: 100%;
   z-index: 10;
   background-color: white;
+  /* text sat flush against the panel's left edge and the close button on
+     its right edge (upstream master); give the panel the same gutter as
+     the inventory lists */
+  padding: 0 0.6rem;
+  box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .documentation .nav-button {

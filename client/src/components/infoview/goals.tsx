@@ -366,7 +366,8 @@ export function loadGoals(
   worldId: string,
   levelId: number,
   setProof: React.Dispatch<React.SetStateAction<ProofState | undefined>>,
-  setCrashed: React.Dispatch<React.SetStateAction<boolean>>) {
+  setCrashed: React.Dispatch<React.SetStateAction<boolean>>,
+  attempt = 0) {
 console.info('sending rpc request to load the proof state')
 
 rpcSess.call('Game.getProofState',
@@ -391,6 +392,16 @@ rpcSess.call('Game.getProofState',
     console.warn(error)
     return
   }
+  // The in-tab checker rejects requests that straddle a document switch
+  // ("QED64: the Lean checker switched documents; please retry") — e.g. a
+  // level's initial load right after rapid level navigation. Typewriter mode
+  // has no other trigger to reload, so the pane would sit on "Loading the
+  // level…" for good; retry a few times instead of declaring a crash.
+  if (/switched documents|please retry/i.test(String(error?.message ?? error)) && attempt < 4) {
+    console.warn(`${error} — retrying (${attempt + 1}/4)`)
+    setTimeout(() => loadGoals(rpcSess, uri, worldId, levelId, setProof, setCrashed, attempt + 1), 800 * (attempt + 1))
+    return
+  }
   setCrashed(true)
   console.warn(error)
 })
@@ -400,11 +411,19 @@ rpcSess.call('Game.getProofState',
 export function lastStepHasErrors (proof : ProofState): boolean {
   if (!proof?.steps.length) {return false}
 
-  let diags = [...proof.steps[proof.steps.length - 1].diags, ...proof.diagnostics]
+  const last = proof.steps[proof.steps.length - 1]
+  let diags = [...last.diags, ...proof.diagnostics]
 
-  return diags.some(
-    (d) => (d.severity == DiagnosticSeverity.Error ) // || d.severity == DiagnosticSeverity.Warning
-  )
+  if (diags.some((d) => d.severity == DiagnosticSeverity.Error)) { return true }
+
+  // The server calls a level "completed with warnings" whenever no ERROR is
+  // reported — but a tactic can fail without an error reaching the
+  // diagnostics (NNG4's `rw [unknown]` does: only "declaration uses sorry"
+  // arrives), leaving the goal untouched. Upstream then hides the input and
+  // soft-locks the level (adam.math.hhu.de does exactly this). Goals still
+  // open means the last command did not work: treat it as a failed step so
+  // the input stays, refilled, and the next command replaces it.
+  return Boolean(last.command?.trim() && proof.completedWithWarnings && !proof.completed && (last.goals?.length ?? 0) > 0)
 }
 
 export function isLastStepWithErrors (proof : ProofState, i: number): boolean {

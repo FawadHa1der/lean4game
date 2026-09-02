@@ -328,24 +328,13 @@ function InfoAux(props: InfoProps) {
             // (see https://github.com/leanprover/vscode-lean4/issues/90)
             .then(diags => diags.length === 0 ? lspDiagsHere.map(lspDiagToInteractive) : diags)
 
-        // While `lake print-paths` is running, the output of Lake is shown as
-        // info diagnostics on line 1.  However, all RPC requests block until
-        // Lake is finished, so we don't see these diagnostics while Lake is
-        // building.  Therefore we show the LSP diagnostics on line 1 if the
-        // server does not respond within half a second.
-        if (pos.line === 0 && lspDiagsHere.length) {
-            setTimeout(() => resolve({
-                pos,
-                status: 'updating',
-                messages: lspDiagsHere.map(lspDiagToInteractive),
-                proof: undefined,
-                goals: undefined,
-                termGoal: undefined,
-                error: undefined,
-                userWidgets: [],
-                rpcSess
-            }), 500)
-        }
+        // Upstream shows the line-1 LSP diagnostics after 500 ms here so that
+        // `lake print-paths` output is visible while Lake builds. There is no
+        // Lake in the wasm build, and the timeout RESOLVED this promise with
+        // `goals: undefined` — a promise settles once, so whenever the real
+        // answers took longer than 500 ms (typical under wasm: the proof-state
+        // request alone is ~1 s) the goals were discarded and the editor-mode
+        // panel stayed blank until the next edit. Removed.
 
         // NB: it is important to await await reqs at once, otherwise
         // if both throw then one exception becomes unhandled.

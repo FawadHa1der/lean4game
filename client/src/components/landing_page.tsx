@@ -77,23 +77,11 @@ function LandingPage() {
   const [navOpen] = useAtom(navOpenAtom)
   const [tiles] = useAtom(gameTilesAtom)
 
-  const [usageCPU, setUsageCPU] = React.useState<number>()
-  const [usageMem, setUsageMem] = React.useState<number>()
-  const showUsageMem = usageMem !== undefined && usageMem >= 0
-  const showUsageCPU = usageCPU !== undefined && usageCPU >= 0
 
   const { t, i18n } = useTranslation()
 
   // Load the namespaces of all games
   i18n.loadNamespaces(tiles.map(tileWithName => `g/${tileWithName.owner}/${tileWithName.game}`))
-
-  /** Parse `games/stats.csv` if present and display server capacity. */
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      fetch_stats();
-    }, 2000)
-    return () => clearInterval(interval)
-  }, [])
 
   return <div className="landing-page">
     <header style={{backgroundImage: `url(${bgImage})`}}>
@@ -152,22 +140,15 @@ function LandingPage() {
         ))
       } */}
     </div>
-    { // show server capacity from `games/stats.csv` if present
-      (showUsageMem || showUsageCPU) &&
-      <section>
-        <div className="wrapper">
-          <h2>{t("Server capacity.translation", { defaultValue: "Server capacity" })}</h2>
-          <Trans
-            i18nKey="Server capacity.description"
-            defaults="<p>As this server runs lean on our university machines, it has a limited capacity. We estimate that our setup will support around 50 simultaneous games at high performance, and up to 180 simultaneous games at a slower pace.</p>"
-          />
-          <p>
-            { showUsageMem && <> {t("RAM")}: <strong>{usageMem.toFixed(2)} %</strong>{t(" used")}.<br/></> }
-            { showUsageCPU && <> {t("CPU")}: <strong>{usageCPU.toFixed(2)} %</strong>{t(" used")}. </> }
-          </p>
-        </div>
-      </section>
-    }
+    <section>
+      <div className="wrapper">
+        <h2>{t("In your browser.translation", { defaultValue: "Runs entirely in your browser" })}</h2>
+        <Trans
+          i18nKey="In your browser.description"
+          defaults="<p>There is no game server: the Lean proof checker itself runs inside this tab as WebAssembly. Nothing you type leaves your computer, and there is no capacity limit — as many people can play at once as want to.</p><p>The first visit downloads the checker and the game's mathematical environment (about 600&nbsp;MB) and keeps it in your browser's storage, so later visits start in seconds. You need a recent desktop browser (Chrome, Edge or Firefox) and a few GB of free memory; on other browsers the game may not start yet. Your progress is saved in this browser.</p>"
+        />
+      </div>
+    </section>
     <section>
       <div className="wrapper">
         <h2>{t("Development notes.translation", { defaultValue: "Development notes" })}</h2>
@@ -213,31 +194,6 @@ function LandingPage() {
       <a className="link" onClick={() => {setPopup(PopupType.privacy)}}>{t("Privacy Policy")}</a>
     </footer>
   </div>
-
-  function fetch_stats() {
-    fetch(`${window.location.origin}/data/stats`)
-      .then(response => {
-        if (response.ok) {
-          return response.text();
-        } else { throw ""; }
-      })
-      .then(data => {
-        // Parse the CSV content
-        const lines = data.split('\n');
-        const [header, line2] = lines;
-        if (!(header.replace(' ', '').startsWith("CPU,MEM"))) {
-          console.info("Not displaying server stats: received unexpected: ", header);
-        }
-        if (line2) {
-          let values = line2.split(',');
-          setUsageCPU(100 * parseFloat(values[0]));
-          setUsageMem(100 * parseFloat(values[1]));
-        }
-      }).catch(err => {
-        console.info('server stats unavailable');
-        console.debug(err);
-      });
-  }
 }
 
 export default LandingPage

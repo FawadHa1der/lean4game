@@ -60,12 +60,15 @@ export const checkerActivityAtom = atom<CheckerActivity>({
 });
 
 const SWITCHING_RE =
-  /starting the Lean|checking the new imports|imports changed|restarting the checker|preparing the header|loading the .* environment|environment snapshot|downloading|unpacking|installing|Mounting|Verifying|starting Lean/i;
+  /starting the Lean|checking the new imports|imports changed|restarting the checker|preparing the header|preparing the .* environment|loading the .* environment|environment snapshot|downloading|unpacking|installing|Mounting|Verifying|starting Lean/i;
 
-export function publishCheckerActivity(state: "busy" | "ready", label: string): void {
+/** `booting`: the first boot has not finished — every stage is a switch then
+ * (the stage labels vary: module names, "Starting the Emscripten runtime",
+ * … — matching them one by one left the gate flickering between stages). */
+export function publishCheckerActivity(state: "busy" | "ready", label: string, booting = false): void {
   getDefaultStore().set(checkerActivityAtom, {
     busy: state === "busy",
-    switching: state === "busy" && SWITCHING_RE.test(label),
+    switching: state === "busy" && (booting || SWITCHING_RE.test(label)),
     label,
   });
 }

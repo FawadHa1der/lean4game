@@ -33,6 +33,7 @@ import { getDefaultStore } from "jotai";
 import { difficultyAtom, progressAtom } from "../store/progress-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
 import { publishBootStatus, publishCheckerActivity } from "../store/boot-atoms";
+import { rememberGamedata } from "./gamedata-cache";
 
 export interface GameDataBundle {
   gameName: string;
@@ -62,7 +63,9 @@ let boundGame: { gameId: string; snapshot: string } | null = null;
 async function fetchJson(url: string): Promise<any> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`fetch ${url}: ${r.status}`);
-  return r.json();
+  const json = await r.json();
+  rememberGamedata(url, json); // the UI's offline fallback for level texts
+  return json;
 }
 
 export async function fetchGameData(): Promise<GameDataBundle> {
@@ -131,25 +134,45 @@ function ensureTranslation(): GameTranslation {
 /** Post-boot, routine checker chatter (per-edit elaboration, import probes)
  * must not resurrect the boot banner — only real boot/restart stages do. */
 const ROUTINE_BUSY = /elaborating|checking the new imports|imports changed/i;
+
+/** qed64's labels carry their own size notes ("(1.4 GiB — one-time)",
+ * "(3.3 GiB unpacked — cached …)"); the banner shows byte progress in MB
+ * itself, so three unit systems met on one line. Strip the notes and say
+ * "game environment" where qed64 says the snapshot's internal name. */
+function humanizeLabel(label: string): string {
+  // Per-module progress reports the module name ("Mathlib.Tactic.Attr.Register").
+  if (/^[A-Z][\w']*(\.[\w']+)+$/.test(label.trim())) return "loading the game's modules";
+  const out = label
+    .replace(/\s*\([^)]*(GiB|MiB|MB|KB)[^)]*\)/g, "")
+    .replace(/\b(the )?(nng4|testgame|mathlib|init|core)( environment| snapshot)\b/i, (m, the, _name, what) =>
+      `${the ?? ""}game${what}`)
+    .trim();
+  // qed64 capitalises some stage names ("Mounting verified library packs");
+  // they read as mid-sentence here ("Lean is starting — mounting …").
+  return /^[A-Z][a-z]/.test(out) && !/^(Lean|Mathlib|Init)\b/.test(out) ? out[0].toLowerCase() + out.slice(1) : out;
+}
 let bootFinishedOnce = false;
 
 const consoleSink: StatusSink = {
-  busy: (label) => {
-    console.info(`[game-boot] ⏳ ${label}`);
-    publishCheckerActivity("busy", label);
+  busy: (rawLabel) => {
+    const label = humanizeLabel(rawLabel);
+    console.info(`[game-boot] ⏳ ${rawLabel}`);
+    publishCheckerActivity("busy", label, !bootFinishedOnce);
     if (!bootFinishedOnce || !ROUTINE_BUSY.test(label)) {
       publishBootStatus({ state: "busy", label });
     }
   },
-  progress: (label, info) => {
-    console.debug(`[game-boot] … ${label}`, info ?? "");
-    publishCheckerActivity("busy", label);
+  progress: (rawLabel, info) => {
+    const label = humanizeLabel(rawLabel);
+    console.debug(`[game-boot] … ${rawLabel}`, info ?? "");
+    publishCheckerActivity("busy", label, !bootFinishedOnce);
     if (!bootFinishedOnce || !ROUTINE_BUSY.test(label)) {
       publishBootStatus({ state: "busy", label, loaded: info?.loaded, total: info?.total, unit: info?.unit });
     }
   },
-  idle: (label) => {
-    console.info(`[game-boot] ✔ ${label}`);
+  idle: (rawLabel) => {
+    const label = humanizeLabel(rawLabel);
+    console.info(`[game-boot] ✔ ${rawLabel}`);
     publishCheckerActivity("ready", label);
     publishBootStatus({ state: "ready", label });
   },

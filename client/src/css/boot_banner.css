@@ -30,6 +30,11 @@
   font-style: italic;
 }
 
+/* A few-pixel default progress bar at the very bottom edge is easy to miss. */
+.lean-boot-banner .MuiLinearProgress-root {
+  height: 6px;
+}
+
 /* While the banner is shown, push page content above it so nothing is
    hidden behind the fixed strip (footers must stay clickable). */
 body.lean-boot-banner-visible .app {
@@ -78,4 +83,23 @@ body.lean-boot-banner-visible .app {
   padding: 0.4rem 1rem;
   z-index: 20;
   text-align: center;
+}
+
+/* Per-step "checking" state of the tactic input: under wasm a step takes
+   1–3 s, long enough that a silent wait reads as "ignored". Sibling of the
+   form inside .typewriter — never an ancestor of the monaco input. */
+.typewriter .lean-checking-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.3em 0.2em 0;
+  color: #eaf0fb;
+  font-size: 0.85rem;
+}
+.typewriter .lean-checking-note code {
+  font-family: var(--ff-code, monospace);
+  color: #fff;
+}
+.typewriter button .MuiCircularProgress-root {
+  vertical-align: middle;
 }

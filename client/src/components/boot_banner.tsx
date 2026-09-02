@@ -66,7 +66,8 @@ export function BootBanner() {
   const progress = formatProgress(status);
   const determinate = status.loaded !== undefined && !!status.total;
   const percent = determinate ? (100 * status.loaded!) / status.total! : 0;
-  const downloading = /download|unpack|install/i.test(status.label);
+  // Byte-counted progress IS a download (labels vary: "preparing the … environment").
+  const downloading = status.unit === "bytes" || /download|unpack|install|preparing the .* environment/i.test(status.label);
 
   return (
     <div className="lean-boot-banner" role="status">

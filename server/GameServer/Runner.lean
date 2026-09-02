@@ -14,16 +14,17 @@ open Lean Meta Elab Command
 Find all tactics in syntax object that are forbidden according to a
 set `allowed` of allowed tactics.
 -/
-partial def findForbiddenTactics
+partial def findForbiddenTactics (levelInfo : LevelInfo)
     (levelId : LevelId) (inventory : List String) (difficulty : Nat) (stx : Syntax) : CommandElabM Unit := do
-  let levelInfo ← loadLevelData "." levelId.world levelId.level
+  -- `levelInfo` is loaded ONCE by the caller (`Runner`): this function runs once per syntax node and
+  -- `loadLevelData` (JSON read+parse) costs ~46 ms per call under wasm64, i.e. 46 ms × nodes per keystroke.
   -- Parse the syntax object and look for tactics and declarations.
   match stx with
   | .missing => return ()
   | .node _info _kind args =>
     -- Go inside a node.
     for arg in args do
-      findForbiddenTactics levelId inventory difficulty arg
+      findForbiddenTactics levelInfo levelId inventory difficulty arg
   | .atom _ val =>
     -- Atoms might be tactic names or other keywords.
     -- Note: We whitelisted known keywords because we cannot
@@ -133,7 +134,8 @@ elab "Runner" gameId:str worldId:str levelId:num
       match tacticStx with
       | some ⟨tacticStx⟩ =>
         -- Check for forbidden tactics
-        findForbiddenTactics levelId inventory difficulty tacticStx
+        let levelInfo ← loadLevelData "." levelId.world levelId.level
+        findForbiddenTactics levelInfo levelId inventory difficulty tacticStx
         return tacticStx.getArgs.map (⟨.⟩)
       | none => -- empty tactic sequence
         -- Insert invisible `skip` command to make sure we always display the initial goal

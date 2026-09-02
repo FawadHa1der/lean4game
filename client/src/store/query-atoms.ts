@@ -4,14 +4,14 @@ import { Doc, GameInfo, InventoryOverview, LevelInfo } from './api'
 import { atomFamily } from 'jotai/utils'
 import { atom } from 'jotai'
 import { InventoryTab } from './inventory-atoms'
+import { fetchGamedataJson } from '../wasm/gamedata-cache'
 
 /** The info about all games */
 export const gameInfoAtomFamily = atomFamily((gameId: string) => atomWithQuery<GameInfo>(() => {
   return {
     queryKey: ['gameInfo', gameId],
     queryFn: async () => {
-      const res = await fetch(`${window.location.origin}/data/${gameId}/game.json`)
-      return res.json()
+      return fetchGamedataJson<GameInfo>(`${window.location.origin}/data/${gameId}/game.json`)
     },
     enabled: gameId.length > 0,
   }
@@ -31,8 +31,7 @@ export const levelInfoAtom = atomWithQuery<LevelInfo>((get) => {
   return {
     queryKey: ['levelInfo', gameId, worldId, levelId],
     queryFn: async () => {
-      const res = await fetch(`${window.location.origin}/data/${gameId}/level__${worldId}__${levelId}.json`)
-      return res.json()
+      return fetchGamedataJson<LevelInfo>(`${window.location.origin}/data/${gameId}/level__${worldId}__${levelId}.json`)
     },
   }
 })
