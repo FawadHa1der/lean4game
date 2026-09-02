@@ -491,6 +491,20 @@ export function TypewriterInterface() {
     setProof(undefined)
   }, [worldId, levelId, setProof])
 
+  // Recovery: during a navigation storm the checker replaces its session
+  // repeatedly and rejects every in-flight request ("switched documents");
+  // once loadGoals' retries are spent, nothing reloads the pane and it sits
+  // on "Loading the level…" for good (seen after editor-mode toggle + rapid
+  // hash navigation). Reload whenever the checker settles with no state.
+  const [activity] = useAtom(checkerActivityAtom)
+  React.useEffect(() => {
+    if (activity.busy || !effectiveUri) return
+    if (proof === undefined || crashed) {
+      setCrashed(false)
+      loadGoals(rpcSess, effectiveUri, worldId!, levelId!, setProof, setCrashed)
+    }
+  }, [activity.busy])
+
   /** Delete all proof lines starting from a given line.
   * Note that the first line (i.e. deleting everything) is `1`!
   */

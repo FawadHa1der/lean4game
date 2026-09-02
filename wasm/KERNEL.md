@@ -18,13 +18,27 @@ runtime `wasm64-303e5c765fc415ed`. The qed64 repo's
 `pipeline/toolchain/KERNEL-PIN` is the machine-readable pin, including the
 paired snapshot identities.
 
-The worker script the game serves (`client/public/workers/lean.worker.js`)
-is a staged COPY of qed64's `public/workers/lean.worker.js`, while the
-watchdog shim is consumed live from the qed64 source via the `file:`
-dependency — re-copy the worker whenever qed64's changes (the
-`stage-game-assets.sh` script does it) so the two stay paired. Staged
-worker as of 2026-09-02: qed64 commit `0dfa204` (byte-level LSP
-frame-header scan; resident-mode handlers inert without `?resident=1`).
+## Substrate pin (the qed64 closure, vendored)
+
+The browser-side substrate — boot (`qed64-boot.ts`), watchdog shim, runtime
+client, snapshot loader, install profiles, and the two worker scripts — is a
+**vendored copy of the qed64 closure at one commit**, under
+`client/src/wasm/vendor/qed64/` with the pin in
+`client/src/wasm/vendor/QED64-PIN`. The `qed64/...` import specifiers resolve
+there (vite alias + tsconfig paths); `scripts/stage-game-assets.sh` copies the
+worker scripts from the same directory, so shim and worker are paired by
+construction. Nothing in a build reads the qed64 checkout any more.
+
+It used to be a live `file:` link into the qed64 checkout: every build
+compiled whatever that checkout held at that second, uncommitted edits
+included (a half-typed import broke the game build on 2026-09-02, and shim
+behaviour changed under a running test day), and the worker copy could
+silently drift from the shim.
+
+Bump: `scripts/sync-qed64.sh <qed64-commit>` (extracts with `git archive`,
+never from a working tree), rebuild, run cypress, commit the diff. The
+closure has no third-party imports; the sync script fails if a relative
+import does not resolve inside the vendored tree.
 
 ## Snapshot rebake 2026-09-02 (GameServer `Runner` hoist, runtime unchanged)
 

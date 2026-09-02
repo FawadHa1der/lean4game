@@ -1,9 +1,11 @@
 #!/bin/bash
 # Stage everything the wasm build serves statically into client/public/.
-# Sources: the game's compiled gamedata + translations (in-repo), and the
-# QED64 sibling checkout for the substrate artifacts (worker, runtime
-# chunks, core profile). Snapshots are baked by the qed64 pipeline
-# (bake-snapshot.mjs --out client/public/snapshots) and land here directly.
+# Sources: the game's compiled gamedata + translations (in-repo) and the
+# worker scripts from the vendored, commit-pinned qed64 closure
+# (client/src/wasm/vendor, scripts/sync-qed64.sh). The qed64 sibling
+# checkout is only an OPTIONAL import path for digest-pinned build artifacts
+# (core profile pack, runtime chunks) when the runtime pin changes; snapshots
+# are staged with scripts/stage-snapshots.py. See wasm/KERNEL.md.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 QED64="${QED64:-$HERE/../wasm64-lean-fable/qed64}"
@@ -44,9 +46,12 @@ fs.writeFileSync(path.join(here, "client/public/api/games"), JSON.stringify(out)
 ' "$HERE"
 
 # substrate: worker + core profile from qed64; runtime via chunk-runtime.mjs
-cp "$QED64/public/workers/lean.worker.js" "$PUB/workers/"
+# Worker scripts come from the vendored, commit-pinned qed64 closure (scripts/sync-qed64.sh),
+# never from a live qed64 checkout — they must pair with the vendored watchdog shim.
+VENDOR="$HERE/client/src/wasm/vendor/qed64"
+cp "$VENDOR/public/workers/lean.worker.js" "$PUB/workers/"
 # the disposable-prefetch boot (qed64 b00cba3) spawns a second worker
-cp "$QED64/public/workers/snapshot-prefetch.worker.js" "$PUB/workers/"
+cp "$VENDOR/public/workers/snapshot-prefetch.worker.js" "$PUB/workers/"
 # i18next probes every configured language; a missing file must yield JSON,
 # not the SPA-fallback HTML (the uncaught SyntaxError wedged cypress runs)
 for G in "g/test/TestGame" "g/hhu-adam/NNG4"; do
@@ -55,8 +60,15 @@ for G in "g/test/TestGame" "g/hhu-adam/NNG4"; do
     if [ ! -f "$PUB/i18n/$G/$L" ]; then printf '{}' > "$PUB/i18n/$G/$L"; fi
   done
 done
-cp "$QED64"/public/profiles/index.json "$QED64"/public/profiles/lean-core.manifest.json \
-   "$QED64"/public/profiles/lean-core.pack.gzip.* "$PUB/profiles/"
+# Artifact import (optional): the core profile pack is a digest-pinned build
+# OUTPUT of the shared kernel pipeline (wasm/KERNEL.md), not source; it only
+# needs re-copying when the runtime pin changes, so a missing checkout is fine.
+if [ -d "$QED64/public/profiles" ]; then
+  cp "$QED64"/public/profiles/index.json "$QED64"/public/profiles/lean-core.manifest.json \
+     "$QED64"/public/profiles/lean-core.pack.gzip.* "$PUB/profiles/"
+else
+  echo "note: $QED64/public/profiles not found — keeping the already-staged core profile pack"
+fi
 
 echo "staged. Runtime chunks: node $QED64/pipeline/toolchain/chunk-runtime.mjs --bin <stage1/bin> --out $PUB/runtime"
 echo "Snapshots: bake with --out $PUB/snapshots (init + testgame), see wasm/README notes."

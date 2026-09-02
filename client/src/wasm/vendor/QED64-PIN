@@ -1,0 +1,12 @@
+qed64 commit: 6e7f079f040b5a68dae8a04dea20c38fca3c1ef6
+date: 2026-09-02 15:11:56 -0400
+subject: resident mode: shim safety fixes, worker ring FIFO, harness trust, architecture review
+files:
+  f0e8aab0b6e954a6  frontend/src/qed64-boot.ts
+  61cd2c00c39a2d1f  frontend/src/watchdog-shim.ts
+  444d52fab79ed8ce  src/install/profiles.ts
+  f235af141585af8d  src/runtime/client.ts
+  17c0173a54723476  src/runtime/snapshots.ts
+  17c757dfbe6def89  src/runtime/umbrella.ts
+  5f2c169286478bb2  public/workers/lean.worker.js
+  66bc998493f5e3cd  public/workers/snapshot-prefetch.worker.js

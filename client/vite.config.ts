@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react-swc'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 import { normalizePath } from 'vite'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import svgr from "vite-plugin-svgr"
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import importMetaUrlPlugin from '@codingame/esbuild-import-meta-url-plugin'
@@ -89,8 +90,7 @@ export default defineConfig({
   server: {
     port: Number(clientPort),
     fs: {
-      // the qed64 substrate is an npm file: symlink outside the vite root
-      allow: ['..', normalizePath(path.resolve(__dirname, '../../wasm64-lean-fable/qed64'))],
+      allow: ['..'],
     },
     proxy: wasmMode ? {} : {
       '/websocket': {
@@ -114,6 +114,12 @@ export default defineConfig({
   resolve: {
     alias: {
       path: "path-browserify",
+      // The wasm substrate (boot, watchdog shim, runtime client, snapshot
+      // loader) is a vendored, commit-pinned copy of the qed64 closure —
+      // see client/src/wasm/vendor/QED64-PIN and scripts/sync-qed64.sh. It
+      // used to be a live `file:` link into the qed64 checkout, which made
+      // every build depend on that checkout's uncommitted state.
+      qed64: fileURLToPath(new URL('./src/wasm/vendor/qed64', import.meta.url)),
     },
   },
 })

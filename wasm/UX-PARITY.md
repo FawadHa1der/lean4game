@@ -16,6 +16,10 @@ the deployed site runs an older upstream — deliberately not reverted), or
 
 ## Result
 
+Final verification (2026-09-02 evening, quiet machine): cypress **24/24**
+(5 basic-interface + 19 game-feature tests) on the build that contains every
+fix below; twin-harness journey and garbage storm green in the same run.
+
 Apart from start-up (the one-time ~600 MB download and the ~10–20 s boot),
 the wasm build is at parity or better on every checkpoint, and strictly
 better on several behaviours the deployed site gets wrong or lacks.
@@ -103,7 +107,15 @@ machine); "was" values are from the same harness before fix 8.
    panel stayed blank until the next edit. This was the "chronic" editor-mode
    cypress margin failure. There is no Lake here; the fallback is removed
    (goal now renders ~2 s after the toggle, reliably).
-9. **Per-step latency: GameServer `Runner` hoist + snapshot rebake.**
+9. **Pane recovers after a navigation storm.** While the checker replaces
+   its session repeatedly (rapid level switches), every in-flight
+   proof-state request is rejected with "switched documents"; once the
+   loader's retries were spent nothing reloaded the pane, which sat on
+   "Loading the level…" indefinitely (seen after an editor-mode toggle
+   followed by rapid hash navigation). The pane now reloads its state
+   whenever the checker settles with no state, and the loader retries the
+   transient a few times with backoff before giving up.
+10. **Per-step latency: GameServer `Runner` hoist + snapshot rebake.**
    `findForbiddenTactics` re-read and re-parsed the level's JSON
    (`loadLevelData`, ~46 ms under wasm64) once per syntax node; the load is
    now done once per elaboration. Headless probe: 8-step proof 8.1 s → 0.73 s,

@@ -17,6 +17,10 @@
       "DOM"
     ],
     "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "qed64/*": ["src/wasm/vendor/qed64/*"]
+    },
   },
   "include": [
     "./src/",
