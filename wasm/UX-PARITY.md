@@ -117,7 +117,9 @@ machine); "was" values are from the same harness before fix 8.
    transient a few times with backoff before giving up.
 10. **Reload hygiene.** The page now releases its checker on `pagehide` and
     caps the game session's Memory64 reservation at 3 GiB (see the open item
-    for the measured effect; post-reload boot ~5.8 s).
+    for the measured effect; post-reload boot ~5.8 s). Keep both across
+    substrate bumps: they remove two multi-GiB standing costs regardless of
+    how the worker's boot-time transients get fixed.
 11. **Per-step latency: GameServer `Runner` hoist + snapshot rebake.**
    `findForbiddenTactics` re-read and re-parsed the level's JSON
    (`loadLevelData`, ~46 ms under wasm64) once per syntax node; the load is
