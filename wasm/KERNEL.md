@@ -40,6 +40,13 @@ never from a working tree), rebuild, run cypress, commit the diff. The
 closure has no third-party imports; the sync script fails if a relative
 import does not resolve inside the vendored tree.
 
+Bump only to a qed64 commit its owners have announced as having passed
+their test pyramid (as of 2026-09-02 the shim is being rewritten to a
+fact-driven state machine — same module path, class name and constructor;
+full-text didChange wire — and intermediate commits are not safe to take).
+The game's boot registers `pagehide → shim.disposeForUnload()`; keep that
+call working across bumps (qed64's own page relies on the same hook).
+
 ## Snapshot rebake 2026-09-02 (GameServer `Runner` hoist, runtime unchanged)
 
 `server/GameServer/Runner.lean` now loads the level's JSON once per

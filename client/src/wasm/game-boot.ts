@@ -223,6 +223,13 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
         /^\s*import\s+(Game\b|Game\.|GameServer)/m.test(header) ? boundGame!.snapshot : null,
     });
     shimRef = shim;
+    // Release the wasm heap the moment the page goes away. A reload does not
+    // promptly reclaim a dead page's committed multi-GiB shared memory; the
+    // next boot commits its own, and a burst of level switches on top of the
+    // stacked heaps jetsams the renderer (reproduced: reload, reload, six
+    // switches at 100 ms → "Target crashed"). qed64's own page wires this
+    // hook; the game had not.
+    window.addEventListener("pagehide", () => shim.disposeForUnload(), { once: true });
     translation.attachServer(shim.clientPort);
     ui.idle("Lean ready");
     // Test hooks and status displays key off this.
