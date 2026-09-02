@@ -208,7 +208,14 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     // worker needs (snapshot + gamedata files) happens inside it.
     let shimRef: WatchdogShim | null = null;
     const makeSession = async (): Promise<Qed64Session> => {
-      const qs = await newSession(artifacts, ui, () => void shimRef?.handleWorkerDeath(), {});
+      // Cap the shared Memory64 reservation: game sessions peak under 2 GiB
+      // (the editor's default ceiling is 6 GiB). The reservation is what a
+      // dead-but-not-yet-reclaimed page keeps holding across reloads, so a
+      // smaller cap shrinks the stacked-heap window behind the reload-then-
+      // switch-storm renderer crash. 3 GiB leaves room for a storm's overlap.
+      const qs = await newSession(artifacts, ui, () => void shimRef?.handleWorkerDeath(), {
+        maximumBytes: 3 * 1073741824,
+      });
       await loadSnapshotByName(artifacts, qs, boundGame!.snapshot, ui);
       await writeGamedataToWorker(qs, bundle);
       return qs;

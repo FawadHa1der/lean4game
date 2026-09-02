@@ -115,7 +115,10 @@ machine); "was" values are from the same harness before fix 8.
    followed by rapid hash navigation). The pane now reloads its state
    whenever the checker settles with no state, and the loader retries the
    transient a few times with backoff before giving up.
-10. **Per-step latency: GameServer `Runner` hoist + snapshot rebake.**
+10. **Reload hygiene.** The page now releases its checker on `pagehide` and
+    caps the game session's Memory64 reservation at 3 GiB (see the open item
+    for the measured effect; post-reload boot ~5.8 s).
+11. **Per-step latency: GameServer `Runner` hoist + snapshot rebake.**
    `findForbiddenTactics` re-read and re-parsed the level's JSON
    (`loadLevelData`, ~46 ms under wasm64) once per syntax node; the load is
    now done once per elaboration. Headless probe: 8-step proof 8.1 s → 0.73 s,
@@ -146,26 +149,24 @@ preferences popup's empty "Controls" section.
 
 ## Open
 
-- **Renderer crash at the rapid-navigation storm after a reload.** In 3 of
-  ~8 full harness runs the tab died ("Target crashed") during six hash
-  switches at 250 ms between Addition levels 2 and 3 — always in the flow
-  that reloads the page earlier in the session (the persistence checkpoint)
-  and then runs the garbage storm; fresh-page storms at 100–250 ms never
-  crash, JS heap stays flat (~61 MB), no wasm-heap warnings are logged. A
-  renderer death is below the client: suspect the worker replacement path
-  (each switch re-initialises the checker in place, "init called with a live
-  session; cancelling it and replacing") combined with a second 6 GiB
-  Memory64 reservation after the reload. Minimal reproduction (qed64
-  `work/reload-storm-probe.mjs`): boot → reload → storm at 250 ms (survives)
-  → reload → storm at 250 ms (survives) → storm at 100 ms → renderer crash;
-  each reload boots a fresh worker in the same tab (~6 s). Substrate-level;
-  reported to the qed64 side. Client-side mitigation if it stays open:
-  coalesce level switches while a session replacement is in flight.
-- **Per-step residuals.** Each step still pays one ~0.3 s level-JSON load
-  (memoising it, or reading `level.toInfo` from the environment, would
-  remove it) and the whole `by` block is re-elaborated (~0.2–0.3 s for an
-  8-step proof; `Runner` is not incremental). Both are below the native
-  site's own per-step cost now.
+- **Renderer crash: reloads then a 100 ms navigation storm (mitigated,
+  not closed).** Recipe (qed64 `work/reload-storm-probe.mjs`): boot → reload
+  → six hash switches at 250 ms → reload → six at 250 ms → six at 100 ms.
+  Before any fix the third storm crashed the tab every time. Cause, from
+  both sides: a reload does not promptly reclaim the previous worker's
+  memory, and the worker's boot-time transient copies (snapshot staging and
+  inflate buffers) take the renderer's resident size far above the wasm
+  reservation itself (the qed64 side measured a ~15 GB peak during boot);
+  a reload stacks a second set and the switch burst tips it over. Page-side
+  mitigations shipped: `pagehide → shim.disposeForUnload()` (the game never
+  released its worker on unload; qed64's own page does) and a 3 GiB
+  Memory64 cap for game sessions (qed64 `8e708dc`, sessions peak under
+  2 GiB). Measured: the hook alone let 2 of 4 full passes survive; the cap
+  brought post-reload boots from ~13.6 s back to ~5.8 s but the 100 ms
+  storm after two reloads still crashed (0 of 3). The remaining lever is
+  worker-side (delete the boot-time copies, read the snapshot straight
+  into the heap) and lands with the qed64 shim rewrite; bump the pin then
+  and re-run the recipe. Fresh-page storms at 100–250 ms never crash.
 - Only NNG4 is listed on the landing page; more games follow the catalog
   pattern in `KERNEL.md`.
 - The boot strip can cover the bottom row of world-map labels during the
