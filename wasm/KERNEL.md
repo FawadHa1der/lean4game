@@ -18,6 +18,14 @@ runtime `wasm64-303e5c765fc415ed`. The qed64 repo's
 `pipeline/toolchain/KERNEL-PIN` is the machine-readable pin, including the
 paired snapshot identities.
 
+The worker script the game serves (`client/public/workers/lean.worker.js`)
+is a staged COPY of qed64's `public/workers/lean.worker.js`, while the
+watchdog shim is consumed live from the qed64 source via the `file:`
+dependency — re-copy the worker whenever qed64's changes (the
+`stage-game-assets.sh` script does it) so the two stay paired. Staged
+worker as of 2026-09-02: qed64 commit `0dfa204` (byte-level LSP
+frame-header scan; resident-mode handlers inert without `?resident=1`).
+
 ## Snapshot rebake 2026-09-02 (GameServer `Runner` hoist, runtime unchanged)
 
 `server/GameServer/Runner.lean` now loads the level's JSON once per
