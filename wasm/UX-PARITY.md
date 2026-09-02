@@ -155,8 +155,12 @@ preferences popup's empty "Controls" section.
   renderer death is below the client: suspect the worker replacement path
   (each switch re-initialises the checker in place, "init called with a live
   session; cancelling it and replacing") combined with a second 6 GiB
-  Memory64 reservation after the reload. Recipe: `work/ux-twin.mjs` on ours;
-  minimal attempt: `work/reload-storm-probe.mjs`.
+  Memory64 reservation after the reload. Minimal reproduction (qed64
+  `work/reload-storm-probe.mjs`): boot → reload → storm at 250 ms (survives)
+  → reload → storm at 250 ms (survives) → storm at 100 ms → renderer crash;
+  each reload boots a fresh worker in the same tab (~6 s). Substrate-level;
+  reported to the qed64 side. Client-side mitigation if it stays open:
+  coalesce level switches while a session replacement is in flight.
 - **Per-step residuals.** Each step still pays one ~0.3 s level-JSON load
   (memoising it, or reading `level.toInfo` from the environment, would
   remove it) and the whole `by` block is re-elaborated (~0.2–0.3 s for an
