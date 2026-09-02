@@ -6,8 +6,11 @@
 # The game consumes exactly this closure from qed64 (no third-party imports):
 #   frontend/src/qed64-boot.ts, frontend/src/watchdog-shim.ts,
 #   src/install/profiles.ts, src/runtime/{client,snapshots,umbrella}.ts
-# plus the two worker scripts the page spawns:
+# plus the worker scripts the page spawns:
 #   public/workers/lean.worker.js, public/workers/snapshot-prefetch.worker.js
+# and, from the byte-channel rewrite on, the decoder lean.worker.js loads
+# with importScripts and therefore MUST be served beside it:
+#   public/workers/lsp-frames.js
 # It is extracted with `git archive` at the given commit (never from the
 # working tree, so uncommitted edits in a shared checkout cannot leak in),
 # into client/src/wasm/vendor/qed64/, and the pin is recorded in
@@ -22,6 +25,17 @@ PATHS=(frontend/src/qed64-boot.ts frontend/src/watchdog-shim.ts
        src/install/profiles.ts src/runtime/client.ts src/runtime/snapshots.ts src/runtime/umbrella.ts
        public/workers/lean.worker.js public/workers/snapshot-prefetch.worker.js)
 FULL="$(git -C "$QED64" rev-parse --verify "$SHA^{commit}")"
+# Pins older than the byte-channel rewrite have no lsp-frames.js, and
+# `git archive` refuses a missing pathspec: vendor it when the commit has it.
+# A commit whose worker loads it but lacks it is refused here — the failure
+# mode otherwise is a worker that never posts {type:"boot"} (every game
+# session hangs at boot), found only in the browser.
+DECODER=public/workers/lsp-frames.js
+if git -C "$QED64" cat-file -e "$FULL:$DECODER" 2>/dev/null; then
+  PATHS+=("$DECODER")
+elif git -C "$QED64" show "$FULL:public/workers/lean.worker.js" | grep -q 'importScripts("lsp-frames.js")'; then
+  echo "qed64 ${FULL:0:12}: lean.worker.js imports lsp-frames.js but the commit has no $DECODER" >&2; exit 1
+fi
 rm -rf "$DEST"; mkdir -p "$DEST"
 git -C "$QED64" archive "$FULL" "${PATHS[@]}" | tar -x -C "$DEST"
 # Sanity: the closure must be self-contained (every relative import resolves inside DEST).
