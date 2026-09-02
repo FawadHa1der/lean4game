@@ -146,6 +146,17 @@ preferences popup's empty "Controls" section.
 
 ## Open
 
+- **Renderer crash at the rapid-navigation storm after a reload.** In 3 of
+  ~8 full harness runs the tab died ("Target crashed") during six hash
+  switches at 250 ms between Addition levels 2 and 3 — always in the flow
+  that reloads the page earlier in the session (the persistence checkpoint)
+  and then runs the garbage storm; fresh-page storms at 100–250 ms never
+  crash, JS heap stays flat (~61 MB), no wasm-heap warnings are logged. A
+  renderer death is below the client: suspect the worker replacement path
+  (each switch re-initialises the checker in place, "init called with a live
+  session; cancelling it and replacing") combined with a second 6 GiB
+  Memory64 reservation after the reload. Recipe: `work/ux-twin.mjs` on ours;
+  minimal attempt: `work/reload-storm-probe.mjs`.
 - **Per-step residuals.** Each step still pays one ~0.3 s level-JSON load
   (memoising it, or reading `level.toInfo` from the environment, would
   remove it) and the whole `by` block is re-elaborated (~0.2–0.3 s for an
