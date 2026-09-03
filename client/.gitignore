@@ -1,5 +1,8 @@
-public/runtime/
-public/profiles/
-public/snapshots/
+# Large served artifacts live outside git (published as the artifact bundle,
+# see wasm/KERNEL.md and scripts/fetch-artifacts.sh). Their DIGEST MANIFESTS
+# are tracked so any downloaded copy can be verified.
+public/runtime/chunks/
+public/profiles/*.part-*
+public/snapshots/*.snapz
+# worker scripts are staged from the vendored qed64 closure (stage-game-assets.sh)
 public/workers/
-public/data/

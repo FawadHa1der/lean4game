@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "exact",
+ "displayName": "exact",
+ "content":
+ "## Summary\n\nIf the goal is a statement `P`, then `exact h` will close the goal if `h` is a proof of `P`.\n\n### Example\n\nIf the goal is `x = 37` and you have a hypothesis `h : x = 37`\nthen `exact h` will solve the goal.\n\n### Example\n\nIf the goal is `x + 0 = x` then `exact add_zero x` will close the goal.\n\n### Exact needs to be exactly right\n\nNote that `exact add_zero` will *not work* in the previous example;\nfor `exact h` to work, `h` has to be *exactly* a proof of the goal.\n`add_zero` is a proof of `∀ n, n + 0 = n` or, if you like,\na proof of `? + 0 = ?` where `?` needs to be supplied by the user.\nThis is in contrast to `rw` and `apply`, which will \\\"guess the inputs\\\"\nif necessary. If the goal is `x + 0 = x` then `rw [add_zero]`\nand `rw [add_zero x]` will both change the goal to `x = x`,\nbecause `rw` guesses the input to the function `add_zero`.",
+ "category": "📖︎"}

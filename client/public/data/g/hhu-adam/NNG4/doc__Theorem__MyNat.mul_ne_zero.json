@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b : ℕ) (ha : a ≠ 0) (hb : b ≠ 0) : a * b ≠ 0",
+ "name": "MyNat.mul_ne_zero",
+ "displayName": "mul_ne_zero",
+ "content":
+ "`mul_ne_zero a b` is a proof that if `a ≠ 0` and `b ≠ 0` then `a * b ≠ 0`.",
+ "category": "*"}

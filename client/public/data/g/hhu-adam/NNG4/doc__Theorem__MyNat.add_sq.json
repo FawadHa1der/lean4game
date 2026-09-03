@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a b : ℕ) : (a + b) ^ 2 = a ^ 2 + b ^ 2 + 2 * a * b",
+ "name": "MyNat.add_sq",
+ "displayName": "add_sq",
+ "content": "`add_sq a b` is the statement that $(a+b)^2=a^2+b^2+2ab.$",
+ "category": "^"}

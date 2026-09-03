@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "cases",
+ "displayName": "cases",
+ "content":
+ "## Summary\n\nIf `n` is a number, then `cases n with d` will break the goal into two goals,\none with `n = 0` and the other with `n = succ d`.\n\nIf `h` is a proof (for example a hypothesis), then `cases h with...` will break the\nproof up into the pieces used to prove it.\n\n## Example\n\nIf `n : ℕ` is a number, then `cases n with d` will break the goal into two goals,\none with `n` replaced by 0 and the other with `n` replaced by `succ d`. This\ncorresponds to the mathematical idea that every natural number is either `0`\nor a successor.\n\n## Example\n\nIf `h : P ∨ Q` is a hypothesis, then `cases h with hp hq` will turn one goal\ninto two goals, one with a hypothesis `hp : P` and the other with a\nhypothesis `hq : Q`.\n\n## Example\n\nIf `h : False` is a hypothesis, then `cases h` will turn one goal into no goals,\nbecause there are no ways to make a proof of `False`! And if you have no goals left,\nyou have finished the level.\n\n## Example\n\nIf `h : a ≤ b` is a hypothesis, then `cases h with c hc` will create a new number `c`\nand a proof `hc : b = a + c`. This is because the *definition* of `a ≤ b` is\n`∃ c, b = a + c`.",
+ "category": "📖︎"}

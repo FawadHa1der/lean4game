@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b c : ℕ) (ha : a ≠ 0) (h : a * b = a * c) : b = c",
+ "name": "MyNat.mul_left_cancel",
+ "displayName": "mul_left_cancel",
+ "content":
+ "`mul_left_cancel a b c` is a proof that if `a ≠ 0` and `a * b = a * c` then `b = c`.",
+ "category": "*"}

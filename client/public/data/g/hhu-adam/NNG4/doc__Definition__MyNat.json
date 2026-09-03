@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "MyNat",
+ "displayName": "ℕ",
+ "content":
+ "`ℕ` is the natural numbers, just called \\\"numbers\\\" in this game. It's\ndefined via two rules:\n\n* `0 : ℕ` (zero is a number)\n* `succ (n : ℕ) : ℕ` (the successor of a number is a number)\n\n## Game Implementation\n\n*The game uses its own copy of the natural numbers, called `MyNat` with notation `ℕ`.\nIt is distinct from the Lean natural numbers `Nat`, which should hopefully\nnever leak into the natural number game.*",
+ "category": "📖︎"}

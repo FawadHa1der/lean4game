@@ -1,0 +1,6 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rfl",
+ "displayName": "rfl",
+ "content": "The way to proof reflexivity.",
+ "category": "📖︎"}

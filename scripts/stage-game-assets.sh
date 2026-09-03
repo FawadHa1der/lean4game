@@ -15,11 +15,18 @@ GAME="$HERE/cypress/TestGame"
 mkdir -p "$PUB"/{workers,profiles,runtime,snapshots} "$PUB/data/g/test/TestGame" "$PUB/i18n/g/test/TestGame"
 
 # game data + translations + serverless stats
-cp "$GAME"/.lake/gamedata/*.json "$PUB/data/g/test/TestGame/"
-cp "$GAME"/.i18n/de/Game.json "$PUB/i18n/g/test/TestGame/de"
+# TestGame gamedata/i18n are compiled outputs (cypress/TestGame/.lake, gitignored);
+# the results are tracked under client/public, so a clone without a Lean
+# toolchain keeps the committed copies.
+if [ -d "$GAME/.lake/gamedata" ]; then
+  cp "$GAME"/.lake/gamedata/*.json "$PUB/data/g/test/TestGame/"
+  cp "$GAME"/.i18n/de/Game.json "$PUB/i18n/g/test/TestGame/de"
+else
+  echo "note: $GAME/.lake/gamedata not found — keeping the tracked TestGame gamedata/i18n"
+fi
 printf 'CPU, MEM\n0, 0\n' > "$PUB/data/stats"
 
-# NNG4 — local clone at games-src/NNG4 (branch wasm64-port; see wasm/README)
+# NNG4 — local clone at games-src/NNG4 (branch wasm64-port; see wasm/KERNEL.md)
 NNG="$HERE/games-src/NNG4"
 if [ -d "$NNG/.lake/gamedata" ]; then
   mkdir -p "$PUB/data/g/hhu-adam/NNG4" "$PUB/i18n/g/hhu-adam/NNG4"
@@ -36,7 +43,8 @@ const fs = require("fs"), path = require("path");
 const here = process.argv[1];
 // TestGame stays reachable at /#/g/test/TestGame for the cypress suite but
 // is not advertised on the landing page.
-const games = [["hhu-adam","NNG4", path.join(here, "games-src/NNG4/.lake/gamedata/game.json")]];
+const games = [["hhu-adam","NNG4", path.join(here, "games-src/NNG4/.lake/gamedata/game.json")]].filter(([,,p]) => fs.existsSync(p));
+if (!games.length) { console.log("note: no game sources present — keeping the tracked client/public/api/games"); process.exit(0); }
 const out = [];
 for (const [owner, game, p] of games) {
   try { out.push({ owner, game, tile: JSON.parse(fs.readFileSync(p, "utf8")).tile }); } catch {}
@@ -80,4 +88,4 @@ else
 fi
 
 echo "staged. Runtime chunks: node $QED64/pipeline/toolchain/chunk-runtime.mjs --bin <stage1/bin> --out $PUB/runtime"
-echo "Snapshots: bake with --out $PUB/snapshots (init + testgame), see wasm/README notes."
+echo "Snapshots: bake with --out $PUB/snapshots (init + testgame), see wasm/KERNEL.md."

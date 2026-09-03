@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b : ℕ) (h : MyNat.succ a = MyNat.succ b) : a = b",
+ "name": "MyNat.succ_inj",
+ "displayName": "succ_inj",
+ "content":
+ "# Statement\n\nIf $a$ and $b$ are numbers, then\n`succ_inj a b` is the proof that\n$ (\\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\n## More technical details\n\nThere are other ways to think about `succ_inj`.\n\nYou can think about `succ_inj` itself as a function which takes two\nnumbers $$a$$ and $$b$$ as input, and outputs a proof of\n$ ( \\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\nYou can think of `succ_inj` itself as a proof; it is the proof\nthat `succ` is an injective function. In other words,\n`succ_inj` is a proof of\n$\\forall a, b \\in  \\mathbb{N}, ( \\operatorname{succ}(a) = \\operatorname{succ}(b)) \\implies a=b$.\n\n`succ_inj` was postulated as an axiom by Peano, but\nin Lean it can be proved using `pred`, a mathematically\npathological function.",
+ "category": "Peano"}

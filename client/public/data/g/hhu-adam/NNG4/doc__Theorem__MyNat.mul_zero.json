@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ) : a * 0 = 0",
+ "name": "MyNat.mul_zero",
+ "displayName": "mul_zero",
+ "content": "`mul_zero m` is the proof that `m * 0 = 0`.",
+ "category": "*"}

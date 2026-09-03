@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (m : ℕ) : 0 ^ MyNat.succ m = 0",
+ "name": "MyNat.zero_pow_succ",
+ "displayName": "zero_pow_succ",
+ "content":
+ "Although $0^0=1$ in this game, $0^n=0$ if $n>0$, i.e., if\n$n$ is a successor.",
+ "category": "^"}

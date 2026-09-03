@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ) : a ^ 1 = a",
+ "name": "MyNat.pow_one",
+ "displayName": "pow_one",
+ "content":
+ "`pow_one a` says that `a ^ 1 = a`.\n\nNote that this is not quite true by definition: `a ^ 1` is\ndefined to be `a ^ 0 * a` so it's `1 * a`, and to prove\nthat this is equal to `a` you need to use induction somewhere.",
+ "category": "^"}

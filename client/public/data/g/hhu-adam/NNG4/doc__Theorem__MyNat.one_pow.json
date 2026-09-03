@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (m : ℕ) : 1 ^ m = 1",
+ "name": "MyNat.one_pow",
+ "displayName": "one_pow",
+ "content": "`one_pow n` is a proof that $1^n=1$.",
+ "category": "^"}

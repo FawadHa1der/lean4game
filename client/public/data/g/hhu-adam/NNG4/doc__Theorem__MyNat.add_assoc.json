@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b c : ℕ) : a + b + c = a + (b + c)",
+ "name": "MyNat.add_assoc",
+ "displayName": "add_assoc",
+ "content":
+ "`add_assoc a b c` is a proof\nthat `(a + b) + c = a + (b + c)`. Note that in Lean `(a + b) + c` prints\nas `a + b + c`, because the notation for addition is defined to be left\nassociative.",
+ "category": "+"}

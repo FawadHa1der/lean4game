@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Pow",
+ "displayName": "^",
+ "content":
+ "`Pow a b`, with notation `a ^ b`, is the usual\n  exponentiation of natural numbers. Internally it is\n  defined via two axioms:\n\n  * `pow_zero a : a ^ 0 = 1`\n\n  * `pow_succ a b : a ^ succ b = a ^ b * a`\n\nNote in particular that `0 ^ 0 = 1`.",
+ "category": "📖︎"}

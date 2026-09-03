@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ) : 0 ≠ MyNat.succ a",
+ "name": "MyNat.zero_ne_succ",
+ "displayName": "zero_ne_succ",
+ "content":
+ "`zero_ne_succ n` is the proof that `0 ≠ succ n`.\n\nIn Lean, `a ≠ b` is *defined to mean* `a = b → False`. Hence\n`zero_ne_succ n` is really a proof of `0 = succ n → False`.\nHere `False` is a generic false statement. This means that\nyou can `apply zero_ne_succ at h` if `h` is a proof of `0 = succ n`.",
+ "category": "Peano"}

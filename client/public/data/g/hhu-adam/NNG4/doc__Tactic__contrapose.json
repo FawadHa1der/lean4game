@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "contrapose",
+ "displayName": "contrapose",
+ "content":
+ "# Summary\n\nIf you have a hypothesis\n\n`h : a ≠ b`\n\nand goal\n\n`c ≠ d`\n\nthen `contrapose! h` replaces the set-up with its so-called \\\"contrapositive\\\":\na hypothesis\n\n`h : c = d`\n\nand goal\n\n`a = b`.",
+ "category": "📖︎"}

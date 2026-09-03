@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (m : ℕ) : 2 * m = m + m",
+ "name": "MyNat.two_mul",
+ "displayName": "two_mul",
+ "content": "`two_mul m` is the proof that `2 * m = m + m`.",
+ "category": "*"}

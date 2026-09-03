@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "symm",
+ "displayName": "symm",
+ "content":
+ "## Summary\n\nThe `symm` tactic will change a goal or hypothesis of\nthe form `X = Y` to `Y = X`. It will also work on `X ≠ Y`\nand on `X ↔ Y`.\n\n### Example\n\nIf the goal is `2 + 2 = 4` then `symm` will change it to `4 = 2 + 2`.\n\n### Example\n\nIf `h : 2 + 2 ≠ 5` then `symm at h` will change `h` to `5 ≠ 2 + 2`.",
+ "category": "📖︎"}

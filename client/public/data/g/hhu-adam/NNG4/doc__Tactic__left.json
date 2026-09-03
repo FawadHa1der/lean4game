@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "left",
+ "displayName": "left",
+ "content":
+ "# Summary\nThe `left` tactic changes a goal of `P ∨ Q` into a goal of `P`.\nUse it when your hypotheses guarantee that the reason that `P ∨ Q`\nis true is because in fact `P` is true.\n\nInternally this tactic is just `apply`ing a theorem\nsaying that $P \\implies P \\lor Q.$\n\nNote that this tactic can turn a solvable goal into an unsolvable\none.",
+ "category": "📖︎"}

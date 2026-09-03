@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a b : ℕ) (h : a * b ≠ 0) : b ≠ 0",
+ "name": "MyNat.mul_left_ne_zero",
+ "displayName": "mul_left_ne_zero",
+ "content": "`mul_left_ne_zero a b` is a proof that `a * b ≠ 0 → b ≠ 0`.",
+ "category": "*"}

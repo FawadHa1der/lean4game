@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a b : ℕ) (a✝ : a + b = 0) : a = 0",
+ "name": "MyNat.add_right_eq_zero",
+ "displayName": "add_right_eq_zero",
+ "content": "A proof that $a+b=0 \\implies a=0$.",
+ "category": "+"}

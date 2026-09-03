@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a b c : ℕ) : (a + b) * c = a * c + b * c",
+ "name": "MyNat.add_mul",
+ "displayName": "add_mul",
+ "content": "`add_mul a b c` is a proof that $(a+b)c=ac+bc$.",
+ "category": "*"}

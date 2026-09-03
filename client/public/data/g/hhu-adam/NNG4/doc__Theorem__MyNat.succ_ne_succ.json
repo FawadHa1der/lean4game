@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (m n : ℕ) (h : m ≠ n) : MyNat.succ m ≠ MyNat.succ n",
+ "name": "MyNat.succ_ne_succ",
+ "displayName": "succ_ne_succ",
+ "content": "`succ_ne_succ m n` is the proof that `m ≠ n → succ m ≠ succ n`.",
+ "category": "Peano"}

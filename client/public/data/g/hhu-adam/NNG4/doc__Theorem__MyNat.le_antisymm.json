@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (x y : ℕ) (hxy : x ≤ y) (hyx : y ≤ x) : x = y",
+ "name": "MyNat.le_antisymm",
+ "displayName": "le_antisymm",
+ "content":
+ "`le_antisymm x y` is a proof that if `x ≤ y` and `y ≤ x` then `x = y`.",
+ "category": "≤"}

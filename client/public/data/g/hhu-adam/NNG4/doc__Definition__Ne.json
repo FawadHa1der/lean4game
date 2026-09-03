@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Ne",
+ "displayName": "≠",
+ "content":
+ "`a ≠ b` is *notation* for `(a = b) → False`.\n\nThe reason this is mathematically\nvalid is that if `P` is a true-false statement then `P → False`\nis the logical opposite of `P`. Indeed `True → False` is false,\nand `False → False` is true!\n\nThe upshot of this is that you can treat `a ≠ b` in exactly\nthe same way as you treat any implication `P → Q`. For example,\nif your *goal* is of the form `a ≠ b` then you can make progress\nwith `intro h`, and if you have a hypothesis `h` of the\nform `a ≠ b` then you can `apply h at h1` if `h1` is a proof\nof `a = b`.",
+ "category": "📖︎"}

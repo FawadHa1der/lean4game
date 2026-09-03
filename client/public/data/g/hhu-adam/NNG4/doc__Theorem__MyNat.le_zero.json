@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (x : ℕ) (hx : x ≤ 0) : x = 0",
+ "name": "MyNat.le_zero",
+ "displayName": "le_zero",
+ "content": "`le_zero x` is a proof of `x ≤ 0 → x = 0`.",
+ "category": "≤"}

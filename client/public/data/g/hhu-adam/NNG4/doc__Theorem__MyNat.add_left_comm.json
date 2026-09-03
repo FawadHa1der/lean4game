@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b c : ℕ) : a + (b + c) = b + (a + c)",
+ "name": "MyNat.add_left_comm",
+ "displayName": "add_left_comm",
+ "content":
+ "`add_left_comm a b c` is a proof that `a + (b + c) = b + (a + c)`.",
+ "category": "+"}

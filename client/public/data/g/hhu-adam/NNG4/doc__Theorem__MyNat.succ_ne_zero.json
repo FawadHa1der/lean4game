@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ) : MyNat.succ a ≠ 0",
+ "name": "MyNat.succ_ne_zero",
+ "displayName": "succ_ne_zero",
+ "content": "`succ_ne_zero a` is a proof of `succ a ≠ 0`.",
+ "category": "Peano"}

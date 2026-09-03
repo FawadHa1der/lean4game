@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a m n : ℕ) : (a ^ m) ^ n = a ^ (m * n)",
+ "name": "MyNat.pow_pow",
+ "displayName": "pow_pow",
+ "content": "`pow_pow a m n` is a proof that $(a^m)^n=a^{mn}.$",
+ "category": "^"}

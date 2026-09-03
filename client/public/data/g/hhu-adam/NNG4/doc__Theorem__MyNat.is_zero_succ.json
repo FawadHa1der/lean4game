@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : (MyNat.succ n).is_zero = False",
+ "name": "MyNat.is_zero_succ",
+ "displayName": "is_zero_succ",
+ "content": "`is_zero_succ a` is a proof of `is_zero (succ a) = False`.",
+ "category": "Peano"}

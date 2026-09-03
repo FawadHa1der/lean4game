@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Mul",
+ "displayName": "*",
+ "content":
+ "`Mul a b`, with notation `a * b`, is the usual\n  product of natural numbers. Internally it is\n  via two axioms:\n\n  * `mul_zero a : a * 0 = 0`\n\n  * `mul_succ a b : a * succ b = a * b + a`\n\nOther theorems about naturals, such as `zero_mul`,\nare proved by induction from these two basic theorems.",
+ "category": "📖︎"}

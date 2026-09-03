@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b c : ℕ) : a + b + c = a + c + b",
+ "name": "MyNat.add_right_comm",
+ "displayName": "add_right_comm",
+ "content":
+ "`add_right_comm a b c` is a proof that `(a + b) + c = (a + c) + b`\n\nIn Lean, `a + b + c` means `(a + b) + c`, so this result gets displayed\nas `a + b + c = a + c + b`.",
+ "category": "+"}

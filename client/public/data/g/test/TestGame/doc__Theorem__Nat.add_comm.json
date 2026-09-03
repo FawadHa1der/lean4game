@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (n m : Nat) : n + m = m + n",
+ "name": "Nat.add_comm",
+ "displayName": "add_comm",
+ "content": "Commutativity on `ℕ`",
+ "category": "ℕ"}

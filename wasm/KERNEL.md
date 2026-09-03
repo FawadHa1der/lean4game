@@ -72,3 +72,41 @@ files), then rebuild the client.
 | nng4 | `sha256:79468e1d630aaa72…` | 428,342,216 | 1,466,401,477 |
 | testgame | `sha256:e0ca4af0c94f38f1…` | 413,600,695 | 1,412,288,317 |
 | init | unchanged `sha256:c70b5081d84df6d3…` | 107,410,668 | 342,124,389 |
+
+## Rebuilding from a clone
+
+What a clone contains: the client and server sources, the vendored
+substrate closure (pinned qed64 commit), the compiled gamedata for NNG4 and
+TestGame (`client/public/data`, tracked), the digest manifests of every
+served artifact, and the NNG4 port as a patch (`wasm/patches`). What it does
+not contain: the ~1.2 GB of served binaries — the Lean runtime chunks, the
+core library pack and the environment snapshots — which are published as the
+artifact bundle named in `wasm/artifacts/BUNDLE.json`.
+
+```bash
+git clone -b wasm64-port https://github.com/FawadHa1der/lean4game
+cd lean4game && npm ci
+scripts/fetch-artifacts.sh            # downloads + sha256-verifies the bundle into client/public
+scripts/stage-game-assets.sh          # worker scripts from the vendored closure (+ i18n/api staging)
+npm --workspace client run build
+node scripts/serve-dist.mjs           # http://localhost:3006 with the COOP/COEP headers the worker needs
+```
+
+`fetch-artifacts.sh --from-dir <dir>` takes local tarballs instead (what
+`scripts/pack-artifacts.sh <tag>` produces under `wasm/out/artifacts/<tag>`);
+`--base <url>` takes any HTTP host serving `<url>/<class>.tar`. The script
+refuses a tarball whose digest differs from `BUNDLE.json` and cross-checks
+the extracted runtime chunks against `runtime/runtime-manifest.json`.
+
+Publishing a new bundle (after a rebake or a runtime pin change):
+`scripts/pack-artifacts.sh <tag>` → upload the tarballs + `SHA256SUMS` as a
+GitHub release with that tag (the script prints the `gh release create`
+line) → commit the updated `BUNDLE.json` and manifests.
+
+Rebuilding the binaries themselves (rather than fetching them) needs the
+shared pipeline: the kernel repo's `wasm64-build/build.sh` (Docker,
+1.5–3 h cold, ≥10 GB VM memory) for the runtime; qed64's `pack.mjs` for the
+core pack; `compile-pkg.py` + `bake-snapshot.mjs` over the olean trees for
+the snapshots (the rebake section above). Note the snapshots are paired to
+the exact runtime build they were baked against: a rebuilt runtime is a
+different `buildId` and needs a rebake.

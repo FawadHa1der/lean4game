@@ -1,0 +1,6 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "trivial",
+ "displayName": "trivial",
+ "content": "# Summary\n\n`trivial` will solve the goal `True`.",
+ "category": "📖︎"}

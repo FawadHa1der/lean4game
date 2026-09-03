@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ) (ha : a ≠ 0) : 1 ≤ a",
+ "name": "MyNat.one_le_of_ne_zero",
+ "displayName": "one_le_of_ne_zero",
+ "content": "`one_le_of_ne_zero a` is a proof that `a ≠ 0 → 1 ≤ a`.",
+ "category": "≤"}

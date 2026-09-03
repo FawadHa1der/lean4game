@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (x : ℕ) : 0 ≤ x",
+ "name": "MyNat.zero_le",
+ "displayName": "zero_le",
+ "content": "`zero_le x` is a proof that `0 ≤ x`.",
+ "category": "≤"}

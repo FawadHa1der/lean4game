@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b n : ℕ) (a✝ : n + a = n + b) : a = b",
+ "name": "MyNat.add_left_cancel",
+ "displayName": "add_left_cancel",
+ "content":
+ "`add_left_cancel a b n` is the theorem that $n+a=n+b \\implies a=b.$",
+ "category": "+"}

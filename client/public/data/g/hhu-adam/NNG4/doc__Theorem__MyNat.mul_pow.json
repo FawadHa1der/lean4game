@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a b n : ℕ) : (a * b) ^ n = a ^ n * b ^ n",
+ "name": "MyNat.mul_pow",
+ "displayName": "mul_pow",
+ "content": "`mul_pow a b n` is a proof that $(ab)^n=a^nb^n.$",
+ "category": "^"}

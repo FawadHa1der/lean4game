@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "right",
+ "displayName": "right",
+ "content":
+ "# Summary\nThe `right` tactic changes a goal of `P ∨ Q` into a goal of `Q`.\nUse it when your hypotheses guarantee that the reason that `P ∨ Q`\nis true is because in fact `Q` is true.\n\nInternally this tactic is just `apply`ing a theorem\nsaying that $Q \\implies P \\lor Q.$\n\nNote that this tactic can turn a solvable goal into an unsolvable\none.",
+ "category": "📖︎"}

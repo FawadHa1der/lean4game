@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (m n : ℕ) : m ^ MyNat.succ n = m ^ n * m",
+ "name": "MyNat.pow_succ",
+ "displayName": "pow_succ",
+ "content":
+ "`pow_succ a b : a ^ (succ b) = a ^ b * a` is one of the\ntwo axioms defining exponentiation in this game.",
+ "category": "^"}

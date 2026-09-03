@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b : ℕ) (h : a * b ≠ 0) : a ≤ a * b",
+ "name": "MyNat.le_mul_right",
+ "displayName": "le_mul_right",
+ "content":
+ "`le_mul_right a b` is a proof that `a * b ≠ 0 → a ≤ a * b`.\n\nIt's one way of saying that a divisor of a positive number\nhas to be at most that number.",
+ "category": "≤"}

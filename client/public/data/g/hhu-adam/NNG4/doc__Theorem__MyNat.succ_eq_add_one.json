@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : MyNat.succ n = n + 1",
+ "name": "MyNat.succ_eq_add_one",
+ "displayName": "succ_eq_add_one",
+ "content": "`succ_eq_add_one n` is the proof that `succ n = n + 1`.",
+ "category": "+"}

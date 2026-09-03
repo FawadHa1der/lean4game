@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (x y : ℕ) (a✝ : x + y = y) : x = 0",
+ "name": "MyNat.add_left_eq_self",
+ "displayName": "add_left_eq_self",
+ "content":
+ "`add_left_eq_self x y` is the theorem that $x + y = y \\implies x=0.$",
+ "category": "+"}

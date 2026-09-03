@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ) : a + 0 = a",
+ "name": "MyNat.add_zero",
+ "displayName": "add_zero",
+ "content":
+ "`add_zero a` is a proof that `a + 0 = a`.\n\n## Summary\n\n`add_zero` is really a function, which\neats a number, and returns a proof of a theorem\nabout that number. For example `add_zero 37` is\na proof that `37 + 0 = 37`.\n\nThe `rw` tactic will accept `rw [add_zero]`\nand will try to figure out which number you omitted\nto input.\n\n## Details\n\nA mathematician sometimes thinks of `add_zero`\nas \\\"one thing\\\", namely a proof of $\\forall n ∈ ℕ, n + 0 = n$.\nThis is just another way of saying that it's a function which\ncan eat any number n and will return a proof that `n + 0 = n`.",
+ "category": "+"}

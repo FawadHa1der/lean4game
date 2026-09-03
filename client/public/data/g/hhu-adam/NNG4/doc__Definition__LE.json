@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "LE",
+ "displayName": "≤",
+ "content":
+ "`a ≤ b` is *notation* for `∃ c, b = a + c`.\n\nBecause this game doesn't have negative numbers, this definition\nis mathematically valid.\n\nThis means that if you have a goal of the form `a ≤ b` you can\nmake progress with the `use` tactic, and if you have a hypothesis\n`h : a ≤ b`, you can make progress with `cases h with c hc`.",
+ "category": "📖︎"}

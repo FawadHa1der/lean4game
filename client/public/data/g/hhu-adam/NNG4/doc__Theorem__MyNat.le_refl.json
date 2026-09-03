@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (x : ℕ) : x ≤ x",
+ "name": "MyNat.le_refl",
+ "displayName": "le_refl",
+ "content":
+ "`le_refl x` is a proof of `x ≤ x`.\n\nThe reason for the name is that this lemma is \"reflexivity of $\\le$\"",
+ "category": "≤"}

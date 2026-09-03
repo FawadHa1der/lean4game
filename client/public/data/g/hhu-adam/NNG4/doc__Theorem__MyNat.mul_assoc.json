@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b c : ℕ) : a * b * c = a * (b * c)",
+ "name": "MyNat.mul_assoc",
+ "displayName": "mul_assoc",
+ "content":
+ "`mul_assoc a b c` is a proof that `(a * b) * c = a * (b * c)`.\n\nNote that when Lean says `a * b * c` it means `(a * b) * c`.\n\nNote that `(a * b) * c = a * (b * c)` cannot be proved by \\\"pure thought\\\":\nfor example subtraction is not associative, as `(6 - 2) - 1` is not\nequal to `6 - (2 - 1)`.",
+ "category": "*"}

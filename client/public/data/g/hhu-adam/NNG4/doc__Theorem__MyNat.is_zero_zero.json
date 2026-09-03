@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " : MyNat.is_zero 0 = True",
+ "name": "MyNat.is_zero_zero",
+ "displayName": "is_zero_zero",
+ "content": "`is_zero_zero` is a proof of `is_zero 0 = True`.",
+ "category": "Peano"}

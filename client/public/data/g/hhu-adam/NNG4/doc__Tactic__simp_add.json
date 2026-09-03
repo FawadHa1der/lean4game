@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "simp_add",
+ "displayName": "simp_add",
+ "content":
+ "# Overview\n\nOur home-made tactic `simp_add` will solve arbitrary goals of\nthe form `a + (b + c) + (d + e) = e + (d + (c + b)) + a`.",
+ "category": "📖︎"}

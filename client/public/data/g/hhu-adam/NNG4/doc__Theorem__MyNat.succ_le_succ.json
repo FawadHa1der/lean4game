@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (x y : ℕ) (hx : MyNat.succ x ≤ MyNat.succ y) : x ≤ y",
+ "name": "MyNat.succ_le_succ",
+ "displayName": "succ_le_succ",
+ "content":
+ "`succ_le_succ x y` is a proof that if `succ x ≤ succ y` then `x ≤ y`.",
+ "category": "≤"}

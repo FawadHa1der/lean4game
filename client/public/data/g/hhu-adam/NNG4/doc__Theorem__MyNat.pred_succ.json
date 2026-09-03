@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : (MyNat.succ n).pred = n",
+ "name": "MyNat.pred_succ",
+ "displayName": "pred_succ",
+ "content": "`pred_succ n` is a proof of `pred (succ n) = n`.",
+ "category": "Peano"}

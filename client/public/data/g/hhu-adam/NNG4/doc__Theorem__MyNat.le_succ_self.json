@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (x : ℕ) : x ≤ MyNat.succ x",
+ "name": "MyNat.le_succ_self",
+ "displayName": "le_succ_self",
+ "content": "`le_succ_self x` is a proof that `x ≤ succ x`.",
+ "category": "≤"}

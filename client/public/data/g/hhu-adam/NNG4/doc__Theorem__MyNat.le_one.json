@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (x : ℕ) (hx : x ≤ 1) : x = 0 ∨ x = 1",
+ "name": "MyNat.le_one",
+ "displayName": "le_one",
+ "content": "`le_one x` is a proof that if `x ≤ 1` then `x = 0` or `x = 1`.",
+ "category": "≤"}

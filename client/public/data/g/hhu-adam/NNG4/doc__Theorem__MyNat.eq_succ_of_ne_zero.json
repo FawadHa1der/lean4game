@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ) (ha : a ≠ 0) : ∃ n, a = MyNat.succ n",
+ "name": "MyNat.eq_succ_of_ne_zero",
+ "displayName": "eq_succ_of_ne_zero",
+ "content": "`eq_succ_of_ne_zero a` is a proof that `a ≠ 0 → ∃ n, a = succ n`.",
+ "category": "≤"}

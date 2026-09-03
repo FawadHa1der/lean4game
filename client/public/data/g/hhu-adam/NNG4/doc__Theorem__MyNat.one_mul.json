@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (m : ℕ) : 1 * m = m",
+ "name": "MyNat.one_mul",
+ "displayName": "one_mul",
+ "content": "`one_mul m` is the proof `1 * m = m`.",
+ "category": "*"}

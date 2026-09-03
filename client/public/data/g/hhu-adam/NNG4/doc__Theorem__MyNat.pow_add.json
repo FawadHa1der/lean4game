@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a m n : ℕ) : a ^ (m + n) = a ^ m * a ^ n",
+ "name": "MyNat.pow_add",
+ "displayName": "pow_add",
+ "content": "`pow_add a m n` is a proof that $a^{m+n}=a^ma^n.$",
+ "category": "^"}

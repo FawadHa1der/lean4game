@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (x y : ℕ) (h : x * y = 1) : x = 1",
+ "name": "MyNat.mul_right_eq_one",
+ "displayName": "mul_right_eq_one",
+ "content": "`mul_right_eq_one a b` is a proof that `a * b = 1 → a = 1`.",
+ "category": "*"}

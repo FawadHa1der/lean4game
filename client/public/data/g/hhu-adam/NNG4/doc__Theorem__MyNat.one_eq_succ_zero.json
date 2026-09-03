@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " : 1 = MyNat.succ 0",
+ "name": "MyNat.one_eq_succ_zero",
+ "displayName": "one_eq_succ_zero",
+ "content": "`one_eq_succ_zero` is a proof of `1 = succ 0`.",
+ "category": "012"}

@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a b : ℕ) : a + b = b + a",
+ "name": "MyNat.add_comm",
+ "displayName": "add_comm",
+ "content": "`add_comm a b` is a proof of `a + b = b + a`.",
+ "category": "+"}

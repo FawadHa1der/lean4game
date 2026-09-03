@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "simp",
+ "displayName": "simp",
+ "content":
+ "# Overview\n\nLean's simplifier, `simp`, will rewrite every lemma\ntagged with `simp` and every lemma fed to it by the user, as much as it can.\nFurthermore, it will attempt to order variables into an internal order if fed\nlemmas such as `add_comm`, so that it does not go into an infinite loop.",
+ "category": "📖︎"}

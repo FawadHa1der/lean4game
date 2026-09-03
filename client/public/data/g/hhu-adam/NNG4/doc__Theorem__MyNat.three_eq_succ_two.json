@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " : 3 = MyNat.succ 2",
+ "name": "MyNat.three_eq_succ_two",
+ "displayName": "three_eq_succ_two",
+ "content": "`three_eq_succ_two` is a proof of `3 = succ 2`.",
+ "category": "012"}

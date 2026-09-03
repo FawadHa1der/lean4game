@@ -1,0 +1,96 @@
+{"worlds":
+ {"nodes":
+  {"Tutorial":
+   {"title": "Tutorial World",
+    "name": "Tutorial",
+    "introduction":
+    "Welcome to tutorial world! In this world we learn the basics\nof proving theorems. The boss level of this world\nis the theorem `2 + 2 = 4`.\n\nYou prove theorems by solving puzzles using tools called *tactics*.\nThe aim is to prove the theorem by applying tactics\nin the right order.\n\nLet's learn some basic tactics. Click on \"Start\" below\nto begin your quest.",
+    "image": ""},
+   "Power":
+   {"title": "Power World",
+    "name": "Power",
+    "introduction":
+    "This world introduces exponentiation. If you want to define `37 ^ n`\nthen, as always, you will need to know what `37 ^ 0` is, and\nwhat `37 ^ (succ d)` is, given only `37 ^ d`.\n\nYou can probably guess the names of the general theorems:\n\n  * `pow_zero (a : ℕ) : a ^ 0 = 1`\n  * `pow_succ (a b : ℕ) : a ^ succ b = a ^ b * a`\n\nUsing only these, can you get past the final boss level?\n\nThe levels in this world were designed by Sian Carey, a UROP student\nat Imperial College London, funded by a Mary Lister McCammon Fellowship\nin the summer of 2019. Thanks to Sian and also thanks to Imperial\nCollege for funding her.",
+    "image": ""},
+   "Multiplication":
+   {"title": "Multiplication World",
+    "name": "Multiplication",
+    "introduction":
+    "How should we define `37 * x`? Just like addition, we need to give definitions\nwhen $x=0$ and when $x$ is a successor.\n\nThe zero case is easy: we define `37 * 0` to be `0`. Now say we know\n`37 * d`. What should `37 * succ d` be? Well, that's $(d+1)$ $37$s,\nso it should be `37 * d + 37`.\n\nHere are the definitions in Lean.\n\n  * `mul_zero a : a * 0 = 0`\n  * `mul_succ a d : a * succ d = a * d + a`\n\nIn this world, we must not only prove facts about multiplication like `a * b = b * a`,\nwe must also prove facts about how multiplication interacts with addition, like `a * (b + c) = a * b + a * c`.\nLet's get started.",
+    "image": ""},
+   "LessOrEqual":
+   {"title": "≤ World",
+    "name": "LessOrEqual",
+    "introduction":
+    "In this world we define `a ≤ b` and prove standard facts\nabout it, such as \"if `a ≤ b` and `b ≤ c` then `a ≤ c`.\"\n\nThe definition of `a ≤ b` is \"there exists a number `c`\nsuch that `b = a + c`. \" So we're going to have to learn\na tactic to prove \"exists\" theorems, and another one\nto use \"exists\" hypotheses.\n\nClick on \"Start\" to proceed.",
+    "image": ""},
+   "Implication":
+   {"title": "Implication World",
+    "name": "Implication",
+    "introduction":
+    "We've proved that $2+2=4$; in Implication World we'll learn\nhow to prove $2+2\\neq 5$.\n\nIn Addition World we proved *equalities* like $x + y = y + x$.\nIn this second tutorial world we'll learn some new tactics,\nenabling us to prove *implications*\nlike $x+1=4 \\implies x=3.$\n\nWe'll also learn two new fundamental facts about\nnatural numbers, which Peano introduced as axioms.\n\nClick on \"Start\" to proceed.",
+    "image": ""},
+   "Algorithm":
+   {"title": "Algorithm World",
+    "name": "Algorithm",
+    "introduction":
+    "Proofs like $2+2=4$ and $a+b+c+d+e=e+d+c+b+a$ are very tedious to do by hand.\nIn Algorithm World we learn how to get the computer to do them for us.\n\nClick on \"Start\" to proceed.",
+    "image": ""},
+   "AdvMultiplication":
+   {"title": "Advanced Multiplication World",
+    "name": "AdvMultiplication",
+    "introduction":
+    "Advanced *Addition* World proved various implications\ninvolving addition, such as `x + y = 0 → x = 0` and `x + y = x → y = 0`.\nThese lemmas were used to prove basic facts about ≤ in ≤ World.\n\nIn Advanced Multiplication World we prove analogous\nfacts about multiplication, such as `x * y = 1 → x = 1`, and\n`x * y = x → y = 1` (assuming `x ≠ 0` in the latter result). This will prepare\nus for Divisibility World.\n\nMultiplication World is more complex than Addition World. In the same\nway, Advanced Multiplication world is more complex than Advanced Addition\nWorld. One reason for this is that certain intermediate results are only\ntrue under the additional hypothesis that one of the variables is non-zero.\nThis causes some unexpected extra twists.",
+    "image": ""},
+   "AdvAddition":
+   {"title": "Advanced Addition World",
+    "name": "AdvAddition",
+    "introduction":
+    "In Advanced Addition World we will prove some basic\naddition facts such as $x+y=x\\implies y=0$. The theorems\nproved in this world will be used to build\na theory of inequalities in `≤` World.\n\nClick on \"Start\" to proceed.",
+    "image": ""},
+   "Addition":
+   {"title": "Addition World",
+    "name": "Addition",
+    "introduction":
+    "Welcome to Addition World! In this world we'll learn the `induction` tactic.\nThis will enable us to defeat the boss level of this world, namely `x + y = y + x`.\n\nThe tactics `rw`, `rfl` and `induction` are the only tactics you'll need to\nbeat all the levels in Addition World, Multiplication World, and Power World.\nPower World contains the final boss of the game.\n\nThere are plenty more tactics in this game, but you'll only need to know them if you\nwant to explore the game further (for example if you decide to 100%\nthe game).",
+    "image": ""}},
+  "edges":
+  [["Implication", "AdvAddition"],
+   ["Implication", "Algorithm"],
+   ["AdvAddition", "LessOrEqual"],
+   ["Tutorial", "Addition"],
+   ["Multiplication", "Power"],
+   ["LessOrEqual", "AdvMultiplication"],
+   ["Multiplication", "AdvMultiplication"],
+   ["Addition", "Multiplication"],
+   ["Addition", "Implication"]]},
+ "worldSize":
+ {"Tutorial": 8,
+  "Power": 10,
+  "Multiplication": 9,
+  "LessOrEqual": 11,
+  "Implication": 11,
+  "Algorithm": 9,
+  "AdvMultiplication": 10,
+  "AdvAddition": 6,
+  "Addition": 5},
+ "title": "Natural Number Game",
+ "tile":
+ {"worlds": 9,
+  "title": "Natural Number Game",
+  "short": "The classical introduction game for Lean.",
+  "prerequisites": [],
+  "long":
+  "In this game you recreate the natural numbers $\\mathbb{N}$ from the Peano axioms,\nlearning the basics about theorem proving in Lean.\n\nThis is a good first introduction to Lean!",
+  "levels": 79,
+  "languages": ["en", "zh", "uk", "it", "fr"],
+  "image": "images/cover.png"},
+ "settings": {"unbundleHyps": false},
+ "name": "MyGame",
+ "introduction":
+ "# Welcome to the Natural Number Game\n#### An introduction to mathematical proof.\n\nIn this game, we will build the basic theory of the natural\nnumbers `{0,1,2,3,4,...}` from scratch. Our first goal is to prove\nthat `2 + 2 = 4`. Next we'll prove that `x + y = y + x`.\nAnd at the end we'll see if we can prove Fermat's Last Theorem.\nWe'll do this by solving levels of a computer puzzle game called Lean.\n\n# Read this.\n\nLearning how to use an interactive theorem prover takes time.\nTests show that the people who get the most out of this game are\nthose who read the help texts like this one.\n\nTo start, click on \"Tutorial World\".\n\nNote: this is a new Lean 4 version of the game containing several\nworlds which were not present in the old Lean 3 version. More new worlds\nsuch as Strong Induction World, Even/Odd World and Prime Number World\nare in development; if you want to see their state or even help out, checkout\nout the [issues in the github repo](https://github.com/leanprover-community/NNG4/issues).\n\n## More\n\nClick on the three lines in the top right and select \"Game Info\" for resources,\nlinks, and ways to interact with the Lean community.",
+ "info":
+ "*Game version: 4.3*\n\n*Recent additions: bug fixes*\n\n## Progress saving\n\nThe game stores your progress in your local browser storage.\nIf you delete it, your progress will be lost!\n\nWarning: In most browsers, deleting cookies will also clear the local storage\n(or \"local site data\"). Make sure to download your game progress first!\n\n## Credits\n\n* **Creators:** Kevin Buzzard, Jon Eugster\n* **Original Lean3-version:** Kevin Buzzard, Mohammad Pedramfar\n* **Game Engine:** Alexander Bentkamp, Jon Eugster, Patrick Massot\n* **Additional levels:** Sian Carey, Ivan Farabella, Archie Browne.\n* **Additional thanks:** All the student beta testers, all the schools\nwho invited Kevin to speak, and all the schoolkids who asked him questions\nabout the material.\n\n## Resources\n\n* The [Lean Zulip chat](https://leanprover.zulipchat.com/) forum\n* [Original Lean3 version](https://github.com/ImperialCollegeLondon/natural_number_game/) (no longer maintained)\n\n## Problems?\n\nPlease ask any questions about this game in the\n[Lean Zulip chat](https://leanprover.zulipchat.com/) forum, for example in\nthe stream \"New Members\". The community will happily help. Note that\nthe Lean Zulip chat is a professional research forum.\nPlease use your full real name there, stay on topic, and be nice. If you're\nlooking for somewhere less formal (e.g. you want to post natural number\ngame memes) then head on over to the [Lean Discord](https://discord.gg/WZ9bs9UCvx).\n\nAlternatively, if you experience issues / bugs you can also open github issues:\n\n* For issues with the game engine, please open an\n[issue at the lean4game](https://github.com/leanprover-community/lean4game/issues) repo.\n* For issues about the game's content, please open an\n[issue at the NNG](https://github.com/hhu-adam/NNG4/issues) repo.",
+ "image": "",
+ "conclusion": "",
+ "authors": []}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (x : ℕ) (hx : x ≤ 2) : x = 0 ∨ x = 1 ∨ x = 2",
+ "name": "MyNat.le_two",
+ "displayName": "le_two",
+ "content":
+ "`le_two x` is a proof that if `x ≤ 2` then `x = 0` or `x = 1` or `x = 2`.",
+ "category": "≤"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (m : ℕ) : m ^ 0 = 1",
+ "name": "MyNat.pow_zero",
+ "displayName": "pow_zero",
+ "content":
+ "`pow_zero a : a ^ 0 = 1` is one of the two axioms\ndefining exponentiation in this game.",
+ "category": "^"}

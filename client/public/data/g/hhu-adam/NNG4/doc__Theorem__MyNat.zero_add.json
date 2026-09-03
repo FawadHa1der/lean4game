@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : 0 + n = n",
+ "name": "MyNat.zero_add",
+ "displayName": "zero_add",
+ "content":
+ "`zero_add n` is the proof of `0 + n = n`.\n\n`zero_add` is a `simp` lemma, because replacing `0 + n` by `n`\nis almost always what you want to do if you're simplifying an expression.",
+ "category": "+"}

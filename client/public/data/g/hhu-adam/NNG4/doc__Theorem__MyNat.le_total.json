@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (x y : ℕ) : x ≤ y ∨ y ≤ x",
+ "name": "MyNat.le_total",
+ "displayName": "le_total",
+ "content": "`le_total x y` is a proof that `x ≤ y` or `y ≤ x`.",
+ "category": "≤"}

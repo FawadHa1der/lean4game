@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b : ℕ) (h : a * b = 0) : a = 0 ∨ b = 0",
+ "name": "MyNat.mul_eq_zero",
+ "displayName": "mul_eq_zero",
+ "content":
+ "`mul_eq_zero a b` is a proof that if `a * b = 0` then `a = 0` or `b = 0`.",
+ "category": "*"}

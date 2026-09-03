@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a b : ℕ) : a * MyNat.succ b = a * b + a",
+ "name": "MyNat.mul_succ",
+ "displayName": "mul_succ",
+ "content": "`mul_succ a b` is the proof that `a * succ b = a * b + a`.",
+ "category": "*"}

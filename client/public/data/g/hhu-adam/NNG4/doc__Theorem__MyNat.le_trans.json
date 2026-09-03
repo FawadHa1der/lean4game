@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (x y z : ℕ) (hxy : x ≤ y) (hyz : y ≤ z) : x ≤ z",
+ "name": "MyNat.le_trans",
+ "displayName": "le_trans",
+ "content":
+ "`le_trans x y z` is a proof that if `x ≤ y` and `y ≤ z` then `x ≤ z`.\nMore precisely, it is a proof that `x ≤ y → (y ≤ z → x ≤ z)`. In words,\nIf $x \\le y$ then (pause) if $y \\le z$ then $x \\le z$.\n\n## A note on associativity\n\nIn Lean, `a + b + c` means `(a + b) + c`, because `+` is left associative. However\n`→` is right associative. This means that `x ≤ y → y ≤ z → x ≤ z` in Lean means\nexactly that `≤` is transitive. This is different to how mathematicians use\n$P \\implies Q \\implies R$; for them, this usually means that $P \\implies Q$\nand $Q \\implies R$.",
+ "category": "≤"}

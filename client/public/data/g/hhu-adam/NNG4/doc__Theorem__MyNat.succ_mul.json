@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b : ℕ) : MyNat.succ a * b = a * b + b",
+ "name": "MyNat.succ_mul",
+ "displayName": "succ_mul",
+ "content":
+ "`succ_mul a b` is the proof that `succ a * b = a * b + b`.\n\nIt could be deduced from `mul_succ` and `mul_comm`, however this argument\nwould be circular because the proof of `mul_comm` uses `mul_succ`.",
+ "category": "*"}

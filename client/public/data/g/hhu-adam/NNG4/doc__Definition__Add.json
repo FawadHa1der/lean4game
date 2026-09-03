@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Add",
+ "displayName": "+",
+ "content":
+ "`Add a b`, with notation `a + b`, is\nthe usual sum of natural numbers. Internally it is defined\nvia the following two hypotheses:\n\n* `add_zero a : a + 0 = a`\n\n* `add_succ a b : a + succ b = succ (a + b)`\n\nOther theorems about naturals, such as `zero_add a : 0 + a = a`, are proved\nby induction using these two basic theorems.",
+ "category": "📖︎"}

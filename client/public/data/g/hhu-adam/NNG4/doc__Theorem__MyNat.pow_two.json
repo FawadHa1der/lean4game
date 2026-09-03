@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ) : a ^ 2 = a * a",
+ "name": "MyNat.pow_two",
+ "displayName": "pow_two",
+ "content": "`pow_two a` says that `a ^ 2 = a * a`.",
+ "category": "^"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "have",
+ "displayName": "have",
+ "content":
+ "# Summary\n\nThe `have` tactic can be used to add new hypotheses to a level, but of course\nyou have to prove them.\n\n\n## Example\n\nThe simplest usage is like this. If you have `a` in your context and you execute\n\n`have ha : a = 0`\n\nthen you will get a new goal `a = 0` to prove, and after you've proved\nit you will have a new hypothesis `ha : a = 0` in your original goal.\n\n## Example\n\nIf you already have a proof of what you want to `have`, you\ncan just create it immediately. For example, if you have `a` and `b`\nnumber objects, then\n\n`have h2 : succ a = succ b → a = b := succ_inj a b`\n\nwill directly add a new hypothesis `h2 : succ a = succ b → a = b`\nto the context, because you just supplied the proof of it (`succ_inj a b`).\n\n## Example\n\nIf you have a proof to hand, then you don't even need to state what you\nare proving. For example\n\n`have h2 := succ_inj a b`\n\nwill add `h2 : succ a = succ b → a = b` as a hypothesis.",
+ "category": "📖︎"}

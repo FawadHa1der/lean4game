@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " : 0 ≠ 1",
+ "name": "MyNat.zero_ne_one",
+ "displayName": "zero_ne_one",
+ "content": "`zero_ne_one` is a proof of `0 ≠ 1`.",
+ "category": "012"}

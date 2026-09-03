@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b c : ℕ) : a * (b + c) = a * b + a * c",
+ "name": "MyNat.mul_add",
+ "displayName": "mul_add",
+ "content":
+ "Multiplication distributes\nover addition on the left.\n\n`mul_add a b c` is the proof that `a * (b + c) = a * b + a * c`.",
+ "category": "*"}

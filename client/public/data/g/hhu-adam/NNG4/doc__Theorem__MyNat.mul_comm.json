@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b : ℕ) : a * b = b * a",
+ "name": "MyNat.mul_comm",
+ "displayName": "mul_comm",
+ "content":
+ "`mul_comm` is the proof that multiplication is commutative. More precisely,\n`mul_comm a b` is the proof that `a * b = b * a`.",
+ "category": "*"}

@@ -1,0 +1,31 @@
+{
+ "schema": "lean4game.artifact-bundle/v1",
+ "tag": "artifacts-2026-09-02",
+ "runtime": "wasm64-303e5c765fc415ed",
+ "snapshots": "init=c70b5081d84df6d3,nng4=79468e1d630aaa72,testgame=e0ca4af0c94f38f1",
+ "extract_into": "client/public",
+ "tarballs": [
+  {
+   "class": "runtime",
+   "file": "runtime.tar",
+   "bytes": 154176512,
+   "sha256": "c19b31348f38245882c08db5a5f39a9593cfc013a408fe160ef5db3500a5bcfd",
+   "files": 11
+  },
+  {
+   "class": "profiles",
+   "file": "profiles.tar",
+   "bytes": 120668672,
+   "sha256": "58825dc91de5c7f57fc418f068e8f68a264f09fdc2cd3960df7584658bb47288",
+   "files": 10
+  },
+  {
+   "class": "snapshots",
+   "file": "snapshots.tar",
+   "bytes": 949366272,
+   "sha256": "a83fc00b1108ce13b4d2fc1cac468aff523b84eef5d5c8ccdeae938017be6bff",
+   "files": 4
+  }
+ ],
+ "note": "Tarballs are plain tar of client/public/<class>/ (paths relative to client/public). Per-file digests live in the tracked manifests (runtime/runtime-manifest.json, snapshots/index.json, profiles/lean-core.manifest.json)."
+}

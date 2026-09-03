@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " : 0 ^ 0 = 1",
+ "name": "MyNat.zero_pow_zero",
+ "displayName": "zero_pow_zero",
+ "content":
+ "Mathematicians sometimes argue that `0 ^ 0 = 0` is also\na good convention. But it is not a good convention in this\ngame; all the later levels come out beautifully with the\nconvention that `0 ^ 0 = 1`.",
+ "category": "^"}

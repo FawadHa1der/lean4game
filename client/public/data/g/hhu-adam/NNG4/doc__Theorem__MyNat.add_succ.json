@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a d : ℕ) : a + MyNat.succ d = MyNat.succ (a + d)",
+ "name": "MyNat.add_succ",
+ "displayName": "add_succ",
+ "content": "`add_succ a b` is the proof of `a + succ b = succ (a + b)`.",
+ "category": "+"}

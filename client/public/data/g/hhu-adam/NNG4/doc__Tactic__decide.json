@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "decide",
+ "displayName": "decide",
+ "content":
+ "# Summary\n\n`decide` will attempt to solve a goal if it can find an algorithm which it\ncan run to solve it.\n\n## Example\n\nA term of type `DecidableEq ℕ` is an algorithm to decide whether two naturals\nare equal or different. Hence, once this term is made and made into an `instance`,\nthe `decide` tactic can use it to solve goals of the form `a = b` or `a ≠ b`.",
+ "category": "📖︎"}
