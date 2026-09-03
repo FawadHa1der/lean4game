@@ -103,6 +103,72 @@ Publishing a new bundle (after a rebake or a runtime pin change):
 GitHub release with that tag (the script prints the `gh release create`
 line) → commit the updated `BUNDLE.json` and manifests.
 
+## Building the artifacts from source (optional submodules)
+
+Two submodules pin the source side of the pipeline; both are marked
+`update = none`, so a plain `git clone` / `git submodule update --init`
+leaves them empty and running the game from the bundle never needs them:
+
+| path | repo | pinned at | what it is |
+| --- | --- | --- | --- |
+| `wasm/kernel` | FawadHa1der/lean4, branch `qed64-wasm64` | `852d1b9` (= KERNEL-PIN) | the patched Lean fork + `wasm64-build/` (Docker toolchain, build.sh, gate) |
+| `wasm/qed64` | FawadHa1der/QED64, branch `main` | `8e708dc` (= QED64-PIN) | the pipeline: chunk-runtime, pack, bake-snapshot, node-runner, snapshot-probe |
+
+Check them out explicitly when building from source (the kernel is a
+~700 MB checkout):
+
+```bash
+git submodule update --init --checkout wasm/kernel wasm/qed64
+```
+
+Then `wasm/build-from-source.sh` drives the lanes end to end; `--plan`
+prints every step with its cwd and environment without running anything,
+`--lanes` selects a subset (e.g. `games,bake,bundle` after a game change):
+
+| lane | does | needs |
+| --- | --- | --- |
+| preflight | pins, clean tree, Docker memory, Node ≥ 24, disk, inputs | — |
+| runtime | kernel `wasm64-build/build.sh` in Docker → gate → chunk into a staging dir; build id = `wasm64-` + sha256(lean.wasm)[:16] | Docker ≥ 10 GiB, 1.5–3 h cold |
+| core | Lean core library pack from stage1's `Init` facets (`pack.mjs`), or `--reuse-core-pack` | — |
+| trees | unpack the core pack and the **Mathlib pack** into an olean tree; compile lean-i18n (`vendor/i18n`) and `server/GameServer` with the native stage0; overlay Lake | the Mathlib pack (below) |
+| games | compile `cypress/TestGame` and `games-src/NNG4` (cloned + patched if absent) → gamedata + per-game trees | — |
+| bake | `bake-snapshot.mjs` for init, testgame, nng4 against that stage1; `--verify-snapshots` runs a Runner document through `snapshot-probe.mjs` | ~40 GB scratch |
+| bundle | stage into `client/public`, `stage-game-assets.sh`, client build, `pack-artifacts.sh` | — |
+
+Inputs the script does not produce:
+
+- **The Mathlib olean pack** (`mathlib-essential`, 4,192 modules, ~1 GB
+  transfer / 3.5 GB raw). Its digest manifest is tracked in qed64
+  (`public/profiles/mathlib-essential.manifest.json`); the part files come
+  from the qed64 artifact host. Point `MATHLIB_PACK_DIR` at a directory
+  holding them. Compiling Mathlib for this fork natively is hours of work
+  and its compatibility patch lives outside any repository, so it is out
+  of scope here.
+- Docker, and the network for the first `docker build` (base image
+  `emscripten/emsdk:6.0.5`, pinned by tag only).
+
+Known limits, on purpose visible in the script's output:
+
+- The Mathlib oleans were compiled against the *served* Lean core. The
+  core lane compares stage1's `Init` facets with the tracked core manifest
+  and warns when they differ (`--strict` stops); a difference means the
+  baked snapshots may not import Mathlib and the pack would need
+  regenerating. Measured 2026-09-03 against a kernel build several commits
+  newer than the pin: 3,145 facets identical, 0 different — the core
+  facets are stable across kernel rebuilds in practice; the check is the
+  guard for the day that stops being true.
+- Bit-reproducibility of the runtime at the pin has not been demonstrated
+  (the served build even records a source revision older than the pin). A
+  rebuild is therefore treated as a **new build id**: every snapshot is
+  rebaked against it and the whole bundle is republished; nothing is mixed
+  with the shipped chunks.
+- The lanes were assembled from the commands that produced today's
+  artifacts (bake, compile, chunk: proven by logs) and from the kernel
+  repo's build script (never yet run from this repo). Expect to iterate on
+  the first full run. Bumping either submodule is a pin change: the runtime pin implies
+a full rebake (snapshots pair to the runtime build id), the qed64 pin
+should move together with the vendored closure (`scripts/sync-qed64.sh`).
+
 Rebuilding the binaries themselves (rather than fetching them) needs the
 shared pipeline: the kernel repo's `wasm64-build/build.sh` (Docker,
 1.5–3 h cold, ≥10 GB VM memory) for the runtime; qed64's `pack.mjs` for the
