@@ -257,6 +257,8 @@ lane_games() {
   [ "$PLAN" = 1 ] || { rm -rf "$PKGS/testgame"; mkdir -p "$G/cypress/TestGame/.lake/gamedata"; }
   compile_pkg games "$G/cypress/TestGame" "$PKGS/testgame" Game "$TREES/lib-tree-gamebase:$PKGS/testgame"
   check "TestGame gamedata written" test -f "$G/cypress/TestGame/.lake/gamedata/game.json"
+  # the compile regenerates the tracked translation template (timestamps only); keep the tree clean
+  run games "$G" -- bash -c "git -C '$G' checkout -- cypress/TestGame/.i18n/en/project.pot 2>/dev/null || true"
   # NNG4 (fork branch, or upstream + the tracked patch)
   if [ ! -d "$G/games-src/NNG4" ]; then
     run games "$G" -- git clone https://github.com/hhu-adam/NNG4 "$G/games-src/NNG4"

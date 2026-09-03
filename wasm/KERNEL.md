@@ -162,10 +162,17 @@ Known limits, on purpose visible in the script's output:
   rebuild is therefore treated as a **new build id**: every snapshot is
   rebaked against it and the whole bundle is republished; nothing is mixed
   with the shipped chunks.
-- The lanes were assembled from the commands that produced today's
-  artifacts (bake, compile, chunk: proven by logs) and from the kernel
-  repo's build script (never yet run from this repo). Expect to iterate on
-  the first full run. Bumping either submodule is a pin change: the runtime pin implies
+- First full run, 2026-09-03 (Docker 7.65 GiB VM, ccache seeded from an
+  earlier kernel build): **24 min end to end** — runtime 11 min, core 1.5,
+  trees 1.5, games 5.5, bake 4.7, bundle 0.3. Gate passed; build id
+  `wasm64-0becc706d2ef1964` (the served `303e5c…` was not reproduced
+  bit-for-bit, as expected); Lean core facets identical to the shipped pack
+  (3,145/3,145); init and testgame snapshots at exactly the served raw
+  sizes, nng4 within 2.3 KB; the Runner probe elaborated a level through
+  the fresh nng4 snapshot; the resulting client booted in a browser
+  (ready in 31 s cold, `rfl` completes level 1 in 0.8 s) and passed cypress
+  24/24. A run at a lower Docker memory than the documented 10 GiB worked
+  on this machine; keep the requirement as the safe figure. Bumping either submodule is a pin change: the runtime pin implies
 a full rebake (snapshots pair to the runtime build id), the qed64 pin
 should move together with the vendored closure (`scripts/sync-qed64.sh`).
 
