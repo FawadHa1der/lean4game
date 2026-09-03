@@ -1,29 +1,29 @@
 {
  "schema": "lean4game.artifact-bundle/v1",
- "tag": "artifacts-2026-09-02",
- "runtime": "wasm64-303e5c765fc415ed",
- "snapshots": "init=c70b5081d84df6d3,nng4=79468e1d630aaa72,testgame=e0ca4af0c94f38f1",
+ "tag": "artifacts-from-source-2026-09-03",
+ "runtime": "wasm64-0becc706d2ef1964",
+ "snapshots": "init=b07859007e814af2,nng4=96d03497e700a738,testgame=98e8ba5e91fcdc73",
  "extract_into": "client/public",
  "tarballs": [
   {
    "class": "runtime",
    "file": "runtime.tar",
    "bytes": 154176512,
-   "sha256": "c19b31348f38245882c08db5a5f39a9593cfc013a408fe160ef5db3500a5bcfd",
+   "sha256": "813f05681d760a696d907dad4009353b0897a924cdbe333db394dd42d07f2f11",
    "files": 11
   },
   {
    "class": "profiles",
    "file": "profiles.tar",
-   "bytes": 120668672,
-   "sha256": "58825dc91de5c7f57fc418f068e8f68a264f09fdc2cd3960df7584658bb47288",
+   "bytes": 120705024,
+   "sha256": "c0ea28cba4acd3ae08fa005caa5a7e32dd319d4498f65b27c2776b9a17673d59",
    "files": 10
   },
   {
    "class": "snapshots",
    "file": "snapshots.tar",
-   "bytes": 949366272,
-   "sha256": "a83fc00b1108ce13b4d2fc1cac468aff523b84eef5d5c8ccdeae938017be6bff",
+   "bytes": 949379584,
+   "sha256": "84f2e6a67ccd9000ae4acc982ebb62ec531d0ee95bc9ae0f1dc240e52dbbfc38",
    "files": 4
   }
  ],

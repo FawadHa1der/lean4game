@@ -73,6 +73,30 @@ files), then rebuild the client.
 | testgame | `sha256:e0ca4af0c94f38f1…` | 413,600,695 | 1,412,288,317 |
 | init | unchanged `sha256:c70b5081d84df6d3…` | 107,410,668 | 342,124,389 |
 
+## Served bundle since 2026-09-03: built from source
+
+The repo now serves the artifacts produced by `wasm/build-from-source.sh`
+from the pinned kernel (`852d1b9`) and pipeline (`8e708dc`) submodules, bundle
+tag **`artifacts-from-source-2026-09-03`** (`wasm/artifacts/BUNDLE.json`):
+
+| artifact | digest / build id | transfer bytes | raw bytes |
+| --- | --- | --- | --- |
+| runtime | `wasm64-0becc706d2ef1964` (source `qed64-wasm64@852d1b9c3`) | 154,176,512 (tar) | — |
+| init | `sha256:b07859007e814af2…` | 107,410,678 | 342,124,389 |
+| nng4 | `sha256:96d03497e700a738…` | 428,355,085 | 1,466,403,813 |
+| testgame | `sha256:98e8ba5e91fcdc73…` | 413,600,402 | 1,412,288,317 |
+
+| tarball | bytes | sha256 |
+| --- | --- | --- |
+| runtime.tar | 154,176,512 | `813f05681d760a69…` |
+| profiles.tar | 120,705,024 | `c0ea28cba4acd3ae…` |
+| snapshots.tar | 949,379,584 | `84f2e6a67ccd9000…` |
+
+The core library pack was repacked from this build's stage1 (facets
+byte-identical to the previous pack); the profile index now lists only the
+`core` profile. The previous bundle (`artifacts-2026-09-02`, runtime
+`wasm64-303e5c765fc415ed`) remains valid for the commit that referenced it.
+
 ## Rebuilding from a clone
 
 What a clone contains: the client and server sources, the vendored

@@ -1,8 +1,8 @@
 {
   "schema": "org.lean-browser64.runtime/v1",
-  "buildId": "wasm64-303e5c765fc415ed",
+  "buildId": "wasm64-0becc706d2ef1964",
   "leanVersion": "4.33.0-pre",
-  "sourceRevision": "qed64-wasm64@4a35f4791 (base 5732b84)",
+  "sourceRevision": "qed64-wasm64@852d1b9c3",
   "target": "wasm64-unknown-emscripten",
   "pointerBits": 64,
   "memory": {
@@ -13,12 +13,12 @@
   "files": {
     "lean.js": {
       "bytes": 48088019,
-      "sha256": "4c4c4f06df665b4c497453689a667ed0d7356e1a672be68c3acc1bad67328195",
+      "sha256": "6d1cdfeaee32297b4ece354be138579f23fdcff0839ec4c79b39d7518fa9349a",
       "chunks": [
         {
-          "url": "/runtime/chunks/lean.js.1309b19e0b4075e5c29e.part-000",
+          "url": "/runtime/chunks/lean.js.0600231547ce3ed76132.part-000",
           "bytes": 16777216,
-          "sha256": "1309b19e0b4075e5c29e5d5fed760c660f6d5a79f4815f619eed3670187ed587"
+          "sha256": "0600231547ce3ed761324298b966e53203942d743513e95db980083221376242"
         },
         {
           "url": "/runtime/chunks/lean.js.ce7d9b7ff8b9267bac30.part-001",
@@ -33,43 +33,43 @@
       ]
     },
     "lean.wasm": {
-      "bytes": 106055846,
-      "sha256": "303e5c765fc415edc458a11caf041cf9d9660b717c85e38172ffea221acb12e6",
+      "bytes": 106055739,
+      "sha256": "0becc706d2ef19649624a7f6231446fd025186aed8a4d99cb09116f250aaa55e",
       "chunks": [
         {
-          "url": "/runtime/chunks/lean.wasm.31fcf8a83ba870bc0db7.part-000",
+          "url": "/runtime/chunks/lean.wasm.ab699b1fb8b532be4956.part-000",
           "bytes": 16777216,
-          "sha256": "31fcf8a83ba870bc0db7f4771f54ac6b6a798e0bba1987c30bfcbb453bed9cba"
+          "sha256": "ab699b1fb8b532be4956a21c6ff3296e5865a2ba067c6fa4998478647aee67c2"
         },
         {
-          "url": "/runtime/chunks/lean.wasm.4aeb3b57b2ccdfc704a6.part-001",
+          "url": "/runtime/chunks/lean.wasm.4ff1b5c08b78fdc3da97.part-001",
           "bytes": 16777216,
-          "sha256": "4aeb3b57b2ccdfc704a601d9449ca1883fa6fa813beeb992c5e902420b8d1208"
+          "sha256": "4ff1b5c08b78fdc3da97cc0daadac97c7bd654560bf071490f864c0abf2beabb"
         },
         {
-          "url": "/runtime/chunks/lean.wasm.f09cbb7270ad928513bb.part-002",
+          "url": "/runtime/chunks/lean.wasm.4af4a75244c3c4a693ae.part-002",
           "bytes": 16777216,
-          "sha256": "f09cbb7270ad928513bbe44a36b6a260baf8485c9af552e4df955595deadeaac"
+          "sha256": "4af4a75244c3c4a693ae0fc5fa8cde5ec60d17b2eff7270e5f8580db5b044ed6"
         },
         {
-          "url": "/runtime/chunks/lean.wasm.18e2d8fc913469a993ae.part-003",
+          "url": "/runtime/chunks/lean.wasm.e4d165bd0f67dd11d4d1.part-003",
           "bytes": 16777216,
-          "sha256": "18e2d8fc913469a993ae4ddd7b64dff72b3737d9501d0b3d81c027992a0d4072"
+          "sha256": "e4d165bd0f67dd11d4d1e5c48cd6cb7e2de34383af9478f4df9828ad9b1fdd39"
         },
         {
-          "url": "/runtime/chunks/lean.wasm.4ef63a9f95634b07afaa.part-004",
+          "url": "/runtime/chunks/lean.wasm.d84ef9cdeb693669a3ca.part-004",
           "bytes": 16777216,
-          "sha256": "4ef63a9f95634b07afaaee298e4c507ba33d4483cb0cb168ac0d4d2023c27a3d"
+          "sha256": "d84ef9cdeb693669a3ca658db2b61a0e9f545d6ae8b4f94869dffd905534972e"
         },
         {
-          "url": "/runtime/chunks/lean.wasm.b916ac4eeabd01188a2d.part-005",
+          "url": "/runtime/chunks/lean.wasm.79ebe1275c92ec12fdae.part-005",
           "bytes": 16777216,
-          "sha256": "b916ac4eeabd01188a2d738909710679b89a3f299606b6e8dc751cf7e902464c"
+          "sha256": "79ebe1275c92ec12fdae6d7a1092825cad82c54dbc7873d64cfcb531b1c0b110"
         },
         {
-          "url": "/runtime/chunks/lean.wasm.985aa461e3c47d5382e8.part-006",
-          "bytes": 5392550,
-          "sha256": "985aa461e3c47d5382e820f5c43361da5faa0e55df62af9baabcf9d793a5c7be"
+          "url": "/runtime/chunks/lean.wasm.06fa88bbf050bd46bcbe.part-006",
+          "bytes": 5392443,
+          "sha256": "06fa88bbf050bd46bcbe65e491ebb52d44e920dde6960de331d88fb33dbc71b5"
         }
       ]
     }

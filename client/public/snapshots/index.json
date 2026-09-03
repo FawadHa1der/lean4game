@@ -3,29 +3,29 @@
  "snapshots": [
   {
    "name": "init",
-   "url": "/snapshots/init.c70b5081d84df6d3.snapz",
-   "digest": "sha256:c70b5081d84df6d3616ecafcc494df1594dbacf97027c0bc8a87cd980e34d494",
+   "url": "/snapshots/init.b07859007e814af2.snapz",
+   "digest": "sha256:b07859007e814af28b086865aa1f96408eb187ece7c54e890e643eb0433acd26",
    "bytes": 342124389,
-   "transfer": 107410668,
+   "transfer": 107410678,
    "imports": []
   },
   {
-   "name": "nng4",
-   "url": "/snapshots/nng4.79468e1d630aaa72.snapz",
-   "digest": "sha256:79468e1d630aaa72d9653be0b2efd39d614499fb459a82938e49d6b512b66a9c",
-   "bytes": 1466401477,
-   "transfer": 428342216,
+   "name": "testgame",
+   "url": "/snapshots/testgame.98e8ba5e91fcdc73.snapz",
+   "digest": "sha256:98e8ba5e91fcdc73ffcd91de560b9078acbd3897a5d2e758396736a79c27418d",
+   "bytes": 1412288317,
+   "transfer": 413600402,
    "imports": [
     "Game",
     "GameServer.Runner"
    ]
   },
   {
-   "name": "testgame",
-   "url": "/snapshots/testgame.e0ca4af0c94f38f1.snapz",
-   "digest": "sha256:e0ca4af0c94f38f1171fd8d64bb6537377a7b3e45e5ce50f0294fb5466b1bb36",
-   "bytes": 1412288317,
-   "transfer": 413600695,
+   "name": "nng4",
+   "url": "/snapshots/nng4.96d03497e700a738.snapz",
+   "digest": "sha256:96d03497e700a7383515664e6fdbf253a568b43c303867ab2237b46ec429d940",
+   "bytes": 1466403813,
+   "transfer": 428355085,
    "imports": [
     "Game",
     "GameServer.Runner"
