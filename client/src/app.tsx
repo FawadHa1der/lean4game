@@ -14,6 +14,7 @@ import { Popup } from './components/popup/popup';
 import { leanMonacoAtom, leanMonacoOptionsAtom } from './store/editor-atoms';
 import { LeanMonaco } from 'lean4monaco';
 import { preferencesAtom } from './store/preferences-atoms';
+import { gameIdAtom } from './store/location-atoms';
 import { bootGameRuntime } from './wasm/game-boot';
 import { BootBanner } from './components/boot_banner';
 
@@ -22,7 +23,11 @@ import { BootBanner } from './components/boot_banner';
 // editor's LSP port buffers until this resolves.
 void bootGameRuntime().catch((e) => console.error('[wasm] Lean runtime boot failed:', e));
 // A landing-page load defers game binding; re-trigger when a game route is
-// entered (bootGameRuntime is idempotent once bound).
+// entered by a typed/clicked hash (bootGameRuntime is idempotent once bound).
+// In-app navigation does NOT pass through here: the location atoms navigate
+// with history.replaceState, which fires no hashchange — the React effect in
+// App below is the trigger for that path (landing → game → level by clicks
+// never started the checker; a reload of the level URL did).
 window.addEventListener('hashchange', () => {
   void bootGameRuntime().catch((e) => console.error('[wasm] Lean runtime boot failed:', e));
 });
@@ -33,6 +38,14 @@ function App({ children }: { children?: React.ReactNode }) {
   const [leanMonaco, setLeanMonaco] = useAtom(leanMonacoAtom)
   const [leanMonacoOptions] = useAtom(leanMonacoOptionsAtom)
   const [preferences] = useAtom(preferencesAtom)
+  const [gameId] = useAtom(gameIdAtom)
+
+  // Start the checker as soon as a game is entered by any route — the
+  // hashchange listener above misses in-app navigation (replaceState).
+  useEffect(() => {
+    if (!gameId) return
+    void bootGameRuntime().catch((e) => console.error('[wasm] Lean runtime boot failed:', e))
+  }, [gameId])
 
   useEffect(() => {
     i18n.changeLanguage(preferences.language)

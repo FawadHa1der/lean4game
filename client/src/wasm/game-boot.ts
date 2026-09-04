@@ -49,9 +49,16 @@ export interface GameDataBundle {
  * cache key and cannot coexist in a worker. Navigating to a DIFFERENT game
  * reloads the page (see the guard in bootGameRuntime). */
 function currentGameId(): { gameId: string; snapshot: string } | null {
+  // Hash form `#/g/{owner}/{game}/…` (what the location atoms write) or the
+  // path form `/{owner}/{game}/…` (the newer URLs the atoms also read).
+  let gameId: string | null = null;
   const m = /#\/(g\/[^/]+\/[^/]+)/.exec(window.location.hash);
-  if (!m) return null;
-  const gameId = m[1];
+  if (m) gameId = m[1];
+  else {
+    const seg = window.location.pathname.split("/").filter(Boolean);
+    if (seg.length >= 2) gameId = `g/${seg[0]}/${seg[1]}`;
+  }
+  if (!gameId) return null;
   return { gameId, snapshot: gameId.split("/")[2].toLowerCase() };
 }
 /** Worker cwd is /workspace (lean.worker.js boots there); Runner reads

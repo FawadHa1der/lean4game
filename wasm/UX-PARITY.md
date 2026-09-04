@@ -213,7 +213,24 @@ machine); "was" values are from the same harness before fix 8.
     bumps that re-render, and the load effect requests with the session of
     that render (both typewriter and editor mode). The typewriter input is
     also read-only until the first proof state exists — a tactic typed into
-    it before then had nothing to attach to.
+    it before then had nothing to attach to. This closed a real gap but was
+    not the reporter's case — see item 18.
+18. **The checker never started when the game was entered by clicks.** The
+    reporter's console (no `[game-boot]` line at all, "No active Lean
+    client" then "No connection to Lean" for ever, "language client:
+    stopped") showed the runtime was never booted on that page. The boot
+    was triggered at page load and on the browser's `hashchange` event —
+    but every in-app navigation (landing → game tile → world → level) goes
+    through the location atoms, which navigate with `history.replaceState`,
+    and that fires no `hashchange`. So a first visit by clicks never
+    started the checker, while a reload of the level URL (hash form) did —
+    the exact "fixes itself on refresh" report. Every probe and cypress run
+    assigned `location.hash` or visited a hash URL, which does fire the
+    event, and so never saw it. Fix: `App` boots the runtime from a React
+    effect on the game id (any route, any navigation); `currentGameId`
+    also accepts the path form of a game URL; and the level pane says
+    "Starting the checker…" while the boot status is still inert instead
+    of claiming the checker is up.
 
 ## Parity items verified (no action)
 

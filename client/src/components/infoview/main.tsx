@@ -707,7 +707,12 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
     void clients[0].restart?.()
   }, [idle, noConnection, waited >= 20, clients.length])
   let headline: React.ReactNode, detail: React.ReactNode
-  if (status.state === 'busy') {
+  if (status.state !== 'busy' && status.label === '') {
+    // The boot status atom starts inert (the landing page binds no game);
+    // no stage has been published yet — the checker has not started.
+    headline = <>Starting the checker in your browser…</>
+    detail = <>The Lean runtime is being launched for this game (language client: {clientState}).</>
+  } else if (status.state === 'busy') {
     headline = <>Lean is starting in your browser — {status.label}{progress ? ` · ${progress}` : ''}{eta ? ` · ${eta}` : ''}</>
     detail = downloading
       ? <>The first visit downloads the Lean checker and this game&apos;s mathematics (about 600 MB) and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.</>
