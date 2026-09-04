@@ -7,7 +7,8 @@
    "digest": "sha256:b07859007e814af28b086865aa1f96408eb187ece7c54e890e643eb0433acd26",
    "bytes": 342124389,
    "transfer": 107410678,
-   "imports": []
+   "imports": [],
+   "runtime": "wasm64-0becc706d2ef1964"
   },
   {
    "name": "testgame",
@@ -18,7 +19,8 @@
    "imports": [
     "Game",
     "GameServer.Runner"
-   ]
+   ],
+   "runtime": "wasm64-0becc706d2ef1964"
   },
   {
    "name": "nng4",
@@ -29,7 +31,8 @@
    "imports": [
     "Game",
     "GameServer.Runner"
-   ]
+   ],
+   "runtime": "wasm64-0becc706d2ef1964"
   }
  ]
 }

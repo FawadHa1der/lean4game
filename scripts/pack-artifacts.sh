@@ -4,7 +4,12 @@
 # record their digests in wasm/artifacts/BUNDLE.json (tracked) so
 # scripts/fetch-artifacts.sh can verify any downloaded copy.
 #
-# Usage: scripts/pack-artifacts.sh <tag>        e.g. artifacts-2026-09-02
+# Usage: scripts/pack-artifacts.sh <tag> [--mathlib <dir>]
+#   <tag>            e.g. artifacts-2026-09-02
+#   --mathlib <dir>  also pack the Mathlib olean pack (mathlib-essential
+#                    manifest + parts in <dir>, ~1 GB) as mathlib-pack.tar —
+#                    only needed for from-source builds (build-from-source.sh),
+#                    fetched with fetch-artifacts.sh --mathlib
 # Output: wasm/out/artifacts/<tag>/{runtime,profiles,snapshots}.tar + SHA256SUMS
 #
 # Classes (all under client/public/): runtime/ (Lean runtime chunks +
@@ -13,7 +18,9 @@
 # vendored and are NOT part of the bundle. Tarballs are plain (the members
 # are already compressed) and built from a sorted file list.
 set -euo pipefail
-TAG="${1:?tag, e.g. artifacts-2026-09-02}"
+TAG="${1:?tag, e.g. artifacts-2026-09-02}"; shift
+MATHLIB=""
+while [ $# -gt 0 ]; do case "$1" in --mathlib) MATHLIB="$(cd "${2:?dir}" && pwd)"; shift 2 ;; *) echo "unknown option $1" >&2; exit 2 ;; esac; done
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PUB="$ROOT/client/public"
 OUT="$ROOT/wasm/out/artifacts/$TAG"
@@ -30,6 +37,15 @@ for cls in runtime profiles snapshots; do
   entries+=("{\"class\":\"$cls\",\"file\":\"$cls.tar\",\"bytes\":$bytes,\"sha256\":\"$digest\",\"files\":$files}")
   echo "$cls.tar  $bytes B  sha256 $digest  ($files files)"
 done
+if [ -n "$MATHLIB" ]; then
+  [ -f "$MATHLIB/mathlib-essential.manifest.json" ] || { echo "no mathlib-essential.manifest.json in $MATHLIB" >&2; exit 1; }
+  tarball="$OUT/mathlib-pack.tar"
+  ( cd "$MATHLIB" && { echo mathlib-essential.manifest.json; ls mathlib-essential.pack.gzip.*.part-*; } | LC_ALL=C sort | tar -cf "$tarball" --no-recursion -T - )
+  bytes=$(stat -f %z "$tarball" 2>/dev/null || stat -c %s "$tarball"); digest=$(sha "$tarball")
+  files=$(( 1 + $(ls "$MATHLIB"/mathlib-essential.pack.gzip.*.part-* | wc -l) ))
+  entries+=("{\"class\":\"mathlib\",\"file\":\"mathlib-pack.tar\",\"bytes\":$bytes,\"sha256\":\"$digest\",\"files\":$files,\"optional\":true,\"extract_into\":\"wasm/out/mathlib-pack\"}")
+  echo "mathlib-pack.tar  $bytes B  sha256 $digest  ($files files, optional: from-source builds only)"
+fi
 ( cd "$OUT" && shasum -a 256 *.tar > SHA256SUMS )
 runtime_id=$(python3 -c "import json;print(json.load(open('$PUB/runtime/runtime-manifest.json'))['buildId'])")
 snaps=$(python3 -c "import json;print(','.join(sorted(s['name']+'='+s['digest'][7:23] for s in json.load(open('$PUB/snapshots/index.json'))['snapshots'])))")

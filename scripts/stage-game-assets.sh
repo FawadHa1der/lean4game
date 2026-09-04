@@ -60,6 +60,8 @@ VENDOR="$HERE/client/src/wasm/vendor/qed64"
 cp "$VENDOR/public/workers/lean.worker.js" "$PUB/workers/"
 # the disposable-prefetch boot (qed64 b00cba3) spawns a second worker
 cp "$VENDOR/public/workers/snapshot-prefetch.worker.js" "$PUB/workers/"
+# resident-mode front door: loaded lazily by lean.worker.js only under ?resident=1; serve it when vendored
+[ -f "$VENDOR/public/workers/lsp-front-door.js" ] && cp "$VENDOR/public/workers/lsp-front-door.js" "$PUB/workers/"
 # the LSP frame decoder lean.worker.js loads with importScripts (qed64
 # byte-channel rewrite): without it the worker throws at script load, never
 # posts {type:"boot"}, and every session hangs. Fail here, not in the browser.

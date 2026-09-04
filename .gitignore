@@ -15,3 +15,6 @@ wasm/snapshots/
 .lake/
 dist/
 games-src/
+
+# scratch dirs of the vendored qed64 pipeline scripts (bake work dir, staging)
+wasm/vendor/qed64-pipeline/work/

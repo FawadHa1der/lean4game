@@ -21,13 +21,24 @@ paired snapshot identities.
 ## Substrate pin (the qed64 closure, vendored)
 
 The browser-side substrate — boot (`qed64-boot.ts`), watchdog shim, runtime
-client, snapshot loader, install profiles, and the two worker scripts — is a
-**vendored copy of the qed64 closure at one commit**, under
-`client/src/wasm/vendor/qed64/` with the pin in
-`client/src/wasm/vendor/QED64-PIN`. The `qed64/...` import specifiers resolve
-there (vite alias + tsconfig paths); `scripts/stage-game-assets.sh` copies the
-worker scripts from the same directory, so shim and worker are paired by
-construction. Nothing in a build reads the qed64 checkout any more.
+client, snapshot loader, install profiles, and the worker scripts
+(`lean.worker.js` + the `lsp-frames.js` decoder it imports, the prefetch
+worker, and the resident-only `lsp-front-door.js`) — is a **vendored copy of
+the qed64 closure at one commit**, under `client/src/wasm/vendor/qed64/`
+with the pin in `client/src/wasm/vendor/QED64-PIN`. The nine pipeline
+scripts the from-source lane runs (chunk-runtime, artifact-paths,
+bake-snapshot, node-runner, snapshot-probe, pack/unpack/inspect,
+verify-release; no third-party imports) are vendored by the same script into
+`wasm/vendor/qed64-pipeline/`. The `qed64/...` import specifiers resolve to
+the closure (vite alias + tsconfig paths); `scripts/stage-game-assets.sh`
+copies the worker scripts from the same directory, so shim and worker are
+paired by construction. **No build, bake or test reads a qed64 checkout.**
+Current pin: qed64 `e5df87a` (its full test pyramid passed on the qed64
+side; pump-mode behaviour unchanged for the game, `status()` added, snapshot
+pairing check available). On the game's `852d1b9` runtime the worker's LSP
+decoder reports non-zero `junkLines`: that runtime still prints library
+progress to stdout (moved to stderr in kernel patch 0031), the decoder sheds
+it and resyncs — expected, not a fault.
 
 It used to be a live `file:` link into the qed64 checkout: every build
 compiled whatever that checkout held at that second, uncommitted edits
@@ -41,9 +52,8 @@ closure has no third-party imports; the sync script fails if a relative
 import does not resolve inside the vendored tree.
 
 Bump only to a qed64 commit its owners have announced as having passed
-their test pyramid (as of 2026-09-02 the shim is being rewritten to a
-fact-driven state machine — same module path, class name and constructor;
-full-text didChange wire — and intermediate commits are not safe to take).
+their test pyramid (`e5df87a` was; the resident-mode rewrite lives behind
+`?resident=1` and does not change the pump path the game uses).
 The game's boot registers `pagehide → shim.disposeForUnload()`; keep that
 call working across bumps (qed64's own page relies on the same hook).
 
@@ -129,20 +139,20 @@ line) → commit the updated `BUNDLE.json` and manifests.
 
 ## Building the artifacts from source (optional submodules)
 
-Two submodules pin the source side of the pipeline; both are marked
-`update = none`, so a plain `git clone` / `git submodule update --init`
-leaves them empty and running the game from the bundle never needs them:
+One submodule pins the kernel source; it is marked `update = none`, so a
+plain `git clone` / `git submodule update --init` leaves it empty and
+running the game from the bundle never needs it:
 
 | path | repo | pinned at | what it is |
 | --- | --- | --- | --- |
-| `wasm/kernel` | FawadHa1der/lean4, branch `qed64-wasm64` | `852d1b9` (= KERNEL-PIN) | the patched Lean fork + `wasm64-build/` (Docker toolchain, build.sh, gate) |
-| `wasm/qed64` | FawadHa1der/QED64, branch `main` | `8e708dc` (= QED64-PIN) | the pipeline: chunk-runtime, pack, bake-snapshot, node-runner, snapshot-probe |
+| `wasm/kernel` | FawadHa1der/lean4, branch `qed64-wasm64` | `852d1b9` (= `wasm/KERNEL-PIN`, the game's own pin) | the patched Lean fork + `wasm64-build/` (Docker toolchain, build.sh, gate) |
 
-Check them out explicitly when building from source (the kernel is a
-~700 MB checkout):
+The pipeline scripts are vendored (above), so the former `wasm/qed64`
+submodule is gone. Check the kernel out explicitly when building from
+source (~700 MB):
 
 ```bash
-git submodule update --init --checkout wasm/kernel wasm/qed64
+git submodule update --init --checkout wasm/kernel
 ```
 
 Then `wasm/build-from-source.sh` drives the lanes end to end; `--plan`
@@ -162,12 +172,12 @@ prints every step with its cwd and environment without running anything,
 Inputs the script does not produce:
 
 - **The Mathlib olean pack** (`mathlib-essential`, 4,192 modules, ~1 GB
-  transfer / 3.5 GB raw). Its digest manifest is tracked in qed64
-  (`public/profiles/mathlib-essential.manifest.json`); the part files come
-  from the qed64 artifact host. Point `MATHLIB_PACK_DIR` at a directory
-  holding them. Compiling Mathlib for this fork natively is hours of work
-  and its compatibility patch lives outside any repository, so it is out
-  of scope here.
+  transfer / 3.5 GB raw): manifest plus part files, shipped as the bundle's
+  optional `mathlib-pack.tar` — `scripts/fetch-artifacts.sh --mathlib`
+  puts it in `wasm/out/mathlib-pack`, the script's default
+  `MATHLIB_PACK_DIR`. Compiling Mathlib for this fork natively is hours of
+  work and its compatibility patch lives outside any repository, so the
+  pack is an input, not rebuilt.
 - Docker, and the network for the first `docker build` (base image
   `emscripten/emsdk:6.0.5`, pinned by tag only).
 
@@ -196,9 +206,7 @@ Known limits, on purpose visible in the script's output:
   the fresh nng4 snapshot; the resulting client booted in a browser
   (ready in 31 s cold, `rfl` completes level 1 in 0.8 s) and passed cypress
   24/24. A run at a lower Docker memory than the documented 10 GiB worked
-  on this machine; keep the requirement as the safe figure. Bumping either submodule is a pin change: the runtime pin implies
-a full rebake (snapshots pair to the runtime build id), the qed64 pin
-should move together with the vendored closure (`scripts/sync-qed64.sh`).
+  on this machine; keep the requirement as the safe figure. Bumping the kernel pin (`wasm/KERNEL-PIN` + the submodule commit) implies a full rebake (snapshots pair to the runtime build id); bumping the qed64 pin is `scripts/sync-qed64.sh <commit>` (closure + pipeline together).
 
 Rebuilding the binaries themselves (rather than fetching them) needs the
 shared pipeline: the kernel repo's `wasm64-build/build.sh` (Docker,

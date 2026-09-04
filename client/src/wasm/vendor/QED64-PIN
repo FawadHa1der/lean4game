@@ -1,12 +1,24 @@
-qed64 commit: 8e708dcdc60d9778c18f6d00f98bef415e1be3f9
-date: 2026-09-02 17:23:34 -0400
-subject: newSession: maximumBytes cap for the Memory64 reservation ladder
+qed64 commit: e5df87a2290ad993d828d49d247468d12e1f06f9
+date: 2026-09-03 20:50:01 -0400
+subject: promote: serve the 0032 pairing (runtime wasm64-5dcdda005a7c5ae0 + init/mathlib snapshots); KERNEL-PIN bumped
 files:
-  93523eeac087fb46  frontend/src/qed64-boot.ts
-  61cd2c00c39a2d1f  frontend/src/watchdog-shim.ts
+  6af9bc6b9f9b99a4  frontend/src/qed64-boot.ts
+  df21e48247fa6995  frontend/src/watchdog-shim.ts
   444d52fab79ed8ce  src/install/profiles.ts
-  f235af141585af8d  src/runtime/client.ts
-  17c0173a54723476  src/runtime/snapshots.ts
+  a799383c55501fcd  src/runtime/client.ts
+  2818775882aee530  src/runtime/snapshots.ts
   17c757dfbe6def89  src/runtime/umbrella.ts
-  5f2c169286478bb2  public/workers/lean.worker.js
+  4c1af952571666e2  public/workers/lean.worker.js
   66bc998493f5e3cd  public/workers/snapshot-prefetch.worker.js
+  efdf325b1ed0f4b4  public/workers/lsp-frames.js
+  07f755848fa944a1  public/workers/lsp-front-door.js
+pipeline (wasm/vendor/qed64-pipeline):
+  d70d4faae333fade  pipeline/toolchain/chunk-runtime.mjs
+  e487cf1eb9b978af  pipeline/toolchain/artifact-paths.mjs
+  2f11564ba3721f02  pipeline/snapshot/bake-snapshot.mjs
+  60f1f08ab57fe678  pipeline/snapshot/node-runner.mjs
+  e8a82f5ccdbe7b7e  pipeline/snapshot/snapshot-probe.mjs
+  7e54d785405bbf9d  pipeline/artifacts/pack.mjs
+  57a118f4789242cb  pipeline/artifacts/unpack.mjs
+  e471f875f94aa193  pipeline/artifacts/inspect.mjs
+  b228be39a38ec5d6  pipeline/release/verify-release.mjs

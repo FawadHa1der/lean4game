@@ -3,8 +3,3 @@
 	url = https://github.com/FawadHa1der/lean4.git
 	branch = qed64-wasm64
 	update = none
-[submodule "wasm/qed64"]
-	path = wasm/qed64
-	url = https://github.com/FawadHa1der/QED64.git
-	branch = main
-	update = none

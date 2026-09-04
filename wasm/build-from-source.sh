@@ -29,12 +29,13 @@
 #
 # Inputs (environment, all optional):
 #   KERNEL_DIR   kernel source at the pin      (default wasm/kernel submodule)
-#   QED64_DIR    qed64 pipeline checkout       (default wasm/qed64 submodule)
+#   QED64_DIR    pipeline scripts               (default wasm/vendor/qed64-pipeline, vendored by scripts/sync-qed64.sh)
 #   BUILD_DIR    kernel build tree + ccache    (default wasm/out/kernel-build)
-#   MATHLIB_MANIFEST  mathlib-essential.manifest.json (default: qed64's tracked copy)
-#   MATHLIB_PACK_DIR  directory holding its .pack.gzip.*.part-NNN files
-#                     (default: next to the manifest; ~1 GB, from the qed64
-#                     artifact host — NOT produced by this script)
+#   MATHLIB_PACK_DIR  directory holding mathlib-essential.manifest.json + its
+#                     .pack.gzip.*.part-NNN files (default wasm/out/mathlib-pack,
+#                     filled by `scripts/fetch-artifacts.sh --mathlib`; ~1 GB;
+#                     an INPUT of this script, not produced by it)
+#   MATHLIB_MANIFEST  override the manifest path (default: in MATHLIB_PACK_DIR)
 #   JOBS         parallelism hint for the kernel build (its script uses 12)
 #
 # Requirements: Docker (daemon with >= 10 GiB memory: the wasm link step is
@@ -72,14 +73,16 @@ while [ $# -gt 0 ]; do
 done
 
 KERNEL_DIR="${KERNEL_DIR:-$G/wasm/kernel}"
-QED64_DIR="${QED64_DIR:-$G/wasm/qed64}"
+QED64_DIR="${QED64_DIR:-$G/wasm/vendor/qed64-pipeline}"   # vendored pipeline scripts (scripts/sync-qed64.sh); a qed64 checkout also works
 BUILD_DIR="${BUILD_DIR:-$G/wasm/out/kernel-build}"
 S1="$BUILD_DIR/build/stage1"; S0="$BUILD_DIR/build/stage0/bin"
 OUT="$G/wasm/out"; TREES="$OUT/trees"; LOGS="$OUT/logs"; PKGS="$OUT/pkgs"
-MATHLIB_MANIFEST="${MATHLIB_MANIFEST:-$QED64_DIR/public/profiles/mathlib-essential.manifest.json}"
-MATHLIB_PACK_DIR="${MATHLIB_PACK_DIR:-$(dirname "$MATHLIB_MANIFEST")}"
+# The Mathlib olean pack: fetched into wasm/out/mathlib-pack by `scripts/fetch-artifacts.sh --mathlib`
+# (the bundle's optional mathlib-pack.tar), or any directory holding the manifest + parts.
+MATHLIB_PACK_DIR="${MATHLIB_PACK_DIR:-$OUT/mathlib-pack}"
+MATHLIB_MANIFEST="${MATHLIB_MANIFEST:-$MATHLIB_PACK_DIR/mathlib-essential.manifest.json}"
 IMAGE="qed64-toolchain:emsdk-6.0.5"; LEAN_VERSION="4.33.0-pre"
-PIN="$(grep -Eo '^[0-9a-f]{40}' "$QED64_DIR/pipeline/toolchain/KERNEL-PIN" 2>/dev/null | head -1 || true)"
+PIN="$(grep -Eo '^[0-9a-f]{40}' "$G/wasm/KERNEL-PIN" 2>/dev/null | head -1 || true)"   # the game's own kernel pin (= wasm/kernel submodule commit)
 QPIN="$(grep -Eo '[0-9a-f]{40}' "$G/client/src/wasm/vendor/QED64-PIN" 2>/dev/null | head -1 || true)"
 PUB="$G/client/public"
 mkdir -p "$LOGS" "$OUT"
@@ -124,13 +127,12 @@ lane_preflight() {
   say "preflight"
   note "repo $G"; note "kernel $KERNEL_DIR"; note "qed64 $QED64_DIR"; note "build $BUILD_DIR"
   [ -f "$KERNEL_DIR/wasm64-build/build.sh" ] || die "kernel source missing — run: git submodule update --init --checkout wasm/kernel   (or set KERNEL_DIR)"
-  [ -f "$QED64_DIR/pipeline/snapshot/bake-snapshot.mjs" ] || die "qed64 pipeline missing — run: git submodule update --init --checkout wasm/qed64   (or set QED64_DIR)"
-  [ -n "$PIN" ] || die "no kernel pin in $QED64_DIR/pipeline/toolchain/KERNEL-PIN"
+  [ -f "$QED64_DIR/pipeline/snapshot/bake-snapshot.mjs" ] || die "pipeline scripts missing at $QED64_DIR — run scripts/sync-qed64.sh <qed64-commit> (or set QED64_DIR to a qed64 checkout)"
+  [ -n "$PIN" ] || die "no kernel pin in $G/wasm/KERNEL-PIN"
   local khead; khead="$(git -C "$KERNEL_DIR" rev-parse HEAD)"
   [ "$khead" = "$PIN" ] || die "kernel checkout is $khead but KERNEL-PIN is $PIN — checkout the pin (git -C $KERNEL_DIR checkout $PIN)"
   [ -z "$(git -C "$KERNEL_DIR" status --porcelain)" ] || die "kernel tree is dirty — the recorded source revision would lie"
-  local qhead; qhead="$(git -C "$QED64_DIR" rev-parse HEAD)"
-  [ "$qhead" = "$QPIN" ] || warn "qed64 pipeline is at ${qhead:0:12}, the vendored closure pin is ${QPIN:0:12} (fine for building; keep them together when bumping)"
+  if [ -d "$QED64_DIR/.git" ]; then local qhead; qhead="$(git -C "$QED64_DIR" rev-parse HEAD)"; [ "$qhead" = "$QPIN" ] || warn "qed64 checkout is at ${qhead:0:12}, the vendored pin is ${QPIN:0:12}"; fi
   note "kernel pin $PIN (clean)"
   local nv; nv="$(node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1 || echo 0)"; [ "${nv:-0}" -ge 24 ] || die "Node >= 24 required (Memory64), found $(node -v 2>/dev/null || echo none)"
   command -v python3 >/dev/null || die "python3 required"; command -v rsync >/dev/null || die "rsync required"
@@ -145,7 +147,7 @@ lane_preflight() {
     local parts; parts="$(find "$MATHLIB_PACK_DIR" -maxdepth 1 -name 'mathlib-essential.pack.gzip.*.part-*' 2>/dev/null | wc -l | tr -d ' ' || true)"
     note "mathlib pack: manifest $MATHLIB_MANIFEST, $parts part files in $MATHLIB_PACK_DIR$([ "$parts" -gt 0 ] || echo '  — WARNING: parts missing (fetch them from the qed64 artifact host); the trees lane needs them')"
   else
-    warn "mathlib-essential manifest not found at $MATHLIB_MANIFEST (set MATHLIB_MANIFEST / MATHLIB_PACK_DIR)"
+    warn "mathlib-essential manifest not found at $MATHLIB_MANIFEST — run scripts/fetch-artifacts.sh --mathlib (or set MATHLIB_PACK_DIR)"
   fi
   note "lanes: $LANES$([ "$PLAN" = 1 ] && echo '   (PLAN — nothing runs)')"
 }

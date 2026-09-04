@@ -24,6 +24,17 @@ DEST="$ROOT/client/src/wasm/vendor/qed64"
 PATHS=(frontend/src/qed64-boot.ts frontend/src/watchdog-shim.ts
        src/install/profiles.ts src/runtime/client.ts src/runtime/snapshots.ts src/runtime/umbrella.ts
        public/workers/lean.worker.js public/workers/snapshot-prefetch.worker.js)
+# Optional extra worker (resident mode only; loaded lazily by lean.worker.js — serve it when the commit has it).
+OPTIONAL=(public/workers/lsp-front-door.js)
+# The pipeline scripts the from-source lane runs (wasm/build-from-source.sh):
+# no third-party imports, vendored into a SEPARATE root so their work/ scratch
+# dirs (work/snapshot, work/staging) never land under client/src.
+PIPELINE=(pipeline/toolchain/chunk-runtime.mjs pipeline/toolchain/artifact-paths.mjs
+          pipeline/snapshot/bake-snapshot.mjs pipeline/snapshot/node-runner.mjs pipeline/snapshot/snapshot-probe.mjs
+          pipeline/artifacts/pack.mjs pipeline/artifacts/unpack.mjs pipeline/artifacts/inspect.mjs
+          pipeline/release/verify-release.mjs)
+PIPELINE_OPTIONAL=(pipeline/toolchain/artifact-paths.d.mts)
+PIPE_DEST="$ROOT/wasm/vendor/qed64-pipeline"
 FULL="$(git -C "$QED64" rev-parse --verify "$SHA^{commit}")"
 # Pins older than the byte-channel rewrite have no lsp-frames.js, and
 # `git archive` refuses a missing pathspec: vendor it when the commit has it.
@@ -38,6 +49,15 @@ elif git -C "$QED64" show "$FULL:public/workers/lean.worker.js" | grep -q 'impor
 fi
 rm -rf "$DEST"; mkdir -p "$DEST"
 git -C "$QED64" archive "$FULL" "${PATHS[@]}" | tar -x -C "$DEST"
+for opt in "${OPTIONAL[@]}"; do
+  if git -C "$QED64" cat-file -e "$FULL:$opt" 2>/dev/null; then git -C "$QED64" archive "$FULL" "$opt" | tar -x -C "$DEST"; PATHS+=("$opt"); fi
+done
+rm -rf "$PIPE_DEST"; mkdir -p "$PIPE_DEST"
+for pf in "${PIPELINE[@]}"; do git -C "$QED64" cat-file -e "$FULL:$pf" 2>/dev/null || { echo "pipeline script missing at $FULL: $pf" >&2; exit 1; }; done
+git -C "$QED64" archive "$FULL" "${PIPELINE[@]}" | tar -x -C "$PIPE_DEST"
+for opt in "${PIPELINE_OPTIONAL[@]}"; do
+  if git -C "$QED64" cat-file -e "$FULL:$opt" 2>/dev/null; then git -C "$QED64" archive "$FULL" "$opt" | tar -x -C "$PIPE_DEST"; fi
+done
 # Sanity: the closure must be self-contained (every relative import resolves inside DEST).
 python3 - "$DEST" <<'PY'
 import os, re, sys
@@ -58,5 +78,6 @@ PY
   echo "date: $(git -C "$QED64" show -s --format=%ci "$FULL")"
   echo "subject: $(git -C "$QED64" show -s --format=%s "$FULL")"
   echo "files:"; for p in "${PATHS[@]}"; do printf '  %s  %s\n' "$(shasum -a 256 "$DEST/$p" | cut -c1-16)" "$p"; done
+  echo "pipeline (wasm/vendor/qed64-pipeline):"; for p in "${PIPELINE[@]}"; do printf '  %s  %s\n' "$(shasum -a 256 "$PIPE_DEST/$p" | cut -c1-16)" "$p"; done
 } > "$ROOT/client/src/wasm/vendor/QED64-PIN"
-echo "vendored qed64 @ ${FULL:0:12} into client/src/wasm/vendor/qed64 (pin: client/src/wasm/vendor/QED64-PIN)"
+echo "vendored qed64 @ ${FULL:0:12}: closure → client/src/wasm/vendor/qed64, pipeline → wasm/vendor/qed64-pipeline (pin: client/src/wasm/vendor/QED64-PIN)"

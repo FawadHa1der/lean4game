@@ -33,6 +33,13 @@ for e in entries:
         if oldfile.exists() and oldfile != dst:
             print(f"remove superseded {oldfile.name}")
             oldfile.unlink()
+    # Pairing fact: every entry records the runtime build id that baked it (the
+    # worker refuses a mismatched snapshot instead of trapping). Older bakes
+    # omit it; stamp from the served runtime manifest, which is the same build.
+    if not e.get("runtime"):
+        rm = root / "client/public/runtime/runtime-manifest.json"
+        if rm.exists():
+            e["runtime"] = json.loads(rm.read_text())["buildId"]
     pidx["snapshots"] = [o for o in pidx["snapshots"] if o["name"] != e["name"]] + [e]
     print(f"index: {e['name']} -> {e['digest'][:23]}…")
 (pub / "index.json").write_text(json.dumps(pidx, indent=1) + "\n")

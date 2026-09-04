@@ -25,6 +25,15 @@
    "bytes": 949379584,
    "sha256": "84f2e6a67ccd9000ae4acc982ebb62ec531d0ee95bc9ae0f1dc240e52dbbfc38",
    "files": 4
+  },
+  {
+   "class": "mathlib",
+   "file": "mathlib-pack.tar",
+   "bytes": 999728128,
+   "sha256": "634c67fb6bf7c7a2713b4c3e4abdcc1adb1e1b7c78ce084e47a104284de886f0",
+   "files": 61,
+   "optional": true,
+   "extract_into": "wasm/out/mathlib-pack"
   }
  ],
  "note": "Tarballs are plain tar of client/public/<class>/ (paths relative to client/public). Per-file digests live in the tracked manifests (runtime/runtime-manifest.json, snapshots/index.json, profiles/lean-core.manifest.json)."
