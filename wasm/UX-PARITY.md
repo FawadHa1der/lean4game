@@ -197,6 +197,23 @@ machine); "was" values are from the same harness before fix 8.
     level). Typing *during* a level switch can still meet the checker's
     previous document for a moment — the verdict lock's processing gate
     covers the common case; the remaining window is listed under Open.
+17. **First visit on the live site: "Waiting for the checker's first
+    answer…" forever, input editable.** Reported on the deployed site right
+    after the first deploy; a reload cured it. Cause: the level's first rpc
+    session is created on the first render, a few milliseconds before the
+    freshly started Lean client reports itself running, so its connect is
+    rejected ("No connection to Lean"); the infoview's session manager drops
+    the failed session, but every retry — the 4 s auto-retry, the settle
+    reload, the manual Retry — called `loadGoals` from a timer closure that
+    still held the dead session, so the pane asked a corpse for ever. A
+    reload mounts the level while the checker is still starting, and the
+    busy → idle flip re-renders the pane into a fresh session, which is why
+    it "fixed itself"; locally an incidental re-render (the client's
+    restarted event) hid the bug in every probe. Fix: retries are now state
+    bumps that re-render, and the load effect requests with the session of
+    that render (both typewriter and editor mode). The typewriter input is
+    also read-only until the first proof state exists — a tactic typed into
+    it before then had nothing to attach to.
 
 ## Parity items verified (no action)
 

@@ -308,13 +308,16 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
   // Under wasm a step takes 1–3 s (vs ~0.6 s server-side); text typed into
   // an editable input during that window was silently replaced by the
   // failed-command refill when the step failed.
+  // Also locked until the level's first proof state exists: a tactic typed
+  // into the input while the pane still waits for the checker's first answer
+  // has nothing to attach to (and was silently lost on the live site).
   useEffect(() => {
     if (!oneLineEditor) return
     oneLineEditor.updateOptions({
-      readOnly: processing,
-      readOnlyMessage: { value: t("Lean is still checking your previous step…") },
+      readOnly: processing || proof === undefined,
+      readOnlyMessage: { value: proof === undefined ? t("The level is still loading…") : t("Lean is still checking your previous step…") },
     })
-  }, [oneLineEditor, processing])
+  }, [oneLineEditor, processing, proof === undefined])
 
   // Safety valves: a crash (no proof state will come) or a lost response
   // must not leave the input locked.

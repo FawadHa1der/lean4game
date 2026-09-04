@@ -391,6 +391,12 @@ export function settleProof<T extends { completed?: boolean; completedWithWarnin
  * Tutorial/1, and a tactic judged against it. */
 export const currentLevel = { key: "" }
 
+/** What the last proof-state request failed with, for the loading pane
+ * ("" once one succeeded). "No connection to Lean" = the language client is
+ * not running yet — on a first visit the level's first session is created
+ * before the freshly started client reports itself running. */
+export const lastLoadError = { message: "" }
+
 export function loadGoals(
   rpcSess: RpcSessionAtPos,
   uri: string,
@@ -415,6 +421,7 @@ rpcSess.call('Game.getProofState',
     if (typeof proof !== 'undefined') {
       console.info(`received a proof state!`)
       console.log(proof)
+      lastLoadError.message = ''
       setProof(settleProof(proof as ProofState))
       setCrashed(false)
     } else {
@@ -423,6 +430,7 @@ rpcSess.call('Game.getProofState',
     }
   }
 ).catch((error) => {
+  lastLoadError.message = String(error?.message ?? error)
   if (error === 'No connection to Lean') {
     console.warn(error)
     return

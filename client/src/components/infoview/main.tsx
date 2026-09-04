@@ -23,7 +23,7 @@ import { Markdown } from '../markdown';
 
 import { Infos } from './infos';
 import { Errors, WithLspDiagnosticsContext } from './messages';
-import { Goal, isLastStepWithErrors, lastStepHasErrors, loadGoals, currentLevel } from './goals';
+import { Goal, isLastStepWithErrors, lastStepHasErrors, loadGoals, currentLevel, lastLoadError } from './goals';
 import { MonacoEditorContext } from './context';
 import { levelUri } from '../../wasm/level-uri';
 import { Typewriter, getInteractiveDiagsAt, hasInteractiveErrors } from './typewriter';
@@ -193,13 +193,21 @@ export function Main() {
   const model = editor?.getModel()
   const uri = model?.uri.toString()
   const rpcSess = useRpcSessionAtPos({ uri: uri ?? '', line: 0, character: 0 })
+  // Fresh-session retry while there is no state (see TypewriterInterface).
+  const [retryTick, setRetryTick] = React.useState(0)
+  const [activity] = useAtom(checkerActivityAtom)
 
   React.useEffect(() => {
     if (!uri || !worldId || !levelId) {
       return
     }
     loadGoals(rpcSess, uri, worldId, levelId, setProof, setCrashed)
-  }, [rpcSess, uri, worldId, levelId, setProof, setCrashed])
+  }, [rpcSess, uri, worldId, levelId, retryTick, setProof, setCrashed])
+  React.useEffect(() => {
+    if (proof !== undefined || activity.busy || !uri) return
+    const id = setTimeout(() => { setCrashed(false); setRetryTick((t) => t + 1) }, 4000)
+    return () => clearTimeout(id)
+  }, [proof === undefined, activity.busy, uri, retryTick])
 
   function toggleSelection(line: number) {
     return (ev: any) => {
@@ -486,7 +494,19 @@ export function TypewriterInterface() {
   // const config = useEventResult(ec.events.changedInfoviewConfig) ?? defaultInfoviewConfig;
   // const curUri = useEventResult(ec.events.changedCursorLocation, loc => loc?.uri);
 
+  // A failed rpc session is dropped by the infoview's session manager, and the
+  // next RENDER creates a fresh one — so every retry below is a state bump
+  // that re-renders, and the load effect (keyed on the session and the tick)
+  // issues the request with the session of THAT render. Calling loadGoals
+  // from a timer closure reused the session captured at effect time: on a
+  // first visit the level's first session was created a few ms before the
+  // freshly started Lean client reported itself running, failed with
+  // "No connection to Lean", and every 4 s auto-retry re-asked that dead
+  // session forever ("Waiting for the checker's first answer…" on the live
+  // site until a reload). Locally an incidental re-render hid it.
   const rpcSess = useRpcSessionAtPos({uri: effectiveUri, line: 0, character: 0})
+  const [retryTick, setRetryTick] = React.useState(0)
+  const retry = React.useCallback(() => { setCrashed(false); setRetryTick((t) => t + 1) }, [setCrashed])
 
   React.useEffect(() => {
     if (!effectiveUri) {
@@ -494,7 +514,7 @@ export function TypewriterInterface() {
     }
     setCrashed(false)
     loadGoals(rpcSess, effectiveUri, worldId!, levelId!, setProof, setCrashed)
-  }, [rpcSess, effectiveUri, worldId, levelId, setProof, setCrashed])
+  }, [rpcSess, effectiveUri, worldId, levelId, retryTick, setProof, setCrashed])
 
   // Clear the previous level's steps while the new one is prepared —
   // otherwise they sit under the new statement for the whole switch. Keyed
@@ -514,22 +534,17 @@ export function TypewriterInterface() {
   const [activity] = useAtom(checkerActivityAtom)
   React.useEffect(() => {
     if (activity.busy || !effectiveUri) return
-    if (proof === undefined || crashed) {
-      setCrashed(false)
-      loadGoals(rpcSess, effectiveUri, worldId!, levelId!, setProof, setCrashed)
-    }
+    if (proof === undefined || crashed) retry()
   }, [activity.busy])
   // No state, checker idle, nothing in flight that would deliver one: retry
-  // the first request every few seconds (a request lost to a session switch
-  // or answered before the level existed otherwise waits forever).
+  // the first request every few seconds (a request lost to a session switch,
+  // answered before the level existed, or asked of a dead session otherwise
+  // waits forever).
   React.useEffect(() => {
     if (proof !== undefined || activity.busy || !effectiveUri) return
-    const id = setInterval(() => {
-      setCrashed(false)
-      loadGoals(rpcSess, effectiveUri, worldId!, levelId!, setProof, setCrashed)
-    }, 4000)
-    return () => clearInterval(id)
-  }, [proof === undefined, activity.busy, effectiveUri, rpcSess])
+    const id = setTimeout(retry, 4000)
+    return () => clearTimeout(id)
+  }, [proof === undefined, activity.busy, effectiveUri, retryTick])
 
   // Document settled (fileProgress empty): replace any provisional state.
   const [docProcessingTw] = useAtom(documentProcessingAtom)
@@ -673,12 +688,17 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
     headline = <>Preparing this level — {activity.label}…</>
     detail = <>The checker is elaborating the level&apos;s statement. The first level after start-up can take up to a minute while everything warms up; later levels switch in a second or two.</>
   } else {
-    headline = <>Waiting for the checker&apos;s first answer…{waited >= 15 ? ' (retrying every few seconds)' : ''}</>
+    const noConnection = /No connection to Lean/i.test(lastLoadError.message)
+    headline = noConnection
+      ? <>Connecting to the checker…{waited >= 15 ? ' (retrying every few seconds)' : ''}</>
+      : <>Waiting for the checker&apos;s first answer…{waited >= 15 ? ' (retrying every few seconds)' : ''}</>
     detail = waited < 15
-      ? <>The level is loaded and the checker is idle; its answer usually arrives within a second.</>
+      ? (noConnection
+          ? <>The checker is up; the editor&apos;s connection to it is being (re)established, which takes a moment.</>
+          : <>The level is loaded and the checker is idle; its answer usually arrives within a second.</>)
       : waited < 90
-        ? <>This is taking longer than usual. The request is retried automatically; you can also retry now.</>
-        : <>Still no answer after {secs(waited)}. Reloading the page is safe: your progress is saved in this browser, and the downloaded environment stays cached.</>
+        ? <>This is taking longer than usual{lastLoadError.message ? <> (last attempt: {lastLoadError.message})</> : null}. The request is retried automatically; you can also retry now.</>
+        : <>Still no answer after {secs(waited)}{lastLoadError.message ? <> (last attempt: {lastLoadError.message})</> : null}. Reloading the page is safe: your progress is saved in this browser, and the downloaded environment stays cached.</>
   }
   return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
     {/* explicit size + static position: the pane's spinner rule shifts it
@@ -814,7 +834,7 @@ let lastStepErrors = proof?.steps.length ? hasInteractiveErrors(getInteractiveDi
               </div>
             }
           </> :
-          <LevelLoadingIndicator since={loadingSince.current} onRetry={() => { setCrashed(false); loadGoals(rpcSess, effectiveUri, worldId!, levelId!, setProof, setCrashed) }} />
+          <LevelLoadingIndicator since={loadingSince.current} onRetry={retry} />
           // <CircularProgress variant="determinate" value={100*(1 - 1.024 ** (- Math.max(loadingProgress, 1)))} />
         // note: since we don't know the total number of files,
         // we use a function which strictly monotonely increases towards `100` as `x → ∞`
