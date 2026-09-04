@@ -165,10 +165,13 @@ preferences popup's empty "Controls" section.
   Memory64 cap for game sessions (qed64 `8e708dc`, sessions peak under
   2 GiB). Measured: the hook alone let 2 of 4 full passes survive; the cap
   brought post-reload boots from ~13.6 s back to ~5.8 s but the 100 ms
-  storm after two reloads still crashed (0 of 3). The remaining lever is
-  worker-side (delete the boot-time copies, read the snapshot straight
-  into the heap) and lands with the qed64 shim rewrite; bump the pin then
-  and re-run the recipe. Fresh-page storms at 100–250 ms never crash.
+  storm after two reloads still crashed (0 of 3). With the qed64 `e5df87a`
+  closure (byte-exact worker channel, 2026-09-04) the full recipe survived
+  2 of 2 passes on top of the hook and the cap. The worker-side fix for the
+  boot-time transient copies (read the snapshot straight into the heap) has
+  not landed on the qed64 side yet; when it does, bump the pin and re-run
+  the recipe to confirm it is closed rather than improved. Fresh-page
+  storms at 100–250 ms never crash.
 - Only NNG4 is listed on the landing page; more games follow the catalog
   pattern in `KERNEL.md`.
 - The boot strip can cover the bottom row of world-map labels during the
