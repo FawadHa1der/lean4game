@@ -1,0 +1,24 @@
+name = "lean4game"
+main = "infra/worker.js"
+compatibility_date = "2026-08-01"
+# Serve on lean4game.<account>.workers.dev; attach a custom domain later via routes.
+workers_dev = true
+
+# App shell only: scripts/deploy-app.sh copies client/dist here WITHOUT the
+# R2-served artifact directories (Workers assets cap files at 25 MiB; the
+# game snapshot alone is 428 MB). client/dist itself stays complete for the
+# local server (scripts/serve-dist.mjs).
+[assets]
+directory = "wasm/out/deploy"
+binding = "ASSETS"
+# Assets are served BEFORE the worker by default, which would skip the
+# COOP/COEP headers the app cannot live without — run the worker for every
+# request so withHeaders() applies to the shell too.
+run_worker_first = true
+
+# Shared with the QED64 editor; the game's objects live under lean4game/
+# (infra/worker.js adds the prefix), so the two mutable manifest sets never
+# collide and the existing bucket-scoped upload token keeps working.
+[[r2_buckets]]
+binding = "ARTIFACTS"
+bucket_name = "qed64-artifacts"

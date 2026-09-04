@@ -18,3 +18,6 @@ games-src/
 
 # scratch dirs of the vendored qed64 pipeline scripts (bake work dir, staging)
 wasm/vendor/qed64-pipeline/work/
+
+# per-build immutable manifest copy written by scripts/upload-artifacts.sh
+client/public/runtime/runtime-manifest.*.json
