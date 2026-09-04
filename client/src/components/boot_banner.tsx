@@ -15,7 +15,7 @@ import "../css/boot_banner.css";
 
 /** Rolling download rate → human ETA ("~2 min left"). Samples reset when
  * the total changes (a new artifact started). */
-function useEta(status: { loaded?: number; total?: number; unit?: string }): string | null {
+export function useEta(status: { loaded?: number; total?: number; unit?: string }): string | null {
   const samples = React.useRef<{ t: number; loaded: number; total: number }[]>([]);
   if (status.unit === "bytes" && status.loaded !== undefined && status.total) {
     const now = performance.now();

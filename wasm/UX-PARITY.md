@@ -133,7 +133,22 @@ machine); "was" values are from the same harness before fix 8.
     "level completed" diagnostic); the pane reloads once the document
     settles. Surfaced by the faster byte-channel worker of the `e5df87a`
     closure; the race existed before.
-12. **Per-step latency: GameServer `Runner` hoist + snapshot rebake.**
+12. **The level pane explains every waiting phase.** A bare "Loading the
+    level…" read as hung to a first-time visitor (reported in use). The pane
+    now names the phase with elapsed time: the first-visit download (with
+    size, progress and ETA, and why it happens once), the in-tab start-up,
+    the level's first elaboration (up to a minute cold), and "waiting for
+    the checker's first answer". That last phase — the checker idle but no
+    answer — now retries automatically every few seconds, offers a manual
+    retry after 15 s, and after 90 s says that reloading is safe; those
+    thresholds count from the moment the checker went idle, not from the
+    level's load (after a four-minute first download the first idle second
+    must not read "no answer after 4 min — reload"). The elapsed counter is
+    owned by the level, so re-renders of the pane's branches do not reset
+    it (verified on a 40 Mbit/s throttled first visit: 0 s → 4 min
+    continuous, goal at 245 s). Chasing the phase that never ended found
+    item 14.
+13. **Per-step latency: GameServer `Runner` hoist + snapshot rebake.**
    `findForbiddenTactics` re-read and re-parsed the level's JSON
    (`loadLevelData`, ~46 ms under wasm64) once per syntax node; the load is
    now done once per elaboration. Headless probe: 8-step proof 8.1 s → 0.73 s,
@@ -141,6 +156,47 @@ machine); "was" values are from the same harness before fix 8.
    with `inventory := []`). Only `GameServer/Runner.olean` changed; nng4 and
    testgame snapshots were rebaked against the pinned runtime and staged
    (`KERNEL.md`, `scripts/stage-snapshots.py`).
+14. **Crossing into a new world hung the level for good.** The reported
+    "stuck at Loading the level…" reproduced deterministically (qed64
+    `work/stall-diag{2,3,4}.mjs`): Tutorial → Addition never showed a goal,
+    while typed tactics still elaborated and the checker sat idle with no
+    pending request. The port trace found the cause. lean4monaco derives one
+    Lean language client per parent folder of the open document (its
+    browser `findLeanProjectRootInfo` is `uri.join('..')`), and upstream's
+    `file:///{world}/{level}.lean` scheme therefore creates a second client
+    on the first world switch. Upstream can afford that — every client opens
+    its own relay websocket — but here all clients share the single in-tab
+    MessagePort: the newcomer's reader takes the port over, the rpc connect
+    the infoview had already issued through the previous client is answered
+    to the new one, which drops the unknown request id, and the level's rpc
+    session promise hangs forever; every `Game.getProofState` (including the
+    retries of item 12) awaited it silently. Fix (`client/src/wasm/level-uri.ts`):
+    every level now lives in one folder, `file:///levels/{world}__{level}.lean`,
+    so exactly one client and one document serve the whole game — the
+    same-world level switch that always worked. The uri is synthetic on both
+    sides (the translation layer maps it to the worker's document and back),
+    so only the constructor, the fallback in the pane, and the translation's
+    parser changed; the legacy shape still parses. Verified with
+    `work/stall-verify.mjs`: the original recipe (two Tutorial levels, an
+    editor-mode round trip, then Addition/1), a tactic in the new world, two
+    more world switches and a return to Tutorial, with a single
+    "Creating LeanClient" for the session.
+15. **Boot no longer spins the level panel at ~1.2 kHz.** game-boot's
+    status sink republished a fresh status object per progress event —
+    thousands per second while a cached snapshot loads — and every jotai
+    subscriber (the typewriter panel among them) re-rendered per event, each
+    render creating a new infoview rpc session whose connect the not-yet-
+    running client rejected ("No connection to Lean", ~6,000 per boot in the
+    console, and CPU taken from the boot itself). Both publishers now skip
+    unchanged content; the panel re-renders on stage changes only.
+16. **A previous level's late reply is not shown under the next level.**
+    Rapid next-level clicks (300 ms apart in `work/stall-verify2.mjs`) had
+    Addition/1's goal rendered beneath Tutorial/1's statement, and a tactic
+    typed at once judged against it. `loadGoals` now drops a proof state for
+    a level the player has left (the infoview root stamps the current
+    level). Typing *during* a level switch can still meet the checker's
+    previous document for a moment — the verdict lock's processing gate
+    covers the common case; the remaining window is listed under Open.
 
 ## Parity items verified (no action)
 
@@ -197,6 +253,12 @@ preferences popup's empty "Controls" section.
   not landed on the qed64 side yet; when it does, bump the pin and re-run
   the recipe to confirm it is closed rather than improved. Fresh-page
   storms at 100–250 ms never crash.
+- A tactic typed within the first ~0.5 s of a level switch can be
+  elaborated against the previous level's document (the shim's re-open
+  runs the header-switch machinery asynchronously; item 16 removes the
+  stale *display*, not this race). Upstream has the same shape with a
+  slower relay round-trip; a fix would hold typewriter submissions until
+  the first `publishDiagnostics` of the new document.
 - Only NNG4 is listed on the landing page; more games follow the catalog
   pattern in `KERNEL.md`.
 - The boot strip can cover the bottom row of world-map labels during the

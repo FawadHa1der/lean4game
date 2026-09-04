@@ -233,6 +233,8 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
         /^\s*import\s+(Game\b|Game\.|GameServer)/m.test(header) ? boundGame!.snapshot : null,
     });
     shimRef = shim;
+    // Diagnostics hook for harnesses (status(): phase, pending/queued requests).
+    (globalThis as { qed64GameShim?: unknown }).qed64GameShim = shim;
     // Release the wasm heap the moment the page goes away. A reload does not
     // promptly reclaim a dead page's committed multi-GiB shared memory; the
     // next boot commits its own, and a burst of level switches on top of the

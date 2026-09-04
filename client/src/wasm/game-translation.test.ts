@@ -1,6 +1,13 @@
 // Run: node client/src/wasm/game-translation.test.ts  (Node ≥22 type stripping)
 import { GameTranslation, shiftLines, rebaseSemanticTokens, PROOF_START_LINE } from "./game-translation.ts";
 import assert from "node:assert";
+import { levelUri, parseLevelUri } from "./level-uri";
+
+// level-uri: flat scheme round-trips; the legacy nested shape still parses.
+assert.equal(levelUri("Tutorial", 3), "file:///levels/Tutorial__3.lean");
+assert.deepEqual(parseLevelUri("file:///levels/Tutorial__3.lean"), { worldId: "Tutorial", levelId: "3" });
+assert.deepEqual(parseLevelUri("file:///levels/Adv__Add__12.lean"), { worldId: "Adv__Add", levelId: "12" });
+assert.deepEqual(parseLevelUri("file:///Tutorial/3.lean"), { worldId: "Tutorial", levelId: "3" });
 
 // shiftLines: nested positions, lineRange, floors at 0
 {
@@ -40,8 +47,8 @@ import assert from "node:assert";
 
   const post = (m: any) => (gt.clientPort as any).postMessage(m);
   post({ jsonrpc: "2.0", id: 1, method: "initialize", params: { rootUri: null, initializationOptions: { difficulty: 1, inventory: ["rfl"] } } });
-  post({ jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: "file:///TestWorld/1.lean", languageId: "lean4", version: 1, text: "rfl" } } });
-  post({ jsonrpc: "2.0", id: 7, method: "textDocument/hover", params: { textDocument: { uri: "file:///TestWorld/1.lean" }, position: { line: 0, character: 2 } } });
+  post({ jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean", languageId: "lean4", version: 1, text: "rfl" } } });
+  post({ jsonrpc: "2.0", id: 7, method: "textDocument/hover", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean" }, position: { line: 0, character: 2 } } });
 
   setTimeout(() => {
     assert.equal(toWorker.length, 3);
@@ -60,7 +67,7 @@ import assert from "node:assert";
     setTimeout(() => {
       assert.equal(fromServer.length, 1);
       const d = fromServer[0];
-      assert.equal(d.params.uri, "file:///TestWorld/1.lean");
+      assert.equal(d.params.uri, "file:///levels/TestWorld__1.lean");
       assert.equal(d.params.diagnostics[0].range.start.line, 0);
       console.log("game-translation: ALL TESTS PASS");
       process.exit(0);

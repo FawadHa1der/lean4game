@@ -384,6 +384,13 @@ export function settleProof<T extends { completed?: boolean; completedWithWarnin
   return proof
 }
 
+/** The level currently shown, `${worldId}/${levelId}`; written by the
+ * infoview root on every render. A `Game.getProofState` reply that arrives
+ * after the player moved on (rapid next-level clicks) must not be rendered
+ * under the new level's statement — observed: Addition/1's goal shown for
+ * Tutorial/1, and a tactic judged against it. */
+export const currentLevel = { key: "" }
+
 export function loadGoals(
   rpcSess: RpcSessionAtPos,
   uri: string,
@@ -401,6 +408,10 @@ rpcSess.call('Game.getProofState',
     }
 ).then(
   (proof) => {
+    if (currentLevel.key && currentLevel.key !== `${worldId}/${levelId}`) {
+      console.info(`proof state for ${worldId}/${levelId} arrived after leaving it — ignored`)
+      return
+    }
     if (typeof proof !== 'undefined') {
       console.info(`received a proof state!`)
       console.log(proof)

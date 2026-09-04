@@ -15,7 +15,7 @@
  *  - initialize: capture difficulty/inventory from initializationOptions and
  *    smuggle the game name through rootUri (the GameServer library reads it
  *    back out of rc.initParams.rootUri? — upstream's own hack, preserved).
- *  - didOpen of file:///{world}/{level}.lean: rewrite the text to
+ *  - didOpen of the level uri (level-uri.ts): rewrite the text to
  *      import {level module} import GameServer.Runner \n
  *      Runner "{game}" "{world}" {level} (difficulty := d) (inventory := [..]) := by\n
  *      {player text}\n
@@ -24,6 +24,7 @@
  *  - all positions shifted +2 lines; server→client shifted −2, uris mapped
  *    back, range semanticTokens disabled, full semanticTokens rebased.
  */
+import { levelUri, parseLevelUri } from "./level-uri";
 
 type JsonRpc = {
   jsonrpc: "2.0";
@@ -173,11 +174,9 @@ export class GameTranslation {
     }
 
     if (message.method === "textDocument/didOpen") {
-      // file:///{worldId}/{levelId}.lean
-      const uri = new URL(message.params.textDocument.uri);
-      const parts = uri.pathname.split("/").filter(Boolean);
-      this.worldId = parts[parts.length - 2] ?? "";
-      this.levelId = (parts[parts.length - 1] ?? "").replace(/\.lean$/, "");
+      const { worldId, levelId } = parseLevelUri(message.params.textDocument.uri);
+      this.worldId = worldId;
+      this.levelId = levelId;
 
       replaceUri(message, this.workerUri);
 
@@ -214,7 +213,7 @@ export class GameTranslation {
       this.onProcessing(Array.isArray(ranges) && ranges.length > 0);
     }
     shiftLines(message, -PROOF_START_LINE);
-    replaceUri(message, `file:///${this.worldId}/${this.levelId}.lean`);
+    replaceUri(message, levelUri(this.worldId, this.levelId));
 
     // Range semantic tokens are difficult to shift — disable the capability.
     if (message?.result?.capabilities?.semanticTokensProvider?.range) {

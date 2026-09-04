@@ -23,12 +23,14 @@ import { Markdown } from '../markdown';
 
 import { Infos } from './infos';
 import { Errors, WithLspDiagnosticsContext } from './messages';
-import { Goal, isLastStepWithErrors, lastStepHasErrors, loadGoals } from './goals';
+import { Goal, isLastStepWithErrors, lastStepHasErrors, loadGoals, currentLevel } from './goals';
 import { MonacoEditorContext } from './context';
+import { levelUri } from '../../wasm/level-uri';
 import { Typewriter, getInteractiveDiagsAt, hasInteractiveErrors } from './typewriter';
 import { Button } from '../button';
 import { CircularProgress } from '@mui/material';
 import { bootStatusAtom, checkerActivityAtom, documentProcessingAtom, formatProgress } from '../../store/boot-atoms';
+import { useEta } from '../boot_banner';
 import { selectAtom } from 'jotai/utils';
 import '../../css/boot_banner.css';
 import { GameHint, InteractiveGoalsWithHints, ProofState } from './rpc_api';
@@ -113,6 +115,9 @@ function DualEditorMain() {
       return newProgress.set(params.textDocument.uri, params.processing);
     }, [])
   const serverVersion = useEventResult(ec.events.serverRestarted, result => new ServerVersion(result.serverInfo?.version ?? ''))
+
+  // Stamp the level for loadGoals' late-reply guard (see goals.tsx).
+  currentLevel.key = worldId && levelId ? `${worldId}/${levelId}` : ''
 
   return <>
     <ConfigContext.Provider value={config}>
@@ -461,7 +466,7 @@ export function TypewriterInterface() {
 
   const worldSize = gameInfo?.worldSize?.[worldId ?? ""] ?? 0
 
-  const fallbackUri = `file:///${worldId}/${levelId}.lean`
+  const fallbackUri = levelUri(worldId!, levelId!)
   const effectiveUri = uri || fallbackUri
   let image: string | undefined = gameInfo?.worlds?.nodes[worldId!]?.image
 
@@ -494,8 +499,10 @@ export function TypewriterInterface() {
   // Clear the previous level's steps while the new one is prepared —
   // otherwise they sit under the new statement for the whole switch. Keyed
   // on the level only: the rpc session also changes after every edit, and a
-  // reset there blanked the pane mid-proof.
+  // reset there blanked the pane mid-proof. The loading timer starts here.
+  const loadingSince = React.useRef(Date.now())
   React.useEffect(() => {
+    loadingSince.current = Date.now()
     setProof(undefined)
   }, [worldId, levelId, setProof])
 
@@ -512,6 +519,18 @@ export function TypewriterInterface() {
       loadGoals(rpcSess, effectiveUri, worldId!, levelId!, setProof, setCrashed)
     }
   }, [activity.busy])
+  // No state, checker idle, nothing in flight that would deliver one: retry
+  // the first request every few seconds (a request lost to a session switch
+  // or answered before the level existed otherwise waits forever).
+  React.useEffect(() => {
+    if (proof !== undefined || activity.busy || !effectiveUri) return
+    const id = setInterval(() => {
+      setCrashed(false)
+      loadGoals(rpcSess, effectiveUri, worldId!, levelId!, setProof, setCrashed)
+    }, 4000)
+    return () => clearInterval(id)
+  }, [proof === undefined, activity.busy, effectiveUri, rpcSess])
+
   // Document settled (fileProgress empty): replace any provisional state.
   const [docProcessingTw] = useAtom(documentProcessingAtom)
   React.useEffect(() => {
@@ -615,22 +634,61 @@ function LeanGateOverlay() {
 /** The level pane's waiting state: a labeled, determinate-when-possible
  * loader driven by the wasm boot status — a bare spinner reads as "hung"
  * during the first-visit kernel download. */
-function LevelLoadingIndicator() {
+/** The level pane while there is no proof state yet. Every phase says what
+ * is happening, how long it has been going, and what to expect — a bare
+ * "Loading…" read as hung to first-time visitors (the first visit downloads
+ * ~600 MB and the first level after start-up is elaborated cold). The last
+ * phase, "checker idle but no answer yet", is retried automatically and
+ * offers a manual retry, because a first request lost to a session switch
+ * used to leave the pane waiting forever. */
+function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since: number }) {
   const [status] = useAtom(bootStatusAtom)
   const [activity] = useAtom(checkerActivityAtom)
   const progress = formatProgress(status)
+  const eta = useEta(status)
+  // `since` is owned by the level (the pane re-renders its branch several
+  // times during a cold start; a mount-local timer showed "0 s" repeatedly).
+  const [elapsed, setElapsed] = React.useState(() => Math.max(0, Math.round((Date.now() - since) / 1000)))
+  React.useEffect(() => {
+    const id = setInterval(() => setElapsed(Math.max(0, Math.round((Date.now() - since) / 1000))), 1000)
+    return () => clearInterval(id)
+  }, [since])
+  const secs = (n: number) => n < 60 ? `${n} s` : `${Math.floor(n / 60)} min ${n % 60} s`
+  const downloading = status.unit === 'bytes' || /download|unpack|install|preparing the .* environment/i.test(status.label)
+  // The "no answer yet" thresholds count from the moment the checker went
+  // idle, not from the level's load: after a four-minute first download the
+  // first idle second must not read "still no answer after 4 min — reload".
+  const idle = status.state !== 'busy' && !activity.busy
+  const waitingSince = React.useRef<number | null>(null)
+  if (!idle) waitingSince.current = null
+  else waitingSince.current ??= Date.now()
+  const waited = idle ? Math.max(0, Math.round((Date.now() - waitingSince.current!) / 1000)) : 0
+  let headline: React.ReactNode, detail: React.ReactNode
+  if (status.state === 'busy') {
+    headline = <>Lean is starting in your browser — {status.label}{progress ? ` · ${progress}` : ''}{eta ? ` · ${eta}` : ''}</>
+    detail = downloading
+      ? <>The first visit downloads the Lean checker and this game&apos;s mathematics (about 600 MB) and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.</>
+      : <>Starting the checker inside this tab: unpacking and loading the mathematics environment. On a laptop this takes about 10–30 seconds after the download.</>
+  } else if (activity.busy) {
+    headline = <>Preparing this level — {activity.label}…</>
+    detail = <>The checker is elaborating the level&apos;s statement. The first level after start-up can take up to a minute while everything warms up; later levels switch in a second or two.</>
+  } else {
+    headline = <>Waiting for the checker&apos;s first answer…{waited >= 15 ? ' (retrying every few seconds)' : ''}</>
+    detail = waited < 15
+      ? <>The level is loaded and the checker is idle; its answer usually arrives within a second.</>
+      : waited < 90
+        ? <>This is taking longer than usual. The request is retried automatically; you can also retry now.</>
+        : <>Still no answer after {secs(waited)}. Reloading the page is safe: your progress is saved in this browser, and the downloaded environment stays cached.</>
+  }
   return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
     {/* explicit size + static position: the pane's spinner rule shifts it
         off-centre and it collapsed to a dot in the level-switch state */}
     <CircularProgress size={40} style={{ position: 'static', margin: 0 }} />
-    <div style={{ color: '#555', fontSize: '0.9rem', textAlign: 'center', maxWidth: '28rem' }}>
-      {status.state === 'busy'
-        ? <>Lean is starting in your browser — {status.label}{progress ? ` · ${progress}` : ''}.<br/>
-            First visit downloads the game environment once; afterwards it&apos;s cached.</>
-        : activity.busy
-          ? <>Preparing this level — {activity.label}…</>
-          : <>Loading the level…</>}
-    </div>
+    <div style={{ color: '#333', fontSize: '0.95rem', textAlign: 'center', maxWidth: '30rem' }}>{headline}</div>
+    <div style={{ color: '#666', fontSize: '0.85rem', textAlign: 'center', maxWidth: '30rem' }}>{detail}</div>
+    <div style={{ color: '#888', fontSize: '0.8rem' }}>{secs(elapsed)} elapsed</div>
+    {idle && waited >= 15 && onRetry &&
+      <Button className="btn" onClick={onRetry}>Retry now</Button>}
   </div>
 }
 
@@ -756,7 +814,7 @@ let lastStepErrors = proof?.steps.length ? hasInteractiveErrors(getInteractiveDi
               </div>
             }
           </> :
-          <LevelLoadingIndicator />
+          <LevelLoadingIndicator since={loadingSince.current} onRetry={() => { setCrashed(false); loadGoals(rpcSess, effectiveUri, worldId!, levelId!, setProof, setCrashed) }} />
           // <CircularProgress variant="determinate" value={100*(1 - 1.024 ** (- Math.max(loadingProgress, 1)))} />
         // note: since we don't know the total number of files,
         // we use a function which strictly monotonely increases towards `100` as `x → ∞`

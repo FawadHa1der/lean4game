@@ -7,6 +7,7 @@ import { CircularProgress } from '@mui/material'
 import type { Location } from 'vscode-languageserver-protocol'
 import { LeanMonaco, LeanMonacoEditor, LeanMonacoOptions } from 'lean4monaco'
 import { setupMonacoClient } from 'lean4monaco/dist/monacoleanclient'
+import { levelUri } from '../wasm/level-uri'
 import type { EditorApi, InfoviewApi } from '@leanprover/infoview-api'
 import { EditorContext } from '../../../node_modules/vscode-lean4/lean4-infoview/src/infoview/contexts'
 import { EditorConnection, EditorEvents } from '../../../node_modules/vscode-lean4/lean4-infoview/src/infoview/editorConnection'
@@ -243,7 +244,9 @@ function PlayableLevel() {
   useEffect(() => {
     if (leanMonaco) {
       const leanMonacoEditor = new LeanMonacoEditor()
-      const uriStr = `file:///${worldId}/${levelId}.lean`
+      // One folder for every level — see level-uri.ts for why this is not
+      // upstream's `file:///{world}/{level}.lean`.
+      const uriStr = levelUri(worldId!, levelId!)
 
       ;(async () => {
         await leanMonaco!.whenReady

@@ -27,9 +27,17 @@ export const bootStatusAtom = atom<BootStatus>({
   label: "",
 });
 
-/** For non-React producers (game-boot's StatusSink). */
+/** For non-React producers (game-boot's StatusSink). Unchanged content is
+ * not republished: the sink fires per progress event (thousands per second
+ * while a cached snapshot loads), and every fresh object re-rendered each
+ * subscriber at that rate — measured as a ~1.2 kHz render loop of the level
+ * panel during boot, each render issuing a doomed rpc connect. */
 export function publishBootStatus(status: BootStatus): void {
-  getDefaultStore().set(bootStatusAtom, status);
+  const store = getDefaultStore();
+  const cur = store.get(bootStatusAtom);
+  if (cur.state === status.state && cur.label === status.label && cur.loaded === status.loaded
+      && cur.total === status.total && cur.unit === status.unit) return;
+  store.set(bootStatusAtom, status);
 }
 
 /** Pretty progress text: "213 / 600 MB" or "37 / 152 modules". */
@@ -66,11 +74,15 @@ const SWITCHING_RE =
  * (the stage labels vary: module names, "Starting the Emscripten runtime",
  * … — matching them one by one left the gate flickering between stages). */
 export function publishCheckerActivity(state: "busy" | "ready", label: string, booting = false): void {
-  getDefaultStore().set(checkerActivityAtom, {
+  const next: CheckerActivity = {
     busy: state === "busy",
     switching: state === "busy" && (booting || SWITCHING_RE.test(label)),
     label,
-  });
+  };
+  const store = getDefaultStore();
+  const cur = store.get(checkerActivityAtom);
+  if (cur.busy === next.busy && cur.switching === next.switching && cur.label === next.label) return;
+  store.set(checkerActivityAtom, next);
 }
 
 /** Is the checker still processing the level document (`$/lean/fileProgress`
