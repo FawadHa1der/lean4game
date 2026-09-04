@@ -155,6 +155,18 @@ machine); "was" values are from the same harness before fix 8.
 - The typewriter is hidden by the exercise panel overflow at some viewport
   heights only when a level has been solved (upstream layout, both sites).
 
+- **Rare renderer crash right after an early edit (open, low rate).** In
+  hook-free browser probes that boot TestGame, switch to editor mode and
+  type one tactic, the page crashed once in about thirteen runs (once with
+  the `e5df87a` closure); six-run series on both the `e5df87a` and the
+  `8e708dc` closures over the same runtime then completed without a crash,
+  so it is not closure-specific. Same shape as the reload-storm item
+  (renderer death, not a Lean error) and as a signature the qed64 side has
+  seen; expected to move with their worker-side memory work. Note: probes
+  that patch page prototypes or serialise logged proof objects over the
+  debugging protocol crash the page far more often — that is the probe,
+  not the game; measure with hook-free probes only.
+
 ## Version drift (deliberately kept — our fork is upstream master)
 
 Monospace statement/goal with the Lean signature line; hypothesis chips;

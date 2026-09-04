@@ -36,6 +36,11 @@ PIPELINE=(pipeline/toolchain/chunk-runtime.mjs pipeline/toolchain/artifact-paths
 PIPELINE_OPTIONAL=(pipeline/toolchain/artifact-paths.d.mts)
 PIPE_DEST="$ROOT/wasm/vendor/qed64-pipeline"
 FULL="$(git -C "$QED64" rev-parse --verify "$SHA^{commit}")"
+# Validate everything BEFORE touching the tree: a commit lacking a file must
+# fail without leaving a half-vendored closure or an empty pipeline dir.
+for pf in "${PATHS[@]}" "${PIPELINE[@]}"; do
+  git -C "$QED64" cat-file -e "$FULL:$pf" 2>/dev/null || { echo "missing at ${FULL:0:12}: $pf (this commit predates a file the game needs; pick a newer one)" >&2; exit 1; }
+done
 # Pins older than the byte-channel rewrite have no lsp-frames.js, and
 # `git archive` refuses a missing pathspec: vendor it when the commit has it.
 # A commit whose worker loads it but lacks it is refused here — the failure
@@ -53,7 +58,6 @@ for opt in "${OPTIONAL[@]}"; do
   if git -C "$QED64" cat-file -e "$FULL:$opt" 2>/dev/null; then git -C "$QED64" archive "$FULL" "$opt" | tar -x -C "$DEST"; PATHS+=("$opt"); fi
 done
 rm -rf "$PIPE_DEST"; mkdir -p "$PIPE_DEST"
-for pf in "${PIPELINE[@]}"; do git -C "$QED64" cat-file -e "$FULL:$pf" 2>/dev/null || { echo "pipeline script missing at $FULL: $pf" >&2; exit 1; }; done
 git -C "$QED64" archive "$FULL" "${PIPELINE[@]}" | tar -x -C "$PIPE_DEST"
 for opt in "${PIPELINE_OPTIONAL[@]}"; do
   if git -C "$QED64" cat-file -e "$FULL:$opt" 2>/dev/null; then git -C "$QED64" archive "$FULL" "$opt" | tar -x -C "$PIPE_DEST"; fi
