@@ -30,6 +30,7 @@ import { Typewriter, getInteractiveDiagsAt, hasInteractiveErrors } from './typew
 import { Button } from '../button';
 import { CircularProgress } from '@mui/material';
 import { bootStatusAtom, checkerActivityAtom, documentProcessingAtom, formatProgress } from '../../store/boot-atoms';
+import { leanMonacoAtom } from '../../store/editor-atoms';
 import { useEta } from '../boot_banner';
 import { selectAtom } from 'jotai/utils';
 import '../../css/boot_banner.css';
@@ -119,10 +120,18 @@ function DualEditorMain() {
   // Stamp the level for loadGoals' late-reply guard (see goals.tsx).
   currentLevel.key = worldId && levelId ? `${worldId}/${levelId}` : ''
 
+  // WithRpcSessions binds its session manager to the editor connection it
+  // first sees (a useState initializer). If the LeanMonaco instance is ever
+  // recreated, every later rpc would still go to the disposed instance's
+  // stopped client ("No connection to Lean" for good) — remount on a new
+  // editor API. The API object is per LeanMonaco instance, not per level.
+  const apiKey = React.useRef<{ api: unknown; n: number }>({ api: ec?.api, n: 0 })
+  if (apiKey.current.api !== ec?.api) apiKey.current = { api: ec?.api, n: apiKey.current.n + 1 }
+
   return <>
     <ConfigContext.Provider value={config}>
       <VersionContext.Provider value={serverVersion}>
-        <WithRpcSessions>
+        <WithRpcSessions key={apiKey.current.n}>
           <WithLspDiagnosticsContext>
             <ProgressContext.Provider value={allProgress}>
               {(typewriterMode) ?
@@ -659,6 +668,7 @@ function LeanGateOverlay() {
 function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since: number }) {
   const [status] = useAtom(bootStatusAtom)
   const [activity] = useAtom(checkerActivityAtom)
+  const [leanMonaco] = useAtom(leanMonacoAtom)
   const progress = formatProgress(status)
   const eta = useEta(status)
   // `since` is owned by the level (the pane re-renders its branch several
@@ -678,6 +688,24 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
   if (!idle) waitingSince.current = null
   else waitingSince.current ??= Date.now()
   const waited = idle ? Math.max(0, Math.round((Date.now() - waitingSince.current!) / 1000)) : 0
+  // The language client's own view (lean4monaco LeanClient): "running" is
+  // the only state in which rpc can flow; "starting" = waiting for its
+  // initialize round trip; "stopped" = never started or torn down.
+  const clients = (leanMonaco?.clientProvider?.getClients?.() ?? []) as Array<{ isRunning?: () => boolean; isStarted?: () => boolean; restart?: () => Promise<void> }>
+  const clientState = clients.length === 0 ? 'no client'
+    : clients.map((c) => c.isRunning?.() ? 'running' : c.isStarted?.() ? 'starting' : 'stopped').join(', ')
+  const noConnection = /No connection to Lean/i.test(lastLoadError.message)
+  // Self-heal: a client that is still not running 20 s after the checker
+  // went idle has lost its start (its initialize answer, typically); restart
+  // it — the same action as the editor's "Restart Lean" — at most every 30 s.
+  const lastRestart = React.useRef(0)
+  React.useEffect(() => {
+    if (!idle || !noConnection || waited < 20 || clients.length === 0) return
+    if (Date.now() - lastRestart.current < 30000) return
+    lastRestart.current = Date.now()
+    console.warn(`[lean4game] Lean client ${clientState} ${waited}s after the checker went idle — restarting it`)
+    void clients[0].restart?.()
+  }, [idle, noConnection, waited >= 20, clients.length])
   let headline: React.ReactNode, detail: React.ReactNode
   if (status.state === 'busy') {
     headline = <>Lean is starting in your browser — {status.label}{progress ? ` · ${progress}` : ''}{eta ? ` · ${eta}` : ''}</>
@@ -688,17 +716,17 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
     headline = <>Preparing this level — {activity.label}…</>
     detail = <>The checker is elaborating the level&apos;s statement. The first level after start-up can take up to a minute while everything warms up; later levels switch in a second or two.</>
   } else {
-    const noConnection = /No connection to Lean/i.test(lastLoadError.message)
     headline = noConnection
       ? <>Connecting to the checker…{waited >= 15 ? ' (retrying every few seconds)' : ''}</>
       : <>Waiting for the checker&apos;s first answer…{waited >= 15 ? ' (retrying every few seconds)' : ''}</>
+    const attempt = lastLoadError.message ? <> (last attempt: {lastLoadError.message}; language client: {clientState})</> : null
     detail = waited < 15
       ? (noConnection
-          ? <>The checker is up; the editor&apos;s connection to it is being (re)established, which takes a moment.</>
+          ? <>The checker is up; the editor&apos;s connection to it is being (re)established, which takes a moment (language client: {clientState}).</>
           : <>The level is loaded and the checker is idle; its answer usually arrives within a second.</>)
       : waited < 90
-        ? <>This is taking longer than usual{lastLoadError.message ? <> (last attempt: {lastLoadError.message})</> : null}. The request is retried automatically; you can also retry now.</>
-        : <>Still no answer after {secs(waited)}{lastLoadError.message ? <> (last attempt: {lastLoadError.message})</> : null}. Reloading the page is safe: your progress is saved in this browser, and the downloaded environment stays cached.</>
+        ? <>This is taking longer than usual{attempt}. The request is retried automatically{noConnection && waited >= 20 ? ', and the language client is restarted' : ''}; you can also retry now.</>
+        : <>Still no answer after {secs(waited)}{attempt}. Reloading the page is safe: your progress is saved in this browser, and the downloaded environment stays cached.</>
   }
   return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
     {/* explicit size + static position: the pane's spinner rule shifts it
