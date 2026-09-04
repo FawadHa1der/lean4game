@@ -31,8 +31,14 @@ node scripts/preflight-artifacts.mjs "$PUB"
 BUILD_ID=$(node -p 'JSON.parse(require("fs").readFileSync(process.argv[1] + "/runtime/runtime-manifest.json","utf8")).buildId' "$PUB")
 cp "$PUB/runtime/runtime-manifest.json" "$PUB/runtime/runtime-manifest.$BUILD_ID.json"
 
+# Live progress in a terminal; periodic one-line stats when logged to a file.
+# The snapshots are three single files (905 MB; nng4.snapz alone is 428 MB)
+# uploaded multipart — without --progress a big file shows nothing for
+# minutes and looks stuck. Already-uploaded digest-named files are skipped.
+if [ -t 1 ]; then STATS=(--progress); else STATS=(--stats 10s --stats-one-line); fi
 for dir in runtime profiles snapshots; do
-  rclone copy "$PUB/$dir" "$REMOTE:$BUCKET/$PREFIX/$dir" --checksum --transfers 4 --s3-chunk-size 64M --stats 30s --stats-one-line
+  echo "== $dir ($(du -sh "$PUB/$dir" | cut -f1), $(find "$PUB/$dir" -type f | wc -l | tr -d ' ') files) → $REMOTE:$BUCKET/$PREFIX/$dir"
+  rclone copy "$PUB/$dir" "$REMOTE:$BUCKET/$PREFIX/$dir" --checksum --transfers 4 --s3-chunk-size 64M --s3-upload-concurrency 4 "${STATS[@]}"
 done
 echo "artifact upload complete — R2 view:"
 rclone ls "$REMOTE:$BUCKET/$PREFIX" | sort -k2 | head -30
