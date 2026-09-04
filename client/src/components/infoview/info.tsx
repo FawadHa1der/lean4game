@@ -13,7 +13,7 @@ import { RpcContext, useRpcSessionAtPos } from '../../../../node_modules/vscode-
 import { GoalsLocation, Locations, LocationsContext } from '../../../../node_modules/vscode-lean4/lean4-infoview/src/infoview/goalLocation'
 
 import { AllMessages, lspDiagToInteractive } from './messages'
-import { goalsToString, Goal, MainAssumptions, OtherGoals } from './goals'
+import { goalsToString, Goal, MainAssumptions, OtherGoals, settleProof } from './goals'
 import { InteractiveTermGoal, InteractiveGoals, ProofState } from './rpc_api'
 import { MonacoEditorContext, InfoStatus } from './context'
 import { useTranslation } from 'react-i18next'
@@ -438,7 +438,7 @@ function InfoAux(props: InfoProps) {
 
           // Update the game's proof state
           console.info('updating proof from editor mode.')
-          setProof(state.value.proof)
+          setProof(state.value.proof ? settleProof(state.value.proof as any) : state.value.proof)
 
         } else if (state.state === 'rejected' && state.error !== 'retry') {
             // The code inside `useAsyncWithTrigger` may only ever reject with a `retry` exception.

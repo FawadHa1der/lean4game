@@ -12,6 +12,7 @@ import { WithTooltipOnHover } from '../../../../node_modules/vscode-lean4/lean4-
 import { useAppendTypewriterInput } from './context';
 import { InteractiveGoal, InteractiveGoals, InteractiveGoalsWithHints, InteractiveHypothesisBundle, ProofState } from './rpc_api';
 import { RpcSessionAtPos } from '@leanprover/infoview/*';
+import { isDocumentProcessing } from '../../store/boot-atoms'
 import { DocumentPosition } from '../../../../node_modules/vscode-lean4/lean4-infoview/src/infoview/util';
 import { DiagnosticSeverity } from 'vscode-languageserver-protocol';
 import { useTranslation } from 'react-i18next';
@@ -360,6 +361,29 @@ export const FilteredGoals = React.memo(({ headerChildren, goals }: FilteredGoal
     </div>
 })
 
+/** A proof state fetched while the checker is still processing the document
+ * is provisional: a half-typed or not-yet-elaborated tactic block reports
+ * `completed` with no goals and no diagnostics for a few hundred ms (traced
+ * on TestGame: `rw []`, `rw [h]` → completed:true, then the real state
+ * ~700 ms later). Acting on it focused the Next button (keystrokes lost)
+ * and marked the level completed in local storage. Strip the completion
+ * flags until the document settles; the pane reloads on settle. */
+export function settleProof<T extends { completed?: boolean; completedWithWarnings?: boolean; diagnostics?: unknown[]; steps?: { diags?: unknown[] }[] }>(proof: T): T {
+  if (!proof || !(proof.completed || proof.completedWithWarnings)) return proof
+  // A real completion always carries the server's "level completed" diagnostic
+  // (RpcHandlers.completionDiagnostics); a state with no diagnostics at all
+  // is one whose tactic block has not finished elaborating — its `completed`
+  // is the absence of errors so far, not a verdict. The client's "settled"
+  // flag can flip a few ms before such a late provisional answer arrives, so
+  // this check is needed on top of the processing flag.
+  const last = proof.steps?.[proof.steps.length - 1]
+  const anyDiag = (proof.diagnostics?.length ?? 0) + (last?.diags?.length ?? 0) > 0
+  if (isDocumentProcessing() || !anyDiag) {
+    return { ...proof, completed: false, completedWithWarnings: false }
+  }
+  return proof
+}
+
 export function loadGoals(
   rpcSess: RpcSessionAtPos,
   uri: string,
@@ -380,7 +404,7 @@ rpcSess.call('Game.getProofState',
     if (typeof proof !== 'undefined') {
       console.info(`received a proof state!`)
       console.log(proof)
-      setProof(proof as ProofState)
+      setProof(settleProof(proof as ProofState))
       setCrashed(false)
     } else {
       console.warn('received undefined proof state!')

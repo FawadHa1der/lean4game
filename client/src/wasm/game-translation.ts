@@ -204,8 +204,15 @@ export class GameTranslation {
     return message;
   }
 
+  /** Optional sink for the document's processing state (see boot-atoms). */
+  onProcessing: ((processing: boolean) => void) | null = null;
+
   /** relay: server → client rewrites. */
   private toClient(message: JsonRpc): JsonRpc {
+    if (message.method === "$/lean/fileProgress" && this.onProcessing) {
+      const ranges = message.params?.processing;
+      this.onProcessing(Array.isArray(ranges) && ranges.length > 0);
+    }
     shiftLines(message, -PROOF_START_LINE);
     replaceUri(message, `file:///${this.worldId}/${this.levelId}.lean`);
 

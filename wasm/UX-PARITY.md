@@ -120,7 +120,20 @@ machine); "was" values are from the same harness before fix 8.
     for the measured effect; post-reload boot ~5.8 s). Keep both across
     substrate bumps: they remove two multi-GiB standing costs regardless of
     how the worker's boot-time transients get fixed.
-11. **Per-step latency: GameServer `Runner` hoist + snapshot rebake.**
+11. **Provisional "completed" states no longer act.** In editor mode every
+    keystroke triggers a proof-state request, and the server answers for a
+    tactic block that has not finished elaborating with `completed: true`,
+    no goals and no diagnostics (the absence of errors so far, not a
+    verdict) for a few hundred ms. The game acted on it at once: it
+    rendered and focused the Next button (keystrokes lost — the cypress
+    editor-mode test caught the focus), and marked the level completed in
+    local storage. Completion is now ignored while the checker reports the
+    document as processing, and whenever a "completed" state carries no
+    diagnostic at all (a real completion always carries the server's
+    "level completed" diagnostic); the pane reloads once the document
+    settles. Surfaced by the faster byte-channel worker of the `e5df87a`
+    closure; the race existed before.
+12. **Per-step latency: GameServer `Runner` hoist + snapshot rebake.**
    `findForbiddenTactics` re-read and re-parsed the level's JSON
    (`loadLevelData`, ~46 ms under wasm64) once per syntax node; the load is
    now done once per elaboration. Headless probe: 8-step proof 8.1 s → 0.73 s,

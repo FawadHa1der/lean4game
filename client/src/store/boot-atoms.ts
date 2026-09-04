@@ -72,3 +72,16 @@ export function publishCheckerActivity(state: "busy" | "ready", label: string, b
     label,
   });
 }
+
+/** Is the checker still processing the level document (`$/lean/fileProgress`
+ * with non-empty ranges)? Written by the LSP translation layer on every
+ * progress notification. Proof states that arrive while this is true are
+ * provisional: an edit that has not been elaborated yet reports
+ * `completed` with no goals and no diagnostics for a few hundred ms. */
+export const documentProcessingAtom = atom<boolean>(false);
+export function publishDocumentProcessing(processing: boolean): void {
+  getDefaultStore().set(documentProcessingAtom, processing);
+}
+export function isDocumentProcessing(): boolean {
+  return getDefaultStore().get(documentProcessingAtom);
+}

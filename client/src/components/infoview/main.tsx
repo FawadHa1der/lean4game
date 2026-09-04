@@ -28,7 +28,7 @@ import { MonacoEditorContext } from './context';
 import { Typewriter, getInteractiveDiagsAt, hasInteractiveErrors } from './typewriter';
 import { Button } from '../button';
 import { CircularProgress } from '@mui/material';
-import { bootStatusAtom, checkerActivityAtom, formatProgress } from '../../store/boot-atoms';
+import { bootStatusAtom, checkerActivityAtom, documentProcessingAtom, formatProgress } from '../../store/boot-atoms';
 import { selectAtom } from 'jotai/utils';
 import '../../css/boot_banner.css';
 import { GameHint, InteractiveGoalsWithHints, ProofState } from './rpc_api';
@@ -244,6 +244,14 @@ export function Main() {
     }
     loadGoals(rpcSess, uri, worldId!, levelId!, setProof, setCrashed)
   }, [typewriterMode, lockEditorMode, uri, worldId, levelId, rpcSess, setProof, setCrashed])
+
+  // Reload once the document settles: states fetched mid-elaboration are
+  // provisional (settleProof); the settled one must replace them.
+  const [docProcessing] = useAtom(documentProcessingAtom)
+  React.useEffect(() => {
+    if (typewriterMode || docProcessing || !uri) return
+    loadGoals(rpcSess, uri, worldId!, levelId!, setProof, setCrashed)
+  }, [docProcessing])
 
   useServerNotificationEffect('textDocument/publishDiagnostics', (params: any) => {
     if (typewriterMode) {
@@ -504,6 +512,12 @@ export function TypewriterInterface() {
       loadGoals(rpcSess, effectiveUri, worldId!, levelId!, setProof, setCrashed)
     }
   }, [activity.busy])
+  // Document settled (fileProgress empty): replace any provisional state.
+  const [docProcessingTw] = useAtom(documentProcessingAtom)
+  React.useEffect(() => {
+    if (docProcessingTw || !effectiveUri || proof === undefined) return
+    loadGoals(rpcSess, effectiveUri, worldId!, levelId!, setProof, setCrashed)
+  }, [docProcessingTw])
 
   /** Delete all proof lines starting from a given line.
   * Note that the first line (i.e. deleting everything) is `1`!

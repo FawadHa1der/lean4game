@@ -32,7 +32,7 @@ import { WatchdogShim } from "qed64/frontend/src/watchdog-shim";
 import { getDefaultStore } from "jotai";
 import { difficultyAtom, progressAtom } from "../store/progress-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
-import { publishBootStatus, publishCheckerActivity } from "../store/boot-atoms";
+import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing } from "../store/boot-atoms";
 import { rememberGamedata } from "./gamedata-cache";
 
 export interface GameDataBundle {
@@ -127,6 +127,9 @@ function ensureTranslation(): GameTranslation {
     gameName: "", // patched once game.json arrives (see bootGameRuntime)
     levelData: () => undefined,
   });
+  // fileProgress → documentProcessingAtom: proof states fetched while the
+  // document is still being processed are provisional (see settleProof).
+  translationSingleton.onProcessing = publishDocumentProcessing;
   return translationSingleton;
 }
 
