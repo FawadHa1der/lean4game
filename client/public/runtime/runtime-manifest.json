@@ -1,8 +1,8 @@
 {
   "schema": "org.lean-browser64.runtime/v1",
-  "buildId": "wasm64-0becc706d2ef1964",
+  "buildId": "wasm64-d77d34b97592d014",
   "leanVersion": "4.33.0-pre",
-  "sourceRevision": "qed64-wasm64@852d1b9c3",
+  "sourceRevision": "qed64-wasm64@992dc94b2",
   "target": "wasm64-unknown-emscripten",
   "pointerBits": 64,
   "memory": {
@@ -12,64 +12,64 @@
   },
   "files": {
     "lean.js": {
-      "bytes": 48088019,
-      "sha256": "6d1cdfeaee32297b4ece354be138579f23fdcff0839ec4c79b39d7518fa9349a",
+      "bytes": 48082769,
+      "sha256": "451d063d52714f9b2b41a1abc06686805d451170350411e4da604ccac79327cc",
       "chunks": [
         {
-          "url": "/runtime/chunks/lean.js.0600231547ce3ed76132.part-000",
+          "url": "/runtime/chunks/lean.js.777b734bb14f6a8b65f1.part-000",
           "bytes": 16777216,
-          "sha256": "0600231547ce3ed761324298b966e53203942d743513e95db980083221376242"
+          "sha256": "777b734bb14f6a8b65f14ca3c46d9e7db60a8dc75d7b84a99e96ac501b1eea04"
         },
         {
-          "url": "/runtime/chunks/lean.js.ce7d9b7ff8b9267bac30.part-001",
+          "url": "/runtime/chunks/lean.js.539690a348901854e7ac.part-001",
           "bytes": 16777216,
-          "sha256": "ce7d9b7ff8b9267bac30368c0aefc39932bc34a68d4914016da338b2e8204b3d"
+          "sha256": "539690a348901854e7ac44c90f9ebb262dfec3b725c8df111b3ea2069b90b785"
         },
         {
-          "url": "/runtime/chunks/lean.js.6d1a5d5e5b3ee64a9287.part-002",
-          "bytes": 14533587,
-          "sha256": "6d1a5d5e5b3ee64a928770ca16a75a4e2af68315631d7cf37ddff8d2b068a591"
+          "url": "/runtime/chunks/lean.js.d44ce605bc3fb9bc671b.part-002",
+          "bytes": 14528337,
+          "sha256": "d44ce605bc3fb9bc671b36bbc9681793ff491e4efd32aa5967ed40f8c5bcaed0"
         }
       ]
     },
     "lean.wasm": {
-      "bytes": 106055739,
-      "sha256": "0becc706d2ef19649624a7f6231446fd025186aed8a4d99cb09116f250aaa55e",
+      "bytes": 105546982,
+      "sha256": "d77d34b97592d01403969ff64180127f31f12585bd9859e080200cc429b0ee15",
       "chunks": [
         {
-          "url": "/runtime/chunks/lean.wasm.ab699b1fb8b532be4956.part-000",
+          "url": "/runtime/chunks/lean.wasm.d407cc8ab5a0053baf47.part-000",
           "bytes": 16777216,
-          "sha256": "ab699b1fb8b532be4956a21c6ff3296e5865a2ba067c6fa4998478647aee67c2"
+          "sha256": "d407cc8ab5a0053baf4742383d5fa8f7279cbb81e309b042cda972ab545d3b2a"
         },
         {
-          "url": "/runtime/chunks/lean.wasm.4ff1b5c08b78fdc3da97.part-001",
+          "url": "/runtime/chunks/lean.wasm.7f981fd1aa1141bec401.part-001",
           "bytes": 16777216,
-          "sha256": "4ff1b5c08b78fdc3da97cc0daadac97c7bd654560bf071490f864c0abf2beabb"
+          "sha256": "7f981fd1aa1141bec4019118aec6ec9c1b706c00593939d5aba7e3d21eaccf4d"
         },
         {
-          "url": "/runtime/chunks/lean.wasm.4af4a75244c3c4a693ae.part-002",
+          "url": "/runtime/chunks/lean.wasm.1e7b9e474b2daa3f2cdf.part-002",
           "bytes": 16777216,
-          "sha256": "4af4a75244c3c4a693ae0fc5fa8cde5ec60d17b2eff7270e5f8580db5b044ed6"
+          "sha256": "1e7b9e474b2daa3f2cdf699eef6a29c07cafe5d4d9b87196ad72d96d2c0ad09d"
         },
         {
-          "url": "/runtime/chunks/lean.wasm.e4d165bd0f67dd11d4d1.part-003",
+          "url": "/runtime/chunks/lean.wasm.93306eaf59944aa425a7.part-003",
           "bytes": 16777216,
-          "sha256": "e4d165bd0f67dd11d4d1e5c48cd6cb7e2de34383af9478f4df9828ad9b1fdd39"
+          "sha256": "93306eaf59944aa425a774818b9495686ebe2f737a1596743855f1a88ae01834"
         },
         {
-          "url": "/runtime/chunks/lean.wasm.d84ef9cdeb693669a3ca.part-004",
+          "url": "/runtime/chunks/lean.wasm.8cdf1e8ba5a3ae192a9e.part-004",
           "bytes": 16777216,
-          "sha256": "d84ef9cdeb693669a3ca658db2b61a0e9f545d6ae8b4f94869dffd905534972e"
+          "sha256": "8cdf1e8ba5a3ae192a9eaa43cf73baa18873282e5164eeefa3fe704ca896d998"
         },
         {
-          "url": "/runtime/chunks/lean.wasm.79ebe1275c92ec12fdae.part-005",
+          "url": "/runtime/chunks/lean.wasm.85242ba63e8d72f3761f.part-005",
           "bytes": 16777216,
-          "sha256": "79ebe1275c92ec12fdae6d7a1092825cad82c54dbc7873d64cfcb531b1c0b110"
+          "sha256": "85242ba63e8d72f3761f4c07d437932661c49db00fe60671c5a998fb6268545e"
         },
         {
-          "url": "/runtime/chunks/lean.wasm.06fa88bbf050bd46bcbe.part-006",
-          "bytes": 5392443,
-          "sha256": "06fa88bbf050bd46bcbe65e491ebb52d44e920dde6960de331d88fb33dbc71b5"
+          "url": "/runtime/chunks/lean.wasm.9e0a194d403a155ed525.part-006",
+          "bytes": 4883686,
+          "sha256": "9e0a194d403a155ed525340a86e0f3f77f6f0f6ba3a8618987ef9a6c36847997"
         }
       ]
     }

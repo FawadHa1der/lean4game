@@ -1,13 +1,13 @@
 {
  "format": "browser64.artifact-manifest",
  "version": 1,
- "digest": "sha256:35914e701e2736bb902af16177b0c016e86eea33ebf5e26e72bf4cab51077b6f",
+ "digest": "sha256:6b49e766a150a5723c8933e2b4815bb0e0ddafb95c96a0572e5aed51db74847d",
  "content": {
   "release": "lean-core-4.33.0-pre-local",
   "lean": {
    "version": "4.33.0-pre",
    "target": "wasm64-unknown-emscripten",
-   "gitRevision": "852d1b9c3af42b4fc7af21ff3887fa402ecc8cc3"
+   "gitRevision": "992dc94b2de491878cca61aca382ed31286f3a86"
   },
   "pack": {
    "url": "/profiles/lean-core.pack.gzip",

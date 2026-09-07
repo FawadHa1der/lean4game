@@ -1,39 +1,30 @@
 {
  "schema": "lean4game.artifact-bundle/v1",
- "tag": "artifacts-from-source-2026-09-03",
- "runtime": "wasm64-0becc706d2ef1964",
- "snapshots": "init=b07859007e814af2,nng4=96d03497e700a738,testgame=98e8ba5e91fcdc73",
+ "tag": "artifacts-wasm64-d77d34b97592d014",
+ "runtime": "wasm64-d77d34b97592d014",
+ "snapshots": "init=da2ed4de9dabfb73,nng4=3613d20f2f3545d1,testgame=aee31c25b23c454c",
  "extract_into": "client/public",
  "tarballs": [
   {
    "class": "runtime",
    "file": "runtime.tar",
-   "bytes": 154176512,
-   "sha256": "813f05681d760a696d907dad4009353b0897a924cdbe333db394dd42d07f2f11",
-   "files": 11
+   "bytes": 153673728,
+   "sha256": "66da008066384c1fe39094dd3833258db302e30a59a185a15aa7525dd1a70bf8",
+   "files": 13
   },
   {
    "class": "profiles",
    "file": "profiles.tar",
    "bytes": 120705024,
-   "sha256": "c0ea28cba4acd3ae08fa005caa5a7e32dd319d4498f65b27c2776b9a17673d59",
+   "sha256": "8f0bfd6c5211fa41a69b0c22147ebb14f0b15b27bebad0e1ee03e6f3e76c468a",
    "files": 10
   },
   {
    "class": "snapshots",
    "file": "snapshots.tar",
-   "bytes": 949379584,
-   "sha256": "84f2e6a67ccd9000ae4acc982ebb62ec531d0ee95bc9ae0f1dc240e52dbbfc38",
+   "bytes": 949378048,
+   "sha256": "499cb04dd30c0304cd9194e8d2669c75118aeb4c68717aa0439a3ebec232a340",
    "files": 4
-  },
-  {
-   "class": "mathlib",
-   "file": "mathlib-pack.tar",
-   "bytes": 999728128,
-   "sha256": "634c67fb6bf7c7a2713b4c3e4abdcc1adb1e1b7c78ce084e47a104284de886f0",
-   "files": 61,
-   "optional": true,
-   "extract_into": "wasm/out/mathlib-pack"
   }
  ],
  "note": "Tarballs are plain tar of client/public/<class>/ (paths relative to client/public). Per-file digests live in the tracked manifests (runtime/runtime-manifest.json, snapshots/index.json, profiles/lean-core.manifest.json)."

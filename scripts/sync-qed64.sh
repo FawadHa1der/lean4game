@@ -4,8 +4,9 @@
 # Usage: scripts/sync-qed64.sh <qed64-commit> [path-to-qed64-checkout]
 #
 # The game consumes exactly this closure from qed64 (no third-party imports):
-#   frontend/src/qed64-boot.ts, frontend/src/watchdog-shim.ts,
-#   src/install/profiles.ts, src/runtime/{client,snapshots,umbrella}.ts
+#   frontend/src/{qed64-boot,resident-session,lsp-relay}.ts,
+#   src/install/profiles.ts, src/runtime/{client,snapshots}.ts,
+#   public/workers/{lean.worker,lsp-frames,lsp-front-door,snapshot-prefetch.worker}.js
 # plus the worker scripts the page spawns:
 #   public/workers/lean.worker.js, public/workers/snapshot-prefetch.worker.js
 # and, from the byte-channel rewrite on, the decoder lean.worker.js loads
@@ -21,15 +22,20 @@ SHA="${1:?qed64 commit}"
 QED64="${2:-$(cd "$(dirname "$0")/../../wasm64-lean-fable/qed64" && pwd)}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="$ROOT/client/src/wasm/vendor/qed64"
-PATHS=(frontend/src/qed64-boot.ts frontend/src/watchdog-shim.ts
-       src/install/profiles.ts src/runtime/client.ts src/runtime/snapshots.ts src/runtime/umbrella.ts
-       public/workers/lean.worker.js public/workers/snapshot-prefetch.worker.js)
-# Optional extra worker (resident mode only; loaded lazily by lean.worker.js — serve it when the commit has it).
-OPTIONAL=(public/workers/lsp-front-door.js)
+# The resident closure (qed64 ≥ 32e5e62, pump transport removed): the session
+# adapter with its boot policy, the L3 relay, boot/artifacts, runtime client,
+# snapshot loader, install profiles; the worker plus the two scripts it
+# importScripts (the LSP frame decoder and the resident front door, loaded at
+# arm) and the prefetch worker. watchdog-shim.ts / umbrella.ts are gone.
+PATHS=(frontend/src/qed64-boot.ts frontend/src/resident-session.ts frontend/src/lsp-relay.ts
+       src/install/profiles.ts src/runtime/client.ts src/runtime/snapshots.ts
+       public/workers/lean.worker.js public/workers/lsp-frames.js public/workers/lsp-front-door.js
+       public/workers/snapshot-prefetch.worker.js)
+OPTIONAL=()
 # The pipeline scripts the from-source lane runs (wasm/build-from-source.sh):
 # no third-party imports, vendored into a SEPARATE root so their work/ scratch
 # dirs (work/snapshot, work/staging) never land under client/src.
-PIPELINE=(pipeline/toolchain/chunk-runtime.mjs pipeline/toolchain/artifact-paths.mjs
+PIPELINE=(pipeline/toolchain/chunk-runtime.mjs pipeline/toolchain/artifact-paths.mjs pipeline/toolchain/gen-exports.py pipeline/toolchain/gate.mjs pipeline/snapshot/persistent-probe.mjs
           pipeline/snapshot/bake-snapshot.mjs pipeline/snapshot/node-runner.mjs pipeline/snapshot/snapshot-probe.mjs
           pipeline/artifacts/pack.mjs pipeline/artifacts/unpack.mjs pipeline/artifacts/inspect.mjs
           pipeline/release/verify-release.mjs)
@@ -41,20 +47,13 @@ FULL="$(git -C "$QED64" rev-parse --verify "$SHA^{commit}")"
 for pf in "${PATHS[@]}" "${PIPELINE[@]}"; do
   git -C "$QED64" cat-file -e "$FULL:$pf" 2>/dev/null || { echo "missing at ${FULL:0:12}: $pf (this commit predates a file the game needs; pick a newer one)" >&2; exit 1; }
 done
-# Pins older than the byte-channel rewrite have no lsp-frames.js, and
-# `git archive` refuses a missing pathspec: vendor it when the commit has it.
-# A commit whose worker loads it but lacks it is refused here — the failure
-# mode otherwise is a worker that never posts {type:"boot"} (every game
-# session hangs at boot), found only in the browser.
-DECODER=public/workers/lsp-frames.js
-if git -C "$QED64" cat-file -e "$FULL:$DECODER" 2>/dev/null; then
-  PATHS+=("$DECODER")
-elif git -C "$QED64" show "$FULL:public/workers/lean.worker.js" | grep -q 'importScripts("lsp-frames.js")'; then
-  echo "qed64 ${FULL:0:12}: lean.worker.js imports lsp-frames.js but the commit has no $DECODER" >&2; exit 1
-fi
+# The two scripts lean.worker.js importScripts (the frame decoder and the
+# front door) are in PATHS: a commit that lacks either fails validation above
+# — the failure mode otherwise is a worker that never boots (every game
+# session hangs), found only in the browser.
 rm -rf "$DEST"; mkdir -p "$DEST"
 git -C "$QED64" archive "$FULL" "${PATHS[@]}" | tar -x -C "$DEST"
-for opt in "${OPTIONAL[@]}"; do
+for opt in ${OPTIONAL[@]+"${OPTIONAL[@]}"}; do
   if git -C "$QED64" cat-file -e "$FULL:$opt" 2>/dev/null; then git -C "$QED64" archive "$FULL" "$opt" | tar -x -C "$DEST"; PATHS+=("$opt"); fi
 done
 rm -rf "$PIPE_DEST"; mkdir -p "$PIPE_DEST"

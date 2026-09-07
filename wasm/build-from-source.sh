@@ -103,6 +103,17 @@ run() {
   printf '   $ %s\n' "$*"
   ( cd "$cwd" && env ${envs[@]+"${envs[@]}"} "$@" ) 2>&1 | tee -a "$LOGS/$log.log" || die "step failed, see $LOGS/$log.log: $*"
 }
+# run_soft: like run, but returns the command's status instead of dying
+# (for a step whose failure a later step can repair).
+run_soft() {
+  local log="$1" cwd="$2"; shift 2; local envs=()
+  while [ "$1" != "--" ]; do envs+=("$1"); shift; done; shift
+  local envstr=""; [ ${#envs[@]} -eq 0 ] || envstr="${envs[*]} "
+  if [ "$PLAN" = 1 ]; then printf '   $ (cd %s && %s%s)   [failure tolerated]\n' "$cwd" "$envstr" "$*"; return 0; fi
+  printf '   $ %s\n' "$*"
+  ( cd "$cwd" && env ${envs[@]+"${envs[@]}"} "$@" ) 2>&1 | tee -a "$LOGS/$log.log"
+  return "${PIPESTATUS[0]}"
+}
 # check <description> <shell test...>  — asserts are skipped under --plan
 check() { local d="$1"; shift; if [ "$PLAN" = 1 ]; then note "check: $d"; return 0; fi; "$@" || die "check failed: $d"; }
 sha16() { shasum -a 256 "$1" | cut -c1-16; }
@@ -132,6 +143,13 @@ lane_preflight() {
   local khead; khead="$(git -C "$KERNEL_DIR" rev-parse HEAD)"
   [ "$khead" = "$PIN" ] || die "kernel checkout is $khead but KERNEL-PIN is $PIN — checkout the pin (git -C $KERNEL_DIR checkout $PIN)"
   [ -z "$(git -C "$KERNEL_DIR" status --porcelain)" ] || die "kernel tree is dirty — the recorded source revision would lie"
+  if [ -z "$(git -C "$KERNEL_DIR" ls-files src/emscripten-exports.txt)" ]; then
+    # Generated-exports pin (0032+): the gate is advisory, so the bake lane's
+    # snapshot probes must run — learn that before the kernel build, not after.
+    if { [ "$VERIFY" = 1 ] && lane_on bake; }; then note "generated-exports pin: gate advisory, bake probes required (--verify-snapshots): on"
+    elif [ "$PLAN" = 1 ]; then note "generated-exports pin: a real run needs --verify-snapshots AND the bake lane (the snapshot probes are its acceptance test)"
+    else die "this pin generates its exports list (0032+): run with --verify-snapshots AND the bake lane, the snapshot probes are its acceptance test"; fi
+  fi
   if [ -d "$QED64_DIR/.git" ]; then local qhead; qhead="$(git -C "$QED64_DIR" rev-parse HEAD)"; [ "$qhead" = "$QPIN" ] || warn "qed64 checkout is at ${qhead:0:12}, the vendored pin is ${QPIN:0:12}"; fi
   note "kernel pin $PIN (clean)"
   local nv; nv="$(node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1 || echo 0)"; [ "${nv:-0}" -ge 24 ] || die "Node >= 24 required (Memory64), found $(node -v 2>/dev/null || echo none)"
@@ -155,12 +173,60 @@ lane_preflight() {
 # ---------------------------------------------------------------- runtime --
 lane_runtime() {
   say "runtime: kernel $PIN → Docker toolchain → stage0/stage1 → gate → chunks"
-  run runtime "$KERNEL_DIR" "QED64_BUILD_DIR=$BUILD_DIR" -- bash "$KERNEL_DIR/wasm64-build/build.sh"
-  check "stage1 produced bin/lean.js + lean.wasm" test -s "$S1/bin/lean.wasm"
+  # A reused build tree keeps the previous pin's link outputs; the checks
+  # below must see THIS build's, so the old binaries go first.
+  run runtime "$G" -- rm -f "$S1/bin/lean.js" "$S1/bin/lean.wasm"
+  # Kernel pins from patch 0032 on generate src/emscripten-exports.txt at
+  # build time (gitignored; qed64 pipeline/toolchain/gen-exports.py: seed +
+  # (wanted ∩ the names stage1's compiled C defines)), a host-side step
+  # between the stage-1 libraries and the final link that the kernel's own
+  # wasm64-build/build.sh does not run — its [5/5] link fails on the missing
+  # file. Let it run through stage 4, then generate and finish the link the
+  # way qed64's toolchain build.sh does. A pin that still tracks the file
+  # links in one go and skips the repair.
+  # A generated list must be recomputed from THIS build's compiled C: a
+  # reused tree keeps the previous run's (gitignored) file, and the kernel's
+  # link rule has no dependency on it — it would silently link against the
+  # previous build's symbol universe.
+  local generated_exports=0
+  [ -n "$(git -C "$KERNEL_DIR" ls-files src/emscripten-exports.txt)" ] || generated_exports=1
+  [ "$PLAN" = 1 ] || [ "$generated_exports" = 0 ] || rm -f "$KERNEL_DIR/src/emscripten-exports.txt"
+  local log_before=0; [ "$PLAN" = 1 ] || log_before=$(stat -f%z "$LOGS/runtime.log" 2>/dev/null || echo 0)
+  if [ "$PLAN" = 1 ] || ! run_soft runtime "$KERNEL_DIR" "QED64_BUILD_DIR=$BUILD_DIR" -- bash "$KERNEL_DIR/wasm64-build/build.sh"; then
+    [ "$PLAN" = 1 ] || [ "$generated_exports" = 1 ] || die "kernel build failed — see $LOGS/runtime.log"
+    # Repair only a link failure of THIS run (the stage-1 libraries built):
+    # anything earlier is a real failure, and a stale lib/temp from a
+    # previous build must not be linked.
+    [ "$PLAN" = 1 ] || tail -c +$((log_before + 1)) "$LOGS/runtime.log" | grep -q "=== \[5/5\] final lean link ===" || die "kernel build failed before the final link — see $LOGS/runtime.log"
+    say "runtime: exports list is generated at this pin (patch 0032) — generating it from this build's compiled C and finishing the link"
+    run runtime "$G" -- python3 "$QED64_DIR/pipeline/toolchain/gen-exports.py" "$S1/lib/temp" "$KERNEL_DIR/src"
+    run runtime "$KERNEL_DIR" -- docker run --rm -v "$KERNEL_DIR":/lean4 -v "$BUILD_DIR/build":/build -v "$BUILD_DIR/ccache":/root/.ccache \
+      -e EM_COMPILER_WRAPPER=ccache "$IMAGE" bash -lc "git config --global --add safe.directory /lean4 && make -C /build/stage1 leaninitialize lean -j12"
+  fi
+  check "stage1 produced bin/lean.js + lean.wasm" bash -c "test -s '$S1/bin/lean.wasm' && test -s '$S1/bin/lean.js'"
   # Node treats lean.js as ESM under a package.json with "type":"module"; a CJS marker beside the binary keeps the pthread workers alive.
   run runtime "$G" -- bash -c "test -f '$S1/bin/package.json' || printf '{ \"type\": \"commonjs\" }\n' > '$S1/bin/package.json'"
-  run runtime "$KERNEL_DIR" -- node --stack-size=8192 "$KERNEL_DIR/wasm64-build/gate.mjs" --artifact "$S1"
-  check "gate passed" grep -q "GATE PASSED" "$LOGS/runtime.log"
+  # The gate runs qed64's pipeline copy (its node-runner carries the mirror
+  # mount the 0031+ runtime needs to find its own binary; the kernel's sibling
+  # runner does not). On pins that generate the exports list (0032+) the
+  # gate is ADVISORY: under the proxied main (patch 0031) the process does
+  # not exit after `main` returns, so the smoke times out even on a good
+  # build — the bake lane's --verify-snapshots probe (a real elaboration on
+  # every baked snapshot) is the acceptance test there.
+  local gate="$QED64_DIR/pipeline/toolchain/gate.mjs"; [ -f "$gate" ] || gate="$KERNEL_DIR/wasm64-build/gate.mjs"
+  if [ "$generated_exports" = 1 ]; then
+    # Not run on these pins: it cannot pass (the proxied main never exits in
+    # Node, so its smokes time out after ~30 min of wall-clock) and the bake
+    # lane's --verify-snapshots probes are the acceptance test (preflight
+    # requires both on such a pin).
+    note "gate skipped: advisory on generated-exports pins — the bake lane's snapshot probes (--verify-snapshots) are the acceptance test"
+  elif [ "$PLAN" = 1 ]; then
+    run runtime "$QED64_DIR" -- node --stack-size=8192 "$gate" --artifact "$S1"; note "check: gate passed"
+  else
+    run_soft runtime "$QED64_DIR" -- node --stack-size=8192 "$gate" --artifact "$S1" || true
+    tail -c +$((log_before + 1)) "$LOGS/runtime.log" | grep -q "GATE PASSED" || die "gate failed — see $LOGS/runtime.log"
+    note "gate passed"
+  fi
   local rid="wasm64-unknown"; [ "$PLAN" = 1 ] || rid="wasm64-$(sha16 "$S1/bin/lean.wasm")"
   note "runtime build id: $rid"
   [ "$PLAN" = 1 ] || { rm -rf "$STG/runtime"; mkdir -p "$STG"; }
@@ -299,6 +365,7 @@ lane_bake() {
     # header == the baked import list (anything else is a cache miss, over budget by design)
     [ "$PLAN" = 1 ] || printf 'import Game\nimport GameServer.Runner\nRunner "MyGame" "Tutorial" 1 (difficulty := 1) (inventory := ["rfl"]) := by\nrfl\n' > "$pf"
     run bake "$QED64_DIR" "QED64_ALLOW_LEGACY_IMPORTS=1" -- node --stack-size=8192 "$QED64_DIR/pipeline/snapshot/snapshot-probe.mjs" --artifact "$S1" --snap "$QED64_DIR/work/snapshot/nng4.snap" --lib "$TREES/lib-tree-nng4" --workspace "$G/games-src/NNG4" --probe-file "$pf" --budget-ms 600000
+    run bake "$QED64_DIR" "QED64_ALLOW_LEGACY_IMPORTS=1" -- node --stack-size=8192 "$QED64_DIR/pipeline/snapshot/snapshot-probe.mjs" --artifact "$S1" --snap "$QED64_DIR/work/snapshot/testgame.snap" --lib "$TREES/lib-tree-testgame" --workspace "$G/cypress/TestGame" --probe-file "$pf" --budget-ms 600000
   fi
 }
 

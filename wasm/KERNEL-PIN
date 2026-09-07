@@ -1,1 +1,7 @@
-852d1b9c3af42b4fc7af21ff3887fa402ecc8cc3  qed64-wasm64 @ FawadHa1der/lean4 (wasm/kernel submodule; runtime source pin)
+992dc94b2de491878cca61aca382ed31286f3a86  qed64-wasm64 @ FawadHa1der/lean4 (wasm/kernel submodule; runtime source pin)
+# Patch series through 0032 (resident header resolver, one environment
+# registry, generated exports) — the pin qed64 serves as runtime
+# wasm64-5dcdda005a7c5ae0. Bumped 2026-09-07 from 852d1b9 for the resident
+# transport port (the pump transport the game used was removed upstream).
+# A stage1 rebuild from a new pin REQUIRES rebaking every game snapshot
+# (init/testgame/nng4) against it: wasm/build-from-source.sh does all lanes.

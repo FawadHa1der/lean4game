@@ -1,20 +1,23 @@
-qed64 commit: f98e0093f9b2a439f8427475baf48a022015ff83
-date: 2026-09-04 11:33:18 -0400
-subject: docs: pump-removal assessment (inventory, verified gaps, order of operations, lean4game dependency)
+qed64 commit: 32e5e62566826a1042a916af67681754d1ff12d0
+date: 2026-09-07 11:06:53 -0400
+subject: plan: post-removal pyramid numbers (e2e 23/23, 323 ms switch, gauntlets clean)
 files:
-  14f727a0233a7233  frontend/src/qed64-boot.ts
-  30a1a1f5777b16a1  frontend/src/watchdog-shim.ts
+  bf2957fcf337541b  frontend/src/qed64-boot.ts
+  3bc18b4725e4ca50  frontend/src/resident-session.ts
+  ffc2ef23f1c3a1ca  frontend/src/lsp-relay.ts
   444d52fab79ed8ce  src/install/profiles.ts
-  d4d91eb9db57c1fc  src/runtime/client.ts
-  2818775882aee530  src/runtime/snapshots.ts
-  17c757dfbe6def89  src/runtime/umbrella.ts
-  852c5cfcda3df19e  public/workers/lean.worker.js
-  66bc998493f5e3cd  public/workers/snapshot-prefetch.worker.js
+  8e14b983459f1d9b  src/runtime/client.ts
+  d6eed5f27eb2d199  src/runtime/snapshots.ts
+  52958f9acd215507  public/workers/lean.worker.js
   efdf325b1ed0f4b4  public/workers/lsp-frames.js
-  e08f7ea38be56e55  public/workers/lsp-front-door.js
+  6a919afe7466be9c  public/workers/lsp-front-door.js
+  66bc998493f5e3cd  public/workers/snapshot-prefetch.worker.js
 pipeline (wasm/vendor/qed64-pipeline):
   d70d4faae333fade  pipeline/toolchain/chunk-runtime.mjs
   e487cf1eb9b978af  pipeline/toolchain/artifact-paths.mjs
+  a1bfd52ef9b2d7b4  pipeline/toolchain/gen-exports.py
+  6c8a70a416d5e4b6  pipeline/toolchain/gate.mjs
+  316d3275e60ea3da  pipeline/snapshot/persistent-probe.mjs
   2f11564ba3721f02  pipeline/snapshot/bake-snapshot.mjs
   60f1f08ab57fe678  pipeline/snapshot/node-runner.mjs
   e8a82f5ccdbe7b7e  pipeline/snapshot/snapshot-probe.mjs
