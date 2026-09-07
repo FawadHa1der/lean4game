@@ -274,19 +274,29 @@ worker-staging fix (item 19) went live. Drivers in qed64 `work/`:
 `click-mem-probe.mjs`): 0.85 GB through the download and unpack; **3.6 GB at
 "Starting the Emscripten runtime"; 7.4 GB at "Initializing the Lean
 runtime"** (before any snapshot); 7.8 GB after the init snapshot; 6.7 GB
-while the game snapshot streams in; 8.3 GB at ready. The jump at runtime
-init is the pthread pool: `pthreadPoolSize=24` is compiled into `lean.js`,
-and every idle pool worker loads the 48 MB glue — the exact finding behind
-qed64's kernel patch 0033 (`PTHREAD_POOL_DELAY_LOAD`, "+4 GB renderer at
-runtime init"). There is no runtime knob. Whether a first visit survives
-therefore depends on the visitor's machine; on this laptop two of four
-click-path visits died at the game-snapshot handover, while four direct
-level-URL visits survived. This is the same cause as the reload-storm
-crash, and the same lever: bump the kernel pin to a 0033-bearing commit,
-rebuild the runtime (`wasm/build-from-source.sh`), rebake the game
-snapshots, publish the pairing. Until then the first visit is the one
-phase where the site can lose a visitor without a word — the boot-failure
-card (item 19) cannot help when the whole renderer is gone.
+while the game snapshot streams in; 8.3 GB at ready. The same curve qed64
+measured for its editor (their HARDENING #44: ~9.2 GB at ready). The first
+reading of it — the 24-worker pthread pool compiled into `lean.js`
+(`pthreadPoolSize=24`), each idle worker parsing the 48 MB glue — was
+tested by qed64 the same day as kernel patch 0033
+(`PTHREAD_POOL_DELAY_LOAD`): built, baked, measured, **identical curve**,
+and dropped from their series. Their Node attribution settled it: the boot
+reaches ~7.5 GB before any snapshot with or without the pool's threads and
+with tier-up disabled; `WebAssembly.compile` alone is 0.28 GB; the growth
+is machine code V8 generates lazily for every function the Lean stdlib
+initializers execute. That is a floor of running the full Lean compiler as
+a 106 MB module — only a leaner module (fewer linked components) or fewer
+initializers moves it, kernel research rather than a pin bump, and a
+pairing change without benefit would only invalidate every visitor's
+content-addressed cache. Consequences for the game: there is no runtime
+knob and no substrate bump to schedule; whether a first visit survives
+depends on the visitor's machine (here two of four click-path visits died
+at the game-snapshot handover, four direct level-URL visits survived), and
+when it fails the whole renderer is gone, so no failure card can help.
+What the page can do is say so beforehand: the download phase now warns
+when `navigator.deviceMemory` reports less than 8 GB (Chrome caps the value
+at 8, so machines with more say nothing) that the checker needs roughly
+8–9 GB free while it starts and may not start on this device.
 
 Minor: the world intro page fetches `level__<World>__0.json`, which does
 not exist (two 404s per world entry). Harmless; upstream does the same.
@@ -350,12 +360,12 @@ preferences popup's empty "Controls" section.
   previous worker survived 0 of 3 and its boot after the second reload took
   14 s in two passes (the stacked-heap signature); the new worker boots in
   5.8 s after every reload and survived 1 of 3. Improved, not closed. qed64's
-  per-process attribution (their HARDENING #44) puts the remaining floor in
-  V8's lazily generated code for the 106 MB module and names the pthread
-  pool as the lever — kernel patch 0033 (`PTHREAD_POOL_DELAY_LOAD`, measured
-  +4 GB renderer at runtime init), which for the game means a kernel pin
-  bump, a runtime rebuild and a snapshot rebake (the from-source lane), not
-  a closure bump. Fresh-page storms at 100–250 ms never crash.
+  per-process attribution (their HARDENING #44 and its follow-up) puts the
+  remaining floor in V8's lazily generated machine code for the 106 MB
+  module (~7.5 GB before any snapshot); the pthread-pool patch they tried
+  against it (0033) measured as a no-op and was dropped. Nothing below the
+  kernel moves it — a leaner module or fewer initializers is kernel
+  research. Fresh-page storms at 100–250 ms never crash.
 - A tactic typed within the first ~0.5 s of a level switch can be
   elaborated against the previous level's document (the shim's re-open
   runs the header-switch machinery asynchronously; item 16 removes the

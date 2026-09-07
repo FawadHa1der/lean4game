@@ -718,9 +718,19 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
     detail = <>The Lean runtime is being launched for this game (language client: {clientState}).</>
   } else if (status.state === 'busy') {
     headline = <>Lean is starting in your browser — {status.label}{progress ? ` · ${progress}` : ''}{eta ? ` · ${eta}` : ''}</>
+    // Chrome reports navigator.deviceMemory in {0.25 … 8}: below 8 the
+    // device really is small; 8 means "8 or more". Starting the full Lean
+    // compiler in a tab takes ~8–9 GB of renderer memory (measured: 3.6 GB
+    // at runtime start, 7.4 GB at runtime init, 8.3 GB at ready) and a
+    // small machine loses the tab without a word — say so before the
+    // download, not after.
+    const deviceGb = (navigator as { deviceMemory?: number }).deviceMemory
+    const smallDevice = typeof deviceGb === 'number' && deviceGb < 8
+      ? <> This device reports about {deviceGb} GB of memory; the checker needs roughly 8–9 GB free while it starts and may not start here.</>
+      : null
     detail = downloading
-      ? <>The first visit downloads the Lean checker and this game&apos;s mathematics (about 600 MB) and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.</>
-      : <>Starting the checker inside this tab: unpacking and loading the mathematics environment. On a laptop this takes about 10–30 seconds after the download.</>
+      ? <>The first visit downloads the Lean checker and this game&apos;s mathematics (about 600 MB) and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.{smallDevice}</>
+      : <>Starting the checker inside this tab: unpacking and loading the mathematics environment. On a laptop this takes about 10–30 seconds after the download.{smallDevice}</>
   } else if (activity.busy) {
     headline = <>Preparing this level — {activity.label}…</>
     detail = <>The checker is elaborating the level&apos;s statement. The first level after start-up can take up to a minute while everything warms up; later levels switch in a second or two.</>
