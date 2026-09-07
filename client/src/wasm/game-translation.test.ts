@@ -61,6 +61,14 @@ assert.deepEqual(parseLevelUri("file:///Tutorial/3.lean"), { worldId: "Tutorial"
     assert.equal(hover.params.position.line, 0 + PROOF_START_LINE);
     assert.equal(hover.params.textDocument.uri, "file:///game/Metadata.lean");
 
+    // fileProgress → onProcessing: ranges in flight = true; a lone kind-2 (fatal
+    // error) entry is a verdict, not work; empty = false.
+    const seen: boolean[] = [];
+    gt.onProcessing = (b) => seen.push(b);
+    for (const processing of [[{ range: {}, kind: 1 }], [{ range: {}, kind: 2 }], []]) {
+      gt["toClient"]({ jsonrpc: "2.0", method: "$/lean/fileProgress", params: { textDocument: { uri: "file:///game/Metadata.lean" }, processing } } as any);
+    }
+    assert.deepEqual(seen, [true, false, false]);
     // server → client: diagnostics on the wrapped doc come back rebased + re-uri'd
     upstream.port2.postMessage({ jsonrpc: "2.0", method: "textDocument/publishDiagnostics",
       params: { uri: "file:///game/Metadata.lean", diagnostics: [{ range: { start: { line: 2, character: 0 }, end: { line: 2, character: 3 } }, message: "boom" }] } });

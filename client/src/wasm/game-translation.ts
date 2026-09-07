@@ -209,8 +209,12 @@ export class GameTranslation {
   /** relay: server → client rewrites. */
   private toClient(message: JsonRpc): JsonRpc {
     if (message.method === "$/lean/fileProgress" && this.onProcessing) {
+      // A kind-2 entry (LeanFileProgressKind.fatalError — a refused or
+      // unresolvable header) is a verdict, not work in flight: it never
+      // drains, so counting it would pin "processing" for good (qed64
+      // HARDENING #46; the vendored shim applies the same reading).
       const ranges = message.params?.processing;
-      this.onProcessing(Array.isArray(ranges) && ranges.length > 0);
+      this.onProcessing(Array.isArray(ranges) && ranges.some((r: { kind?: number } | null) => r?.kind !== 2));
     }
     shiftLines(message, -PROOF_START_LINE);
     replaceUri(message, levelUri(this.worldId, this.levelId));

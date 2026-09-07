@@ -213,6 +213,41 @@ export class WatchdogShim {
    * "ready". This is the worker's own verdict — no client-side re-resolution. */
   private headerSetupFailed = false;
 
+  /** Header whose names collided with the preloaded umbrella; the collision
+   * note and the "Load exact imports" offer were shown for it (once). */
+  private collisionHeader: string | null = null;
+
+  /** The user chose exact imports: reboot into faithful mode for this header
+   * (the only path that installs the olean pack and imports on the main
+   * thread). Deliberate — counted as a user restart, not a crash. */
+  loadExactImports(header: string = this.doc ? headerOf(this.doc.text) : ""): void {
+    if (!this.doc || !header) return;
+    this.ui.clearAction?.();
+    this.collisionHeader = null;
+    this.faithfulHeader = header;
+    this.ui.busy("loading exactly your imports — first the Mathlib library (once), then the import (about a minute)");
+    this.deathTimes = []; // deliberate reboot, not a crash
+    this.workerStarted = false;
+    this.disposeHard();
+    window.setTimeout(() => void this.handleWorkerDeath(), 50);
+  }
+
+  /** The collision note (severity 3 = information) on the header line. */
+  private collisionNote(shown: string, first: string): { range: unknown; severity: number; source: string; message: string } {
+    const lines = this.doc ? this.doc.text.split("\n") : [""];
+    let line = lines.findIndex((l) => /^\s*(?:public\s+|private\s+)?(?:meta\s+)?import\s+/.test(l));
+    if (line < 0) line = 0;
+    return {
+      range: { start: { line, character: 0 }, end: { line, character: lines[line]?.length ?? 1 } },
+      severity: 3,
+      source: "QED64",
+      message:
+        `${shown} collides with Mathlib: this playground preloads all of Mathlib for speed, so names Mathlib defines are already taken. ` +
+        `live.lean-lang.org imports only your header's closure and would not collide. ` +
+        `Rename it (e.g. My${first.replace(/^.*\./, "")}), or use "Load exact imports" beside the status pill (about a minute; the first time downloads the 1 GB Mathlib library).`,
+    };
+  }
+
   /** Header (headerOf text) the session was deliberately rebooted to serve
    * with EXACT imports instead of the covering umbrella env. The covering
    * env serves any Mathlib-subset header in ~40 ms but makes ALL of
@@ -381,14 +416,34 @@ export class WatchdogShim {
         !UMBRELLA_ALIAS_IMPORT.test(header) &&
         this.faithfulHeader !== header
       ) {
-        // Set synchronously — later diagnostics for the same header no-op.
-        this.faithfulHeader = header;
-        this.ui.busy("a name collides with preloaded Mathlib — restarting with exactly your imports (this can take minutes)");
-        this.deathTimes = []; // deliberate reboot, not a crash
-        this.workerStarted = false;
-        this.disposeHard();
-        window.setTimeout(() => void this.handleWorkerDeath(), 50);
+        // EXPLAIN AND OFFER — never reboot on the user's behalf. The collision
+        // is an artifact of this playground: the header is served by the
+        // preloaded Mathlib umbrella, which already declares the name. On
+        // live.lean-lang.org exactly the header's closure is imported and the
+        // same file compiles. Importing exactly here means downloading the
+        // ~1 GB olean library once and importing on the main thread for a
+        // minute or more, near the renderer's memory ceiling — the user
+        // decides (second review, C4 / UX contract row 8).
+        const names = diags
+          .map((d) => (/[`'"]?([^`'"\s]+)[`'"]? has already been declared/.exec(d.message ?? "") ?? [])[1])
+          .filter((n): n is string => Boolean(n));
+        const shown = [...new Set(names)].slice(0, 3).join(", ") || "a name";
+        // Ride along INSIDE the worker's publish (LSP diagnostics are a
+        // whole-document replacement: a separate publish would hide the real
+        // errors and be overwritten by the next burst). Re-appended on every
+        // collision burst for this header, so the note lives and dies with
+        // the errors it explains.
+        (msg.params as { diagnostics: unknown[] }).diagnostics.push(this.collisionNote(shown, names[0] ?? "Name"));
+        if (this.collisionHeader !== header) {
+          this.collisionHeader = header;
+          this.ui.action?.("Load exact imports (≈1 min; first time downloads 1 GB)", () => this.loadExactImports(header));
+        }
         return;
+      }
+      if (this.collisionHeader !== null && this.collisionHeader !== header) {
+        // The header moved on: the offer no longer applies.
+        this.collisionHeader = null;
+        this.ui.clearAction?.();
       }
     }
     if (this.mode.resident && msg.method === "$/lean/ileanHeaderSetupInfo") {
@@ -405,7 +460,15 @@ export class WatchdogShim {
     }
     if (msg.method === "$/lean/fileProgress") {
       this.lastProgressAt = performance.now();
-      const processing = (msg.params as { processing?: unknown[] })?.processing ?? [];
+      // A kind-2 entry (LeanFileProgressKind.fatalError — a refused or
+      // unresolvable header) is a verdict, not work in flight: it never
+      // drains, so counting it kept the pill at "elaborating" for good after
+      // the idle "imports incomplete" verdict and queued requests behind a
+      // count that could never reach zero (measured: unresolvable-import-
+      // composition settled 'elaborating'@120s, timing-dependent). The
+      // resident front door applies the same reading (phaseOf → headerRefused).
+      const processing = ((msg.params as { processing?: unknown[] })?.processing ?? [])
+        .filter((p) => (p as { kind?: number } | null)?.kind !== 2);
       const was = this.processingCount;
       this.processingCount = processing.length;
       if (processing.length > 0 && was === 0) {
@@ -542,6 +605,7 @@ export class WatchdogShim {
         this.publishHeaderFailure("the imports could not be resolved — check the module names (details in the browser console)");
         return;
       }
+      this.headerSetupFailed = false; // the header set up (tag 0)
       // The replaced session never answers requests that were in flight
       // against it — without this they dangle until the 15 s loss watchdog
       // (observed as a "response lost" storm and a ~15 s InfoView freeze
@@ -691,6 +755,7 @@ export class WatchdogShim {
         return;
       }
       if (r.tag !== 0) throw new Error("the imports could not be resolved — check the module names (details in the browser console)");
+      this.headerSetupFailed = false; // the header set up (tag 0)
       // The replacement is live: in-flight requests against the old session
       // are now orphans — fail them so the InfoView reconnects.
       this.failInFlight("the Lean checker switched documents");
@@ -791,6 +856,13 @@ export class WatchdogShim {
   }
 
   private publishHeaderFailure(message: string): void {
+    // Every caller is a header failure (worker setup failure, the probe's
+    // "still composing" tag 2, an unknown module on the resident hold), and
+    // the flag is what the fileProgress drain reads for its idle label —
+    // without it the probe-side verdicts drained to "ready" (measured:
+    // unresolvable-import-composition settled 'ready' once kind-2 entries
+    // stopped pinning the pill). Cleared where a header setup succeeds.
+    this.headerSetupFailed = true;
     if (!this.doc) return;
     const lines = this.doc.text.split("\n");
     let line = lines.findIndex((l) => /^\s*(?:public\s+|private\s+)?(?:meta\s+)?import\s+/.test(l));
@@ -1024,6 +1096,7 @@ export class WatchdogShim {
           return;
         }
         if (r.tag !== 0) throw new Error("the imports could not be resolved — check the module names (details in the browser console)");
+        this.headerSetupFailed = false; // the header set up (tag 0)
         this.workerStarted = true;
         this.headerDiverged = false; // recomputed below once the replay lands
         this.ui.idle("ready");

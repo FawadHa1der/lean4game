@@ -283,10 +283,20 @@ preferences popup's empty "Controls" section.
   storm after two reloads still crashed (0 of 3). With the qed64 `e5df87a`
   closure (byte-exact worker channel, 2026-09-04) the full recipe survived
   2 of 2 passes on top of the hook and the cap. The worker-side fix for the
-  boot-time transient copies (read the snapshot straight into the heap) has
-  not landed on the qed64 side yet; when it does, bump the pin and re-run
-  the recipe to confirm it is closed rather than improved. Fresh-page
-  storms at 100–250 ms never crash.
+  boot-time transient copies landed as qed64 "W5a" and is vendored with the
+  `f98e009` pin (2026-09-07): `lean.worker.js` keeps two snapshot load
+  paths (raw OPFS sync-read into a wasm allocation, or fetch → gunzip →
+  heap) and drops the compressed-snapshot cache, the download tee and the
+  MEMFS staging file. Same-day A/B on the recipe, three passes each: the
+  previous worker survived 0 of 3 and its boot after the second reload took
+  14 s in two passes (the stacked-heap signature); the new worker boots in
+  5.8 s after every reload and survived 1 of 3. Improved, not closed. qed64's
+  per-process attribution (their HARDENING #44) puts the remaining floor in
+  V8's lazily generated code for the 106 MB module and names the pthread
+  pool as the lever — kernel patch 0033 (`PTHREAD_POOL_DELAY_LOAD`, measured
+  +4 GB renderer at runtime init), which for the game means a kernel pin
+  bump, a runtime rebuild and a snapshot rebake (the from-source lane), not
+  a closure bump. Fresh-page storms at 100–250 ms never crash.
 - A tactic typed within the first ~0.5 s of a level switch can be
   elaborated against the previous level's document (the shim's re-open
   runs the header-switch machinery asynchronously; item 16 removes the

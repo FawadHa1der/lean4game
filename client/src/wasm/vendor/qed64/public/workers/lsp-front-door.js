@@ -68,6 +68,68 @@
   ]);
   const DID_OPEN = "textDocument/didOpen";
   const DID_CHANGE = "textDocument/didChange";
+  const PUBLISH_DIAGNOSTICS = "textDocument/publishDiagnostics";
+
+  // The umbrella collision (§3 row 8; HARDENING #43): a header served
+  // "covered" by the preloaded Mathlib snapshot sees ALL of Mathlib's names,
+  // so a user `Tree`/`Point`/`Graph` is "already declared" although the same
+  // file is clean on live.lean-lang.org (which imports only the header's
+  // closure). The worker names the colliding identifiers with the pump
+  // shim's regex (watchdog-shim.ts observeServerMessage) and rides an
+  // information note INSIDE the FileWorker's own publish — LSP diagnostics
+  // are a whole-document replacement per URI, so a separate publish would
+  // hide the real errors and be overwritten by the next burst (HARDENING #42).
+  const ALREADY_DECLARED = /[`'"]?([^`'"\s]+)[`'"]? has already been declared/;
+  // The note sits on the header line (the first import, else line 0), as the
+  // pump shim's collisionNote does; only this much of the text is inspected.
+  const IMPORT_LINE = /^\s*(?:public\s+|private\s+)?(?:meta\s+)?import\s+/;
+
+  function headerLineOf(text) {
+    const lines = typeof text === "string" ? text.split("\n") : [""];
+    let line = lines.findIndex((l) => IMPORT_LINE.test(l));
+    if (line < 0) line = 0;
+    return { line, length: lines[line] ? lines[line].length : 1 };
+  }
+
+  /** Line indices holding an import: completion there belongs to the client
+   * (frontend/src/import-completion.ts, from the pack manifests). The wasm
+   * FileWorker has no module inventory to answer from and holds such a
+   * request until the header settles; Monaco's suggest widget awaits every
+   * provider, so a held request hides the client's items (measured:
+   * import-completion, widget=false, on the resident path). */
+  function importLinesOf(text) {
+    const out = new Set();
+    if (typeof text === "string") text.split("\n").forEach((l, i) => { if (IMPORT_LINE.test(l)) out.add(i); });
+    return out;
+  }
+
+  /** Distinct identifiers the diagnostics report as already declared. */
+  function collidingNames(diagnostics) {
+    const names = [];
+    for (const d of diagnostics) {
+      const m = d && typeof d.message === "string" ? ALREADY_DECLARED.exec(d.message) : null;
+      if (m && m[1] && !names.includes(m[1])) names.push(m[1]);
+    }
+    return names;
+  }
+
+  /** The collision note (severity 3 = information), text mirroring the pump
+   * shim's collisionNote: what collided, why (this playground, not Lean),
+   * and the two ways out — rename, or the explicit "Load exact imports"
+   * action the page offers while `status.collision` is set. */
+  function collisionNote(headerLine, names) {
+    const shown = names.slice(0, 3).join(", ");
+    const first = names[0].replace(/^.*\./, "");
+    return {
+      range: { start: { line: headerLine.line, character: 0 }, end: { line: headerLine.line, character: headerLine.length } },
+      severity: 3,
+      source: "QED64",
+      message:
+        `${shown} collides with Mathlib: this playground preloads all of Mathlib for speed, so names Mathlib defines are already taken. ` +
+        `live.lean-lang.org imports only your header's closure and would not collide. ` +
+        `Rename it (e.g. My${first}), or use "Load exact imports" beside the status pill (about a minute; the first time downloads the 1 GB Mathlib library).`,
+    };
+  }
 
   function initialState() {
     return {
@@ -93,6 +155,12 @@
       // until the FileWorker drains the NEW version (§2.2(e); review fix 2).
       progress: null,
       header: null, // the last $/qed64/headerStatus params (per header setup, not per version — §2.2(e))
+      // {names, version} while the FileWorker's last publish for the document
+      // reported names already declared under a COVERED header (§3 row 8);
+      // null after a clean burst. Client version space, like `version`.
+      collision: null,
+      headerLine: { line: 0, length: 1 }, // where the collision note sits (from the text the worker holds)
+      importLines: new Set(), // line indices that are imports (same text); completion there is failed fast
       dropped: 0,
     };
   }
@@ -145,6 +213,8 @@
         if (s.doc) s.doc = { ...s.doc, version: v };
         s.lastVersion = v + s.base;
       }
+      const c = Array.isArray(msg.params.contentChanges) ? msg.params.contentChanges[0] : null;
+      if (c && typeof c.text === "string" && c.range === undefined) { s.headerLine = headerLineOf(c.text); s.importLines = importLinesOf(c.text); }
     }
     const wire = shiftVersions(msg, s.base);
     if (s.ringBusy) s.backlog = enqueue(s.backlog, { msg: wire });
@@ -175,16 +245,29 @@
       r.replies.push({ jsonrpc: "2.0", id: msg.id, result: null });
       return;
     }
-    if (isRequest && msg.method === "textDocument/completion" && s.header && s.header.mode === "refused") {
-      // K3 (in-memory import completion) is not built yet: a completion request
-      // on a document whose header was REFUSED has no environment to answer
-      // from and the FileWorker holds it; Monaco's suggest widget waits for
-      // every provider, so the client-side import-path provider's items never
-      // show (measured: import-completion, widget=false). Fail fast, as the
-      // pump shim does while a header is in flight (-32801).
-      s.dropped += 1;
-      r.replies.push({ jsonrpc: "2.0", id: msg.id, error: { code: -32801, message: "QED64: the header is unresolved; completion is unavailable until it resolves" } });
-      return;
+    if (isRequest && msg.method === "textDocument/completion") {
+      // Two completions the FileWorker cannot answer are failed fast with
+      // ContentModified (-32801, which clients swallow as "ask again later")
+      // instead of being held — Monaco's suggest widget awaits every
+      // provider, so one held LSP completion hides the client-side
+      // import-path items for the whole gesture:
+      //   (a) on an import line, whatever the header state: the wasm worker
+      //       has no module inventory (K3), the client provider has the
+      //       manifests. Decided by POSITION, so it cannot race the
+      //       headerStatus that a keystroke's own header change is still
+      //       producing (measured: import-completion widget=false while the
+      //       refused status was in flight).
+      //   (b) anywhere while the header is REFUSED: no environment to
+      //       answer from.
+      const pos = msg.params && msg.params.position;
+      const onImport = !!pos && s.importLines.has(pos.line);
+      if (onImport || (s.header && s.header.mode === "refused")) {
+        s.dropped += 1;
+        r.replies.push({ jsonrpc: "2.0", id: msg.id, error: { code: -32801, message: onImport
+          ? "QED64: import-path completion is answered client-side; the worker has no module inventory"
+          : "QED64: the header is unresolved; completion is unavailable until it resolves" } });
+        return;
+      }
     }
     if (s.phase === "dead") {
       s.dropped += 1;
@@ -217,6 +300,8 @@
         s.base = 0;
         s.doc = { uri: td.uri, languageId: td.languageId, version: td.version };
         s.lastVersion = td.version;
+        s.headerLine = headerLineOf(td.text);
+        s.importLines = importLinesOf(td.text);
         s.phase = "open";
         r.startLoop = true;
         r.ringWrites.push({ jsonrpc: "2.0", id: init ? init.id : 0, method: "initialize", params: init && init.params ? init.params : {} });
@@ -279,7 +364,7 @@
   }
 
   function statusOf(s) {
-    return { phase: phaseOf(s), version: s.doc ? s.doc.version : null, header: s.header, dropped: s.dropped };
+    return { phase: phaseOf(s), version: s.doc ? s.doc.version : null, header: s.header, collision: s.collision, dropped: s.dropped };
   }
 
   /**
@@ -300,9 +385,24 @@
         break;
       case "server": {
         const raw = frame.msg.params; // worker version space — what `progress` stores
-        const msg = shiftVersions(frame.msg, -s.base);
+        let msg = shiftVersions(frame.msg, -s.base);
         const p = msg.params;
-        if (msg.method === "$/lean/fileProgress" && raw && raw.textDocument && typeof raw.textDocument.version === "number") {
+        if (msg.method === PUBLISH_DIAGNOSTICS && p && Array.isArray(p.diagnostics) && s.doc) {
+          // The FileWorker owns exactly one document, so every publish is for
+          // the current one. An "exact" session cannot collide (the header's
+          // own closure declares nothing of the user's), so only a COVERED
+          // verdict turns "already declared" into the umbrella note; any later
+          // burst without a collision clears the fact (the note is a whole-
+          // document replacement and goes with it — HARDENING #42).
+          const names = s.header && s.header.mode === "covered" ? collidingNames(p.diagnostics) : [];
+          if (names.length > 0) {
+            s.collision = { names, version: typeof p.version === "number" ? p.version : s.doc.version };
+            // A new frame, not a mutation of the input (step is pure).
+            msg = { ...msg, params: { ...p, diagnostics: [...p.diagnostics, collisionNote(s.headerLine, names)] } };
+          } else {
+            s.collision = null;
+          }
+        } else if (msg.method === "$/lean/fileProgress" && raw && raw.textDocument && typeof raw.textDocument.version === "number") {
           // FileProgressKind: 1 = processing, 2 = fatalError. After a refused header the
         // FileWorker reports ONE kind-2 entry for the whole file and never clears it,
         // so a drain that counts entries never comes and the phase would sit at

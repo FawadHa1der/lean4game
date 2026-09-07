@@ -33,12 +33,45 @@ verify-release; no third-party imports) are vendored by the same script into
 the closure (vite alias + tsconfig paths); `scripts/stage-game-assets.sh`
 copies the worker scripts from the same directory, so shim and worker are
 paired by construction. **No build, bake or test reads a qed64 checkout.**
-Current pin: qed64 `e5df87a` (its full test pyramid passed on the qed64
-side; pump-mode behaviour unchanged for the game, `status()` added, snapshot
-pairing check available). On the game's `852d1b9` runtime the worker's LSP
-decoder reports non-zero `junkLines`: that runtime still prints library
-progress to stdout (moved to stderr in kernel patch 0031), the decoder sheds
-it and resyncs — expected, not a fault.
+Current pin: qed64 `f98e009` (2026-09-04; bumped from `e5df87a` on
+2026-09-07). What the bump brought the game, all on the pump path it uses:
+the shim no longer counts a kind-2 (fatal-error) `$/lean/fileProgress`
+entry as work in flight (qed64 HARDENING #46 — such an entry never drains
+and pinned "elaborating" for good; the game's translation layer applies the
+same reading to its own processing flag), every published header failure
+sets the sticky flag the progress drain reads and a tag-0 setup clears it
+(#46's companion), and `lean.worker.js` keeps exactly two snapshot load
+paths (raw OPFS sync-read into a wasm allocation, or fetch → gunzip → heap;
+their "W5a": the compressed-snapshot OPFS cache, the download tee, the
+MEMFS staging file and the path-loader branch are gone — the boot-time
+transient copies behind the reload-then-storm renderer crash). The worker
+now requires `_lean_wasm_load_snapshot_mem` in the runtime and raw `bytes`
+in the snapshot index; the game's `wasm64-0becc706d2ef1964` runtime exports
+it and the index carries them (checked before the bump). The umbrella
+collision note / "Load exact imports" offer that also arrived is inert
+here: game headers are covered by the game snapshot and cannot collide.
+On the game's `852d1b9` runtime the worker's LSP decoder reports non-zero
+`junkLines`: that runtime still prints library progress to stdout (moved to
+stderr in kernel patch 0031), the decoder sheds it and resyncs — expected,
+not a fault.
+
+**The pump transport is scheduled for removal upstream.** qed64 made the
+resident transport its default on 2026-09-04 and wrote a removal plan
+(`docs/PUMP-REMOVAL-ASSESSMENT-2026-09-04.md` there): step 1 deletes the
+shim page-side, step 3 deletes the kernel entry points at their next
+pairing bump. `f98e009` is the last commit before step 1; once the shim is
+gone, `scripts/sync-qed64.sh` refuses newer commits (a required path is
+missing) and the game stays frozen here — frozen, not broken. Porting the
+game to the resident transport is a campaign of its own: a kernel bump to
+≥ 0032 (`852d1b9` lacks the ring exports and the in-kernel resolver, so
+resident cannot boot on it), a rebake of the game snapshots against that
+runtime (the from-source lane), the relay + front door in the sync list,
+and a vendorable session adapter with the two policy hooks the game uses
+(snapshots per header, memory cap) — which qed64 intends to extract as
+`frontend/src/resident-session.ts` in its step 1. Wait for that extraction
+before porting; the measured gain is the header switch (322 ms vs 2,571 ms
+on their pairing, i.e. level switches) and the deletion of the shim's
+session-replacement machinery that the game's recovery paths work around.
 
 It used to be a live `file:` link into the qed64 checkout: every build
 compiled whatever that checkout held at that second, uncommitted edits
@@ -52,8 +85,8 @@ closure has no third-party imports; the sync script fails if a relative
 import does not resolve inside the vendored tree.
 
 Bump only to a qed64 commit its owners have announced as having passed
-their test pyramid (`e5df87a` was; the resident-mode rewrite lives behind
-`?resident=1` and does not change the pump path the game uses).
+their test pyramid (`e5df87a` and `f98e009` were: 23/23 e2e on both
+transports; the pump path is reachable there behind `?resident=0`).
 The game's boot registers `pagehide → shim.disposeForUnload()`; keep that
 call working across bumps (qed64's own page relies on the same hook).
 
