@@ -231,6 +231,20 @@ machine); "was" values are from the same harness before fix 8.
     also accepts the path form of a game URL; and the level pane says
     "Starting the checker…" while the boot status is still inert instead
     of claiming the checker is up.
+19. **The first CI-built deploy shipped no worker scripts.** After the
+    pin bump the live site hung at "Lean is starting in your browser" for a
+    returning visitor. Not the cache upgrade (reproduced locally: the new
+    worker boots in 6 s from the cache the previous one wrote) — the site
+    returned 404 for `workers/lean.worker.js`, `lsp-frames.js` and the
+    prefetch worker. `client/public/workers/` is gitignored and populated
+    from the vendored closure by the staging script, which the CI workflow
+    never ran; every earlier deploy had been built on a laptop where the
+    staged copies existed. Fixes: `scripts/stage-workers.sh` (one source of
+    truth, called by the deploy and the asset staging scripts), the deploy
+    script refuses a tree without the workers, manifests and game data, the
+    boot preflights the worker script and any boot failure now reaches the
+    level pane as "Lean failed to start: …" with reload advice instead of a
+    spinner that never ends.
 
 ## Parity items verified (no action)
 

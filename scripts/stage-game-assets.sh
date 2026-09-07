@@ -57,20 +57,7 @@ fs.writeFileSync(path.join(here, "client/public/api/games"), JSON.stringify(out)
 # Worker scripts come from the vendored, commit-pinned qed64 closure (scripts/sync-qed64.sh),
 # never from a live qed64 checkout — they must pair with the vendored watchdog shim.
 VENDOR="$HERE/client/src/wasm/vendor/qed64"
-cp "$VENDOR/public/workers/lean.worker.js" "$PUB/workers/"
-# the disposable-prefetch boot (qed64 b00cba3) spawns a second worker
-cp "$VENDOR/public/workers/snapshot-prefetch.worker.js" "$PUB/workers/"
-# resident-mode front door: loaded lazily by lean.worker.js only under ?resident=1; serve it when vendored
-[ -f "$VENDOR/public/workers/lsp-front-door.js" ] && cp "$VENDOR/public/workers/lsp-front-door.js" "$PUB/workers/"
-# the LSP frame decoder lean.worker.js loads with importScripts (qed64
-# byte-channel rewrite): without it the worker throws at script load, never
-# posts {type:"boot"}, and every session hangs. Fail here, not in the browser.
-if [ -f "$VENDOR/public/workers/lsp-frames.js" ]; then
-  cp "$VENDOR/public/workers/lsp-frames.js" "$PUB/workers/"
-elif grep -q 'importScripts("lsp-frames.js")' "$VENDOR/public/workers/lean.worker.js"; then
-  echo "vendored lean.worker.js imports lsp-frames.js but the vendor closure lacks it; rerun scripts/sync-qed64.sh" >&2
-  exit 1
-fi
+"$HERE/scripts/stage-workers.sh"
 # i18next probes every configured language; a missing file must yield JSON,
 # not the SPA-fallback HTML (the uncaught SyntaxError wedged cypress runs)
 for G in "g/test/TestGame" "g/hhu-adam/NNG4"; do

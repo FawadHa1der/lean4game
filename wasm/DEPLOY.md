@@ -26,7 +26,10 @@ for the upload script.
    (never sync) into R2. Needs the `qed64-r2` rclone remote (R2 API token
    scoped to the bucket, see the QED64 doc). ~1.2 GB the first time; later
    runs transfer only changed digest-named files.
-2. `scripts/deploy-app.sh` — builds the client (the vite `define` pins
+2. `scripts/deploy-app.sh` — stages the worker scripts from the vendored
+   closure into `client/public/workers/` (gitignored, generated;
+   `scripts/stage-workers.sh` — a clean checkout has none and a shell
+   deployed without them hangs at "starting Lean"), builds the client (the vite `define` pins
    `__QED64_BUILD_ID__` to the shipped manifest's build id, so the shell asks
    R2 for the manifest of the exact runtime it was built against), copies
    `client/dist` without `runtime/ profiles/ snapshots/` into

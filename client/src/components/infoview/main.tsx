@@ -707,7 +707,11 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
     void clients[0].restart?.()
   }, [idle, noConnection, waited >= 20, clients.length])
   let headline: React.ReactNode, detail: React.ReactNode
-  if (status.state !== 'busy' && status.label === '') {
+  const bootFailure = status.state !== 'busy' ? /^Lean failed to start: (.*)$/s.exec(status.label)?.[1] : undefined
+  if (bootFailure !== undefined) {
+    headline = <>Lean could not start in your browser</>
+    detail = <>{bootFailure}. Reloading the page retries from the beginning; the downloaded environment stays cached.</>
+  } else if (status.state !== 'busy' && status.label === '') {
     // The boot status atom starts inert (the landing page binds no game);
     // no stage has been published yet — the checker has not started.
     headline = <>Starting the checker in your browser…</>
@@ -742,6 +746,8 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
     <div style={{ color: '#888', fontSize: '0.8rem' }}>{secs(elapsed)} elapsed</div>
     {idle && waited >= 15 && onRetry &&
       <Button className="btn" onClick={onRetry}>Retry now</Button>}
+    {bootFailure !== undefined &&
+      <Button className="btn" onClick={() => window.location.reload()}>Reload</Button>}
   </div>
 }
 

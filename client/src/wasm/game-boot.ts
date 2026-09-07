@@ -202,6 +202,7 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
   }
   boundGame ??= here;
   bootPromise ??= (async () => {
+   try {
     const translation = ensureTranslation();
     const bundle = await ensureBundle();
     const store = getDefaultStore();
@@ -212,6 +213,19 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
       inventory: () => store.get(progressAtom)?.inventory ?? [],
     });
 
+    // Preflight the worker scripts: they are generated into public/workers
+    // from the vendored closure (gitignored), and a shell deployed without
+    // them (the first CI-built deploy, 2026-09-07) hangs at "starting Lean"
+    // with no error — `new Worker(404)` never answers. Fail loud instead.
+    for (const script of ["/workers/lean.worker.js", "/workers/lsp-frames.js", "/workers/snapshot-prefetch.worker.js"]) {
+      const r = await fetch(script, { method: "HEAD", cache: "no-cache" }).catch(() => null);
+      // A static host answers 404; a single-page fallback answers 200 with
+      // the app's HTML — neither is a worker script.
+      const html = /text\/html/i.test(r?.headers.get("content-type") ?? "");
+      if (!r || !r.ok || html) {
+        throw new Error(`this deployment is missing ${script} (${r ? `HTTP ${r.status}${html ? ", HTML page" : ""}` : "unreachable"}) — the site needs a rebuild that stages the worker scripts`);
+      }
+    }
     const artifacts: Qed64Artifacts = await installArtifacts(ui);
 
     // makeSession is also the shim's crash-recovery path: everything a fresh
@@ -255,6 +269,17 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     (globalThis as { qed64GameReady?: boolean }).qed64GameReady = true;
     bootFinishedOnce = true;
     return { translation, shim, bundle };
+   } catch (err) {
+    // A failed boot must reach the page: the banner and the level pane read
+    // the status atoms, and a rejected promise alone left "Lean is starting
+    // in your browser" spinning for ever. The idle label carries the reason
+    // (the pane renders "Lean failed to start" from it) and the promise is
+    // reset so a Retry/reload can boot again.
+    const message = (err as Error)?.message ?? String(err);
+    ui.idle(`Lean failed to start: ${message}`);
+    bootPromise = null;
+    throw err;
+   }
   })();
   return bootPromise;
 }
