@@ -85,11 +85,18 @@ machine); "was" values are from the same harness before fix 8.
    regex; the progress bar is 6 px instead of a hairline; the input gate no
    longer flickers off between boot stages (every stage of the first boot
    is a switch).
-5. **Offline play survives a reload.** The checker never needed the network
-   once loaded, but level texts were fetched per level and 404'd offline
-   after a reload (the in-memory query cache is gone). The boot already
-   downloads every level's JSON for the worker; the UI's queries now fall
-   back to that copy when the network is unavailable.
+5. **Offline play survives a reload — for the checker, not yet for the
+   page.** The checker never needed the network once its artifacts are
+   cached, and the level data is cached alongside them (after a reload,
+   offline level loads used to 404). Measured on the deployed site
+   (2026-09-07, live matrix step 3): a warm online boot takes 6 s, but a
+   reload with the network off never renders the page — the app shell is
+   served `must-revalidate` and there is no service worker, so the browser
+   shows its own offline error before any of our code runs. Offline
+   *reloads* therefore need a service worker that precaches the shell
+   (index, bundles, fonts; the emoji font alone is 23 MiB) — a follow-up,
+   listed under Open. Offline play without a reload (the network dropping
+   mid-session) is unaffected: nothing after boot touches the network.
 6. **Documentation panel gutter.** Text sat flush against the panel's left
    edge and the close button against its right (upstream master styling);
    the panel now has the same side padding as the inventory lists.
@@ -246,6 +253,44 @@ machine); "was" values are from the same harness before fix 8.
     level pane as "Lean failed to start: …" with reload advice instead of a
     spinner that never ends.
 
+## Live end-to-end matrix (deployed site, 2026-09-07, headless Chromium)
+
+Run against `https://lean4game.fawadworkaddress.workers.dev` after the
+worker-staging fix (item 19) went live. Drivers in qed64 `work/`:
+`live-matrix.sh`, `live-persistent.mjs`, `live-offline.mjs`,
+`click-crash-probe.mjs`, `click-mem-probe.mjs`, `stall-verify.mjs`,
+`reload-storm-probe.mjs` (the last two take a base URL).
+
+| # | scenario | result |
+|---|---|---|
+| 1 | fresh first visit, persistent profile: boot, Tutorial 1–2, Addition 1, back | pass — ready 146 s (download), every step ≤ 0.9 s, 0 HTTP errors |
+| 2 | returning visit, same profile (the post-deploy case) | pass — ready 11 s from the caches, steps 0.3–0.7 s |
+| 3 | offline reload, same profile | **fail** — `ERR_INTERNET_DISCONNECTED` at the HTML: no service worker (item 5, Open) |
+| 4 | click-only first visit: landing → tile → world → Start | 2 pass / 2 die — passes reach the goal at ~153 s; the deaths are the renderer going away at ~82 s, when the 1.4 GB game snapshot starts streaming (see below) |
+| 5 | world walk + editor-mode round trip | pass — one Lean client, goal at every switch in 0.1–0.2 s |
+| 6 | reload storm (boot, reload, storm, reload, storm@250, storm@100) | 250 ms storms settle; **100 ms storm after two reloads crashes** (known Open item; not a regression) |
+
+**First-visit memory, measured per boot phase** (largest Chromium process,
+`click-mem-probe.mjs`): 0.85 GB through the download and unpack; **3.6 GB at
+"Starting the Emscripten runtime"; 7.4 GB at "Initializing the Lean
+runtime"** (before any snapshot); 7.8 GB after the init snapshot; 6.7 GB
+while the game snapshot streams in; 8.3 GB at ready. The jump at runtime
+init is the pthread pool: `pthreadPoolSize=24` is compiled into `lean.js`,
+and every idle pool worker loads the 48 MB glue — the exact finding behind
+qed64's kernel patch 0033 (`PTHREAD_POOL_DELAY_LOAD`, "+4 GB renderer at
+runtime init"). There is no runtime knob. Whether a first visit survives
+therefore depends on the visitor's machine; on this laptop two of four
+click-path visits died at the game-snapshot handover, while four direct
+level-URL visits survived. This is the same cause as the reload-storm
+crash, and the same lever: bump the kernel pin to a 0033-bearing commit,
+rebuild the runtime (`wasm/build-from-source.sh`), rebake the game
+snapshots, publish the pairing. Until then the first visit is the one
+phase where the site can lose a visitor without a word — the boot-failure
+card (item 19) cannot help when the whole renderer is gone.
+
+Minor: the world intro page fetches `level__<World>__0.json`, which does
+not exist (two 404s per world entry). Harmless; upstream does the same.
+
 ## Parity items verified (no action)
 
 - `rw [zzz]` on Addition/1 yields no error message on either site (the
@@ -317,6 +362,9 @@ preferences popup's empty "Controls" section.
   stale *display*, not this race). Upstream has the same shape with a
   slower relay round-trip; a fix would hold typewriter submissions until
   the first `publishDiagnostics` of the new document.
+- Offline reload of the deployed site fails at the HTML (no service
+  worker; the shell is `must-revalidate`). A Workbox-style precache of the
+  shell would close it; the artifacts and game data are already cached.
 - Only NNG4 is listed on the landing page; more games follow the catalog
   pattern in `KERNEL.md`.
 - The boot strip can cover the bottom row of world-map labels during the
