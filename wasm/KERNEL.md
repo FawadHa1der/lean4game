@@ -20,58 +20,55 @@ paired snapshot identities.
 
 ## Substrate pin (the qed64 closure, vendored)
 
-The browser-side substrate — boot (`qed64-boot.ts`), watchdog shim, runtime
-client, snapshot loader, install profiles, and the worker scripts
-(`lean.worker.js` + the `lsp-frames.js` decoder it imports, the prefetch
-worker, and the resident-only `lsp-front-door.js`) — is a **vendored copy of
-the qed64 closure at one commit**, under `client/src/wasm/vendor/qed64/`
-with the pin in `client/src/wasm/vendor/QED64-PIN`. The nine pipeline
-scripts the from-source lane runs (chunk-runtime, artifact-paths,
-bake-snapshot, node-runner, snapshot-probe, pack/unpack/inspect,
-verify-release; no third-party imports) are vendored by the same script into
-`wasm/vendor/qed64-pipeline/`. The `qed64/...` import specifiers resolve to
-the closure (vite alias + tsconfig paths); `scripts/stage-game-assets.sh`
-copies the worker scripts from the same directory, so shim and worker are
-paired by construction. **No build, bake or test reads a qed64 checkout.**
-Current pin: qed64 `f98e009` (2026-09-04; bumped from `e5df87a` on
-2026-09-07). What the bump brought the game, all on the pump path it uses:
-the shim no longer counts a kind-2 (fatal-error) `$/lean/fileProgress`
-entry as work in flight (qed64 HARDENING #46 — such an entry never drains
-and pinned "elaborating" for good; the game's translation layer applies the
-same reading to its own processing flag), every published header failure
-sets the sticky flag the progress drain reads and a tag-0 setup clears it
-(#46's companion), and `lean.worker.js` keeps exactly two snapshot load
-paths (raw OPFS sync-read into a wasm allocation, or fetch → gunzip → heap;
-their "W5a": the compressed-snapshot OPFS cache, the download tee, the
-MEMFS staging file and the path-loader branch are gone — the boot-time
-transient copies behind the reload-then-storm renderer crash). The worker
-now requires `_lean_wasm_load_snapshot_mem` in the runtime and raw `bytes`
-in the snapshot index; the game's `wasm64-0becc706d2ef1964` runtime exports
-it and the index carries them (checked before the bump). The umbrella
-collision note / "Load exact imports" offer that also arrived is inert
-here: game headers are covered by the game snapshot and cannot collide.
-On the game's `852d1b9` runtime the worker's LSP decoder reports non-zero
-`junkLines`: that runtime still prints library progress to stdout (moved to
-stderr in kernel patch 0031), the decoder sheds it and resyncs — expected,
-not a fault.
+The browser-side substrate — boot/artifacts (`qed64-boot.ts`), the session
+adapter with its boot policy (`resident-session.ts`), the L3 relay
+(`lsp-relay.ts`: crash recovery, replay, the crash-loop breaker), the
+runtime client, snapshot loader and install profiles, and the four worker
+scripts (`lean.worker.js` plus the `lsp-frames.js` decoder and the
+`lsp-front-door.js` it `importScripts`, and the prefetch worker) — is a
+**vendored copy of the qed64 closure at one commit**, under
+`client/src/wasm/vendor/qed64/` with the pin in
+`client/src/wasm/vendor/QED64-PIN`. The pipeline scripts the from-source
+lane runs (chunk-runtime, artifact-paths, gen-exports, gate,
+bake-snapshot, node-runner, snapshot-probe, persistent-probe,
+pack/unpack/inspect, verify-release; no third-party imports) are vendored
+by the same script into `wasm/vendor/qed64-pipeline/`. The `qed64/...`
+import specifiers resolve to the closure (vite alias + tsconfig paths);
+`scripts/stage-workers.sh` copies the worker scripts from the same
+directory, so relay and worker are paired by construction. **No build,
+bake or test reads a qed64 checkout.**
 
-**The pump transport is scheduled for removal upstream.** qed64 made the
-resident transport its default on 2026-09-04 and wrote a removal plan
-(`docs/PUMP-REMOVAL-ASSESSMENT-2026-09-04.md` there): step 1 deletes the
-shim page-side, step 3 deletes the kernel entry points at their next
-pairing bump. `f98e009` is the last commit before step 1; once the shim is
-gone, `scripts/sync-qed64.sh` refuses newer commits (a required path is
-missing) and the game stays frozen here — frozen, not broken. Porting the
-game to the resident transport is a campaign of its own: a kernel bump to
-≥ 0032 (`852d1b9` lacks the ring exports and the in-kernel resolver, so
-resident cannot boot on it), a rebake of the game snapshots against that
-runtime (the from-source lane), the relay + front door in the sync list,
-and a vendorable session adapter with the two policy hooks the game uses
-(snapshots per header, memory cap) — which qed64 intends to extract as
-`frontend/src/resident-session.ts` in its step 1. Wait for that extraction
-before porting; the measured gain is the header switch (322 ms vs 2,571 ms
-on their pairing, i.e. level switches) and the deletion of the shim's
-session-replacement machinery that the game's recovery paths work around.
+Current pin: qed64 `32e5e62` (2026-09-07), the **resident transport**.
+qed64 removed its pump transport that day (the `WatchdogShim` the game had
+built on; their `docs/PUMP-REMOVAL-ASSESSMENT-2026-09-04.md`): the worker
+now owns the document, the queue and every header verdict, a level switch
+is a full-text document change the kernel's resolver serves from the game
+snapshot in-process (qed64 measured 323 ms for a header switch against
+2,571 ms for the pump's in-place session replacement), and the relay only
+remembers what re-establishes the document on a fresh session, fails the
+requests a death orphaned, and breaks crash loops (three deaths in two
+minutes → halted). What the game wires (`client/src/wasm/game-boot.ts`):
+`GameSession extends ResidentSession` (writes the gamedata JSON into the
+worker FS inside `start()`, so it is there on every boot and reboot before
+the relay arms the loop), a policy of `["init", <game snapshot>]` with a
+2 GiB initial commit under a 3 GiB cap, `translation.attachServer(relay.clientPort)`,
+`pagehide → relay.unload()` (dispose + the synchronous kill), and the
+relay's status as the only source of ready / elaborating / halted for the
+page. The translation layer wraps every full-text `didChange` like the
+`didOpen` (the front door syncs whole documents).
+
+This pin needs the **0032 kernel** (`wasm/KERNEL-PIN` → `992dc94`: the
+resident ring exports and the in-kernel header resolver; the worker
+refuses to open its loop on an older runtime) and game snapshots baked
+against it — the from-source lane below does all of it. Two lane changes
+came with the pin: kernels from 0032 on generate `src/emscripten-exports.txt`
+at build time (gitignored; `gen-exports.py` between the stage-1 libraries
+and the final link, which the kernel's own `wasm64-build/build.sh` does not
+run — the lane lets it fail its link, generates, and finishes the link),
+and the gate is advisory on such pins (under the proxied main the process
+never exits in Node, so the smoke times out on a good build; the bake
+lane's `--verify-snapshots` probe, a real elaboration on every baked
+snapshot, is the acceptance test).
 
 It used to be a live `file:` link into the qed64 checkout: every build
 compiled whatever that checkout held at that second, uncommitted edits
@@ -80,15 +77,17 @@ behaviour changed under a running test day), and the worker copy could
 silently drift from the shim.
 
 Bump: `scripts/sync-qed64.sh <qed64-commit>` (extracts with `git archive`,
-never from a working tree), rebuild, run cypress, commit the diff. The
-closure has no third-party imports; the sync script fails if a relative
-import does not resolve inside the vendored tree.
+never from a working tree), `scripts/stage-workers.sh`, rebuild, run
+cypress, commit the diff. The closure has no third-party imports; the sync
+script fails if a relative import does not resolve inside the vendored
+tree. A closure bump that changes the worker's runtime requirements (a
+kernel patch level) is a pairing bump: kernel pin + from-source lane +
+release, never the closure alone.
 
 Bump only to a qed64 commit its owners have announced as having passed
-their test pyramid (`e5df87a` and `f98e009` were: 23/23 e2e on both
-transports; the pump path is reachable there behind `?resident=0`).
-The game's boot registers `pagehide → shim.disposeForUnload()`; keep that
-call working across bumps (qed64's own page relies on the same hook).
+their test pyramid (`32e5e62` was: e2e 23/23, 323 ms switch, gauntlets
+clean). Keep `relay.unload()` on `pagehide` working across bumps (qed64's
+own page relies on the same hook).
 
 ## Snapshot rebake 2026-09-02 (GameServer `Runner` hoist, runtime unchanged)
 
@@ -115,6 +114,37 @@ files), then rebuild the client.
 | nng4 | `sha256:79468e1d630aaa72…` | 428,342,216 | 1,466,401,477 |
 | testgame | `sha256:e0ca4af0c94f38f1…` | 413,600,695 | 1,412,288,317 |
 | init | unchanged `sha256:c70b5081d84df6d3…` | 107,410,668 | 342,124,389 |
+
+## Served bundle since 2026-09-07: the resident pairing (kernel 0032)
+
+Built by `wasm/build-from-source.sh --verify-snapshots` from kernel pin
+`992dc94` (patch series through 0032) with the vendored qed64 `32e5e62`
+pipeline, for the resident-transport port of the closure (see the pin
+section above). Bundle tag `artifacts-wasm64-d77d34b97592d014`
+(`wasm/artifacts/BUNDLE.json`; tarballs in
+`wasm/out/artifacts/artifacts-wasm64-d77d34b97592d014/`, uploaded by the
+operator as the GitHub release of that name and into R2 with
+`scripts/upload-artifacts.sh`).
+
+| artifact | digest / build id | transfer bytes | raw bytes |
+| --- | --- | --- | --- |
+| runtime | `wasm64-d77d34b97592d014` (source `qed64-wasm64@992dc94b2`) | 153,673,728 (tar) | — |
+| init | `sha256:da2ed4de9dabfb73…` | 107,410,385 | 342,124,389 |
+| nng4 | `sha256:3613d20f2f3545d1…` | 428,354,712 | 1,466,403,813 |
+| testgame | `sha256:aee31c25b23c454c…` | 413,599,933 | 1,412,288,317 |
+| core profile pack | unchanged (Init facets 3145/3145 identical to the served pack) | 120,705,024 (tar) | — |
+
+The build id differs from qed64's own build of the same pin
+(`wasm64-5dcdda005a7c5ae0`): the served qed64 binary embeds the githash of
+its work tree, the submodule build embeds none — a provenance detail, not
+a behaviour difference (`lean.wasm` sha is the pairing key either way).
+Run notes: the kernel's own `wasm64-build/build.sh` fails its final link on
+this pin (the exports list is generated; the lane regenerates it from this
+build's compiled C on every run and finishes the link); the gate is
+skipped (advisory on 0032+: the proxied main never exits in Node) and the
+bake lane's `snapshot-probe` on the nng4 and testgame snapshots is the
+acceptance test (`SNAPSHOT PROBE PASS`). Wall-clock with a warm ccache:
+runtime ~12 min, core/trees/games ~8 min, bakes ~10 min, bundle ~2 min.
 
 ## Served bundle since 2026-09-03: built from source
 

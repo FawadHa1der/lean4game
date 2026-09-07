@@ -252,6 +252,48 @@ machine); "was" values are from the same harness before fix 8.
     boot preflights the worker script and any boot failure now reaches the
     level pane as "Lean failed to start: …" with reload advice instead of a
     spinner that never ends.
+20. **Resident transport (qed64 closure `32e5e62`, kernel `992dc94`).**
+    qed64 deleted the pump transport the game was built on (their
+    `PUMP-REMOVAL-ASSESSMENT`): the shim's in-place session replacement per
+    header change, its queue and its 15 s loss watchdog are gone; the worker
+    owns the document and every header verdict, a level switch is a
+    full-text document change the kernel's resolver serves from the game
+    snapshot in-process, and the relay only re-establishes the document on
+    a fresh session, fails requests a death orphaned, and breaks crash
+    loops. Ported with no new dependency (`KERNEL.md`, substrate pin): the
+    session adapter subclassed to write the gamedata on every boot, a game
+    policy (init + game snapshot, 2 GiB initial commit, 3 GiB cap), the
+    relay's status as the page's only readiness source (an armed checker
+    with nothing open is "ready" — the world map), `pagehide →
+    relay.unload()` (dispose plus the synchronous kill), a re-arm for the
+    halted breaker from the pane and on level switch, and the translation
+    wrapping every full-text change (the front door syncs whole
+    documents). A kernel bump and a rebake of all three snapshots came with
+    it (`wasm/build-from-source.sh`; the exports list is generated per
+    build, the kernel gate is advisory on this pin, the bake probes are the
+    acceptance test). Measured on the new pairing, locally: boot + goal
+    18 s warm, `rfl` 0.66 s, every world switch shows its goal in 0.1 s,
+    cypress 24/24, the reload-storm recipe survives the 100 ms storm after
+    two reloads in 2 of 3 passes (1 of 3 on the previous worker, 0 of 3
+    before). The retry rule stops re-asking an rpc session the infoview has
+    marked failed (RpcNeedsReconnect) and leaves the pane's fresh-session
+    ticks to it.
+21. **Returning to a level checked its proof against the previous level.**
+    The "tactic typed during a switch is judged against the previous
+    document" item under Open was misattributed to timing. Trace: returning
+    to a level whose Monaco model still exists (its first visit created it)
+    sends no `didOpen` — the editor emits a full-text `didChange` of that
+    level's uri with the saved proof — and the translation wrapped it with
+    the header of the LAST `didOpen`, the level just left. The worker then
+    held "Addition/1's command := by Tutorial/1's proof" (`rfl` failed
+    against `0 + n = n`) and the session stayed on the wrong level. Same
+    symptom on the pump build in the same probe (`stall-verify2`, item 16's
+    run). Fix: the translation keys the level on each message's uri, and a
+    full-text change for a level other than the one opened last becomes a
+    re-open of the worker document with that level's header (the front door
+    rebases the version, which a plain change behind the current version
+    could not survive). Unit-tested; the probe's re-entered `rfl` now
+    settles against the right goal.
 
 ## Live end-to-end matrix (deployed site, 2026-09-07, headless Chromium)
 
@@ -366,12 +408,6 @@ preferences popup's empty "Controls" section.
   against it (0033) measured as a no-op and was dropped. Nothing below the
   kernel moves it — a leaner module or fewer initializers is kernel
   research. Fresh-page storms at 100–250 ms never crash.
-- A tactic typed within the first ~0.5 s of a level switch can be
-  elaborated against the previous level's document (the shim's re-open
-  runs the header-switch machinery asynchronously; item 16 removes the
-  stale *display*, not this race). Upstream has the same shape with a
-  slower relay round-trip; a fix would hold typewriter submissions until
-  the first `publishDiagnostics` of the new document.
 - Offline reload of the deployed site fails at the HTML (no service
   worker; the shell is `must-revalidate`). A Workbox-style precache of the
   shell would close it; the artifacts and game data are already cached.

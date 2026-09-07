@@ -440,7 +440,19 @@ rpcSess.call('Game.getProofState',
   // level's initial load right after rapid level navigation. Typewriter mode
   // has no other trigger to reload, so the pane would sit on "Loading the
   // level…" for good; retry a few times instead of declaring a crash.
-  if (/switched documents|please retry/i.test(String(error?.message ?? error)) && attempt < 4) {
+  // RpcNeedsReconnect (-32900): the relay answered a request a death
+  // orphaned and is rebooting. The infoview marks THIS rpc session failed
+  // on that code (every later call on it throws the same error without
+  // sending), so retrying here would loop on a corpse; leave `proof`
+  // undefined and let the pane's tick retries ask again with the session of
+  // a fresh render once the checker settles. Not a crash.
+  if (error?.code === -32900) {
+    console.warn(`${error?.message ?? error} — the checker is restarting; the pane retries with a fresh session`)
+    return
+  }
+  // "QED64: …" (-32603) is answered on a session that stays valid (a request
+  // straddled a reboot, or the level's first load raced a switch): retry.
+  if (/^QED64:|switched documents|please retry/i.test(String(error?.message ?? error)) && attempt < 4) {
     console.warn(`${error} — retrying (${attempt + 1}/4)`)
     setTimeout(() => loadGoals(rpcSess, uri, worldId, levelId, setProof, setCrashed, attempt + 1), 800 * (attempt + 1))
     return

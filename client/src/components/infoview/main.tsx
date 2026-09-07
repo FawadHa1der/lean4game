@@ -31,6 +31,7 @@ import { Button } from '../button';
 import { CircularProgress } from '@mui/material';
 import { bootStatusAtom, checkerActivityAtom, documentProcessingAtom, formatProgress } from '../../store/boot-atoms';
 import { leanMonacoAtom } from '../../store/editor-atoms';
+import { rearmCheckerIfHalted } from '../../wasm/game-boot';
 import { useEta } from '../boot_banner';
 import { selectAtom } from 'jotai/utils';
 import '../../css/boot_banner.css';
@@ -213,10 +214,10 @@ export function Main() {
     loadGoals(rpcSess, uri, worldId, levelId, setProof, setCrashed)
   }, [rpcSess, uri, worldId, levelId, retryTick, setProof, setCrashed])
   React.useEffect(() => {
-    if (proof !== undefined || activity.busy || !uri) return
+    if (proof !== undefined || activity.busy || activity.halted || !uri) return
     const id = setTimeout(() => { setCrashed(false); setRetryTick((t) => t + 1) }, 4000)
     return () => clearTimeout(id)
-  }, [proof === undefined, activity.busy, uri, retryTick])
+  }, [proof === undefined, activity.busy, activity.halted, uri, retryTick])
 
   function toggleSelection(line: number) {
     return (ev: any) => {
@@ -550,10 +551,10 @@ export function TypewriterInterface() {
   // answered before the level existed, or asked of a dead session otherwise
   // waits forever).
   React.useEffect(() => {
-    if (proof !== undefined || activity.busy || !effectiveUri) return
+    if (proof !== undefined || activity.busy || activity.halted || !effectiveUri) return
     const id = setTimeout(retry, 4000)
     return () => clearTimeout(id)
-  }, [proof === undefined, activity.busy, effectiveUri, retryTick])
+  }, [proof === undefined, activity.busy, activity.halted, effectiveUri, retryTick])
 
   // Document settled (fileProgress empty): replace any provisional state.
   const [docProcessingTw] = useAtom(documentProcessingAtom)
@@ -711,6 +712,12 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
   if (bootFailure !== undefined) {
     headline = <>Lean could not start in your browser</>
     detail = <>{bootFailure}. Reloading the page retries from the beginning; the downloaded environment stays cached.</>
+  } else if (activity.halted) {
+    // The relay's crash-loop breaker: three deaths in two minutes. It only
+    // re-arms on a document change, which the typewriter cannot produce
+    // while it waits for a proof state — so offer the re-arm here.
+    headline = <>The checker stopped after repeated crashes</>
+    detail = <>{activity.label}. Restarting replays this level into a fresh checker; if it crashes again, reloading the page is safe.</>
   } else if (status.state !== 'busy' && status.label === '') {
     // The boot status atom starts inert (the landing page binds no game);
     // no stage has been published yet — the checker has not started.
@@ -758,6 +765,8 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
       <Button className="btn" onClick={onRetry}>Retry now</Button>}
     {bootFailure !== undefined &&
       <Button className="btn" onClick={() => window.location.reload()}>Reload</Button>}
+    {activity.halted &&
+      <Button className="btn" onClick={() => { if (!rearmCheckerIfHalted()) window.location.reload(); else onRetry?.() }}>Restart the checker</Button>}
   </div>
 }
 

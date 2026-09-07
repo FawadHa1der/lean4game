@@ -127,7 +127,7 @@ export default defineConfig({
   resolve: {
     alias: {
       path: "path-browserify",
-      // The wasm substrate (boot, watchdog shim, runtime client, snapshot
+      // The wasm substrate (boot, session adapter + relay, runtime client, snapshot
       // loader) is a vendored, commit-pinned copy of the qed64 closure —
       // see client/src/wasm/vendor/QED64-PIN and scripts/sync-qed64.sh. It
       // used to be a live `file:` link into the qed64 checkout, which made

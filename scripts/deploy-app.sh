@@ -20,7 +20,7 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 rsync -a --delete --exclude '/runtime/' --exclude '/profiles/' --exclude '/snapshots/' client/dist/ "$OUT/"
 big=$(find "$OUT" -type f -size +25M | head -3)
 [ -z "$big" ] || { echo "files over the 25 MiB asset cap:" >&2; echo "$big" >&2; exit 3; }
-for f in workers/lean.worker.js workers/lsp-frames.js workers/snapshot-prefetch.worker.js runtime/runtime-manifest.json snapshots/index.json profiles/index.json data/g/hhu-adam/NNG4/game.json; do
+for f in workers/lean.worker.js workers/lsp-frames.js workers/lsp-front-door.js workers/snapshot-prefetch.worker.js runtime/runtime-manifest.json snapshots/index.json profiles/index.json data/g/hhu-adam/NNG4/game.json; do
   case "$f" in runtime/*|snapshots/*|profiles/*) src="client/dist/$f" ;; *) src="$OUT/$f" ;; esac
   [ -f "$src" ] || { echo "deploy tree incomplete: $f missing — the shell would hang at start-up" >&2; exit 3; }
 done

@@ -59,12 +59,17 @@ export interface CheckerActivity {
   busy: boolean;
   switching: boolean;
   label: string;
+  /** The relay's crash-loop breaker tripped: every request is refused until
+   * the document changes (or the page re-arms it) — a permanent idle, not a
+   * transient one the pane should keep retrying. */
+  halted: boolean;
 }
 
 export const checkerActivityAtom = atom<CheckerActivity>({
   busy: false,
   switching: false,
   label: "",
+  halted: false,
 });
 
 const SWITCHING_RE =
@@ -73,15 +78,19 @@ const SWITCHING_RE =
 /** `booting`: the first boot has not finished — every stage is a switch then
  * (the stage labels vary: module names, "Starting the Emscripten runtime",
  * … — matching them one by one left the gate flickering between stages). */
-export function publishCheckerActivity(state: "busy" | "ready", label: string, booting = false): void {
+export function publishCheckerActivity(state: "busy" | "ready", label: string, booting = false, switching?: boolean, halted = false): void {
   const next: CheckerActivity = {
     busy: state === "busy",
-    switching: state === "busy" && (booting || SWITCHING_RE.test(label)),
+    // `switching` is the relay's fact when given (a session is being
+    // replaced); the label regex covers the boot-stage labels the StatusSink
+    // still emits on a first boot.
+    switching: state === "busy" && (switching ?? (booting || SWITCHING_RE.test(label))),
     label,
+    halted,
   };
   const store = getDefaultStore();
   const cur = store.get(checkerActivityAtom);
-  if (cur.busy === next.busy && cur.switching === next.switching && cur.label === next.label) return;
+  if (cur.busy === next.busy && cur.switching === next.switching && cur.label === next.label && cur.halted === next.halted) return;
   store.set(checkerActivityAtom, next);
 }
 

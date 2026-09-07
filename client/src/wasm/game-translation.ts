@@ -15,7 +15,8 @@
  *  - initialize: capture difficulty/inventory from initializationOptions and
  *    smuggle the game name through rootUri (the GameServer library reads it
  *    back out of rc.initParams.rootUri? — upstream's own hack, preserved).
- *  - didOpen of the level uri (level-uri.ts): rewrite the text to
+ *  - didOpen of the level uri (level-uri.ts) — and every FULL-text didChange
+ *    (the resident front door syncs whole documents): rewrite the text to
  *      import {level module} import GameServer.Runner \n
  *      Runner "{game}" "{world}" {level} (difficulty := d) (inventory := [..]) := by\n
  *      {player text}\n
@@ -117,6 +118,8 @@ export class GameTranslation {
   private inventory: string[] | undefined;
   private worldId = "";
   private levelId = "";
+  /** The level's Lean module (from level data), captured at didOpen. */
+  private module = "";
   private readonly semanticTokenRequestIds = new Set<number | string>();
   private readonly workerUri: string;
 
@@ -173,6 +176,28 @@ export class GameTranslation {
       this.semanticTokenRequestIds.add(message.id);
     }
 
+    // A full-text didChange for a level OTHER than the one opened last is a
+    // document switch the editor never announced: returning to a level whose
+    // Monaco model still exists (its first visit created it) sends no
+    // didOpen, only a didChange of that uri with the saved text. Wrapping it
+    // with the previous level's header handed the worker "Addition/1's
+    // command := by <Tutorial/1's proof>" (a tactic judged against the wrong
+    // goal, then a whole session on the wrong level). The worker holds one
+    // document, so this becomes the re-open it is — the front door rebases
+    // the version continuing the worker's sequence, which a plain didChange
+    // could not survive if the returning model's version is behind.
+    if (message.method === "textDocument/didChange" && message.params?.textDocument?.uri) {
+      const here = parseLevelUri(message.params.textDocument.uri);
+      const c = message.params.contentChanges?.[0];
+      if ((here.worldId !== this.worldId || here.levelId !== this.levelId) && c && typeof c.text === "string" && c.range === undefined) {
+        message = {
+          ...message,
+          method: "textDocument/didOpen",
+          params: { textDocument: { uri: message.params.textDocument.uri, languageId: "lean4", version: message.params.textDocument.version, text: c.text } },
+        };
+      }
+    }
+
     if (message.method === "textDocument/didOpen") {
       const { worldId, levelId } = parseLevelUri(message.params.textDocument.uri);
       this.worldId = worldId;
@@ -188,13 +213,19 @@ export class GameTranslation {
       this.difficulty = this.config.difficulty?.() ?? this.difficulty ?? 1;
       this.inventory = this.config.inventory?.() ?? this.inventory ?? [];
 
-      const content = message.params.textDocument.text;
-      message.params.textDocument.text =
-        `import ${levelData?.module} import GameServer.Runner \nRunner ` +
-        `${JSON.stringify(this.config.gameName)} ${JSON.stringify(this.worldId)} ${this.levelId} ` +
-        `(difficulty := ${this.difficulty}) ` +
-        `(inventory := [${(this.inventory ?? []).map((s) => JSON.stringify(s)).join(",")}]) ` +
-        `:= by\n${content}\n`;
+      this.module = levelData?.module ?? "";
+      message.params.textDocument.text = this.wrapDocument(message.params.textDocument.text);
+      this.onDidOpen?.(message);
+    } else if (message.method === "textDocument/didChange") {
+      // The resident front door declares FULL-text sync (change = 1), so the
+      // editor sends the whole player text on every edit; forwarding it as-is
+      // would replace the worker's document with untranslated text (no import
+      // line, no Runner command) on the first keystroke. Wrap it exactly like
+      // the didOpen; a ranged change (incremental sync) is only line-shifted.
+      replaceUri(message, this.workerUri);
+      for (const c of message.params?.contentChanges ?? []) {
+        if (c && typeof c.text === "string" && c.range === undefined) c.text = this.wrapDocument(c.text);
+      }
     } else {
       replaceUri(message, this.workerUri);
     }
@@ -203,8 +234,25 @@ export class GameTranslation {
     return message;
   }
 
+  /** The worker document for the player's text: the level's import line,
+   * GameServer.Runner, and the Runner command whose proof block is the text
+   * (PROOF_START_LINE lines above it). Used for didOpen and for every
+   * full-text didChange, so the worker never sees the bare player text. */
+  private wrapDocument(content: string): string {
+    return (
+      `import ${this.module} import GameServer.Runner \nRunner ` +
+      `${JSON.stringify(this.config.gameName)} ${JSON.stringify(this.worldId)} ${this.levelId} ` +
+      `(difficulty := ${this.difficulty}) ` +
+      `(inventory := [${(this.inventory ?? []).map((s) => JSON.stringify(s)).join(",")}]) ` +
+      `:= by\n${content}\n`
+    );
+  }
+
   /** Optional sink for the document's processing state (see boot-atoms). */
   onProcessing: ((processing: boolean) => void) | null = null;
+  /** Fired with the TRANSLATED didOpen (a level switch): the host re-arms a
+   * halted relay from it, since the relay only leaves `halted` on a change. */
+  onDidOpen: ((translated: JsonRpc) => void) | null = null;
 
   /** relay: server → client rewrites. */
   private toClient(message: JsonRpc): JsonRpc {

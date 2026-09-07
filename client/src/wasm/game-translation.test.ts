@@ -61,6 +61,47 @@ assert.deepEqual(parseLevelUri("file:///Tutorial/3.lean"), { worldId: "Tutorial"
     assert.equal(hover.params.position.line, 0 + PROOF_START_LINE);
     assert.equal(hover.params.textDocument.uri, "file:///game/Metadata.lean");
 
+    // full-text didChange (resident front door: change = 1) is wrapped like the
+    // didOpen; a ranged change is only line-shifted.
+    post({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean", version: 2 }, contentChanges: [{ text: "rw [h]\nrfl" }] } });
+    post({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean", version: 3 }, contentChanges: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 2 } }, text: "rfl" }] } });
+    setTimeout(() => {
+      const full = toWorker[3], ranged = toWorker[4];
+      assert.equal(full.params.textDocument.uri, "file:///game/Metadata.lean");
+      assert.ok(full.params.contentChanges[0].text.startsWith("import Game.Levels.TestWorld.L01_X import GameServer.Runner \n"), "full-text change carries the header");
+      assert.ok(full.params.contentChanges[0].text.endsWith(':= by\nrw [h]\nrfl\n'));
+      assert.equal(ranged.params.contentChanges[0].text, "rfl");
+      assert.equal(ranged.params.contentChanges[0].range.start.line, 0 + PROOF_START_LINE);
+    }, 20);
+    // level switch: didClose + didOpen of another level, then a full-text
+    // didChange — the wrapper must carry the NEW level's header and command,
+    // and the version must pass through.
+    post({ jsonrpc: "2.0", method: "textDocument/didClose", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean" } } });
+    post({ jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: "file:///levels/Other__2.lean", languageId: "lean4", version: 1, text: "simp" } } });
+    post({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///levels/Other__2.lean", version: 2 }, contentChanges: [{ text: "simp\nrfl" }] } });
+    setTimeout(() => {
+      const [close, open2, change2] = toWorker.slice(5, 8);
+      assert.equal(close.method, "textDocument/didClose");
+      assert.equal(close.params.textDocument.uri, "file:///game/Metadata.lean");
+      assert.ok(open2.params.textDocument.text.startsWith("import Game.Levels.Other.L02_X import GameServer.Runner \n"));
+      assert.ok(open2.params.textDocument.text.includes('Runner "MyGame" "Other" 2 '));
+      assert.equal(change2.params.textDocument.version, 2);
+      assert.ok(change2.params.contentChanges[0].text.includes('Runner "MyGame" "Other" 2 '), "full-text change after a switch carries the new level's command");
+      assert.ok(change2.params.contentChanges[0].text.endsWith(":= by\nsimp\nrfl\n"));
+    }, 30);
+    // returning to a level whose model still exists: the editor sends only a
+    // full-text didChange of THAT uri — it must become a re-open carrying that
+    // level's header, never the previous level's.
+    post({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean", version: 7 }, contentChanges: [{ text: "rfl" }] } });
+    setTimeout(() => {
+      const back = toWorker[8];
+      assert.equal(back.method, "textDocument/didOpen", "cross-level change re-opens the worker document");
+      assert.equal(back.params.textDocument.uri, "file:///game/Metadata.lean");
+      assert.equal(back.params.textDocument.version, 7);
+      assert.ok(back.params.textDocument.text.startsWith("import Game.Levels.TestWorld.L01_X import GameServer.Runner \n"));
+      assert.ok(back.params.textDocument.text.includes('Runner "MyGame" "TestWorld" 1 '), "the header is the level of the uri, not of the last didOpen");
+      assert.ok(back.params.textDocument.text.endsWith(":= by\nrfl\n"));
+    }, 40);
     // fileProgress → onProcessing: ranges in flight = true; a lone kind-2 (fatal
     // error) entry is a verdict, not work; empty = false.
     const seen: boolean[] = [];
