@@ -55,7 +55,7 @@
   },
   "scripts": {
     "dev": "cross-env NODE_ENV=development vite --host",
-    "build": "cross-env NODE_ENV=production vite build",
+    "build": "cross-env NODE_ENV=production vite build && node ../scripts/build-sw.mjs",
     "translate": "npx i18next-scanner --config i18next-scanner.config.cjs"
   }
 }

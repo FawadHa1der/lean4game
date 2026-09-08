@@ -85,18 +85,26 @@ machine); "was" values are from the same harness before fix 8.
    regex; the progress bar is 6 px instead of a hairline; the input gate no
    longer flickers off between boot stages (every stage of the first boot
    is a switch).
-5. **Offline play survives a reload — for the checker, not yet for the
-   page.** The checker never needed the network once its artifacts are
-   cached, and the level data is cached alongside them (after a reload,
-   offline level loads used to 404). Measured on the deployed site
-   (2026-09-07, live matrix step 3): a warm online boot takes 6 s, but a
-   reload with the network off never renders the page — the app shell is
-   served `must-revalidate` and there is no service worker, so the browser
-   shows its own offline error before any of our code runs. Offline
-   *reloads* therefore need a service worker that precaches the shell
-   (index, bundles, fonts; the emoji font alone is 23 MiB) — a follow-up,
-   listed under Open. Offline play without a reload (the network dropping
-   mid-session) is unaffected: nothing after boot touches the network.
+5. **Offline play survives a reload.** The checker never needed the
+   network once its artifacts are cached (snapshots as raw regions in OPFS,
+   the core library pack, the game data), but the page itself died at the
+   first byte of a reload with the network off: the shell is served
+   `must-revalidate` and there was no service worker. There is one now
+   (`client/src/sw/sw.template.js`, generated into `dist/sw.js` by
+   `scripts/build-sw.mjs` after every build, registered in production
+   only): it precaches the shell at install — index, bundles, the four
+   worker scripts, small fonts, icons, game data, i18n, api, and the
+   artifact manifests including the pinned runtime manifest — serves
+   navigations network-first with the cached index as the fallback,
+   answers the boot's HEAD preflights from the cache, and caches the
+   runtime chunks on first use. Because a first visit's boot fetches
+   everything before the worker controls the page, the boot re-fetches the
+   manifests and runtime chunks through the worker once the checker is
+   ready (`force-cache`: the HTTP cache answers, no second download).
+   Snapshots and pack parts stay network-only (OPFS owns them). Measured
+   locally: after one online visit the worker is active and controlling,
+   its caches hold the shell (431 files) and the warmed runtime (13), and
+   an offline reload boots in 5.9 s, shows the level, and checks a tactic.
 6. **Documentation panel gutter.** Text sat flush against the panel's left
    edge and the close button against its right (upstream master styling);
    the panel now has the same side padding as the inventory lists.
@@ -319,7 +327,7 @@ worker-staging fix (item 19) went live. Drivers in qed64 `work/`:
 |---|---|---|
 | 1 | fresh first visit | pass — ready 187 s (a full download of the new pairing), steps 0.7–0.95 s, 0 HTTP errors |
 | 2 | returning visit | pass — ready 11 s, steps 0.3–0.8 s |
-| 3 | offline reload | fail as before (no service worker; Open item) |
+| 3 | offline reload | fail at the time (no service worker) — closed since by item 5's service worker; re-verify live after its deploy |
 | 4 | click-only first visit, with crash timing | pass — boots during the download, goal at 124 s, no crash |
 | 5 | world walk + editor round trip | pass — goal at every switch in 0.1 s, one Lean client |
 | 6 | reload storm | **pass** — both 250 ms storms and the 100 ms storm after two reloads settle (one pass; locally 2 of 3) |
@@ -432,9 +440,6 @@ preferences popup's empty "Controls" section.
   against it (0033) measured as a no-op and was dropped. Nothing below the
   kernel moves it — a leaner module or fewer initializers is kernel
   research. Fresh-page storms at 100–250 ms never crash.
-- Offline reload of the deployed site fails at the HTML (no service
-  worker; the shell is `must-revalidate`). A Workbox-style precache of the
-  shell would close it; the artifacts and game data are already cached.
 - Only NNG4 is listed on the landing page; more games follow the catalog
   pattern in `KERNEL.md`.
 - The boot strip can cover the bottom row of world-map labels during the

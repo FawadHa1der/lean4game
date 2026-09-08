@@ -239,7 +239,39 @@ function markServed(ui: StatusSink): void {
   bootFinishedOnce = true;
   (globalThis as { qed64GameReady?: boolean }).qed64GameReady = true;
   ui.idle("Lean ready");
+  void warmOfflineCache();
 }
+
+/** Offline reloads: the service worker (client/src/sw) caches the runtime
+ * chunks and manifests it sees pass through — but on a first visit the boot
+ * fetched them before the worker controlled the page. Once the checker is
+ * up, ask the worker itself to fetch them (through the HTTP cache: no
+ * second download) and to prune chunks of superseded runtimes. Needs no
+ * page control, so it works on the very first visit. Snapshots and pack
+ * parts are not needed here (OPFS). */
+let warmedArtifacts: Qed64Artifacts | null = null;
+async function warmOfflineCache(): Promise<void> {
+  const a = warmedArtifacts; warmedArtifacts = null;
+  if (!a || !("serviceWorker" in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const urls: string[] = ["/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json"];
+    for (const f of Object.values((a.runtime as { files?: Record<string, { chunks?: { url: string }[] }> }).files ?? {})) {
+      for (const c of f.chunks ?? []) urls.push(c.url);
+    }
+    const reply = await new Promise<{ cached: number; pruned: number; total: number } | null>((resolve) => {
+      const ch = new MessageChannel();
+      const t = window.setTimeout(() => resolve(null), 120000);
+      ch.port1.onmessage = (e) => { window.clearTimeout(t); resolve(e.data); };
+      reg.active?.postMessage({ type: "warm", urls }, [ch.port2]);
+    });
+    if (reply) console.info(`[game-boot] offline cache: ${reply.cached}/${reply.total} runtime files cached, ${reply.pruned} superseded pruned`);
+    else console.warn("[game-boot] offline cache warm-up: no reply from the service worker");
+  } catch (e) {
+    console.warn("[game-boot] offline cache warm-up skipped:", e);
+  }
+}
+
 function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   const death = st.lastDeath ? `${st.lastDeath.message || st.lastDeath.reason}` : "";
   if (st.relay === "halted") {
@@ -349,6 +381,7 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
       }
     }
     const artifacts: Qed64Artifacts = await installArtifacts(ui);
+    warmedArtifacts = artifacts;
 
     const files = bundle.rawFiles.map((f) => ({ path: `${WORKER_GAMEDATA_DIR}/${f.name}`, text: f.text }));
     const policy = gamePolicy(boundGame!.snapshot);

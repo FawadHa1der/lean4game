@@ -11,6 +11,17 @@ import { gameIdAtom, hashSegmentsAtom, levelIdAtom, pathSegmentsAtom, redirectAt
 import { ErrorBoundary } from './error/ErrorBoundary'
 import { NotFound } from './error/NotFound'
 
+// Offline reloads: the service worker precaches the app shell and caches the
+// runtime chunks and artifact manifests on first use (client/src/sw/
+// sw.template.js, generated into dist/sw.js by scripts/build-sw.mjs). The
+// snapshots and library pack already live in OPFS. Production only: the dev
+// server serves no sw.js, and a stale worker would mask live edits.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((e) => console.warn('[sw] registration failed:', e))
+  })
+}
+
 function Router() {
   const [gameId] = useAtom(gameIdAtom)
   const [worldId] = useAtom(worldIdAtom)

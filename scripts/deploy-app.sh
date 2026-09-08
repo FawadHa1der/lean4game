@@ -20,9 +20,18 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 rsync -a --delete --exclude '/runtime/' --exclude '/profiles/' --exclude '/snapshots/' client/dist/ "$OUT/"
 big=$(find "$OUT" -type f -size +25M | head -3)
 [ -z "$big" ] || { echo "files over the 25 MiB asset cap:" >&2; echo "$big" >&2; exit 3; }
-for f in workers/lean.worker.js workers/lsp-frames.js workers/lsp-front-door.js workers/snapshot-prefetch.worker.js runtime/runtime-manifest.json snapshots/index.json profiles/index.json data/g/hhu-adam/NNG4/game.json; do
+for f in sw.js workers/lean.worker.js workers/lsp-frames.js workers/lsp-front-door.js workers/snapshot-prefetch.worker.js runtime/runtime-manifest.json snapshots/index.json profiles/index.json data/g/hhu-adam/NNG4/game.json; do
   case "$f" in runtime/*|snapshots/*|profiles/*) src="client/dist/$f" ;; *) src="$OUT/$f" ;; esac
   [ -f "$src" ] || { echo "deploy tree incomplete: $f missing — the shell would hang at start-up" >&2; exit 3; }
 done
+# The service worker's precache list must describe THIS tree (a stale
+# sw.js from an earlier build would precache names that no longer exist).
+node -e '
+  const fs = require("fs"); const out = process.argv[1];
+  const s = fs.readFileSync(out + "/sw.js", "utf8"); const l = JSON.parse(s.match(/const PRECACHE = (\[.*?\]);/s)[1]);
+  const miss = l.filter((p) => !/^\/(runtime|profiles|snapshots)\//.test(p) && !fs.existsSync(out + p));
+  if (miss.length) { console.error("sw.js precache lists files missing from the deploy tree:", miss.slice(0, 5)); process.exit(3); }
+  console.log("sw.js precache: " + l.length + " entries, all present");
+' "$OUT"
 echo "shell: $(find "$OUT" -type f | wc -l | tr -d ' ') files, $(du -sh "$OUT" | cut -f1)"
 npx wrangler deploy "$@"

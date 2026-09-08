@@ -21,7 +21,7 @@ export function isImmutable(pathname) {
   if (/\/runtime-manifest(\.[^/]*)?\.json$/.test(pathname) || /\/index\.json$/.test(pathname)) return false;
   // Digest-named artifact files and vite's content-hashed bundles never
   // change under the same name.
-  return /(\.part-\d+|\.snapz|\.chunk\.|[0-9a-f]{16,})/.test(pathname) || /^\/assets\/[^/]+\.[A-Za-z0-9_-]{8}\.[a-z]+$/.test(pathname);
+  return /(\.part-\d+|\.snapz|\.chunk\.|[0-9a-f]{16,})/.test(pathname) || /^\/assets\/[^/]+[-.][A-Za-z0-9_-]{8}\.[a-z0-9]+$/.test(pathname);
 }
 
 function withHeaders(response, pathname) {

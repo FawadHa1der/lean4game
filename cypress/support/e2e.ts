@@ -18,3 +18,13 @@ import './commands'
 
 // Alternatively you can use CommonJS syntax:
 // require('./commands')
+// The production build registers a service worker; between specs, drop it
+// and its caches so a spec never runs against the previous build's shell.
+before(() => {
+  cy.window().then(async (w) => {
+    try {
+      for (const r of await w.navigator.serviceWorker.getRegistrations()) await r.unregister()
+      for (const k of await w.caches.keys()) await w.caches.delete(k)
+    } catch { /* not supported in this browser */ }
+  })
+})
