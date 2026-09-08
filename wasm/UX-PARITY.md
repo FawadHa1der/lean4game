@@ -324,6 +324,18 @@ worker-staging fix (item 19) went live. Drivers in qed64 `work/`:
 | 5 | world walk + editor round trip | pass — goal at every switch in 0.1 s, one Lean client |
 | 6 | reload storm | **pass** — both 250 ms storms and the 100 ms storm after two reloads settle (one pass; locally 2 of 3) |
 
+Two caveats from that run. The probes' post-reload boots (135 s) are the
+probe's own cost: a fresh Playwright context has no persistent HTTP cache,
+so every reload re-downloads the 154 MB runtime chunks (the snapshot raw
+cache in OPFS is used: 0.3 s per snapshot) — a real browser profile booted
+in 11 s (step 2). And a later rerun stalled for ten minutes on a first
+visit because the path itself had slowed to ~1 MB/s (Cloudflare's own
+speed endpoint gave 1.6 MB/s to this machine at that moment; 7 MB/s in the
+morning): at that rate the 1.2 GB first visit takes twenty minutes, which
+the loading pane reports with size, progress and ETA but cannot shorten.
+Range requests are not honoured by the Worker (it streams whole objects);
+the client never uses them.
+
 **First-visit memory, measured per boot phase** (largest Chromium process,
 `click-mem-probe.mjs`): 0.85 GB through the download and unpack; **3.6 GB at
 "Starting the Emscripten runtime"; 7.4 GB at "Initializing the Lean
