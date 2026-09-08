@@ -327,7 +327,7 @@ worker-staging fix (item 19) went live. Drivers in qed64 `work/`:
 |---|---|---|
 | 1 | fresh first visit | pass — ready 187 s (a full download of the new pairing), steps 0.7–0.95 s, 0 HTTP errors |
 | 2 | returning visit | pass — ready 11 s, steps 0.3–0.8 s |
-| 3 | offline reload | fail at the time (no service worker) — closed since by item 5's service worker; re-verify live after its deploy |
+| 3 | offline reload | fail at the time (no service worker); **pass on 2026-09-08 with item 5's service worker deployed** — first online visit 172 s, worker active and controlling, shell cache 432 + runtime 13, the stored document a plain 200 with COOP despite the host's 307 for /index.html; offline reload boots in 5.2 s, cross-origin isolated, level goal shown, `rw [h]` checked |
 | 4 | click-only first visit, with crash timing | pass — boots during the download, goal at 124 s, no crash |
 | 5 | world walk + editor round trip | pass — goal at every switch in 0.1 s, one Lean client |
 | 6 | reload storm | **pass** — both 250 ms storms and the 100 ms storm after two reloads settle (one pass; locally 2 of 3) |
