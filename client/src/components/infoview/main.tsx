@@ -31,7 +31,7 @@ import { Button } from '../button';
 import { CircularProgress } from '@mui/material';
 import { bootStatusAtom, checkerActivityAtom, documentProcessingAtom, formatProgress } from '../../store/boot-atoms';
 import { leanMonacoAtom } from '../../store/editor-atoms';
-import { rearmCheckerIfHalted } from '../../wasm/game-boot';
+import { boundEnvironmentAtom, rearmCheckerIfHalted } from '../../wasm/game-boot';
 import { useEta } from '../boot_banner';
 import { selectAtom } from 'jotai/utils';
 import '../../css/boot_banner.css';
@@ -40,7 +40,6 @@ import { Hint, Hints, MoreHelpButton, filterHints } from '../hints';
 import { DocumentPosition } from '../../../../node_modules/vscode-lean4/lean4-infoview/src/infoview/util';
 import { DiagnosticSeverity } from 'vscode-languageclient';
 import { useTranslation } from 'react-i18next';
-import path from 'path';
 import { useGameTranslation } from '../../utils/translation';
 import { useAtom } from 'jotai';
 import { gameIdAtom, levelIdAtom, worldIdAtom } from '../../store/location-atoms';
@@ -662,7 +661,9 @@ function LeanGateOverlay() {
 /** The level pane while there is no proof state yet. Every phase says what
  * is happening, how long it has been going, and what to expect — a bare
  * "Loading…" read as hung to first-time visitors (the first visit downloads
- * ~600 MB and the first level after start-up is elaborated cold). The last
+ * the checker plus this game's environment — hundreds of MB, the exact figure
+ * comes from the bound snapshot's index entry — and the first level after
+ * start-up is elaborated cold). The last
  * phase, "checker idle but no answer yet", is retried automatically and
  * offers a manual retry, because a first request lost to a session switch
  * used to leave the pane waiting forever. */
@@ -670,6 +671,7 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
   const [status] = useAtom(bootStatusAtom)
   const [activity] = useAtom(checkerActivityAtom)
   const [leanMonaco] = useAtom(leanMonacoAtom)
+  const [boundEnv] = useAtom(boundEnvironmentAtom)
   const progress = formatProgress(status)
   const eta = useEta(status)
   // `since` is owned by the level (the pane re-renders its branch several
@@ -727,16 +729,20 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
     headline = <>Lean is starting in your browser — {status.label}{progress ? ` · ${progress}` : ''}{eta ? ` · ${eta}` : ''}</>
     // Chrome reports navigator.deviceMemory in {0.25 … 8}: below 8 the
     // device really is small; 8 means "8 or more". Starting the full Lean
-    // compiler in a tab takes ~8–9 GB of renderer memory (measured: 3.6 GB
-    // at runtime start, 7.4 GB at runtime init, 8.3 GB at ready) and a
-    // small machine loses the tab without a word — say so before the
-    // download, not after.
+    // compiler in a tab takes about 8 GB of renderer memory (measured:
+    // 3.6 GB at runtime start, 7.4 GB at runtime init, 8.3 GB at ready)
+    // and a small machine loses the tab without a word — say so before the
+    // download, not after (the landing page says it too, but deep links
+    // never render the landing page).
     const deviceGb = (navigator as { deviceMemory?: number }).deviceMemory
     const smallDevice = typeof deviceGb === 'number' && deviceGb < 8
-      ? <> This device reports about {deviceGb} GB of memory; the checker needs roughly 8–9 GB free while it starts and may not start here.</>
+      ? <> This device reports about {deviceGb} GB of memory; the checker needs roughly 8 GB free while it starts and may not start here.</>
       : null
+    // The environment's size is the bound snapshot's index entry (its
+    // transfer bytes), published by game-boot once the pairing check passed.
+    const envSize = boundEnv ? ` (about ${Math.round(boundEnv.transfer / 1048576)} MB)` : ''
     detail = downloading
-      ? <>The first visit downloads the Lean checker and this game&apos;s mathematics (about 600 MB) and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.{smallDevice}</>
+      ? <>The first visit downloads the Lean checker (about 260 MB, once) and this game&apos;s mathematics{envSize} and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.{smallDevice}</>
       : <>Starting the checker inside this tab: unpacking and loading the mathematics environment. On a laptop this takes about 10–30 seconds after the download.{smallDevice}</>
   } else if (activity.busy) {
     headline = <>Preparing this level — {activity.label}…</>
@@ -790,7 +796,7 @@ let lastStepErrors = proof?.steps.length ? hasInteractiveErrors(getInteractiveDi
     <div className="content">
       <div className='world-image-container empty'>
         {image &&
-          <img className="contain" src={path.join("data", gameId!, image)} alt="" />
+          <img className="contain" src={`/data/${gameId!}/${image}`} alt="" />
         }
 
       </div>

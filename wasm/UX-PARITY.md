@@ -407,6 +407,51 @@ inventory as a locked-row list instead of chips; theorem sub-tabs on one
 row; the "en" language button; Monaco bracket-pair boxes in the input; the
 preferences popup's empty "Controls" section.
 
+## Multi-game
+
+The games this build serves are the rows of `wasm/catalog.json` (read only
+through `scripts/games-manifest.mjs`); a port is described in
+`wasm/PORTING.md`, the publish order in `wasm/DEPLOY.md`. One wasm session
+hosts one game environment (every game's root module is `Game`; a snapshot
+is one complete compacted environment for one exact import list, never a
+delta), so a game is one snapshot region, lazily downloaded on first play
+and cached in OPFS, and switching games reloads the page. What is shared is
+the runtime (154 MB) and the shell.
+
+**Local verification 2026-09-08** (`qed64/work/games-smoke.mjs
+http://localhost:3006 <fresh profile> --all`, served from `client/dist` by
+`scripts/serve-dist.mjs`, all artifacts local; the probe's wire counter
+double-counts snapshot bytes — the prefetch worker's fetch and the
+service-worker-observed response — so the index's transfer sizes are the
+figures to trust):
+
+| game | policy (console) | relay serving | proof | wire (index transfer) |
+| --- | --- | --- | --- | --- |
+| testgame (unlisted) | `[testgame]`, region 1,347 MB → initial 1,536 MiB, cap 3,072 MiB | 9.4 s | `rw [h]` `rw [g]` completed | runtime 154 MB + core 120 MB + 414 MB |
+| nng4 | `[nng4]`, region 1,398 MB → initial 1,792 MiB, cap 3,072 MiB | 8.2 s | `rfl` completed | 428 MB |
+| stg4 (new, slim) | `[stg4]`, region 634 MB → initial 1,024 MiB, cap 3,072 MiB | 6.2 s | `exact h` completed | 181 MB |
+
+- **Init-snapshot drop: KEPT.** Every game booted with `snapshots = [<game>]`
+  alone (no `init` region), every level header was covered in-process and
+  the proofs completed; the boot is one region load shorter (locally 8 s
+  where the resident pairing's first local smoke measured 18 s) and the
+  first visit skips init's 107 MB on the wire / 342 MB of heap.
+- **Slim per-game trees: KEPT.** stg4's region is 665 MB raw / 181 MB gz
+  against nng4's fat 1,466 MB / 428 MB with a larger Mathlib closure; the
+  bake-lane probe elaborates through it (`SNAPSHOT PROBE PASS`, compile
+  1.3 s) and the game plays. The served init/nng4/testgame stay fat until
+  the next full lane run.
+- **Landing tiles** read `/snapshots/index.json` + OPFS: "Ready — plays
+  offline" / "Download ≈ N MB" / "Not available on this build"; a game
+  whose snapshot is not published for the shell's runtime never starts a
+  download — the boot's pairing check names the reason on the failure card.
+- The two console errors per game are the known world-intro
+  `level__W__0.json` 404s (harmless).
+
+Live numbers (first visit of the first game, the second game after it, the
+switch back) are recorded below once the stg4 objects are uploaded and the
+shell deployed.
+
 ## Open
 
 - **Renderer crash: reloads then a 100 ms navigation storm (mitigated,
@@ -440,7 +485,7 @@ preferences popup's empty "Controls" section.
   against it (0033) measured as a no-op and was dropped. Nothing below the
   kernel moves it — a leaner module or fewer initializers is kernel
   research. Fresh-page storms at 100–250 ms never crash.
-- Only NNG4 is listed on the landing page; more games follow the catalog
-  pattern in `KERNEL.md`.
+- Listed games are the `listed: true` rows of `wasm/catalog.json`; adding
+  one is `wasm/PORTING.md`.
 - The boot strip can cover the bottom row of world-map labels during the
   first boot (scrollable, not lost).

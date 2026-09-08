@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {a b} (left : a) (right : b) : a ∧ b",
+ "name": "And.intro",
+ "displayName": "And.intro",
+ "content":
+ "If you have `h1 : P` and `h2 : Q`, then `And.intro h1 h2` is a proof of `P ∧ Q`.",
+ "category": "Logic"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {U} (A : Set U) (x : U) : x ∈ Aᶜ ↔ x ∉ A",
+ "name": "STG4.mem_compl_iff",
+ "displayName": "mem_compl_iff",
+ "content":
+ "If you have `A : Set U` and `x : U`, then `mem_compl_iff A x` is a proof of the statement\n`x ∈ Aᶜ ↔ x ∉ A`.  In Mathlib, the name of this theorem is `Set.mem_compl_iff`.",
+ "category": "ᶜ"}

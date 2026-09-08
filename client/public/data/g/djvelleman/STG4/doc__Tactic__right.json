@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "right",
+ "displayName": "right",
+ "content":
+ "If your goal has the form `P ∨ Q`, then the tactic `right` will set your goal to be `Q`.\nThere are other situations in which the `right` tactic can be used, but this is the one\nthat is most relevant for the set theory game.",
+ "category": "📖︎"}

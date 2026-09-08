@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {U} (A : Set U) : Aᶜᶜ = A",
+ "name": "STG4.compl_compl",
+ "displayName": "compl_compl",
+ "content": "If `A` is a set, then `compl_compl A` is a proof of `Aᶜᶜ = A`.",
+ "category": "ᶜ"}

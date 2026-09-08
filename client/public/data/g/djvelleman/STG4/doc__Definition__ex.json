@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "ex",
+ "displayName": "∃",
+ "content":
+ "If `P x` represents a statement about `x`, then `∃ x, P x` means \"there is at least one\n`x` such that `P x` is true\".  To enter the symbol `∃`, type `\\exists`.\n\n### If your goal is `∃ x, P x`\n\nIf you have `h : P a`, for some object `a`, then `Exists.intro a h` is a proof of `∃ x, P x`,\nso `exact Exists.intro a h` will close the goal.\nIf you think `P a` is true, but you don't yet have a proof of it, then `apply Exists.intro a`\nwill set `P a` as your goal.  The tactic `use a` does the same thing, but it also tries to\nprove `P a`; if it doesn't succeed, then it leaves `P a` as a goal for you to prove.\n\n### If you have an assumption `h : ∃ x, P x`\n\nThe tactic `obtain ⟨w, hw⟩ := h` will\nintroduce a new object `w` and a new assumption `hw : P w` into the proof.  To enter the\nangle brackets `⟨ ⟩`, type either `\\<` and `\\>` or `\\langle` and `\\rangle`.",
+ "category": "📖︎"}

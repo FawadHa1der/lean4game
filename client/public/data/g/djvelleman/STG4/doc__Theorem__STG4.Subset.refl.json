@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {U} (A : Set U) : A ⊆ A",
+ "name": "STG4.Subset.refl",
+ "displayName": "Subset.refl",
+ "content":
+ "If you have `A : Set U`, then `Subset.refl A` is a proof of `A ⊆ A`.\nIn Mathlib, the name of this theorem is `Set.Subset.refl`.",
+ "category": "⊆"}

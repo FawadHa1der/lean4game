@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {U} (A B C : Set U) : A ∪ B ∪ C = A ∪ (B ∪ C)",
+ "name": "STG4.union_assoc",
+ "displayName": "union_assoc",
+ "content":
+ "For any sets `A`, `B`, and `C`, `union_assoc A B C` is a proof of the\nstatement `(A ∪ B) ∪ C = A ∪ (B ∪ C)`.  In Mathlib, the name of this theorem is `Set.union_assoc`.",
+ "category": "∩∪"}

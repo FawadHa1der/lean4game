@@ -38,6 +38,24 @@ const allProgressAtom = atomWithStorage<Progress>(
   storage, { getOnInit: true }
 )
 
+/** Read-only, every game: the number of levels marked completed, by game id
+ * (`g/<owner>/<game>`); games with no progress record are absent. The
+ * landing page's "n of N levels done" — a derived view rather than an export
+ * of allProgressAtom, so no game can write another's progress. */
+export const completedLevelCountsAtom = atom((get) => {
+  const counts = new Map<string, number>()
+  for (const [gameId, game] of Object.entries(get(allProgressAtom).games)) {
+    let done = 0
+    for (const world of Object.values(game.data ?? {})) {
+      for (const [level, entry] of Object.entries(world) as [string, LevelProgress | boolean][]) {
+        if (level !== 'readIntro' && typeof entry === 'object' && entry.completed) done++
+      }
+    }
+    counts.set(gameId, done)
+  }
+  return counts
+})
+
 /** Access to the progress of the current game in local storage */
 export const progressAtom = atom(
   get => {

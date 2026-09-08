@@ -2,8 +2,9 @@
  * Slim persistent banner showing the in-tab Lean runtime's boot progress.
  *
  * The wasm build has real, measurable work between page load and a usable
- * checker (first visit: a ~600 MB kernel+environment download; afterwards a
- * ~10 s cached boot). The server-backed original needs no such affordance —
+ * checker (first visit: a multi-hundred-MB checker + environment download —
+ * the sizes come from the served manifests, never from a literal here;
+ * afterwards a ~10 s cached boot). The server-backed original needs no such affordance —
  * without this the page silently "does nothing" for the whole stretch, which
  * reads as hung. Auto-hides once the checker is ready.
  */

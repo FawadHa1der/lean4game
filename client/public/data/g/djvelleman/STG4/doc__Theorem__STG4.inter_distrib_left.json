@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {U} (A B C : Set U) : A ∩ (B ∪ C) = A ∩ B ∪ A ∩ C",
+ "name": "STG4.inter_distrib_left",
+ "displayName": "inter_distrib_left",
+ "content":
+ "For any sets `A`, `B`, and `C`, `inter_distrib_left A B C` is a proof of the\nstatement `A ∩ (B ∪ C) = (A ∩ B) ∪ (A ∩ C)`.  In Mathlib, the name of this theorem\nis `Set.inter_distrib_left`.",
+ "category": "∩∪"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "ext",
+ "displayName": "ext",
+ "content":
+ "If your goal is `A = B`, where `A` and `B` are sets, then the tactic `ext x` will introduce\na new arbitrary object `x` into the proof and set the goal to be `x ∈ A ↔ x ∈ B`.",
+ "category": "📖︎"}

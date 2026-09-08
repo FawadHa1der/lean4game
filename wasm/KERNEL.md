@@ -132,6 +132,7 @@ operator as the GitHub release of that name and into R2 with
 | init | `sha256:da2ed4de9dabfb73…` | 107,410,385 | 342,124,389 |
 | nng4 | `sha256:3613d20f2f3545d1…` | 428,354,712 | 1,466,403,813 |
 | testgame | `sha256:aee31c25b23c454c…` | 413,599,933 | 1,412,288,317 |
+| stg4 (added 2026-09-08, slim) | `sha256:5dbab231c29a9c13…` | 180,977,642 | 665,285,845 |
 | core profile pack | unchanged (Init facets 3145/3145 identical to the served pack) | 120,705,024 (tar) | — |
 
 The build id differs from qed64's own build of the same pin
@@ -145,6 +146,20 @@ skipped (advisory on 0032+: the proxied main never exits in Node) and the
 bake lane's `snapshot-probe` on the nng4 and testgame snapshots is the
 acceptance test (`SNAPSHOT PROBE PASS`). Wall-clock with a warm ccache:
 runtime ~12 min, core/trees/games ~8 min, bakes ~10 min, bundle ~2 min.
+
+**stg4 (2026-09-08, same runtime).** The first catalog-driven game:
+`--lanes preflight,compat,games,bake,bundle --games stg4 --verify-snapshots`
+(19 min wall: compat 1 min, compile 3 min, bake ~10 min, probe 1 s, bundle
++ client build 4 min). The game compiles UNPATCHED from djvelleman/STG4
+`b7296fcb` because the compat lane provides `Mathlib.Tactic.Have`/`Cases`
+(pack-excluded leaves, `wasm/compat/`) inside the game base tree, and its
+per-game tree is SLIM (`*.olean.private` dropped from the base overlay):
+665 MB raw / 181 MB on the wire against nng4's fat 1,466 MB / 428 MB with a
+larger Mathlib closure — the ~55 % saving qed64 measured for its umbrella
+(docs/SERVER-SLIM-REBAKE.md). The served init/nng4/testgame stay fat until
+the next full run (a full run is a full slim rebake; `SLIM_TREES=0` is the
+fat escape hatch). `expectedRaw` for stg4 is keyed
+`wasm64-d77d34b97592d014+slim` in `wasm/catalog.json`.
 
 ## Served bundle since 2026-09-03: built from source
 
@@ -219,18 +234,33 @@ git submodule update --init --checkout wasm/kernel
 ```
 
 Then `wasm/build-from-source.sh` drives the lanes end to end; `--plan`
-prints every step with its cwd and environment without running anything,
-`--lanes` selects a subset (e.g. `games,bake,bundle` after a game change):
+prints every step with its cwd and environment without running anything
+(no Docker needed), `--lanes` selects a subset, and `--games a,b` (catalog
+snapshot names) restricts the games, bake and bundle lanes to those games —
+`--lanes games,bake,bundle --games stg4 --verify-snapshots` adds or rebakes
+one game while the other games' staged snapshots are kept. Which games exist
+is `wasm/catalog.json`, read only through `scripts/games-manifest.mjs`; the
+script names no game. A run **without** `--games` is a full run: the
+snapshot staging dir is wiped and init + every game is rebaked slim (the
+runtime-bump path).
 
 | lane | does | needs |
 | --- | --- | --- |
-| preflight | pins, clean tree, Docker memory, Node ≥ 24, disk, inputs | — |
+| preflight | pins, clean tree, `games-manifest.mjs --check`, Docker memory, Node ≥ 24, disk, inputs | — |
 | runtime | kernel `wasm64-build/build.sh` in Docker → gate → chunk into a staging dir; build id = `wasm64-` + sha256(lean.wasm)[:16] | Docker ≥ 10 GiB, 1.5–3 h cold |
 | core | Lean core library pack from stage1's `Init` facets (`pack.mjs`), or `--reuse-core-pack` | — |
-| trees | unpack the core pack and the **Mathlib pack** into an olean tree; compile lean-i18n (`vendor/i18n`) and `server/GameServer` with the native stage0; overlay Lake | the Mathlib pack (below) |
-| games | compile `cypress/TestGame` and `games-src/NNG4` (cloned + patched if absent) → gamedata + per-game trees | — |
-| bake | `bake-snapshot.mjs` for init, testgame, nng4 against that stage1; `--verify-snapshots` runs a Runner document through `snapshot-probe.mjs` | ~40 GB scratch |
-| bundle | stage into `client/public`, `stage-game-assets.sh`, client build, `pack-artifacts.sh` | — |
+| trees | unpack the core pack and the **Mathlib pack** into an olean tree; compile lean-i18n (`vendor/i18n`) and `server/GameServer` with the native stage0; overlay Lake; then runs `compat` | the Mathlib pack (below) |
+| compat | compile `wasm/compat` (`Mathlib.Tactic.Have`, `Mathlib.Tactic.Cases` — leaves the essential pack excludes) against the fat tree into the game base tree; refuses if the pack itself provides them (`wasm/compat/README.md`) | — |
+| games | per selected catalog row: clone `source.url` @ `rev` + `git am` the patch when `src` is absent; compile with the row's `leanOptions` (`-D` flags) → gamedata; restore the regenerated `.i18n/*/*.pot` templates (only those — translations beside them are left alone); overlay a per-game tree — **slim** by default (`SLIM_TREES=1` drops the pack's `*.olean.private` facets; `SLIM_TREES=0` = fat) | — |
+| bake | `bake-snapshot.mjs` per selected game (reserve = the row's `reserveBytes`), plus init on a full run; raw size checked against the row's `expectedRaw` when its `runtime` equals this run's pairing key — the build id, plus `+slim` when the per-game trees are slim (`SLIM_TREES=1`; a slim bake is ~60 % smaller, so a fat record is never asserted against it) — ±5 % stops the run, otherwise the value to paste is printed; raw > reserve only warns; superseded `.snapz` pruned; `--verify-snapshots` runs each game's catalog probe (`games-manifest.mjs --probe`) through `snapshot-probe.mjs --via-mem` | ~40 GB scratch |
+| bundle | stage into `client/public` (`stage-game-assets.sh`, `stage-snapshots.py` for the selected names), client build, `pack-artifacts.sh` | — |
+
+The pipeline scripts run from a copy of the vendored `wasm/vendor/qed64-pipeline`
+made at `wasm/out/pipeline` on every run (rsync; its `work/` — the bake
+workspace holding the raw `.snap` files a re-probe needs — is kept), because
+`bake-snapshot.mjs` hardcodes that workspace under its own root and nothing
+may be written under `wasm/vendor`. Setting `QED64_DIR` explicitly runs a
+qed64 checkout in place instead.
 
 Inputs the script does not produce:
 

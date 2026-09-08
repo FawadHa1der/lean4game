@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {U} {A B C} (h1 : A ⊆ B) (h2 : B ⊆ C) : A ⊆ C",
+ "name": "STG4.Subset.trans",
+ "displayName": "Subset.trans",
+ "content":
+ "If you have `h1 : A ⊆ B` and `h2 : B ⊆ C`, then `Subset.trans h1 h2` is a proof of `A ⊆ C`.\nIn Mathlib, the name of this theorem is `Set.Subset.trans`.",
+ "category": "⊆"}

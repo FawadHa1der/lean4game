@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {x} {S} : x ∈ ⋂₀ S ↔ ∀ t ∈ S, x ∈ t",
+ "name": "Set.mem_sInter",
+ "displayName": "mem_sInter",
+ "content":
+ "Lean will recognize `mem_sInter` as a proof of any statement of the form\n`x ∈ ⋂₀ F ↔ ∀ t ∈ F, x ∈ t`.  In Mathlib, the name of this theorem is `Set.mem_sInter`.",
+ "category": "⋂₀⋃₀"}

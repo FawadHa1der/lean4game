@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "use",
+ "displayName": "use",
+ "content":
+ "If your goal is `∃ x, P x`, where `P x` represents some statement about `x`, and `a` is a\nvalue that could be assigned to `x`, then the tactic `use a` will\nset `P a` to be the goal.  It will then see if this new goal follows easily from your\nassumptions, and if so it will close the goal.",
+ "category": "📖︎"}

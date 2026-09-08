@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {U} (t A B : U) : t ∈ {A, B} ↔ t = A ∨ t = B",
+ "name": "STG4.mem_pair",
+ "displayName": "mem_pair",
+ "content":
+ "For any `t`, `A`, and `B`, `mem_pair t A B` is a proof of the statement\n`t ∈ {A, B} ↔ t = A ∨ t = B`.",
+ "category": "{ }"}

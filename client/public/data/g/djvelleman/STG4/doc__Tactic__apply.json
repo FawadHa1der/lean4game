@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "apply",
+ "displayName": "apply",
+ "content":
+ "You can use the `apply` tactic to work backwards from the goal.  Suppose you think that you\nwill be able to use some theorem `t` to prove the goal.  In other words, you think there\nis a proof of the goal of the form `t ?`, where the question mark needs to be replaced\nwith a proof of some statement `P` to which the theorem `t` must be applied.  The tactic\n`apply t` will then set `P` as your goal.  If `t` must be applied to more than one proof to\nestablish the goal, then `apply t` will set all of the needed proofs as goals.",
+ "category": "📖︎"}

@@ -33,6 +33,18 @@
     "GameServer.Runner"
    ],
    "runtime": "wasm64-d77d34b97592d014"
+  },
+  {
+   "name": "stg4",
+   "url": "/snapshots/stg4.5dbab231c29a9c13.snapz",
+   "digest": "sha256:5dbab231c29a9c13657c7b17d81aeeaf235980797b923005b55b9b6e082a4563",
+   "bytes": 665285845,
+   "transfer": 180977642,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-d77d34b97592d014"
   }
  ]
 }

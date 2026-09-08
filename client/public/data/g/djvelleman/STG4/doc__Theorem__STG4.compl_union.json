@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {U} (A B : Set U) : (A ∪ B)ᶜ = Aᶜ ∩ Bᶜ",
+ "name": "STG4.compl_union",
+ "displayName": "compl_union",
+ "content":
+ "For any sets `A` and `B`, `compl_union A B` is a proof of the\nstatement `(A ∪ B)ᶜ = Aᶜ ∩ Bᶜ`.  In Mathlib, the name of this theorem is `Set.compl_union`.",
+ "category": "ᶜ"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {p} (w : α) (h : p w) : Exists p",
+ "name": "Exists.intro",
+ "displayName": "Exists.intro",
+ "content":
+ "If `P x` represents a statement about `x` and you have `h : P a`, for some object `a`, then\n`Exists.intro a h` is a proof of `∃ x, P x`.",
+ "category": "Logic"}

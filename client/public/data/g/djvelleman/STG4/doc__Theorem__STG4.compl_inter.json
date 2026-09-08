@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {U} (A B : Set U) : (A ∩ B)ᶜ = Aᶜ ∪ Bᶜ",
+ "name": "STG4.compl_inter",
+ "displayName": "compl_inter",
+ "content":
+ "For any sets `A` and `B`, `compl_inter A B` is a proof of the\nstatement `(A ∩ B)ᶜ = Aᶜ ∪ Bᶜ`.  In Mathlib, the name of this theorem is `Set.compl_inter`.",
+ "category": "ᶜ"}

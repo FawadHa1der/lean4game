@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rcases",
+ "displayName": "rcases",
+ "content":
+ "If `h` is a proof of a statement of the form `P ∨ Q`, then the tactic\n`rcases h with h1 | h2` will break your proof into cases.  In case 1, you'll have the new\nassumption `h1 : P`, and in case 2 you'll have `h2 : Q`.  In both cases you have to prove\nthe original goal.\n\nThe `rcases` tactic has other uses.  In particular, it can be applied to proofs of statements\nthat do not have the form `P ∨ Q`.  However, we will not discuss these other uses of the\n`rcases` tactic in this game.",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rfl",
+ "displayName": "rfl",
+ "content":
+ "If your goal is a statement of the form `P ↔ Q`, and `P` and `Q` are definitionally\nequivalent (that is, equivalent by virtue of the definitions of the symbols occurring in\nthem), then the `rfl` tactic will close the goal.  It will also close a goal of the form\n`X = Y`, if `X` and `Y` are definitionally equal (that is, equal by virtue of definitions).",
+ "category": "📖︎"}

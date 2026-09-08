@@ -9,7 +9,7 @@ tier: R2 10 GB with zero egress, Workers 100 k requests/day.
 | Piece | Where | Size |
 |---|---|---|
 | App shell (`client/dist` minus artifact dirs) | Workers static assets, `wasm/out/deploy` | ~40 MB, 450 files, largest 22.9 MiB (cap 25 MiB) |
-| Runtime chunks, core profile pack, snapshots | R2 bucket `qed64-artifacts`, prefix `lean4game/` | 1.2 GB (runtime 147 MB, profiles 115 MB, snapshots 905 MB) |
+| Runtime chunks, core profile pack, snapshots | R2 bucket `qed64-artifacts`, prefix `lean4game/` | runtime 147 MB, profiles 115 MB, one `.snapz` per catalog game plus `init` (100–430 MB each; the served set is `client/public/snapshots/index.json`) |
 
 The bucket is shared with the editor; the `lean4game/` prefix keeps the two
 mutable manifest sets apart and lets the existing bucket-scoped upload token
@@ -23,9 +23,15 @@ for the upload script.
    (`scripts/preflight-artifacts.mjs`: every chunk, profile part and
    snapshot present and paired to the manifest's build id), writes the
    immutable `runtime-manifest.<buildId>.json` copy, then `rclone copy`
-   (never sync) into R2. Needs the `qed64-r2` rclone remote (R2 API token
-   scoped to the bucket, see the QED64 doc). ~1.2 GB the first time; later
-   runs transfer only changed digest-named files.
+   (never sync) into R2 in three phases per directory — the digest-named
+   objects first, then the manifests that name them
+   (`runtime-manifest*.json`, `lean-core.manifest.json`), then the
+   `index.json` files that name the manifests — so a browser that
+   revalidates an index mid-upload never learns a name whose object is not
+   there yet (R2 has no multi-object atomic publish). Needs the `qed64-r2`
+   rclone remote (R2 API token scoped to the bucket, see the QED64 doc).
+   ~1.2 GB the first time; later runs transfer only changed digest-named
+   files.
 2. `scripts/deploy-app.sh` — stages the worker scripts from the vendored
    closure into `client/public/workers/` (gitignored, generated;
    `scripts/stage-workers.sh` — a clean checkout has none and a shell
@@ -45,6 +51,71 @@ alone; a runtime rebuild or snapshot rebake needs both.
 when the fork has the `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit only)
 and `CLOUDFLARE_ACCOUNT_ID` secrets; without them it logs a skip.
 
+## Adding a game
+
+The catalog (`wasm/catalog.json`) is the only place a game is named; the
+port itself — survey, source pin and patch, compat, options, probe,
+languages — is `wasm/PORTING.md`. The publish order for a finished port:
+
+1. **Catalog row**, `node scripts/games-manifest.mjs --check` exits 0.
+2. **Build lanes** (Docker, `wasm/build-from-source.sh`; flags per its
+   header): `--lanes compat,games,bake --games <snapshot> --verify-snapshots`
+   compiles the game, overlays its slim tree, bakes
+   `<snapshot>.<digest>.snapz` into `wasm/out/staging` and probes it;
+   record the printed raw size in the row's `expectedRaw`. `compat` is
+   cheap and idempotent (two files, `wasm/compat`) and is required whenever
+   `trees` did not run in the same invocation: the `games` lane only warns
+   when the game base tree lacks the compat oleans, and a game importing
+   `Mathlib.Tactic.Have`/`Cases` (STG4) then fails to compile.
+3. **Stage**: `--lanes bundle`, i.e. `scripts/stage-snapshots.py
+   wasm/out/staging/snapshots <snapshot>` (copies the `.snapz`, upserts
+   `client/public/snapshots/index.json`), `scripts/stage-game-assets.sh`
+   (`client/public/{data,i18n}/<id>` and `api/games` for every catalog
+   row) and the client build. Smoke it locally with
+   `node /Users/fawadhaider/code/wasm64-lean-fable/qed64/work/games-smoke.mjs http://localhost:3006`
+   (the script lives in the QED64 checkout's `work/`, not in this repo)
+   over `scripts/serve-dist.mjs`, commit locally, do not push.
+4. **Upload**: `scripts/upload-artifacts.sh` — the new `.snapz` lands
+   before the index that names it.
+5. **Deploy**: `scripts/deploy-app.sh` — refuses a tree that lacks
+   `api/games` or any listed game's `game.json`
+   (`games-manifest.mjs --required-files`).
+6. **Verify** with the smoke against the live URL (below).
+
+## Rollback
+
+R2 is copy-only (`rclone copy`, never `sync`), so every previously
+published digest-named object — chunks, profile parts, `.snapz` — is still
+there after a promote; rolling back is re-publishing the previous *names*.
+
+- **A snapshot publish** (a game added or rebaked): take the previous
+  tracked index from git and put it back with `rclone copyto`, then
+  redeploy the previous shell:
+
+  ```bash
+  git show <previous-deploy-commit>:client/public/snapshots/index.json > /tmp/index.json
+  rclone copyto /tmp/index.json qed64-r2:qed64-artifacts/lean4game/snapshots/index.json
+  git worktree add ../lean4game-rollback <previous-deploy-commit>
+  (cd ../lean4game-rollback && scripts/deploy-app.sh)
+  ```
+
+  `rclone copyto` on purpose, not `scripts/upload-artifacts.sh`: its
+  preflight (`scripts/preflight-artifacts.mjs`) requires every `.snapz` the
+  index names to exist locally, and `scripts/stage-snapshots.py` unlinks
+  the superseded local `.snapz` when a rebake is staged (`*.snapz` is
+  gitignored, so git holds no copy) — the local tree cannot preflight the
+  old index, but R2 still has the objects. The shell must go back too:
+  a newer shell lists (`api/games`) and boots games the old index no
+  longer names.
+- **A runtime publish**: the previous shell was built against its own
+  `runtime-manifest.<buildId>.json`, which is immutable and still in R2, so
+  redeploying that shell (worktree as above) is the whole rollback; also
+  `rclone copyto` the previous `runtime/runtime-manifest.json`,
+  `profiles/index.json` and `snapshots/index.json` from git so the mutable
+  names agree with it.
+- Roll forward the same way: a re-run of the two scripts from the fixed
+  commit re-publishes only what changed.
+
 ## Verify a deploy
 
 - `curl -sI https://lean4game.<account>.workers.dev/ | grep -i cross-origin`
@@ -53,9 +124,11 @@ and `CLOUDFLARE_ACCOUNT_ID` secrets; without them it logs a skip.
   `cache-control: public, max-age=0, must-revalidate`; a chunk URL from the
   manifest → `immutable`.
 - Open `/#/g/hhu-adam/NNG4/world/Tutorial/level/1`: first visit downloads
-  ~1.2 GB (the loading pane shows the phases), later visits boot in ~20 s.
-  The headless check is `qed64/work/stall-verify.mjs` with its URL pointed
-  at the site.
+  the runtime plus the game's snapshot (the loading pane shows the phases),
+  later visits boot in ~10–20 s. The headless check for every listed game
+  is `node /Users/fawadhaider/code/wasm64-lean-fable/qed64/work/games-smoke.mjs https://lean4game.<account>.workers.dev`
+  (each catalog row's probe level and proof; a fresh profile is the cold
+  first visit, a reused profile dir the return visit; exit 1 on any FAIL).
 
 ## The service worker
 

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "or",
+ "displayName": "∨",
+ "content":
+ "`P ∨ Q` means \"`P` or `Q` or both\".  To enter the symbol `∨`, type `\\or`.\n\n### If your goal is `P ∨ Q`\n\nIf you have `hP : P`, then `Or.inl hP` is a proof of `P ∨ Q`, so `exact Or.inl hP`\nwill close the goal.  Similarly, if you have `hQ : Q`, then `Or.inr hQ` is a proof\nof `P ∨ Q`.  If you don't have a proof of either `P` or `Q`, but you think you know\nwhich one is true, then you can use `apply Or.inl` to set the goal to be `P`, or\n`apply Or.inr` to set the goal to be `Q`.  Alternatively, the tactic `left` will have\nthe same effect as `apply Or.inl`, and `right` will have the same effect as\n`apply Or.inr`.\n\n### If you have an assumption `h : P ∨ Q`\n\nA good strategy would be to use proof by cases.  The tactic `rcases h with hP | hQ`\nwill break the proof into two cases.  In case 1, the assumption `h` is replaced by\n`hP : P `, and in case 2 it is replaced by `hQ : Q`.  In both cases, you must prove\nthe goal.",
+ "category": "📖︎"}

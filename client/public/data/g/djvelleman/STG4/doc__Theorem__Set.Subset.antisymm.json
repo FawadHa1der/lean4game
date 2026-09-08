@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {a b} (h₁ : a ⊆ b) (h₂ : b ⊆ a) : a = b",
+ "name": "Set.Subset.antisymm",
+ "displayName": "Subset.antisymm",
+ "content":
+ "If you have `h1 : A ⊆ B` and `h2 : B ⊆ A`, then `Subset.antisymm h1 h2` is a proof of `A = B`.\nIn Mathlib, the name of this theorem is `Set.Subset.antisymm`.",
+ "category": "⊆"}

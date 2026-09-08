@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {a} {p} : a ∈ {x | p x} ↔ p a",
+ "name": "Set.mem_setOf",
+ "displayName": "mem_setOf",
+ "content":
+ "Lean will recognize `mem_setOf` as a proof of any statement of the form\n`a ∈ {x | P x} ↔ P a`.  In Mathlib, the name of this theorem is `Set.mem_setOf`.",
+ "category": "{ }"}

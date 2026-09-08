@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "elt",
+ "displayName": "∈",
+ "content":
+ "`x ∈ A` means that `x` is an element of `A`.  To enter the symbol `∈`, type\n`\\mem` or `\\in`.",
+ "category": "📖︎"}

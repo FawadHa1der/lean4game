@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "union",
+ "displayName": "∪",
+ "content":
+ "If `A` and `B` are sets, then `A ∪ B` is the union of `A` and `B`.\nTo enter the symbol `∪`, type `\\union`.",
+ "category": "📖︎"}

@@ -17,7 +17,6 @@ import { Markdown } from './markdown'
 import { MonacoEditorContext } from './infoview/context'
 import { DualEditor } from './infoview/main'
 import { DeletedHints, Hint, Hints, MoreHelpButton, filterHints } from './hints'
-import path from 'path';
 
 import '@fontsource/roboto/300.css'
 import '@fontsource/roboto/400.css'
@@ -620,7 +619,7 @@ function Introduction() {
           <IntroductionPanel />
           <div className="world-image-container empty center">
             {image && gameId &&
-              <img className="contain" src={path.join("data", gameId, image)} alt="" />
+              <img className="contain" src={`/data/${gameId}/${image}`} alt="" />
             }
 
           </div>

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "and",
+ "displayName": "∧",
+ "content":
+ "`P ∧ Q` means \"`P` and `Q`\".  To enter the symbol `∧`, type `\\and`.\n\n### If your goal is `P ∧ Q`\n\nIf you have `hP : P` and `hQ : Q`, then `And.intro hP hQ` is a proof of `P ∧ Q`,\nso `exact And.intro hP hQ` will close the goal.\nIf you don't yet have proofs of `P` and `Q`, then `apply And.intro` will set `P` and `Q`\nas separate goals.  In this situation, the tactic `constructor` has the same effect as\n`apply And.intro`.\n\n### If you have an assumption `h : P ∧ Q`\n\nLean will recognize `h.left` as a proof of `P` and `h.right` as a proof of `Q`.",
+ "category": "📖︎"}

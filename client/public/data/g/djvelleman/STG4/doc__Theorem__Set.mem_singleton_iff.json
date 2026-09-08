@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {a b} : a ∈ {b} ↔ a = b",
+ "name": "Set.mem_singleton_iff",
+ "displayName": "mem_singleton_iff",
+ "content":
+ "Lean will recognize `mem_singleton_iff` is a proof of any statement of the form\n`x ∈ {a} ↔ x = a`.  In Mathlib, the name of this theorem is `Set.mem_singleton_iff`.",
+ "category": "{ }"}

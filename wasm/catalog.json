@@ -1,0 +1,76 @@
+{
+  "schema": "lean4game.catalog/v1",
+  "defaults": {
+    "reserveBytes": 2147483648
+  },
+  "games": [
+    {
+      "owner": "test",
+      "game": "TestGame",
+      "listed": false,
+      "snapshot": "testgame",
+      "src": "cypress/TestGame",
+      "source": null,
+      "leanOptions": [],
+      "probe": {
+        "world": "TestWorld",
+        "level": 1,
+        "proof": "rw [h]\nrw [g]"
+      },
+      "expectedRaw": {
+        "runtime": "wasm64-d77d34b97592d014",
+        "bytes": 1412288317
+      }
+    },
+    {
+      "owner": "hhu-adam",
+      "game": "NNG4",
+      "listed": true,
+      "snapshot": "nng4",
+      "src": "games-src/NNG4",
+      "source": {
+        "url": "https://github.com/hhu-adam/NNG4",
+        "rev": "360d797",
+        "patch": "wasm/patches/nng4-wasm64-port.patch"
+      },
+      "leanOptions": [
+        "linter.all=false",
+        "tactic.hygienic=false"
+      ],
+      "probe": {
+        "world": "Tutorial",
+        "level": 1,
+        "proof": "rfl"
+      },
+      "expectedRaw": {
+        "runtime": "wasm64-d77d34b97592d014",
+        "bytes": 1466403813
+      }
+    },
+    {
+      "owner": "djvelleman",
+      "game": "STG4",
+      "listed": true,
+      "snapshot": "stg4",
+      "src": "games-src/STG4",
+      "source": {
+        "url": "https://github.com/djvelleman/STG4",
+        "rev": "b7296fcb2f06aa30d396422675c86a5b03b662f9",
+        "patch": null
+      },
+      "leanOptions": [
+        "linter.all=false",
+        "tactic.hygienic=false"
+      ],
+      "probe": {
+        "world": "Subset",
+        "level": 1,
+        "proof": "exact h"
+      },
+      "expectedRaw": {
+        "runtime": "wasm64-d77d34b97592d014+slim",
+        "bytes": 665285845
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "exact",
+ "displayName": "exact",
+ "content":
+ "Use `exact` to close a goal.  If some expression `t` is a proof of\nthe goal, then `exact t` will close the goal.\n\nThink of \"exact\" as meaning \"this is exactly what is needed to prove the goal.\"",
+ "category": "📖︎"}

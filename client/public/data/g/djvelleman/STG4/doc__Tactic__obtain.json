@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "obtain",
+ "displayName": "obtain",
+ "content":
+ "If you have an assumption `h : ∃ x, P x`, then the tactic `obtain ⟨w, hw⟩ := h` will\nintroduce a new object `w` and a new assumption `hw : P w` into the proof.  To enter the\nangle brackets `⟨ ⟩`, type either `\\<` and `\\>` or `\\langle` and `\\rangle`.",
+ "category": "📖︎"}

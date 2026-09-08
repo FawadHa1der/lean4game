@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "not",
+ "displayName": "¬",
+ "content":
+ "`¬P` means \"it is not the case that `P`\".  To enter the symbol `¬`,\ntype `\\not`.\n\n### If your goal is `¬P`\n\nYou may be able to use the `push_neg` tactic to reexpress the goal as an equivalent\npositive statement.  If not, then a good strategy is to use proof by contradiction.  The\ntactic `by_contra h` will introduce the assumption `h : P`, and set the goal to be `False`.\n\n### If you have an assumption `h : ¬P`\n\nYou may be able to use the tactic `push_neg at h` to reexpress this assumption as an equivalent\npositive statement.  Lean treats `¬P` as meaning `P → False`, so if you also have `hP : P`,\nthen `h hP` will be a proof of `False`.  That means that if you are doing a proof by\ncontradiction, so your goal is `False`, then `exact h hP` will close the goal.",
+ "category": "📖︎"}

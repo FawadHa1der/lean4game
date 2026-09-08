@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {a b} (h : b) : a ∨ b",
+ "name": "Or.inr",
+ "displayName": "Or.inr",
+ "content":
+ "If you have `h : Q`, then `Or.inr h` can be used as a proof of `P ∨ Q`, for\nany statement `P`.",
+ "category": "Logic"}

@@ -240,6 +240,13 @@ footer .link {
   margin-left: .5em;
 }
 
+/* wasm build: a game whose environment is not published for this shell's
+   runtime cannot boot — the tile says so and does not navigate */
+.game.unavailable {
+  cursor: default;
+  opacity: 0.6;
+}
+
 /* wasm build: expectation-setting for the in-browser kernel download */
 header .wasm-notice {
   margin-top: 0.75rem;

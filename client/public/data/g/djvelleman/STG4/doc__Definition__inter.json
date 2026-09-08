@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "inter",
+ "displayName": "∩",
+ "content":
+ "If `A` and `B` are sets, then `A ∩ B` is the intersection of `A` and `B`.\nTo enter the symbol `∩`, type `\\inter` or `\\cap`.",
+ "category": "📖︎"}

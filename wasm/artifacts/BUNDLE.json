@@ -2,29 +2,29 @@
  "schema": "lean4game.artifact-bundle/v1",
  "tag": "artifacts-wasm64-d77d34b97592d014",
  "runtime": "wasm64-d77d34b97592d014",
- "snapshots": "init=da2ed4de9dabfb73,nng4=3613d20f2f3545d1,testgame=aee31c25b23c454c",
+ "snapshots": "init=da2ed4de9dabfb73,nng4=3613d20f2f3545d1,stg4=5dbab231c29a9c13,testgame=aee31c25b23c454c",
  "extract_into": "client/public",
  "tarballs": [
   {
    "class": "runtime",
    "file": "runtime.tar",
    "bytes": 153673728,
-   "sha256": "66da008066384c1fe39094dd3833258db302e30a59a185a15aa7525dd1a70bf8",
+   "sha256": "3c6c459e138cbc72fee92cfd36779dbfc2c1de6aedd39c331dc0ade83cbba619",
    "files": 13
   },
   {
    "class": "profiles",
    "file": "profiles.tar",
    "bytes": 120705024,
-   "sha256": "8f0bfd6c5211fa41a69b0c22147ebb14f0b15b27bebad0e1ee03e6f3e76c468a",
+   "sha256": "cdca6e16588697ebab53203d070c47117213c95a61dd6c6ac203417374a2d159",
    "files": 10
   },
   {
    "class": "snapshots",
    "file": "snapshots.tar",
-   "bytes": 949378048,
-   "sha256": "499cb04dd30c0304cd9194e8d2669c75118aeb4c68717aa0439a3ebec232a340",
-   "files": 4
+   "bytes": 1130358784,
+   "sha256": "0ae566d59170e9ebb089a74226f5cb5479e24fabc9ed9e75d1f094bacd0c8162",
+   "files": 5
   }
  ],
  "note": "Tarballs are plain tar of client/public/<class>/ (paths relative to client/public). Per-file digests live in the tracked manifests (runtime/runtime-manifest.json, snapshots/index.json, profiles/lean-core.manifest.json)."

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {U} (A B C : Set U) : A ∪ B ∩ C = (A ∪ B) ∩ (A ∪ C)",
+ "name": "STG4.union_distrib_left",
+ "displayName": "union_distrib_left",
+ "content":
+ "For any sets `A`, `B`, and `C`, `union_distrib_left A B C` is a proof of the\nstatement `A ∪ (B ∩ C) = (A ∪ B) ∩ (A ∪ C)`.  In Mathlib, the name of this theorem\nis `Set.union_distrib_left`.",
+ "category": "∩∪"}

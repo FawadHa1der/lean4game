@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} (x : α) (a b : Set α) : x ∈ a ∪ b ↔ x ∈ a ∨ x ∈ b",
+ "name": "Set.mem_union",
+ "displayName": "mem_union",
+ "content":
+ "If you have `x : U`, `A : Set U`, and `B : Set U`, then `mem_union x A B` is a proof of the\nstatement `x ∈ A ∪ B ↔ x ∈ A ∨ x ∈ B`.  In Mathlib, the name of this theorem is `Set.mem_union`.",
+ "category": "∩∪"}

@@ -15,10 +15,13 @@
  *                                           lsp-front-door.js, snapshot-prefetch.worker.js)
  *
  * Game-specific responsibilities here:
- *  1. the boot policy: the init snapshot and the game snapshot (its baked
- *     environment covers every level header — the kernel's resolver serves
+ *  1. the boot policy: the game's snapshot, named by the catalog (/api/games,
+ *     see games-api.ts) and checked against the served index and the runtime
+ *     build BEFORE any artifact byte moves; its baked environment covers
+ *     every level header — the kernel's resolver serves
  *     `import Game.Levels.X import GameServer.Runner` from it in-process, so
- *     a level switch is a document change, not a session replacement);
+ *     a level switch is a document change, not a session replacement; the
+ *     memory commit is sized from the index's region bytes;
  *  2. place `.lake/gamedata/*.json` into the worker FS on EVERY session —
  *     GameServer's Runner reads level data from the cwd at proof-check time
  *     (GameSession.start, which the relay runs on each boot and reboot);
@@ -28,11 +31,13 @@
 import { installArtifacts, type Qed64Artifacts, type StatusSink } from "qed64/frontend/src/qed64-boot";
 import { LspRelay, type RelayStatus, type RestartOptions } from "qed64/frontend/src/lsp-relay";
 import { ResidentSession, type ResidentHost, type ResidentPolicy } from "qed64/frontend/src/resident-session";
-import { getDefaultStore } from "jotai";
+import type { SnapshotEntry, SnapshotIndex } from "qed64/src/runtime/snapshots";
+import { atom, getDefaultStore } from "jotai";
 import { difficultyAtom, progressAtom } from "../store/progress-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
 import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing } from "../store/boot-atoms";
 import { rememberGamedata } from "./gamedata-cache";
+import { MiB, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId } from "./games-api";
 
 export interface GameDataBundle {
   gameName: string;
@@ -47,7 +52,7 @@ export interface GameDataBundle {
  * every game package is rooted at `Game`, so their snapshots share an env
  * cache key and cannot coexist in a worker. Navigating to a DIFFERENT game
  * reloads the page (see the guard in bootGameRuntime). */
-function currentGameId(): { gameId: string; snapshot: string } | null {
+function currentGameId(): string | null {
   // Hash form `#/g/{owner}/{game}/…` (what the location atoms write) or the
   // path form `/{owner}/{game}/…` (the newer URLs the atoms also read).
   let gameId: string | null = null;
@@ -57,14 +62,77 @@ function currentGameId(): { gameId: string; snapshot: string } | null {
     const seg = window.location.pathname.split("/").filter(Boolean);
     if (seg.length >= 2) gameId = `g/${seg[0]}/${seg[1]}`;
   }
-  if (!gameId) return null;
-  return { gameId, snapshot: gameId.split("/")[2].toLowerCase() };
+  return gameId;
 }
+
+/** The snapshot a game boots is catalog DATA (wasm/catalog.json → the
+ * /api/games row), not a URL convention. The lowercased last segment is the
+ * fallback for an id the catalog does not know (a dev game) and for a page
+ * that cannot read /api/games at all (404, offline before it was cached). */
+async function resolveSnapshotName(gameId: string): Promise<string> {
+  const fallback = fallbackSnapshotName(gameId);
+  try {
+    const row = await findApiGame(gameId);
+    if (row?.snapshot) return row.snapshot;
+    console.warn(`[game-boot] ${gameId} has no /api/games row naming its snapshot; assuming '${fallback}'`);
+  } catch (err) {
+    console.warn(`[game-boot] /api/games unavailable (${(err as Error).message}); assuming snapshot '${fallback}' for ${gameId}`);
+  }
+  return fallback;
+}
+
+/** The environment this page's session is bound to, once the pairing check
+ * has passed: the level pane reads the transfer size from it ("about N MB")
+ * instead of a literal. Null on the landing page and until the check ran. */
+export interface BoundEnvironment {
+  gameId: string;
+  snapshot: string;
+  /** Raw region bytes (what the worker holds). */
+  bytes: number;
+  /** Bytes the first play transfers (gzip on the wire; raw if unknown). */
+  transfer: number;
+}
+export const boundEnvironmentAtom = atom<BoundEnvironment | null>(null);
+
+/** Fail fast — BEFORE the core pack install and before any snapshot byte:
+ * the bound snapshot must be in the served index, baked for the runtime
+ * this shell boots (snapshots are function-table-paired to one binary; the
+ * worker refuses an unpaired one, the relay reboots it three times, and only
+ * then would the page have said anything), and its object must exist — the
+ * "index says yes, object missing" case (a publish window, a failed upload)
+ * is one HEAD away (infra/worker.js serves HEAD from R2). A region already
+ * inflated into OPFS needs no object, so the HEAD is skipped for it and an
+ * offline reload keeps working. The thrown message is the reason only: the
+ * boot's catch prefixes "Lean failed to start: " and the level pane shows
+ * it as the failure card. */
+async function checkSnapshotPairing(snapshot: string): Promise<{ entry: SnapshotEntry; index: SnapshotIndex; buildId: string }> {
+  const [buildId, index] = await Promise.all([resolveRuntimeBuildId(), fetchSnapshotIndexOnce()]);
+  const unpublished = (why: string) => new Error(`the environment "${snapshot}" is not published for this build (${why})`);
+  if (!index) throw unpublished(`the snapshot index could not be read; this shell runs ${buildId}`);
+  const entry = findSnapshotEntry(index, snapshot);
+  if (!entry) throw unpublished(`no entry in the snapshot index; this shell runs ${buildId}`);
+  if (entry.runtime !== buildId) throw unpublished(`baked for ${entry.runtime ?? "an unknown runtime"}, this shell runs ${buildId}`);
+  if (!(await rawSnapshotCached(entry))) {
+    const head = await fetch(entry.url, { method: "HEAD" }).catch(() => null);
+    // A static host answers 404 for a missing object; a single-page fallback
+    // (scripts/serve-dist.mjs, the vite dev server) answers 200 with the
+    // app's HTML — neither is the snapshot. Any other refusal (405/501/5xx:
+    // a host that does not serve HEAD) is no evidence of a missing object,
+    // so it is logged and the download itself reports.
+    const html = /text\/html/i.test(head?.headers.get("content-type") ?? "");
+    if (!head || html || head.status === 404 || head.status === 410) {
+      throw unpublished(`${head ? `HTTP ${head.status}${html ? ", HTML page" : ""}` : "unreachable"} for ${entry.url}`);
+    }
+    if (!head.ok) console.warn(`[game-boot] HEAD ${entry.url}: HTTP ${head.status} — not treated as missing; the download will report`);
+  }
+  return { entry, index, buildId };
+}
+
 /** Worker cwd is /workspace (lean.worker.js boots there); Runner reads
  * `./.lake/gamedata/...` relative to it. */
 const WORKER_GAMEDATA_DIR = "/workspace/.lake/gamedata";
 
-let boundGame: { gameId: string; snapshot: string } | null = null;
+let boundGameId: string | null = null;
 
 async function fetchJson(url: string): Promise<any> {
   const r = await fetch(url);
@@ -75,7 +143,7 @@ async function fetchJson(url: string): Promise<any> {
 }
 
 export async function fetchGameData(): Promise<GameDataBundle> {
-  const base = `/data/${boundGame!.gameId}`;
+  const base = `/data/${boundGameId!}`;
   const game = await fetchJson(`${base}/game.json`);
   const rawFiles: { name: string; text: string }[] = [
     { name: "game.json", text: JSON.stringify(game) },
@@ -87,7 +155,7 @@ export async function fetchGameData(): Promise<GameDataBundle> {
     Object.keys(worldSize).flatMap((w) => {
       const size = worldSize[w] ?? 0;
       return Array.from({ length: size }, (_, i) => i + 1).map(async (l) => {
-        const data = await fetchJson(`/data/${boundGame!.gameId}/level__${w}__${l}.json`);
+        const data = await fetchJson(`/data/${boundGameId!}/level__${w}__${l}.json`);
         levels.set(`${w}/${l}`, data);
         rawFiles.push({ name: `level__${w}__${l}.json`, text: JSON.stringify(data) });
       });
@@ -95,9 +163,6 @@ export async function fetchGameData(): Promise<GameDataBundle> {
   );
   return { gameName: game.name, levels, rawFiles };
 }
-
-const MiB = 1048576;
-const GiB = 1073741824;
 
 /** The relay's session for this game: the resident adapter plus the gamedata
  * files GameServer reads at check time. `start()` is what the relay awaits
@@ -116,18 +181,29 @@ class GameSession extends ResidentSession {
   }
 }
 
-/** The game's boot policy. Snapshots: the init environment, then the game's
- * baked environment (it covers every level header in-process). Memory: the
- * game snapshot's region is ~1.4 GB, committed up front (qed64 measured
- * nondeterministic renderer crashes when a shared Memory64 grows by
- * gigabytes in many steps while a snapshot streams in); the 3 GiB cap keeps
- * the reservation a dead-but-unreclaimed page holds across reloads small
- * (the reload-then-switch-storm renderer crash). */
-function gamePolicy(snapshot: string): ResidentPolicy {
+/** The game's boot policy, from data. Snapshots: the game's baked environment
+ * ALONE — it covers every level header in-process, and the kernel's resolver
+ * can never pick the Init-only env for a level header, so the init snapshot
+ * (107 MB on the wire, ~340 MB of heap) left the game session; a browser
+ * probe of the built shell validates this, and `["init", snapshot]` is the
+ * fallback if it fails (the memory formula sums whichever list the session
+ * loads, so that flip is one line). Memory: the region bytes come from the
+ * served index (gameMemoryPolicy: +10 %, 256 MiB steps, ≥1 GiB; cap ≥3 GiB
+ * and ≥ initial + 1 GiB — the vendored session filters that cap against the
+ * device's reservation rungs, see games-api.ts). The cap keeps the
+ * reservation a dead-but-unreclaimed page holds across reloads small (the
+ * reload-then-switch-storm renderer crash). */
+function gamePolicy(snapshot: string, index: SnapshotIndex): ResidentPolicy {
+  const regionBytes = (names: readonly string[]) => names.reduce((n, name) => n + (findSnapshotEntry(index, name)?.bytes ?? 0), 0);
+  const snapshots = [snapshot];
+  const chosen = gameMemoryPolicy(regionBytes(snapshots));
+  console.info(`[game-boot] policy ${snapshot}: region ${Math.round(regionBytes(snapshots) / MiB)} MB → initial ${chosen.initialBytes / MiB} MiB, cap ${chosen.maximumBytes / MiB} MiB`);
   return {
-    snapshotsFor: () => ["init", snapshot],
-    initialBytesFor: () => 2048 * MiB,
-    maximumBytes: 3 * GiB,
+    snapshotsFor: () => snapshots,
+    // Sized for the list the session WILL load (explicit restart options win
+    // over snapshotsFor), not for the policy's own list.
+    initialBytesFor: (_header, names) => gameMemoryPolicy(regionBytes(names)).initialBytes,
+    maximumBytes: chosen.maximumBytes,
   };
 }
 
@@ -172,14 +248,22 @@ const ROUTINE_BUSY = /elaborating|checking the new imports|imports changed/i;
 /** qed64's labels carry their own size notes ("(1.4 GiB — one-time)",
  * "(3.3 GiB unpacked — cached …)"); the banner shows byte progress in MB
  * itself, so three unit systems met on one line. Strip the notes and say
- * "game environment" where qed64 says the snapshot's internal name. */
+ * "game environment" where qed64 says the snapshot's internal name — ANY
+ * name ("preparing the stg4 environment", "loading the nng4 environment",
+ * "nng4 snapshot failed: …", the death message "snapshot 'nng4' failed to
+ * load"), so no per-game data flows into the label layer; init/core/mathlib
+ * read as "game" too, as before. The generic words are excluded so the
+ * worker's own "Loading environment snapshot" / "Loading the environment
+ * into Lean" stay untouched. (The pack labels "re-preparing the <id>
+ * library" carry a profile id — core/essential — never a snapshot name.) */
 function humanizeLabel(label: string): string {
   // Per-module progress reports the module name ("Mathlib.Tactic.Attr.Register").
   if (/^[A-Z][\w']*(\.[\w']+)+$/.test(label.trim())) return "loading the game's modules";
   const out = label
     .replace(/\s*\([^)]*(GiB|MiB|MB|KB)[^)]*\)/g, "")
-    .replace(/\b(the )?(nng4|testgame|mathlib|init|core)( environment| snapshot)\b/i, (m, the, _name, what) =>
-      `${the ?? ""}game${what}`)
+    .replace(/(^|\s)(the )?(?!(?:the|environment|loading|game)\b)([\w-]+)( environment| snapshot)\b/i, (m, pre, the, _name, what) =>
+      `${pre}${the ?? ""}game${what}`)
+    .replace(/\bsnapshot '[\w-]+'/gi, "the game snapshot")
     .trim();
   // qed64 capitalises some stage names ("Mounting verified library packs");
   // they read as mid-sentence here ("Lean is starting — mounting …").
@@ -344,20 +428,29 @@ export function rearmCheckerIfHalted(): boolean {
 
 export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRuntime> {
   const here = currentGameId();
-  if (here && boundGame && boundGame.gameId !== here.gameId) {
+  if (here && boundGameId && boundGameId !== here) {
     // The wasm session is bound to another game's environment; a clean
     // reload rebinds everything (snapshots reload from OPFS in seconds).
-    console.warn(`[game-boot] switching game ${boundGame.gameId} → ${here.gameId}: reloading`);
+    // Nothing may run after the reload: returning the bound promise would
+    // hand the caller game A's runtime under game B's route.
+    console.warn(`[game-boot] switching game ${boundGameId} → ${here}: reloading`);
     window.location.reload();
+    return new Promise<GameRuntime>(() => {});
   }
   if (!bootPromise && !here) {
     // Landing page: defer binding until a game route is visited.
     return new Promise<GameRuntime>(() => {});
   }
-  boundGame ??= here;
+  boundGameId ??= here;
   bootPromise ??= (async () => {
    try {
     const translation = ensureTranslation();
+    // Bind the snapshot from the catalog and check its pairing before the
+    // gamedata (80 small files for NNG4) and long before any artifact byte.
+    ui.busy("checking this game's environment");
+    const snapshot = await resolveSnapshotName(boundGameId!);
+    const { entry, index } = await checkSnapshotPairing(snapshot);
+    getDefaultStore().set(boundEnvironmentAtom, { gameId: boundGameId!, snapshot, bytes: entry.bytes, transfer: entry.transfer ?? entry.bytes });
     const bundle = await ensureBundle();
     const store = getDefaultStore();
     translation.configure({
@@ -384,7 +477,7 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     warmedArtifacts = artifacts;
 
     const files = bundle.rawFiles.map((f) => ({ path: `${WORKER_GAMEDATA_DIR}/${f.name}`, text: f.text }));
-    const policy = gamePolicy(boundGame!.snapshot);
+    const policy = gamePolicy(snapshot, index);
     // The relay constructs and boots its first session synchronously, so
     // everything the session needs exists by now (artifacts, bundle, the
     // configured translation). `headerText` is the document the session will

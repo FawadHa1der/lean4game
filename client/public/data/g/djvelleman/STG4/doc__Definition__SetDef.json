@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "SetDef",
+ "displayName": "{ }",
+ "content":
+ "If `a` denotes some object, then `{a}` denotes the set whose only element is `a`; such a set\nis called a *singleton* set.  Similarly, if `a` and `b` denote objects, then `{a, b}` denotes\nthe set whose elements are `a` and `b`, and nothing else.  (Similar notation can be used to\ndenote a set containing any finite list of objects.  All of the objects in the list must\nhave the same type; if the objects have type `U`, then the set has type `Set U`.)\n\nThere is another way to define sets.  If `P x` is a statement about an\nunspecified object `x`, then `{x | P x}` denotes the set of all values of `x` that make `P x`\ncome out true.  This is often called *set-builder notation*.",
+ "category": "📖︎"}

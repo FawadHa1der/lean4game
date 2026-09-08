@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "imp",
+ "displayName": "→",
+ "content":
+ "`P → Q` means \"if `P` then `Q`\".  You can enter the symbol `→` by typing `\\imp`.\n\n### If your goal is `P → Q`\n\nThe tactic `intro h` will introduce the new assumption `h : P` into the proof, and set the goal\nto be `Q`.  Be sure to use an identifier `h` that is not already being used to stand for\nsome assumption.\n\n### If you have an assumption `h : P → Q`\n\nIf you also have `hP : P`, then `h hP` is a proof of `Q`.",
+ "category": "📖︎"}

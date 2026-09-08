@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "push_neg",
+ "displayName": "push_neg",
+ "content":
+ "If your goal is a negative statement, then the tactic `push_neg` will try to reexpress it as\nan equivalent positive statement.  Similarly, if an assumption `h` is a negative\nstatement, then `push_neg at h` will try to reexpress `h`.  Here are some examples of\nreexpressions performed by the `push_neg` tactic:\n\n* `¬¬P` is converted to `P`.\n* `¬(P ∨ Q)` is converted to `¬P ∧ ¬Q`.\n* `¬(P ∧ Q)` is converted to `P → ¬Q`.\n* `¬(P → Q)` is converted to `P ∧ ¬Q`.\n* `¬∀ x, P x` is converted to `∃ x, ¬P x`.\n* `¬∃ x, P x` is converted to `∀ x, ¬P x`.",
+ "category": "📖︎"}

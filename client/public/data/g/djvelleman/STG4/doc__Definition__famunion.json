@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "famunion",
+ "displayName": "⋃₀",
+ "content":
+ "`⋃₀ F` is the union of the family of sets `F`.  To enter the symbol `⋃₀`, type `\\U0`.",
+ "category": "📖︎"}

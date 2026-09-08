@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "have",
+ "displayName": "have",
+ "content":
+ "Use `have` to assert a statement that you can prove from your current\nassumptions.  You must give the new assertion an identifier; be sure to\nuse an identifier that is different from those already in use.\n\nIf some expression `t` is a proof of a statement `P`, and `h` is an\nidentifier that is not in use, then `have h : P := t` will add `h : P`\nto the list of assumptions.\n\nThere are two variations on the `have` tactic:\n\n* Sometimes you want to assert a statement `P`, but the proof of `P` is too\ndifficult to be given in one line.  In that situation, you can simply write\n`have h : P`.  Of course, you must still justify the assertion of `P`, so\nthe proof of `P` becomes your immediate goal.\nOnce the goal of proving `P` has been closed, you will be able to return to\nyour original goal, with `h : P` added to the assumption list.\n\n* If you write `have h := t`, then Lean will try to figure out what statement\n`P` is proven by the expression `t` and, if it can figure it out, it will fill\nit in for you.",
+ "category": "📖︎"}

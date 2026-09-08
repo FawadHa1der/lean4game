@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "by_cases",
+ "displayName": "by_cases",
+ "content":
+ "The tactic `by_cases h : P` breaks the proof into two cases.  In the first case, the\nassumption `h : P` is added to the list of assumptions, and in the second case, the\nassumption `h : ¬P` is added.",
+ "category": "📖︎"}

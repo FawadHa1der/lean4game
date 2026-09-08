@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "sub",
+ "displayName": "⊆",
+ "content":
+ "`A ⊆ B` means that `A` is a subset of `B`.  To enter the symbol `⊆`,\ntype `\\sub`.",
+ "category": "📖︎"}

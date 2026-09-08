@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "intro",
+ "displayName": "intro",
+ "content":
+ "Use `intro` to introduce either a new assumption or a new object into your proof.\n\nThere are two situations in which you can use the `intro` tactic:\n\n* If you are proving a statement of the form `P → Q`, then you can use\nthe tactic `intro h` to introduce the assumption `h : P` and set `Q` as the goal.  Be\nsure to use an identifier that is not already in use.\n\n* If you are proving a statement of the form `∀ x, P x`, where `P x` is some statement\nabout `x`, then you can use the tactic `intro x` to introduce a new object `x` into the proof.\nBe sure to use a variable name that is not already in use.  The goal will then be `P x`.\n\nYou can do multiple introductions in one step: for example, `intro x h` has the same\neffect as doing `intro x` followed by `intro h`.",
+ "category": "📖︎"}

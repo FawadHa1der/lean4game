@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {U} {A B} (h1 : A ⊆ B) : Bᶜ ⊆ Aᶜ",
+ "name": "STG4.compl_subset_compl_of_subset",
+ "displayName": "compl_subset_compl_of_subset",
+ "content":
+ "If you have `h : A ⊆ B`, then `compl_subset_compl_of_subset h` is a proof of `Bᶜ ⊆ Aᶜ`.\nIn Mathlib, the name of this theorem is `Set.compl_subset_compl_of_subset`.",
+ "category": "ᶜ"}

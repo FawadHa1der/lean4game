@@ -1,0 +1,88 @@
+{"worlds":
+ {"nodes":
+  {"Union":
+   {"title": "Union World",
+    "name": "Union",
+    "introduction":
+    "If `A` and `B` are sets, then the *union* of `A` and `B`, denoted\n`A ∪ B`, is the set you get by throwing all the elements of `A` and `B`\ntogether into one set.  In other words, for an object to be an element of\n`A ∪ B`, it must be an element of either `A` or `B`, or both.\n\nFor example, if `A` is the set of all people under 30, and `B` is the set of\nall people over 20, then `A ∪ B` is the set of all people.\n\nIn this world you'll prove some basic properties of unions of sets.",
+    "image": ""},
+   "Subset":
+   {"title": "Subset World",
+    "name": "Subset",
+    "introduction":
+    "Welcome to Subset World! In this world you will learn about sets and\nsubsets, and you will also learn the basics of proving theorems in Lean.\n\nThe elements of the sets in this world will come from a universe called `U`.\nTo specify that an\nobject `x` belongs to the universe `U`, we write `x : U`.  To specify\nthat `A` is a set of objects from `U`, we write `A : Set U`.  (The terminology used\nin Lean is that `x` has *type* `U` and `A` has *type* `Set U`.)  To\nsay that `x` is an element of `A`, we write `x ∈ A`.  (You can enter\nthe symbol `∈` by typing `\\mem` or `\\in`, followed by a space.)\n\nYou will prove theorems in this game by using tools called *tactics*.\nThe aim is to prove the theorem by applying tactics\nin the right order.\n\nLet's learn some basic tactics. Click on \"Start\" below\nto get started.",
+    "image": ""},
+   "Intersection":
+   {"title": "Intersection World",
+    "name": "Intersection",
+    "introduction":
+    "If `A` and `B` are sets, then the *intersection* of `A` and `B`, denoted\n`A ∩ B`, is the set of elements that the two sets have in common.  In other words,\nfor an object to be an element of `A ∩ B`, it must be an element of both `A` and `B`.\n\nFor example, if `A` is the set of all round things, and `B` is the set of all red things,\nthen `A ∩ B` is the set of all round red things.\n\nIn this world you'll prove some basic properties of intersections of sets.",
+    "image": ""},
+   "FamUnion":
+   {"title": "Family Union World",
+    "name": "FamUnion",
+    "introduction":
+    "If `F` is a family of sets from `U`, then the *union* of `F` is the set of all objects from\n`U` that belong to at least one element of `F`.  We'll investigate unions of families in this\nworld.",
+    "image": ""},
+   "FamInter":
+   {"title": "Family Intersection World",
+    "name": "FamInter",
+    "introduction":
+    "So far the elements of all of our sets have been objects in the universe `U`.  But\nsets can contain other kinds of objects!  In the next two worlds, we will work with sets whose\nelements are *sets of objects from `U`*.  We will call these *families of sets* from `U`.  To\nindicate that `F` is a family of sets from `U`, we write `F : Set (Set U)`.\n\nFor example, suppose `U` contains the people in a certain club, and we want to form a committee\nconsisting of five members of the club.  The set of all possible committees is a family\nof sets from `U`.  Each element of this family is a set containing five club members.\n\nFamilies of sets are sets, and everything you've learned about sets applies to families of sets.\nFor example, if you have `F G : Set (Set U)` and `S : Set U`, then `mem_inter_iff S F G` is a proof\nof the statement `S ∈ F ∩ G ↔ S ∈ F ∧ S ∈ G`.  Similarly, `mem_union S F G` is a proof of\n`S ∈ F ∪ G ↔ S ∈ F ∨ S ∈ G`, and `mem_compl_iff F S` is a proof of `S ∈ Fᶜ ↔ S ∉ F`.\n\nIn this world we extend the idea of intersections to families of sets.  If `F` is a family of\nsets from `U`, then the *intersection* of the family `F` is the set of all objects from `U`\nthat belong to every element of `F`.",
+    "image": ""},
+   "FamCombo":
+   {"title": "Family Combination World",
+    "name": "FamCombo",
+    "introduction":
+    "In this world we combine family unions and intersections with each other, and with complements.\nThis level contains some of the hardest proofs in the game!",
+    "image": ""},
+   "Complement":
+   {"title": "Complement World",
+    "name": "Complement",
+    "introduction":
+    "If `A` is a set of objects from the universe `U`, then the *complement* of `A`,\ndenoted `Aᶜ`, is the set of all objects in the universe `U` that are *not*\nelements of `A`.\n\nFor example, if `U` consists of all people and `A` is the set of people who are more than\n6 feet tall, then `Aᶜ` is the set of all people who are at most 6 feet tall.\n\nIn this world, we'll see how to prove theorems about complements.",
+    "image": ""},
+   "Combination":
+   {"title": "Combination World",
+    "name": "Combination",
+    "introduction":
+    "In this world you'll prove theorems combining complements, intersections, and unions.  For\nthe most part, we'll leave you on your own to figure out these proofs.",
+    "image": ""}},
+  "edges":
+  [["FamInter", "FamUnion"],
+   ["Subset", "Complement"],
+   ["FamUnion", "FamCombo"],
+   ["Combination", "FamCombo"],
+   ["Intersection", "Union"],
+   ["Complement", "Intersection"],
+   ["Union", "Combination"],
+   ["Union", "FamInter"]]},
+ "worldSize":
+ {"Union": 6,
+  "Subset": 6,
+  "Intersection": 8,
+  "FamUnion": 7,
+  "FamInter": 6,
+  "FamCombo": 8,
+  "Complement": 5,
+  "Combination": 5},
+ "title": "Set Theory Game",
+ "tile":
+ {"worlds": 8,
+  "title": "Set Theory Game",
+  "short": "A game about set theory.",
+  "prerequisites": [],
+  "long":
+  "In this game you will learn the basics of theorem proving in Lean by proving\ntheorems about unions, intersections, and complements of sets.",
+  "levels": 51,
+  "languages": ["en", "es"],
+  "image": "images/cover.png"},
+ "settings": {"unbundleHyps": false},
+ "name": "MyGame",
+ "introduction":
+ "# Welcome to the Set Theory Game\n#### An introduction to mathematical proof.\n\nIn this game, you will solve a sequence of levels by proving theorems.  The game\nis based on an interactive theorem prover called *Lean*.\n\nThe theorems in this game will be about sets.\nA *set* is a collection of objects; the objects in the collection are\ncalled *elements* of the set.  For example, the set of planets in our\nsolar system has eight elements:\nMercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, and Neptune.\n\n# Read this.\n\nLearning how to use an interactive theorem prover takes time.\nYou will get the most out of this game if you\nread the help texts like this one.\n\nTo start, click on \"Subset World\".\n\n## More\n\nOpen \"Game Info\" in the \"≡\" menu on the top right for resources,\nlinks, and ways to interact with the Lean community.",
+ "info":
+ "*Game version: 4.4*\n\n## Progress saving\n\nThe game stores your progress in your local browser storage.\nIf you delete it, your progress will be lost!\n\nWarning: In most browsers, deleting cookies will also clear the local storage\n(or \"local site data\"). Make sure to download your game progress first!\n\n## Credits\n\n* **Creator:** Daniel J. Velleman; based on the Natural Numbers Game, by Kevin Buzzard\n* **Game Engine:** Alexander Bentkamp, Jon Eugster, Patrick Massot\n* **Spanish Translation:** Miguel Marco\n\n## Resources\n\n* The [Lean Zulip chat](https://leanprover.zulipchat.com/) forum\n\n## Problems?\n\nPlease ask any questions about this game in the\n[Lean Zulip chat](https://leanprover.zulipchat.com/) forum, for example in\nthe stream \"New Members\". The community will happily help. Note that\nthe Lean Zulip chat is a professional research forum.\nPlease use your full real name there, stay on topic, and be nice. If you're\nlooking for somewhere less formal (e.g. you want to post set theory\ngame memes) then head on over to the [Lean Discord](https://discord.gg/WZ9bs9UCvx).\n\nAlternatively, if you experience issues / bugs you can also open github issues:\n* For issues with the game engine, please open an\n[issue at the lean4game repo](https://github.com/leanprover-community/lean4game/issues).\n* For issues about the game's content, please open an\n[issue at the STG repo](https://github.com/djvelleman/STG4/issues).",
+ "image": "",
+ "conclusion": "",
+ "authors": []}

@@ -7,7 +7,6 @@ import '@fontsource/roboto/700.css';
 import '../css/landing_page.css'
 import bgImage from '../assets/bg.jpg'
 import { Markdown } from './markdown';
-import path from 'path';
 import { ImpressumButton, LanguageButton, LanguageDropdown, MenuButton, PreferencesButton, PrivacyButton } from './app_bar';
 import ReactCountryFlag from 'react-country-flag';
 import lean4gameConfig from '../config.json'
@@ -19,23 +18,38 @@ import { navOpenAtom } from '../store/navigation-atoms';
 import { gameIdAtom } from '../store/location-atoms';
 import { gameInfoAtomFamily } from '../store/query-atoms';
 import { preferencesAtom } from '../store/preferences-atoms';
+import { completedLevelCountsAtom } from '../store/progress-atoms';
 import { gameTilesAtom } from '../store/tiles-atoms';
-import { GameTileWithName } from '../store/api';
+import { fallbackSnapshotName, gameIdOf, tileSnapshotStates, type ApiGame, type TileSnapshotState } from '../wasm/games-api';
 
-function Tile({tileWithName}: {tileWithName: GameTileWithName}) {
+/** The snapshot a tile's game boots (the catalog's name; the boot's fallback
+ * for a row that predates the field). */
+const tileSnapshotName = (row: ApiGame): string => row.snapshot || fallbackSnapshotName(gameIdOf(row))
+
+function Tile({tileWithName, snapshot, done}: {tileWithName: ApiGame, snapshot?: TileSnapshotState, done?: number}) {
   const { t, i18n } = useTranslation()
   const [, navigateToGame] = useAtom(gameIdAtom)
   const [preferences] = useAtom(preferencesAtom)
 
   const gameTile = tileWithName.tile
-  const gameId = `g/${tileWithName.owner}/${tileWithName.game}`
+  const gameId = gameIdOf(tileWithName)
+  // The tile's truth before the click (served index + this shell's runtime
+  // + OPFS): cached and playable offline, a download of N MB, or not
+  // published for this build — the last cannot boot, so it does not navigate.
+  // Unknown (not resolved yet, or the index/manifest unreadable) shows no
+  // row and navigates: the boot's own pairing check reports the reason.
+  const unavailable = snapshot?.state === 'unavailable'
+  const availability = snapshot === undefined ? null
+    : snapshot.state === 'ready' ? t("Ready — plays offline")
+    : snapshot.state === 'download' ? t("Download ≈{{mb}} MB", { mb: snapshot.transferMB })
+    : t("Not available on this build")
 
-  return <div className="game" onClick={() => navigateToGame(gameId)}>
+  return <div className={"game" + (unavailable ? " unavailable" : "")} onClick={() => { if (!unavailable) navigateToGame(gameId) }}>
       <div className="wrapper">
         <div className="title">{t(gameTile.title, {ns: gameId})}</div>
         <div className="short-description">{t(gameTile.short, { ns: gameId })}
         </div>
-        { gameTile.image ? <img className="image" src={path.join("data", gameId, gameTile.image)} alt="" /> : <div className="image"/> }
+        { gameTile.image ? <img className="image" src={`/data/${gameId}/${gameTile.image}`} alt="" /> : <div className="image"/> }
         <div className="long description"><Markdown>{t(gameTile.long, { ns: gameId })}</Markdown></div>
       </div>
       <table className="info">
@@ -66,6 +80,16 @@ function Tile({tileWithName}: {tileWithName: GameTileWithName}) {
             })}
           </td>
         </tr>
+        {availability !== null &&
+        <tr className="availability">
+          <td>{t("Environment")}</td>
+          <td>{availability}</td>
+        </tr>}
+        {done !== undefined &&
+        <tr className="progress">
+          <td>{t("Progress")}</td>
+          <td>{t("{{done}} of {{total}} levels done", { done, total: gameTile.levels })}</td>
+        </tr>}
         </tbody>
       </table>
   </div>
@@ -76,6 +100,28 @@ function LandingPage() {
   const [, setPopup] = useAtom(popupAtom)
   const [navOpen] = useAtom(navOpenAtom)
   const [tiles] = useAtom(gameTilesAtom)
+  // "n of N levels done" per game from the local-storage progress the games
+  // write (a read-only view; a game with no record shows no row).
+  const [completedCounts] = useAtom(completedLevelCountsAtom)
+  // Per-tile truth (ready / download size / not available) from the served
+  // snapshot index, this shell's runtime build and OPFS, fetched once the
+  // tile list is known. A plain effect: the query atoms only fetch while
+  // mounted, and games-api memoises the requests it shares with the boot.
+  const [snapshotStates, setSnapshotStates] = React.useState<Map<string, TileSnapshotState>>(new Map())
+  const snapshotNames = tiles.map(tileSnapshotName).join(' ')
+  React.useEffect(() => {
+    if (!snapshotNames) return
+    let cancelled = false
+    tileSnapshotStates(snapshotNames.split(' ')).then(
+      (states) => { if (!cancelled) setSnapshotStates(states) },
+      (e) => console.warn('[landing] snapshot states unavailable:', e))
+    return () => { cancelled = true }
+  }, [snapshotNames])
+  // Chrome reports navigator.deviceMemory in {0.25 … 8}: below 8 the device
+  // really is small; 8 means "8 or more". Said here, before the first click,
+  // and again in the level pane (deep links never see this page).
+  const deviceGb = (navigator as { deviceMemory?: number }).deviceMemory
+  const smallDevice = typeof deviceGb === 'number' && deviceGb < 8
 
 
   const { t, i18n } = useTranslation()
@@ -109,10 +155,16 @@ function LandingPage() {
           />
         </p>
         <p className="wasm-notice">
-          Games run <strong>fully in your browser</strong> — no server. The first
-          visit downloads the Lean kernel and game environment (~600&nbsp;MB,
-          cached by your browser); later visits start in seconds.
+          <Trans
+            i18nKey="Wasm notice.description"
+            defaults="Games run <strong>fully in your browser</strong> — no server. Each game's environment is downloaded on first play and cached by your browser (the tiles below say how much); later visits start in seconds. The first game also downloads the checker once (about 260 MB)."
+          />
         </p>
+        {smallDevice &&
+          <p className="wasm-notice small-device">
+            {t("Small device notice", { defaultValue: "This device reports about {{gb}} GB of memory; the checker needs roughly 8 GB free while it starts and may not start here.", gb: deviceGb })}
+          </p>
+        }
       </div>
     </header>
     <div className="game-list">
@@ -121,6 +173,8 @@ function LandingPage() {
           return <Tile
             key={tileWithName.owner + tileWithName.game}
             tileWithName={tileWithName}
+            snapshot={snapshotStates.get(tileSnapshotName(tileWithName))}
+            done={completedCounts.get(gameIdOf(tileWithName))}
           />
         })
       }
@@ -145,7 +199,7 @@ function LandingPage() {
         <h2>{t("In your browser.translation", { defaultValue: "Runs entirely in your browser" })}</h2>
         <Trans
           i18nKey="In your browser.description"
-          defaults="<p>There is no game server: the Lean proof checker itself runs inside this tab as WebAssembly. Nothing you type leaves your computer, and there is no capacity limit — as many people can play at once as want to.</p><p>The first visit downloads the checker and the game's mathematical environment (about 600&nbsp;MB) and keeps it in your browser's storage, so later visits start in seconds. You need a recent desktop browser (Chrome, Edge or Firefox) and a few GB of free memory; on other browsers the game may not start yet. Your progress is saved in this browser.</p>"
+          defaults="<p>There is no game server: the Lean proof checker itself runs inside this tab as WebAssembly. Nothing you type leaves your computer, and there is no capacity limit — as many people can play at once as want to.</p><p>The first visit downloads the checker and the game's mathematical environment (each tile above says how much) and keeps it in your browser's storage, so later visits start in seconds. You need a recent desktop browser (Chrome, Edge or Firefox) and a few GB of free memory; on other browsers the game may not start yet. Your progress is saved in this browser.</p>"
         />
       </div>
     </section>

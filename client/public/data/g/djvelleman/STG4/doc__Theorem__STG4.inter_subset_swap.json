@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {U} (A B : Set U) : A ∩ B ⊆ B ∩ A",
+ "name": "STG4.inter_subset_swap",
+ "displayName": "inter_subset_swap",
+ "content":
+ "For any sets `A` and `B`, `inter_subset_swap A B` is a proof of\n`A ∩ B ⊆ B ∩ A`.",
+ "category": "∩∪"}

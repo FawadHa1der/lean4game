@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {U} (A B : Set U) : A ∪ B ⊆ B ∪ A",
+ "name": "STG4.union_subset_swap",
+ "displayName": "union_subset_swap",
+ "content":
+ "For any sets `A` and `B`, `union_sub_swap A B` is a proof of\n`A ∪ B ⊆ B ∪ A`.",
+ "category": "∩∪"}

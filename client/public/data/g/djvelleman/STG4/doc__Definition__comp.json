@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "comp",
+ "displayName": "ᶜ",
+ "content":
+ "If `A` is a of objects from the universe `U`, then `Aᶜ` is the complement of `A`; that is,\n`Aᶜ` is the set of objects from `U` that are not elements of `A`.  You can enter the symbol `ᶜ`\nby typing `\\compl` or `\\^c`.",
+ "category": "📖︎"}
