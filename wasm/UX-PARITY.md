@@ -312,6 +312,18 @@ worker-staging fix (item 19) went live. Drivers in qed64 `work/`:
 | 5 | world walk + editor-mode round trip | pass — one Lean client, goal at every switch in 0.1–0.2 s |
 | 6 | reload storm (boot, reload, storm, reload, storm@250, storm@100) | 250 ms storms settle; **100 ms storm after two reloads crashes** (known Open item; not a regression) |
 
+**Rerun on the resident deploy (2026-09-08, closure `32e5e62`, runtime
+`wasm64-d77d34b97592d014`), same drivers:**
+
+| # | scenario | result |
+|---|---|---|
+| 1 | fresh first visit | pass — ready 187 s (a full download of the new pairing), steps 0.7–0.95 s, 0 HTTP errors |
+| 2 | returning visit | pass — ready 11 s, steps 0.3–0.8 s |
+| 3 | offline reload | fail as before (no service worker; Open item) |
+| 4 | click-only first visit, with crash timing | pass — boots during the download, goal at 124 s, no crash |
+| 5 | world walk + editor round trip | pass — goal at every switch in 0.1 s, one Lean client |
+| 6 | reload storm | **pass** — both 250 ms storms and the 100 ms storm after two reloads settle (one pass; locally 2 of 3) |
+
 **First-visit memory, measured per boot phase** (largest Chromium process,
 `click-mem-probe.mjs`): 0.85 GB through the download and unpack; **3.6 GB at
 "Starting the Emscripten runtime"; 7.4 GB at "Initializing the Lean
