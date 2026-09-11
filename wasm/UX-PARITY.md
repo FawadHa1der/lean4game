@@ -447,10 +447,36 @@ figures to trust):
   download — the boot's pairing check names the reason on the failure card.
 - The two console errors per game are the known world-intro
   `level__W__0.json` 404s (harmless).
+- **Cypress (24 tests) passes only in Chrome: `npx cypress run --browser
+  chrome --config baseUrl=http://localhost:3006`** (24/24 on this build,
+  2026-09-11). Under Cypress' bundled Electron every checker-dependent test
+  fails with the worker's `Missing capability` card (`sharedArrayBuffer:
+  false`): the proxy strips COOP/COEP and the `--enable-features=
+  SharedArrayBuffer` launch arg in cypress.config.ts is not honoured by
+  Electron. The previous commit (6b91080) fails identically under Electron,
+  so this is a harness property, not a regression of the multi-game work.
 
-Live numbers (first visit of the first game, the second game after it, the
-switch back) are recorded below once the stg4 objects are uploaded and the
-shell deployed.
+**Live verification 2026-09-11** (commit 2fce1b7 deployed by the operator;
+`games-smoke.mjs https://lean4game.fawadworkaddress.workers.dev <fresh
+profile> --games nng4,stg4`, then the same profile again for nng4; the
+bandwidth control `speed.cloudflare.com/__down?bytes=50000000` read
+3.9 MB/s at the time):
+
+| scenario | wire | relay serving | proof |
+| --- | --- | --- | --- |
+| first visit, first game (NNG4: runtime 154 MB + core pack 120 MB + nng4 428 MB, no init) | 702.3 MB | 119.6 s | `rfl` completed |
+| second game after it (STG4: its slim region only) | 181.2 MB | 32.3 s | `exact h` completed |
+| switch back to the cached game (NNG4, page reload) | 0 MB | 6.5 s | `rfl` completed |
+
+Landing page on the deployed shell: a fresh browser shows "Environment —
+Download ≈409 MB" (NNG4) and "Download ≈173 MB" (STG4) under the two tiles
+plus the one-line "the first game also downloads the checker once (about
+260 MB)"; after both games were played the same rows read "Ready — plays
+offline". Both cover images resolve (absolute `/data/<id>/images/cover.png`,
+HTTP 200). The per-game console error is the known world-intro
+`level__W__0.json` 404. For comparison the last matrix on this pairing
+(2026-09-08, init still loaded) measured the first visit at 146–187 s and
+the return visit at 11 s.
 
 ## Open
 
