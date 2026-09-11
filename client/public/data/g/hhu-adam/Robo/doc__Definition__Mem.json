@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Mem",
+ "displayName": "∈",
+ "content":
+ "For a subset `A : Set T` and an element `a` from `T` (more precisely: of type `T`), `a ∈ A` means that\n`a` is in `A`.\nFor subsets of the form `A = { a : T | P a }`, you can simplify the statement\n`a ∈ A` with `simp` to `P a`.",
+ "category": "Set"}

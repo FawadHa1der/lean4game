@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {A B C} (f : A → B) (g : B → C) (gf_is_inj : ∀ x y, (g ∘ f) x = (g ∘ f) y → x = y) (x y : A) (a✝ : f x = f y) : x = y",
+ "name": "ReintroductionToProofs.Function.Injective.of_comp",
+ "displayName": "Injective.of_comp",
+ "content":
+ "For functions `f : A → B` and `g : B → C` if `g ∘ f` is injective, then so is `f`.",
+ "category": "Function"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [CommSemiring α] (a b : α) : (a + b) ^ 2 = a ^ 2 + 2 * a * b + b ^ 2",
+ "name": "add_pow_two",
+ "displayName": "add_pow_two",
+ "content": "*(lean docstring)*\\\n**Alias** of `add_sq`.",
+ "category": "+ *"}

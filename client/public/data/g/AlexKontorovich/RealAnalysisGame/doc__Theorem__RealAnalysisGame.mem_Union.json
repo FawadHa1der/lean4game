@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {ι} {x} {s} : x ∈ ⋃ i, s i ↔ ∃ i, x ∈ s i",
+ "name": "RealAnalysisGame.mem_Union",
+ "displayName": "mem_Union",
+ "content":
+ "An element `x` is in the union of sets `s i` if and only if there exists an index `i` such that `x` is in `s i`.",
+ "category": "x∈U"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (v w : V) :\n  ⟪v,w⟫ = (starRingEnd ℂ) ⟪w,v⟫",
+ "name": "LinearAlgebraGame.inner_conj_symm",
+ "displayName": "inner_conj_symm",
+ "content":
+ "For any vectors `v, w`, `⟪v, w⟫ = conj ⟪w, v⟫`. This means that the inner product commutes if you take\nthe conjugate.\n\n**Usage:** Use the full name `LinearAlgebraGame.inner_conj_symm` when applying this theorem.",
+ "category": "Inner Product"}

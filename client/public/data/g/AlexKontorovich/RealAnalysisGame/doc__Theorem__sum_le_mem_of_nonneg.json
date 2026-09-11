@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {N} [AddCommMonoid N] [PartialOrder N] [IsOrderedAddMonoid N] {f} {s} {i} (hi : i ∈ s)\n  (hf : ∀ i, i ∈ s → 0 ≤ f i) : f i ≤ ∑ j ∈ s, f j",
+ "name": "sum_le_mem_of_nonneg",
+ "displayName": "sum_le_mem_of_nonneg",
+ "content":
+ "If `x ∈ s`, and `0 ≤ f i`, for all `i ∈ s`, then `f x ≤ ∑ i ∈ s, f i`.",
+ "category": "∑aₙ"}

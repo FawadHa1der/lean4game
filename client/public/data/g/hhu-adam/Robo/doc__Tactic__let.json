@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "let",
+ "displayName": "let",
+ "content":
+ "The `let` tactic introduces a temporary definition, for example\n`let x : ℕ := 5 ^ 2`.\n\nOnce `let x := …` defines a `x`, you can use the definition later with `simp only [x]`.",
+ "category": "📖︎"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {M} {A} [AddZeroClass A] [DistribSMul M A] (a : M) (b₁ b₂ : A) : a • (b₁ + b₂) = a • b₁ + a • b₂",
+ "name": "smul_add",
+ "displayName": "smul_add",
+ "content":
+ "`smul_add` is one of the axioms of a vector space. It is a proof that if we know `vs : VectorSpace K V`,\nthen `∀ (a : K) (x y : V), a • (x + y) = a • x + a • y`. It can be considered as right distributivity\nof scalar multiplication",
+ "category": "Vector Spaces"}

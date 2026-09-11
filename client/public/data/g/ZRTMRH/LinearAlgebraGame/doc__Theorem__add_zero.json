@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {M} [AddZeroClass M] (a : M) : a + 0 = a",
+ "name": "add_zero",
+ "displayName": "add_zero",
+ "content":
+ "`add_zero` is a proof that `x + 0 = x`. This holds whether `x` is in `K` or `V`.",
+ "category": "Groups"}

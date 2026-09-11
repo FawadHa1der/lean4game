@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {s} (h : s.Finite) : Finset α",
+ "name": "Set.Finite.toFinset",
+ "displayName": "toFinset",
+ "content":
+ "[Doc.Theorem] Set.Finite.toFinset:\nGiven `A`, `A : Set T` with `h : Set.Finite A`, `Set.Finite A`,\n`h.toFinset`, `h.toFinset : Finset T` is the same subset viewed as finite subset.",
+ "category": "Set"}

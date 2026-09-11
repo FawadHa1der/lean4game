@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a m : ℤ) (h : ∃ x, (a * x) ≡ 1 (mod m)) : IsGCD(a, m) 1",
+ "name": "inv_implies_coprime",
+ "displayName": "inv_implies_coprime",
+ "content":
+ "**Reverse Inverse**\n\nIf $a \\cdot x \\equiv 1 \\pmod m$ for some $x$, then $\\text{IsGCD}(a, m) 1$.",
+ "category": "LinCong"}

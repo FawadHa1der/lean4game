@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "cases'",
+ "displayName": "cases'",
+ "content":
+ "When have a hypothesis `h : P ∨ Q`, you can say `cases' h with h1 h2`; this will make two new Game Boards, one with an extra hypothesis `h1 : P`, and the other with the hypothesis `h2 : Q`. You'll have to solve both to solve the original Goal!",
+ "category": "📖︎"}

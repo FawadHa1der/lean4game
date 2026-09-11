@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "range_v",
+ "displayName": "range_v",
+ "content": "`range_v K V W T` is the set of all possible outputs of T.",
+ "category": "📖︎"}

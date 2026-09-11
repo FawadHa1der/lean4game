@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "Not",
+ "displayName": "Not",
+ "content":
+ "## Summary\n\n`Not` is the logical negation. In Lean, `¬ P` is defined as `P → False`.\nWhen you see `¬ P` in a goal or hypothesis, you can use `unfold Not` to\nreplace it with `P → False`.\n\n## Example\n\nIf you have a goal `¬ P`, using `unfold Not` will change it to `P → False`.\nThis often makes it easier to work with using `intro` and other tactics.",
+ "category": "📖︎"}

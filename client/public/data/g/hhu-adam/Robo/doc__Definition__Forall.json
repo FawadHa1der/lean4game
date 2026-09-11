@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Forall",
+ "displayName": "∀",
+ "content":
+ "Universal quantifier: If `P : A → Prop` is a predicate, then\n`∀ a : A, P a` is the statement that the statement `P a` is true for all `a` in `A`\n(more precisely: for all `a` of type `A`).\n## `∀` as a proof goal\nTo prove a statement of the form `∀ a : A, …`, first use `intro a` to select any element `a`.\n## `∀` as an assumption\nIf `h : ∀ a : A, P a` is an assumption and `a₀ : A` is a concrete element, then `h a₀` is a notation for `P a₀`.\n\nYou can also use `specialize h a₀` to restrict the given assumption\nover all possible `a` to an assumption `h : P a₀` over this concrete `a₀`.",
+ "category": "Logic"}

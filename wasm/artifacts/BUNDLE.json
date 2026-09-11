@@ -2,29 +2,29 @@
  "schema": "lean4game.artifact-bundle/v1",
  "tag": "artifacts-wasm64-d77d34b97592d014",
  "runtime": "wasm64-d77d34b97592d014",
- "snapshots": "init=da2ed4de9dabfb73,nng4=3613d20f2f3545d1,stg4=5dbab231c29a9c13,testgame=aee31c25b23c454c",
+ "snapshots": "knights=0894a607d8c019d1,lag=f84d616679d0ceb0,logic=72eeb282456209b3,nng4=db264c5f3eb7c69c,ntg=dfa69f626e1cf8e8,rag=a7a0c2f7f57b3ce2,reintro=eccae8a265ecef22,robo=5e905b3459712762,stg4=5dbab231c29a9c13,testgame=d5c4280126015f3a",
  "extract_into": "client/public",
  "tarballs": [
   {
    "class": "runtime",
    "file": "runtime.tar",
-   "bytes": 153673728,
-   "sha256": "3c6c459e138cbc72fee92cfd36779dbfc2c1de6aedd39c331dc0ade83cbba619",
-   "files": 13
+   "bytes": 153668096,
+   "sha256": "d67af1bdf26211c31999eab192e4326b9975b94f86036ee2060b8f670e9eb0d6",
+   "files": 12
   },
   {
    "class": "profiles",
    "file": "profiles.tar",
    "bytes": 120705024,
-   "sha256": "cdca6e16588697ebab53203d070c47117213c95a61dd6c6ac203417374a2d159",
+   "sha256": "dd9dcaa1db8218114eb5af7bf70ad67ab68add140a971748ef4b171e55a1a457",
    "files": 10
   },
   {
    "class": "snapshots",
    "file": "snapshots.tar",
-   "bytes": 1130358784,
-   "sha256": "0ae566d59170e9ebb089a74226f5cb5479e24fabc9ed9e75d1f094bacd0c8162",
-   "files": 5
+   "bytes": 2141870080,
+   "sha256": "431acdaae5fcdbcd3874f594b826fd09d82fc3a7717407770c072d8d355d4f75",
+   "files": 11
   }
  ],
  "note": "Tarballs are plain tar of client/public/<class>/ (paths relative to client/public). Per-file digests live in the tracked manifests (runtime/runtime-manifest.json, snapshots/index.json, profiles/lean-core.manifest.json)."

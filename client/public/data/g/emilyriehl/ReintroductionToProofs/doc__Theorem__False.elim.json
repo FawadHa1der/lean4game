@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {C} (h : False) : C",
+ "name": "False.elim",
+ "displayName": "elim",
+ "content":
+ "For any proposition `P`, `False.elim : False → P` proves that `False` implies `P`.",
+ "category": "False"}

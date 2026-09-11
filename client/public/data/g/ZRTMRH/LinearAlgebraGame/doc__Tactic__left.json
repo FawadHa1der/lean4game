@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "left",
+ "displayName": "left",
+ "content":
+ "## Summary\n`left` is one of the ways of proving `or` statements. If your goal is `P ∨ Q`, then `left` changes the\ngoal to `P`.",
+ "category": "📖︎"}

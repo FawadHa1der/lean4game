@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} [Monoid α] (a : α) : a ∣ a",
+ "name": "dvd_refl",
+ "displayName": "dvd_refl",
+ "content":
+ "**Reflexivity of Divisibility**\n\nEvery integer divides itself: $a \\mid a$.",
+ "category": "Divisibility"}

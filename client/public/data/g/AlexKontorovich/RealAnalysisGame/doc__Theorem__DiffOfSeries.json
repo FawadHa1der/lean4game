@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (a : ℕ → ℝ) {n m} (hmn : n ≤ m) : Series a m - Series a n = ∑ k ∈ Finset.Ico n m, a k",
+ "name": "DiffOfSeries",
+ "displayName": "DiffOfSeries",
+ "content": "If `n ≤ m`, then `Series a m - Series a n = ∑ k ∈ Ico n m, a k`.",
+ "category": "∑aₙ"}

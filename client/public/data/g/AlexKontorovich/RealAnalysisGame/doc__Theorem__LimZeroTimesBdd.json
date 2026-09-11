@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b c : ℕ → ℝ) (ha : SeqLim a 0) (hb : SeqBdd b) (hc : ∀ n, c n = a n * b n) : SeqLim c 0",
+ "name": "LimZeroTimesBdd",
+ "displayName": "LimZeroTimesBdd",
+ "content":
+ "If sequence `a : ℕ → ℝ` converges to `0` and sequence `b : ℕ → ℝ` is bounded, then `a n * b n` converges to `0`.",
+ "category": "aₙ"}

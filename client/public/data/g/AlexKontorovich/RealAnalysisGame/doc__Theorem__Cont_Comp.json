@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (f g : ℝ → ℝ) (hf : FunCont f) (hg : FunCont g) : FunCont (f ∘ g)",
+ "name": "Cont_Comp",
+ "displayName": "Cont_Comp",
+ "content": "The composition of continuous functions is continuous.",
+ "category": "f(x)"}

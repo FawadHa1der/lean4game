@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {R} [Semiring R] [LinearOrder R] [IsStrictOrderedRing R] {n} [ExistsAddOfLE R] (hn : Odd n) :\n  StrictMono fun (a : R) ↦ a ^ n",
+ "name": "Odd.strictMono_pow",
+ "displayName": "Odd.strictMono_pow",
+ "content":
+ "[Doc.Theorem] Odd.strictMono_pow\nfor odd `n`, `x ↦ x^n` is strictly monotonous\ngiven `h_odd : Odd n`, can write `Odd.strictMono_pow h_odd` as `h_odd.strictMono_pow`",
+ "category": "Function"}

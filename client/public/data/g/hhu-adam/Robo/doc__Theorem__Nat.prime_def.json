@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {p} : Nat.Prime p ↔ 2 ≤ p ∧ ∀ (m : ℕ), m ∣ p → m = 1 ∨ m = p",
+ "name": "Nat.prime_def",
+ "displayName": "prime_def",
+ "content":
+ "*(lean docstring)*\\\n`Nat.Prime p` means that `p` is a prime number, that is, a natural number\nat least 2 whose only divisors are `p` and `1`.\nThe theorem `Nat.prime_def` witnesses this description of a prime number. ",
+ "category": "ℕ"}

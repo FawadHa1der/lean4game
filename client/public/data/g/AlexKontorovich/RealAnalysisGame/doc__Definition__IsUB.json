@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "IsUB",
+ "displayName": "IsUB",
+ "content":
+ "`(S : Set ℝ) (M : ℝ) : Prop := ∀ s ∈ S, s ≤ M`\n\nThe point `M` is an upper bound of the set `S` if every element `s` in `S` satisfies `s ≤ M`.",
+ "category": "📖︎"}

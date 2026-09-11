@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P Q} (hpq : P → Q) (p : P) : Q",
+ "name": "GameLogic.modus_ponens",
+ "displayName": "modus_ponens",
+ "content":
+ "In this game, the deductive rule *modus_ponens* is just function application.\n```\nintro h : A ∧ B\nhave a : A := and_left h\n-- could be written as\nhave a : A := modus_ponens and_left h\n```\nand\n```\nintro a : A\nintro b : B\nhave h : A ∧ B := and_intro a b\n-- could be written as\nhave h : A ∧ B := modus_ponens (modus_ponens and_intro a) b\n```\n\nYou should never use this style of prefix `modus_ponens` and just use function application instead as that will generally be clearer.\n\n----\n# Infix Modus Ponens\nThere is are infix operators for function application; they look like `|>` and `<|`. `f <| x`, and `x |> f` means the same as the same as `f x`.\n\n`<|` parses `x` with lower precedence, which means that `f <| g $ <|` is interpreted as `(f (g x))` rather than `((f g) x)`.\n\nIt's twin, `|>` chains such that `x |> f |> g` is interpreted as `g (f x)`.\n\nWhat makes the infix operators useful is that they can often replace a pair of brackets `(...)` making expressions easier to read.\n\n----\n# Computer Science\nIf you've done some programming before, you might recognise `Modus Ponens` as the identity function for implications. So `(modus_ponens and_left)` is extensionally equal to `and_left`. There's a conspiracy at work here!",
+ "category": "→"}

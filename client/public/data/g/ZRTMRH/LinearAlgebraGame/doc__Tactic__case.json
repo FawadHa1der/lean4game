@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "case",
+ "displayName": "case",
+ "content":
+ "## Summary\n\n`case` allows you to prove different cases of a goal separately. Often appears after using tactics like `cases'` or `split`.\n\n## Syntax\n\n- `case pos => tactic` - Proves the positive case\n- `case neg => tactic` - Proves the negative case\n- `case tag => tactic` - Proves the case with the given tag\n\n## Example\n\nAfter `split` on an if-then-else:\n```\nsplit\ncase pos =>\n  -- Prove the case when condition is true\n  sorry\ncase neg =>\n  -- Prove the case when condition is false\n  sorry\n```",
+ "category": "📖︎"}

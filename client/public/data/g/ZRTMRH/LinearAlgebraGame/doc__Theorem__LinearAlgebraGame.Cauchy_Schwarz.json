@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (u v : V) :\n  ‖⟪u,v⟫‖ ≤ ‖u‖ * ‖v‖",
+ "name": "LinearAlgebraGame.Cauchy_Schwarz",
+ "displayName": "Cauchy_Schwarz",
+ "content":
+ "The Cauchy-Schwarz inequality: `‖⟪u,v⟫‖ ≤ ‖u‖ * ‖v‖` for any vectors `u` and `v`.\nThis is one of the most important inequalities in linear algebra and analysis.",
+ "category": "Inner Product"}

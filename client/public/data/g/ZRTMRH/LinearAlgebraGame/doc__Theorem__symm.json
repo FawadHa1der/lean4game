@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {r} {a b} [Std.Symm r] (a✝ : r a b) : r b a",
+ "name": "symm",
+ "displayName": "symm",
+ "content": "`symm` is a proof that `a = b` if and only if `b = a`",
+ "category": "Lean"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Set.image",
+ "displayName": "image",
+ "content":
+ "For a mapping `f : A → B`, `image f : Set A → Set B`\nis one of the induced mappings on the power sets –\nit maps a subset of `A` to the image `f '' A` of this subset under `f`.",
+ "category": "Set"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "ext",
+ "displayName": "ext",
+ "content":
+ "The `ext` tactic can be used to apply function extensionality, changing a goal involving proving equality between functions `f g : A → B` into a goal of proving `f x = g x` for an arbitrary `x : A`. The `ext` tactic  applies similar extensionality lemmas that have been proven for other types.",
+ "category": "📖︎"}

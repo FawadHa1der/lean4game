@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "obtain",
+ "displayName": "obtain",
+ "content":
+ "## Summary\nThe `obtain` tactic works very similar to repeating the `cases'` tactic. The `obtain` tactic splits a\nstatement into cases, and allows you to name each case. Instead of splitting into two cases, like the\n`cases'` tactic, `obtain` can split into as many cases as necessary. The syntax looks like\n`obtain ⟨h1, h2, h3⟩ := h`.\n\n## Example\nIf `hw : isSubspace W` is a hypothesis, then `obtain ⟨h1, h2, h3⟩ := hW` will split the definition\ninto three parts, labeled h1, h2, and h3.\n\n## Example\nIf you have a hypothesis `hW : W.Nonempty`, where `W : Set V` is a subset of `V`, then\n`obtain ⟨w, hw⟩ := hW` will give you a `w : V`, and a hypothesis `hw : w ∈ W`",
+ "category": "📖︎"}

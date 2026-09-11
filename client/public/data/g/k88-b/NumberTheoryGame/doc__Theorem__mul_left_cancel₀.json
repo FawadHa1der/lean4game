@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {M₀} [Mul M₀] [Zero M₀] [IsLeftCancelMulZero M₀] {a b c} (ha : a ≠ 0) (h : a * b = a * c) : b = c",
+ "name": "mul_left_cancel₀",
+ "displayName": "mul_left_cancel₀",
+ "content":
+ "The `mul_left_cancel₀` theorem lets you cancel a common non-zero factor from an equation:\nif `a ≠ 0` and `a * b = a * c`, then `b = c`.\nThis works because the integers have no \"zero divisors\": the only way a product can vanish is if one of its factors does, so a non-zero factor can always be safely divided out of an equation.",
+ "category": "Algebra"}

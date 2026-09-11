@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (ι : Type) (V : Finset ι) (δs : ι → ℝ) : ∃ δ, ∀ i ∈ V, δs i ≤ δ",
+ "name": "RealAnalysisGame.FinMax",
+ "displayName": "FinMax",
+ "content": "A finite list has a maximum element.",
+ "category": "Theorems"}

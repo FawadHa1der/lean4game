@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Real_of_CauSeq",
+ "displayName": "Real_of_CauSeq",
+ "content":
+ "`{a : ℕ → ℚ} (ha : IsCauchy a) : ℝ`\n\nA sequence `a : ℕ → ℚ` that is Cauchy converges to a real number; this *is* that real number.",
+ "category": "📖︎"}

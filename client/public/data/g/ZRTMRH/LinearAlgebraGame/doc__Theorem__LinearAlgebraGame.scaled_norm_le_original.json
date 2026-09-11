@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (u v w : V) (c : ℂ)\n  (h_eq : ‖u‖ ^ 2 = ‖c • v‖ ^ 2 + ‖w‖ ^ 2) : ‖c • v‖ ^ 2 ≤ ‖u‖ ^ 2",
+ "name": "LinearAlgebraGame.scaled_norm_le_original",
+ "displayName": "scaled_norm_le_original",
+ "content":
+ "`scaled_norm_le_original` is a helper proof that if `‖u‖^2 = ‖c • v‖^2 + ‖w‖^2`, then\n`‖c • v‖^2 ≤ ‖u‖^2`. The syntax is `scaled_norm_le_original u v w c h_eq`.",
+ "category": "Inner Product"}

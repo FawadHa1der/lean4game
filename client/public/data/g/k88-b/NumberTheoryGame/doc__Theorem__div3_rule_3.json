@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (c0 c1 c2 : ℤ) : (c2 * 10 ^ 2 + c1 * 10 + c0) ≡ c2 * 1 ^ 2 + c1 * 1 + c0 (mod 3)",
+ "name": "div3_rule_3",
+ "displayName": "div3_rule_3",
+ "content":
+ "**Divisibility by 3**\n\nSince 3 divides 9, a number is congruent to the sum of its digits modulo 3, just like with 9.",
+ "category": "DivRules"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "trivial",
+ "displayName": "trivial",
+ "content":
+ "*(lean docstring)*\\\n`trivial` tries different simple tactics (e.g., `rfl`, `contradiction`, ...)\nto close the current goal.\nYou can use the command `macro_rules` to extend the set of tactics used. Example:\n```\nmacro_rules | `(tactic| trivial) => `(tactic| simp)\n```\n",
+ "category": "📖︎"}

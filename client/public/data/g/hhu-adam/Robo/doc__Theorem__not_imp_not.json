@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {a b} : ¬a → ¬b ↔ b → a",
+ "name": "not_imp_not",
+ "displayName": "not_imp_not",
+ "content": "(missing)",
+ "category": "Logic"}

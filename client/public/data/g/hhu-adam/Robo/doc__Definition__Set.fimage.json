@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Set.fimage",
+ "displayName": "f ''",
+ "content":
+ "For a mapping `f : A → B` and a subset `S` of `A`,\n```\nf '' S = {f a | a ∈ S} = {b | ∃ a ∈ S, f a = b}\n```\nis its image under `f`.  Note the space between `f` and `''`.",
+ "category": "Set"}

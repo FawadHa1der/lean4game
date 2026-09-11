@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P} {t t'} (eq : t = t') : Bool.noConfusionType P t t'",
+ "name": "Bool.noConfusion",
+ "displayName": "noConfusion",
+ "content":
+ "`Bool.noConfusion` proves `¬ (false = true)` or `¬ (true = false)` for booleans.",
+ "category": "Bool"}

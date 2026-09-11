@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {N} [AddCommMonoid N] [Preorder N] {f} {s} [AddLeftMono N] (h : ∀ i, i ∈ s → 0 ≤ f i) : 0 ≤ ∑ i ∈ s, f i",
+ "name": "Finset.sum_nonneg",
+ "displayName": "sum_nonneg",
+ "content": "If a function is nonnegative, then its sum is also.",
+ "category": "∑aₙ"}

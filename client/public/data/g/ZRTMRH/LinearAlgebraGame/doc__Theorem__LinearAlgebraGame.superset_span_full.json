@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] {A B T} (hT : ∀ x, x ∈ T)\n  (hA : T = LinearAlgebraGame.span K V A) (hAsubB : A ⊆ B) : T = LinearAlgebraGame.span K V B",
+ "name": "LinearAlgebraGame.superset_span_full",
+ "displayName": "superset_span_full",
+ "content":
+ "`superset_span_full` is a proof that if a set `A` spans the whole space `V`, then any superset of `A`\nalso spans `V`. The syntax requires a set `T : Set V` with the property `hT: ∀ (x : V), x ∈ T`, so that\n`T` is a subset that is actually the entire space. With other hypotheses `hA : T = span K V A`, and\n`hAsubB : A ⊆ B`, then `superset_span_full` is a proof that `T = span K V B`.",
+ "category": "Vector Spaces"}

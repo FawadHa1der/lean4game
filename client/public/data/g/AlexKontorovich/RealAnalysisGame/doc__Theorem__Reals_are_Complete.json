@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (q : ℕ → ℕ → ℚ) (x : ℕ → ℝ) (hq : ∀ n, IsCauchy (q n)) (hx : ∀ n, x n = Real_of_CauSeq ⋯) (hxCau : IsCauchy x) :\n  ∃ y, ∃ (hy : IsCauchy y), SeqLim x (Real_of_CauSeq hy)",
+ "name": "Reals_are_Complete",
+ "displayName": "Reals_are_Complete",
+ "content":
+ "The real numbers are complete; Cauchy sequences in the reals converge to a real number.",
+ "category": "aₙ"}

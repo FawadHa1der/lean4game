@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b : ℕ → ℝ) (c : ℝ) (hb : ∀ n, b n = c * a n) (n : ℕ) : Series b n = c * Series a n",
+ "name": "SeriesConstMul",
+ "displayName": "SeriesConstMul",
+ "content":
+ "The partial sums of the series `∑ k, c * a k` is equal to that of `c * ∑ k, a k`.",
+ "category": "∑aₙ"}

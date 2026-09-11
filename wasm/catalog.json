@@ -18,8 +18,8 @@
         "proof": "rw [h]\nrw [g]"
       },
       "expectedRaw": {
-        "runtime": "wasm64-d77d34b97592d014",
-        "bytes": 1412288317
+        "runtime": "wasm64-d77d34b97592d014+slim",
+        "bytes": 546755869
       }
     },
     {
@@ -43,8 +43,8 @@
         "proof": "rfl"
       },
       "expectedRaw": {
-        "runtime": "wasm64-d77d34b97592d014",
-        "bytes": 1466403813
+        "runtime": "wasm64-d77d34b97592d014+slim",
+        "bytes": 569269949
       }
     },
     {
@@ -70,6 +70,232 @@
       "expectedRaw": {
         "runtime": "wasm64-d77d34b97592d014+slim",
         "bytes": 665285845
+      }
+    },
+    {
+      "owner": "emilyriehl",
+      "game": "ReintroductionToProofs",
+      "listed": true,
+      "snapshot": "reintro",
+      "src": "games-src/ReintroductionToProofs",
+      "source": {
+        "url": "https://github.com/emilyriehl/ReintroductionToProofs",
+        "rev": "c4b1c3d0076e0c4a22dc11b7518fe6dbdb9e5de2",
+        "patch": null
+      },
+      "leanOptions": [
+        "linter.all=false",
+        "pp.showLetValues=true",
+        "tactic.hygienic=false"
+      ],
+      "probe": {
+        "world": "TypeWorld",
+        "level": 1,
+        "proof": "assumption"
+      },
+      "probe2": {
+        "world": "ConjunctionWorld",
+        "level": 1,
+        "proof": "constructor\nexact p\nexact q",
+        "teaches": "constructor (the game's Game.constructor macro over Mathlib fconstructor, Game/Metadata/Tactic/Constructor.lean; taught in ProductWorld L1) plus exact (taught in TypeWorld L3) — both already unlocked (new: false) at this level, which is the first ∧ level and exercises them on Statement {P Q : Prop} (p : P) (q : Q) : P ∧ Q"
+      },
+      "expectedRaw": {
+        "runtime": "wasm64-d77d34b97592d014+slim",
+        "bytes": 562887317
+      }
+    },
+    {
+      "owner": "JadAbouHawili",
+      "game": "KnightsAndKnaves-Lean4Game",
+      "listed": true,
+      "snapshot": "knights",
+      "src": "games-src/KnightsAndKnaves-Lean4Game",
+      "source": {
+        "url": "https://github.com/JadAbouHawili/KnightsAndKnaves-Lean4Game",
+        "rev": "bd4ab6e6d00fbbfb95b17e66589c07e75bb9d56c",
+        "patch": "wasm/patches/knights-wasm64-port.patch"
+      },
+      "leanOptions": [
+        "linter.all=false",
+        "tactic.hygienic=false"
+      ],
+      "probe": {
+        "world": "EquationalReasoning",
+        "level": 1,
+        "proof": "rfl"
+      },
+      "probe2": {
+        "world": "Logic",
+        "level": 7,
+        "proof": "cases h\nexact hPR h_1\nexact hQR h_1",
+        "teaches": "cases (NewTactic cases; the h_1 names rely on tactic.hygienic=false, exactly as the level's own proof)"
+      },
+      "expectedRaw": {
+        "runtime": "wasm64-d77d34b97592d014+slim",
+        "bytes": 728516269
+      }
+    },
+    {
+      "owner": "k88-b",
+      "game": "NumberTheoryGame",
+      "listed": true,
+      "snapshot": "ntg",
+      "src": "games-src/NumberTheoryGame",
+      "source": {
+        "url": "https://github.com/k88-b/NumberTheoryGame",
+        "rev": "08073bc5f2c6f983a79abe250b0e2640cb096131",
+        "patch": null
+      },
+      "leanOptions": [
+        "linter.all=false",
+        "pp.showLetValues=true",
+        "tactic.hygienic=false"
+      ],
+      "probe": {
+        "world": "Divisibility",
+        "level": 1,
+        "proof": "use 4"
+      },
+      "probe2": {
+        "world": "Congruence",
+        "level": 8,
+        "proof": "induction' n with d ih\nunfold ModEq\nuse 0\nring\nrw [pow_succ, pow_succ]\nexact mod_mul (a^d) (b^d) a b m ih h",
+        "teaches": "induction' (the full compat Mathlib.Tactic.Cases elaborator), plus unfold/use/ring/rw/exact and the NewTheorem pow_succ"
+      },
+      "expectedRaw": {
+        "runtime": "wasm64-d77d34b97592d014+slim",
+        "bytes": 835759917
+      }
+    },
+    {
+      "owner": "AlexKontorovich",
+      "game": "RealAnalysisGame",
+      "listed": true,
+      "snapshot": "rag",
+      "src": "games-src/RealAnalysisGame",
+      "source": {
+        "url": "https://github.com/AlexKontorovich/RealAnalysisGame",
+        "rev": "930c38333b2edcc3ad27c5f68b9f09210cfaaf62",
+        "patch": "wasm/patches/rag-wasm64-port.patch"
+      },
+      "leanOptions": [
+        "linter.all=false",
+        "tactic.hygienic=false"
+      ],
+      "probe": {
+        "world": "RealAnalysisStory",
+        "level": 1,
+        "proof": "apply h"
+      },
+      "probe2": {
+        "world": "Lecture6",
+        "level": 5,
+        "proof": "cases' h with h1 h2\nrewrite [h1]\nring_nf\nrewrite [h2]\nring_nf",
+        "teaches": "cases'"
+      },
+      "expectedRaw": {
+        "runtime": "wasm64-d77d34b97592d014+slim",
+        "bytes": 1004806229
+      }
+    },
+    {
+      "owner": "hhu-adam",
+      "game": "Robo",
+      "listed": true,
+      "snapshot": "robo",
+      "src": "games-src/Robo",
+      "source": {
+        "url": "https://github.com/hhu-adam/Robo",
+        "rev": "5d335ce54e9aec50f55ab7e1e24a7a1a79bee188",
+        "patch": "wasm/patches/robo-wasm64-port.patch"
+      },
+      "leanOptions": [
+        "autoImplicit=false",
+        "pp.unicode.fun=true",
+        "pp.funBinderTypes=true",
+        "pp.showLetValues=true",
+        "linter.all=false",
+        "tactic.hygienic=false"
+      ],
+      "probe": {
+        "world": "Logo",
+        "level": 1,
+        "proof": "tauto"
+      },
+      "probe2": {
+        "world": "Implis",
+        "level": 1,
+        "proof": "intro hA\nconstructor\nassumption\nassumption",
+        "teaches": "intro"
+      },
+      "expectedRaw": {
+        "runtime": "wasm64-d77d34b97592d014+slim",
+        "bytes": 1002146453
+      }
+    },
+    {
+      "owner": "Trequetrum",
+      "game": "lean4game-logic",
+      "listed": true,
+      "snapshot": "logic",
+      "src": "games-src/lean4game-logic",
+      "source": {
+        "url": "https://github.com/Trequetrum/lean4game-logic",
+        "rev": "40ceec5f3ca5dce6cec2800b8f5e4927631ca2da",
+        "patch": "wasm/patches/logic-wasm64-port.patch"
+      },
+      "leanOptions": [
+        "linter.all=false",
+        "tactic.hygienic=false",
+        "linter.unusedVariables.funArgs=true"
+      ],
+      "probe": {
+        "world": "AndIntro",
+        "level": 1,
+        "proof": "exact todo_list"
+      },
+      "probe2": {
+        "world": "ImpTactic",
+        "level": 1,
+        "proof": "apply h\nassumption",
+        "teaches": "apply"
+      },
+      "expectedRaw": {
+        "runtime": "wasm64-d77d34b97592d014+slim",
+        "bytes": 835310405
+      }
+    },
+    {
+      "owner": "ZRTMRH",
+      "game": "LinearAlgebraGame",
+      "listed": true,
+      "snapshot": "lag",
+      "src": "games-src/LinearAlgebraGame",
+      "source": {
+        "url": "https://github.com/ZRTMRH/LinearAlgebraGame",
+        "rev": "03b894b227cc969de55de2d155f7308d83b3c3f5",
+        "patch": "wasm/patches/lag-wasm64-port.patch"
+      },
+      "leanOptions": [
+        "tactic.hygienic=false",
+        "linter.unusedVariables.funArgs=false",
+        "trace.debug=false",
+        "linter.all=false"
+      ],
+      "probe": {
+        "world": "TutorialWorld",
+        "level": 1,
+        "proof": "rfl"
+      },
+      "probe2": {
+        "world": "LinearMapsWorld",
+        "level": 1,
+        "proof": "unfold is_linear_map_v\nrfl",
+        "teaches": "unfold (taught TutorialWorld 5) on the game's own definition is_linear_map_v, then rfl; the level's solution verbatim"
+      },
+      "expectedRaw": {
+        "runtime": "wasm64-d77d34b97592d014+slim",
+        "bytes": 998558821
       }
     }
   ]

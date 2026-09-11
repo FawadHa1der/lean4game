@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P} : ¬¬¬P ↔ ¬P",
+ "name": "GameLogic.not_not_not",
+ "displayName": "not_not_not",
+ "content":
+ "# Negation is stable\nA nice result of this theorem is that any more than 2 negations can be simplified down to 1 or 2 negations.\n```\nnot_not_not : ¬¬¬P ↔ ¬P\n```",
+ "category": "↔ extra"}

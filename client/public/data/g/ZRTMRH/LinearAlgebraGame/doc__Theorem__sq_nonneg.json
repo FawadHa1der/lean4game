@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {R} [Semiring R] [LinearOrder R] [ExistsAddOfLE R] [PosMulMono R] [AddLeftMono R] (a : R) : 0 ≤ a ^ 2",
+ "name": "sq_nonneg",
+ "displayName": "sq_nonneg",
+ "content": "`sq_nonneg` shows that squares are nonnegative.",
+ "category": "Inner Product"}

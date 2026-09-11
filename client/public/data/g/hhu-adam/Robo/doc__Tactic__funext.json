@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "funext",
+ "displayName": "funext",
+ "content":
+ "Two mappings with the same range and domain are equal if\nthey take the same values on all elements of the domain.\nA proof goal of the form\n```\nf = g\n```\nfor mappings `f g : X → Y` is converted by `funext x`\ninto the equation\n```\nf x = g x\n```.",
+ "category": "📖︎"}

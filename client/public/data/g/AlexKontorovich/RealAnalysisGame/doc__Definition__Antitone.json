@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Antitone",
+ "displayName": "Antitone",
+ "content":
+ "`(a : X → Y) {i j} (hij : i ≤ j) : a j ≤ a i`\n\nA sequence `a : X → Y` is said to be `Antitone` if `a m ≤ a n` whenever `n ≤ m` (note that `n` and `m` were reversed).",
+ "category": "📖︎"}

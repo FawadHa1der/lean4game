@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rw",
+ "displayName": "rw",
+ "content":
+ "Given a hypothesis `p : x = y`, the tactic `rw [p]` will replace each `x` in the goal by `y`. Writing `rw [← p]` will replace the each `y` in the goal by `x`. This is a slightly less powerful version than the `rw` tactic in Mathlib, which will attempt to close the goal with `rfl`.",
+ "category": "📖︎"}

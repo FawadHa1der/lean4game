@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [Mul α] [Zero α] [Preorder α] {a b c} [MulPosReflectLT α] (h : b * a < c * a) (a0 : 0 ≤ a) : b < c",
+ "name": "lt_of_mul_lt_mul_right",
+ "displayName": "lt_of_mul_lt_mul_right",
+ "content": "(missing)",
+ "category": "≤"}

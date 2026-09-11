@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} [DecidableEq α] {s t} {a} : a ∉ s ∪ t ↔ a ∉ s ∧ a ∉ t",
+ "name": "Finset.notMem_union",
+ "displayName": "notMem_union",
+ "content":
+ "`notMem_union` is the contrapositive of the definition of a union of sets. It states that if\n`v ∉ a ∪ b`, then `v ∉ a ∧ v ∉ b`",
+ "category": "Sets"}

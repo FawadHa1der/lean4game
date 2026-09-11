@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P Q} (h : P ∧ Q) : P",
+ "name": "GameLogic.and_left",
+ "displayName": "and_left",
+ "content":
+ "# ∧ Elimination Left\n### `and_left : P ∧ Q -> P`\n\nIf `h` is a term with a type like `P ∧ Q`\n\n`and_left h`, `h.left` or `h.1` are all expressions for denoting the left-hand side of the given evidence. In this case, the left side has a type of `P`.",
+ "category": "∧"}

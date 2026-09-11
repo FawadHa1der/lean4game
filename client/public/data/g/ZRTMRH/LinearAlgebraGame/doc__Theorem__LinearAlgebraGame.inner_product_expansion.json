@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (u v : V) :\n  ⟪u + v,u + v⟫.re = ⟪u,u⟫.re + ⟪v,v⟫.re + 2 * ⟪u,v⟫.re",
+ "name": "LinearAlgebraGame.inner_product_expansion",
+ "displayName": "inner_product_expansion",
+ "content":
+ "The inner product expansion: `⟪u+v, u+v⟫.re = ⟪u,u⟫.re + ⟪v,v⟫.re + 2*⟪u,v⟫.re`.\nThis expands the squared norm of a sum using the inner product.",
+ "category": "Inner Product"}

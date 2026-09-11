@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "SeqLim",
+ "displayName": "SeqLim",
+ "content":
+ "`(a : ℕ → ℝ) (L : ℝ) := ∀ ε > 0, ∃ N : ℕ, ∀ n ≥ N, |a n - L| < ε`\n\nFor a sequence `a : ℕ → ℝ` and a real number `L : ℝ`, we say that `SeqLim a L` holds if: for every `ε > 0`, there exists `N : ℕ` such that for all `n ≥ N`, we have `|a n - L| < ε`.",
+ "category": "📖︎"}

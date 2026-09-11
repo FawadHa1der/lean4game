@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {n} {f} (h₁ : ∀ A B, f (A * B) = f (B * A)) (i j : Fin n) (a✝ : i ≠ j) : f (Matrix.E i j) = 0",
+ "name": "Matrix.zero_on_offDiag_ebasis",
+ "displayName": "zero_on_offDiag_ebasis",
+ "content": "(missing)",
+ "category": "Matrix"}

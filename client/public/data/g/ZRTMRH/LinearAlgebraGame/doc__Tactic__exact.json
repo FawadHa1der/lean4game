@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "exact",
+ "displayName": "exact",
+ "content":
+ "## Summary\n\nIf the goal is a statement `P`, then `exact h` will solve the goal if `h` is a proof of `P`.\n\n## Example\n\nIf your goal is `x + 5 = 10`, and you have a hypothesis `h: x + 5 = 10`, then `exact h` will solve\nthe goal.\n\n## Example\n\nIf your goal is `x ⬝ y = 0 ↔ x ⟂ y`, and you have a theorem `dot_zero_iff_perp` that states the same\nthing, `exact dot_zero_iff_perp` will solve the goal.\n\n## exact? tactic\n\n`exact` has a variation, `exact?`, that is very useful. If your goal seems very obvious, and if you\nbelieve that there is a theorem or hypothesis that is exactly the same as your goal, `exact?` will\nattempt to fill in an `exact` tactic. This way, you don't have to memorize the exact statement of\nevery theorem in order to finish a proof.\nHowever, with great power comes great responsibility, and using `exact?` too often can obscure how\na proof actually works, and can lead you to being more confused than when you started.",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {a b} (a✝ : a ⊆ b) (a✝ : b ⊆ a) : a = b",
+ "name": "Set.eq_of_subset_of_subset",
+ "displayName": "eq_of_subset_of_subset",
+ "content":
+ "`Set.eq_of_subset_of_subset` is a proof that `A = B` if and only if `A ⊆ B` and `B ⊆ A`. If you have\na goal of the form `A = B`, `apply Set.eq_of_subset_of_subset` will change the goal into two goals:\n`A ⊆ B`, and `B ⊆ A`.",
+ "category": "Sets"}

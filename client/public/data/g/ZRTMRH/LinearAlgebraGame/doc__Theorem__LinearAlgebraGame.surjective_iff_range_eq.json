@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (K V W : Type) [Field K] [AddCommGroup V] [AddCommGroup W] [LinearAlgebraGame.VectorSpace K V]\n  [LinearAlgebraGame.VectorSpace K W] (T : V → W) :\n  LinearAlgebraGame.surjective_v K V W T ↔ ∀ (w : W), w ∈ LinearAlgebraGame.range_v K V W T",
+ "name": "LinearAlgebraGame.surjective_iff_range_eq",
+ "displayName": "surjective_iff_range_eq",
+ "content": "Surjectivity means range equals codomain.",
+ "category": "Linear Maps"}

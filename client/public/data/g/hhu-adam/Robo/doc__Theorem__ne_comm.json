@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {a b} : a ≠ b ↔ b ≠ a",
+ "name": "ne_comm",
+ "displayName": "ne_comm",
+ "content": "(missing)",
+ "category": "Logic"}

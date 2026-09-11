@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (b : Bool) : ∃ x, (!x) = b",
+ "name": "ReintroductionToProofs.Bool.not_surjective",
+ "displayName": "not_surjective",
+ "content": "The function `not : Bool → Bool` is surjective.",
+ "category": "Bool"}

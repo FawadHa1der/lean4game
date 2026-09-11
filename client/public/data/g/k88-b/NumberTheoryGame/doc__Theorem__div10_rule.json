@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (k d : ℤ) : (10 * k + d) ≡ d (mod 10)",
+ "name": "div10_rule",
+ "displayName": "div10_rule",
+ "content":
+ "**Divisibility by 10**\n\nThe remainder of any number modulo 10 is exactly its last digit.\n$10 \\cdot k + d \\equiv d \\pmod{10}$.",
+ "category": "DivRules"}

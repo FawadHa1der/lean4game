@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "left",
+ "displayName": "left",
+ "content":
+ "Having the goal of the form:\n```\nP ∨ Q\n```\nfor `P Q : Prop`, `left` transforms the goal to `P`.",
+ "category": "📖︎"}

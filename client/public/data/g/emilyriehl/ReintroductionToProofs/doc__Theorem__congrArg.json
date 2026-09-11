@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {β} {a₁ a₂} (f : α → β) (h : a₁ = a₂) : f a₁ = f a₂",
+ "name": "congrArg",
+ "displayName": "congrArg",
+ "content":
+ "For a function `f : A → B` between types, elements `x y : A`, and a proof `p : x = y`, then `congrArg f p : f x = f y`.",
+ "category": "Eq"}

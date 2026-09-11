@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ → ℝ) (L : ℝ) (a_const : ∀ n, a n = L) : SeqLim a L",
+ "name": "ConstLim",
+ "displayName": "ConstLim",
+ "content":
+ "For any sequence `a : ℕ → ℝ` and constant `L : ℝ`, and\nhypothesis `h : ∀ n, a n = L`, the theorem `ConstLim`\nproves that `SeqLim a L`, that is, the (constant) sequence `a` converges to `L`.",
+ "category": "aₙ"}

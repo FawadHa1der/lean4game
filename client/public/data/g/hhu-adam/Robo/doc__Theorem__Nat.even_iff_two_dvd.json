@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {a} : Even a ↔ 2 ∣ a",
+ "name": "Nat.even_iff_two_dvd",
+ "displayName": "even_iff_two_dvd",
+ "content": "(missing)",
+ "category": "ℕ"}

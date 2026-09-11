@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {f} {F} {a b} (hab : a < b) {ℓ} (hfint : ∀ n, HasIntegral (f n) a b (ℓ n)) (hfF : UnifConv f F) :\n  ∃ L, SeqLim ℓ L ∧ HasIntegral F a b L",
+ "name": "RealAnalysisGame.Integrable_of_UnifConv",
+ "displayName": "Integrable_of_UnifConv",
+ "content":
+ "If `fₙ` converges uniformly to `F`, and each `fₙ` is integrable on `[a, b]`, then `F` is integrable on `[a, b]`, and the integral of `F` equals the limit of the integrals of `fₙ`.",
+ "category": "∫f"}

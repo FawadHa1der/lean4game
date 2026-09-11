@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "VectorSpace",
+ "displayName": "Vector Space",
+ "content":
+ "A vector space is a space over a field K with an abelian group V. In this game, `VectorSpace K V`\nis an educational alias for Mathlib's `Module K V` over a field. It has four main properties:\n- Distributivity over vector addition,\n- Distributivity over scalar addition,\n- Associativity of scalar multiplication,\n- Identity scalar acting as identity.\n\nThese properties can be found in the theorems tab as \"smul_add\", \"add_smul\", \"mul_smul\", and \"one_smul\",\nas well as the educational versions \"smul_add_explicit\", \"add_smul_explicit\", etc.",
+ "category": "📖︎"}

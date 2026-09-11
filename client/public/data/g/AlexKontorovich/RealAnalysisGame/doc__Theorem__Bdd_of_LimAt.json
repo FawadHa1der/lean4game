@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (f : ℝ → ℝ) (c L : ℝ) (hf : FunLimAt f L c) : ∃ M > 0, ∃ δ > 0, ∀ (x : ℝ), x ≠ c → |x - c| < δ → |f x| < M",
+ "name": "Bdd_of_LimAt",
+ "displayName": "Bdd_of_LimAt",
+ "content":
+ "If `f → L` as `x → c`, then there is an `M > 0` such that\n`|f (x)| < M` near `c`.",
+ "category": "f(x)"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "exact_mod_cast",
+ "displayName": "exact_mod_cast",
+ "content":
+ "The `exact_mod_cast` tactic is similar to `apply`, except it automatically handles type coercions that would otherwise require manual casting.",
+ "category": "📖︎"}

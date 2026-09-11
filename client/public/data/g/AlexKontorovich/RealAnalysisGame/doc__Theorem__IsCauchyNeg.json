@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {X} [NormedField X] [Lattice X] (a : ℕ → X) (ha : IsCauchy a) : IsCauchy (-a)",
+ "name": "IsCauchyNeg",
+ "displayName": "IsCauchyNeg",
+ "content": "If `a` satisfies `IsCauchy`, then `-a` does too.",
+ "category": "aₙ"}

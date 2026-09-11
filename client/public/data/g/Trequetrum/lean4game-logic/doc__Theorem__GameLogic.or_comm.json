@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {P Q} : P ∨ Q ↔ Q ∨ P",
+ "name": "GameLogic.or_comm",
+ "displayName": "or_comm",
+ "content": "# ∨ is commutative\n\n`or_comm` is evidence that `P ∨ Q ↔ Q ∨ P`",
+ "category": "∨"}

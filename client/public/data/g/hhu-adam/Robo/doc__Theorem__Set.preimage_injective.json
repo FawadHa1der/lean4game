@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} {β} {f} : Function.Injective (Set.preimage f) ↔ Function.Surjective f",
+ "name": "Set.preimage_injective",
+ "displayName": "preimage_injective",
+ "content": "(missing)",
+ "category": "Function"}

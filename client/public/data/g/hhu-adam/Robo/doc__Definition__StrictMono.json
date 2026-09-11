@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "StrictMono",
+ "displayName": "StrictMono",
+ "content":
+ "A mapping `f` is strictly monotonous, if:\n\n```\n∀ ⦃a b⦄, a < b → f a < f b\n```",
+ "category": "Function"}

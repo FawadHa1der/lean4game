@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {x} : 0 < √x ↔ 0 < x",
+ "name": "Real.sqrt_pos",
+ "displayName": "Real.sqrt_pos",
+ "content": "The square root of a positive real number is positive.",
+ "category": "ℝ"}

@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {G} [CommMagma G] (a b : G) : a * b = b * a",
+ "name": "mul_comm",
+ "displayName": "mul_comm",
+ "content": "(missing)",
+ "category": "+ *"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "imp",
+ "displayName": "→",
+ "content":
+ "Logical implication `P → Q` is made up of two components:\n- The premise, which in this case is `P`\n- The conclusion, which in this case is `Q`\n\n`P → Q` is read as 'If P is true, then Q is true.\n\n# Truth table\n$\n\\begin{array}{|c|c|c|}\n\\hline\nP & Q & P → Q \\\\\\\\\n\\hline\nT & T & T \\\\\\\\\n\\hline\nT & F & F \\\\\\\\\n\\hline\nF & T & T \\\\\\\\\n\\hline\nF & F & T \\\\\\\\\n\\hline\n\\end{array}\n$\n\nA statement `P → Q` is false when `P` is true and `Q` false, it's true otherwise.\n\n# Implication as a function\nWhat logical implication does is that it takes evidence or proof for `P` and transforms it returning a proof of `Q`.\nThe truth of `P` IMPLIES the truth of `Q`. A proof of `P` IMPLIES a proof of `Q`.\n\nIn other words, it acts like a function. If you give `P → Q` a proof of `P`, you get a proof of `Q`.\n\n`P → Q` acts like a function. It takes a proof of `P` and returns a proof of `Q`.\n\nGiven `hPQ : P → Q` `hP : P`, `hPQ hP` is a proof of Q",
+ "category": "Prop"}

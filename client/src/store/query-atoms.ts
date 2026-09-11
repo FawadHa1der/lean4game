@@ -33,5 +33,10 @@ export const levelInfoAtom = atomWithQuery<LevelInfo>((get) => {
     queryFn: async () => {
       return fetchGamedataJson<LevelInfo>(`${window.location.origin}/data/${gameId}/level__${worldId}__${levelId}.json`)
     },
+    // Leaving a level re-reads these options with the ids already gone while
+    // the level's subscribers are still mounted; without the guard the query
+    // fetched /data/undefined/level__undefined__undefined.json on every exit
+    // (a console error offline). Same guard as gameInfoAtomFamily.
+    enabled: !!gameId && !!worldId && levelId != null,
   }
 })

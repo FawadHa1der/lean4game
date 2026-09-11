@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "suffices",
+ "displayName": "suffices",
+ "content":
+ "## Summary\n\n`suffices` allows you to reduce the goal to a simpler statement. It's useful when proving `Q`\nmakes it easy to prove your original goal `P`.\n\n## Syntax\n\n- `suffices h : Q` - Creates a new goal `Q`, and after proving it, you get `h : Q` to prove the original goal\n- `suffices h : Q by tactic` - Proves the original goal using `h : Q` immediately\n\n## Example\n\nIf your goal is `x + y = 10` and you know this follows from `x = 3` and `y = 7`, you can write:\n```\nsuffices h : x = 3 ∧ y = 7\n· -- Now prove x + y = 10 using h\n  cases' h with hx hy\n  rw [hx, hy]\n  norm_num\n· -- Now prove x = 3 ∧ y = 7\n  constructor\n  · exact x_eq_three\n  · exact y_eq_seven\n```\n\n## Common usage\n\nOften used when the goal follows easily from a simpler fact, especially in contradiction proofs.",
+ "category": "📖︎"}

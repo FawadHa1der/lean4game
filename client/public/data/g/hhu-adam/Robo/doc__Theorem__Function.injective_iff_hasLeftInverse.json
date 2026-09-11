@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} {β} [Nonempty α] {f} : Function.Injective f ↔ Function.HasLeftInverse f",
+ "name": "Function.injective_iff_hasLeftInverse",
+ "displayName": "injective_iff_hasLeftInverse",
+ "content": "(missing)",
+ "category": "Function"}

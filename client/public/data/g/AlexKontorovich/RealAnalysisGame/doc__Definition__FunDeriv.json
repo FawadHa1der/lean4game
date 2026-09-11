@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "FunDeriv",
+ "displayName": "FunDeriv",
+ "content":
+ "`(f : ℝ → ℝ) (g : ℝ → ℝ) := ∀ x, FunDerivAt f (g x) x`.\n\nThe derivative of `f` is `g` everywhere.",
+ "category": "📖︎"}

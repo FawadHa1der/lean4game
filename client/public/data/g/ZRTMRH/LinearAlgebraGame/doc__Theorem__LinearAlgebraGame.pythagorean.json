@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (u v : V)\n  (h : LinearAlgebraGame.orthogonal u v) : ‖u + v‖ ^ 2 = ‖u‖ ^ 2 + ‖v‖ ^ 2",
+ "name": "LinearAlgebraGame.pythagorean",
+ "displayName": "pythagorean",
+ "content":
+ "This is the Pythagorean Theorem. If you have vectors `u v`, and `h : orthogonal u v`, then\n`pythagorean u v h` is a proof that `‖u + v‖^2 = ‖u‖^2 + ‖v‖^2`.",
+ "category": "Inner Product"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "unfold",
+ "displayName": "unfold",
+ "content":
+ "## Summary\n\nIf we have some object or function with some definition, `unfold object` will rewrite the object\nwith its definition in the goal. Lean often unfolds terms automatically, but some tactics and definitions\nare not unfolded automatically. The `unfold` tactic also helps make it easier to take the next steps.\n\n`unfold object at h` unfolds at the assumption `h` whereas `unfold object at *` unfolds everywhere.\n\n## Example:\n\nIf you have a goal `(P → Q) → (¬ Q → ¬ P)`, with `¬ P` (\\\"Not\\\" P) being defined as `P → False`,\nusing `unfold Not` will change the goal to `(P → Q) → ((Q → False) → (P → False))`",
+ "category": "📖︎"}

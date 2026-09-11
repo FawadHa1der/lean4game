@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {M} [AddCommMonoid M] [DecidableEq ι] {s} {i} (h : i ∈ s) (f : ι → M) : ∑ x ∈ s, f x = ∑ x ∈ s \\ {i}, f x + f i",
+ "name": "Finset.sum_eq_sum_diff_singleton_add",
+ "displayName": "sum_eq_sum_diff_singleton_add",
+ "content":
+ "If you have some set s, where you know `h : i ∈ s`, then `sum_eq_sum_diff_singleton_add h` is a proof that\n`(Finset.sum s fun x => f x) = (Finset.sum (s \\ {i}) fun x => f x) + f i`",
+ "category": "Sets"}

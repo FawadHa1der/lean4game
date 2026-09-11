@@ -2,20 +2,23 @@
  "schema": "qed64.snapshot-index/v1",
  "snapshots": [
   {
-   "name": "init",
-   "url": "/snapshots/init.da2ed4de9dabfb73.snapz",
-   "digest": "sha256:da2ed4de9dabfb73d8a1202fb14ba32ee5c2540e63fb7e981cdd32767fc79a4d",
-   "bytes": 342124389,
-   "transfer": 107410385,
-   "imports": [],
+   "name": "stg4",
+   "url": "/snapshots/stg4.5dbab231c29a9c13.snapz",
+   "digest": "sha256:5dbab231c29a9c13657c7b17d81aeeaf235980797b923005b55b9b6e082a4563",
+   "bytes": 665285845,
+   "transfer": 180977642,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
    "runtime": "wasm64-d77d34b97592d014"
   },
   {
    "name": "testgame",
-   "url": "/snapshots/testgame.aee31c25b23c454c.snapz",
-   "digest": "sha256:aee31c25b23c454ce1ee522ff6f078e04743c41e55b0d73eaf866e0833684282",
-   "bytes": 1412288317,
-   "transfer": 413599933,
+   "url": "/snapshots/testgame.d5c4280126015f3a.snapz",
+   "digest": "sha256:d5c4280126015f3aef27bee6b344a5067928479f156cd19b937726eb875e8af0",
+   "bytes": 546755869,
+   "transfer": 148560924,
    "imports": [
     "Game",
     "GameServer.Runner"
@@ -24,10 +27,10 @@
   },
   {
    "name": "nng4",
-   "url": "/snapshots/nng4.3613d20f2f3545d1.snapz",
-   "digest": "sha256:3613d20f2f3545d1a3bad6f214674fa9a180ed08b58760d1bc9f563b75d249c4",
-   "bytes": 1466403813,
-   "transfer": 428354712,
+   "url": "/snapshots/nng4.db264c5f3eb7c69c.snapz",
+   "digest": "sha256:db264c5f3eb7c69ca9f41a7350025135f26ec1620b12dba63dbd1b9aa93086c5",
+   "bytes": 569269949,
+   "transfer": 154373030,
    "imports": [
     "Game",
     "GameServer.Runner"
@@ -35,11 +38,83 @@
    "runtime": "wasm64-d77d34b97592d014"
   },
   {
-   "name": "stg4",
-   "url": "/snapshots/stg4.5dbab231c29a9c13.snapz",
-   "digest": "sha256:5dbab231c29a9c13657c7b17d81aeeaf235980797b923005b55b9b6e082a4563",
-   "bytes": 665285845,
-   "transfer": 180977642,
+   "name": "reintro",
+   "url": "/snapshots/reintro.eccae8a265ecef22.snapz",
+   "digest": "sha256:eccae8a265ecef223c2fbe9407cf73b05efdef4ac3a5141ebb0dd00d014157dc",
+   "bytes": 562887317,
+   "transfer": 152685936,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-d77d34b97592d014"
+  },
+  {
+   "name": "knights",
+   "url": "/snapshots/knights.0894a607d8c019d1.snapz",
+   "digest": "sha256:0894a607d8c019d1e6a90dc20acbfb254a0048c87b8c0517bfb644ac82721841",
+   "bytes": 728516269,
+   "transfer": 199226176,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-d77d34b97592d014"
+  },
+  {
+   "name": "ntg",
+   "url": "/snapshots/ntg.dfa69f626e1cf8e8.snapz",
+   "digest": "sha256:dfa69f626e1cf8e8599c20cf35ed57ffd078e818743e2278e6173930206734ba",
+   "bytes": 835759917,
+   "transfer": 231509452,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-d77d34b97592d014"
+  },
+  {
+   "name": "rag",
+   "url": "/snapshots/rag.a7a0c2f7f57b3ce2.snapz",
+   "digest": "sha256:a7a0c2f7f57b3ce2071897aa1cd739287b5fabfc41ff8bb86e403ecd8d551396",
+   "bytes": 1004806229,
+   "transfer": 281959968,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-d77d34b97592d014"
+  },
+  {
+   "name": "robo",
+   "url": "/snapshots/robo.5e905b3459712762.snapz",
+   "digest": "sha256:5e905b345971276280519726c8bcdcc2aa89cd511a69753bccfa355ee4e084b4",
+   "bytes": 1002146453,
+   "transfer": 281145882,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-d77d34b97592d014"
+  },
+  {
+   "name": "logic",
+   "url": "/snapshots/logic.72eeb282456209b3.snapz",
+   "digest": "sha256:72eeb282456209b34de87b4b65e97f4cbb30853d229fe2fba6a53096575875e5",
+   "bytes": 835310405,
+   "transfer": 231335507,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-d77d34b97592d014"
+  },
+  {
+   "name": "lag",
+   "url": "/snapshots/lag.f84d616679d0ceb0.snapz",
+   "digest": "sha256:f84d616679d0ceb005907fb2eb434195b43ad5c6d842a1868ae02fe624865d66",
+   "bytes": 998558821,
+   "transfer": 280060218,
    "imports": [
     "Game",
     "GameServer.Runner"

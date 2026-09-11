@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ → ℝ) (L : ℝ) (ha : SeqLim a L) (hL : L ≠ 0) : SeqBdd a",
+ "name": "Bdd_of_ConvNonzero",
+ "displayName": "Bdd_of_ConvNonzero",
+ "content":
+ "If `a : ℕ → ℝ` is a sequence which converges to a non-zero limit, then it is bounded.\nSee also `Bdd_of_Conv` which assumes nothing about the limit.",
+ "category": "aₙ"}

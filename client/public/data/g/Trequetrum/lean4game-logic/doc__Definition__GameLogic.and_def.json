@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "GameLogic.and_def",
+ "displayName": "∧",
+ "content":
+ "# Conjunction\n## Introduction\nAn “And” can be introduced with the `and_intro` theorem. Conjunctions and biconditionals can both be constructed using the angle bracket notation as well.\n### Examples\n```\n-- Assumptions\np : P\nq : Q\n-- Each new term is evidence for P ∧ Q\n-- Explicit Constructer, no annotations needed\nhave h₁ := and_intro p q\nhave h₂ := and_intro (left := p) (right := q)\n-- Implicit Constructuer, annotations based on context\n-- Type these angle brackets with “\\<” and “\\>”\nhave h₆ : P ∧ Q := ⟨p,q⟩\nhave h₇ := (⟨p,q⟩ : P ∧ Q)\n```\n## Elimination\nAn “And” like `h : P ∧ Q` can be reduced in two ways:\n1. Aquire evidence for `P` using `and_left h` or `h.left`\n2. Aquire evidence for `Q` using `and_right` or `h.right`",
+ "category": "📖︎"}

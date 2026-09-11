@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (r : ℝ) (z : ℂ) : (↑r * z).re = r * z.re",
+ "name": "Complex.re_ofReal_mul",
+ "displayName": "re_ofReal_mul",
+ "content":
+ "`re_ofReal_mul` is a proof that `(↑r * z).re = r * z.re`. It is helpful when working with both real and\ncomplex numbers at the same time.",
+ "category": "ℂ"}

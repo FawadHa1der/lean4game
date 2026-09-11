@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "False",
+ "displayName": "False",
+ "content":
+ "Proving `False` means deriving a contradiction.\n\nA contradiction is when `P` and `¬P` are both true. We say that `P` and `¬P` contradict each other.\n\n# Principle of explosion, from `False` anything follows.\nThis principle asserts that if you have contradictory assumptions then you can prove anything.\n```\nhP: P\nhnP: ¬P\n```\nSince `hnP : ¬P` is `P → False`, we can obtain `hnP hP : False`.\n\nMoreover, we know that `False.elim : False → Q` for any `Q : Prop` and so `False.elim (hnP hP) : Q`. (using `contradiction` would close the goal as well, without having to use `False.elim`)\n\n\n\nProving `False` is what's usually called deriving a contradiction, and note that to prove `False` you would first need to have a proof `P`, and a proof of `¬P`, i.e. `P → False`.\n\nMoreover, having a proof of `P` and a proof of `¬P` means you have contradictory theorems. If so, then `contradiction` will close any goal without having to prove `False` first.\n\nIf you were able to prove `False`, then the `contradiction` tactic will prove the goal regardless what the goal is because 'from `False`, anything follows'.",
+ "category": "Prop"}

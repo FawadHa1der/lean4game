@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " : ∃ g, (∀ (b : Bool), (g !b) = b) ∧ ∀ (b : Bool), (!g b) = b",
+ "name": "ReintroductionToProofs.Bool.not_invertible",
+ "displayName": "not_invertible",
+ "content": "The function `not : Bool → Bool` is invertible.",
+ "category": "Bool"}

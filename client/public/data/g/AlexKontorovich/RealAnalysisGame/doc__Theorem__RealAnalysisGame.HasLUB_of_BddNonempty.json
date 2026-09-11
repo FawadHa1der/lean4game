@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {S} (hS : S.Nonempty) {M} (hM : RealAnalysisGame.IsUB S M) : ∃ L, RealAnalysisGame.IsLUB S L",
+ "name": "RealAnalysisGame.HasLUB_of_BddNonempty",
+ "displayName": "HasLUB_of_BddNonempty",
+ "content":
+ "Every nonempty set of real numbers that is bounded above has a least upper bound.",
+ "category": "x∈U"}

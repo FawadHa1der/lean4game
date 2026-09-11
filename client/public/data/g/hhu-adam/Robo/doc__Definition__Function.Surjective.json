@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.Surjective",
+ "displayName": "Surjective",
+ "content": "A mapping `f` is surjectiv, if:\n\n```\n∀ b, ∃ a, f a = b\n```",
+ "category": "Function"}

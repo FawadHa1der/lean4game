@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {a b} (ha : a) (hb : b) : a ↔ b",
+ "name": "iff_of_true",
+ "displayName": "iff_of_true",
+ "content":
+ "If two propositions are true, then they have the same truth value.\n\nIf we know `P,Q`  then we can conclude that `P,Q` have the same truth value, i.e. `P ↔ Q`",
+ "category": "Logic"}

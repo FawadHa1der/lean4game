@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "UnBddPeaks",
+ "displayName": "UnBddPeaks",
+ "content":
+ "`(a : ℕ → X) := ∀ k, ∃ n > k, IsAPeak a n`\n\nWe say that a sequence `a : ℕ → X` (where `X` is `ℚ` or `ℝ`)\nsatisfies `UnBddPeaks a`, if its set of peaks is unbounded.",
+ "category": "📖︎"}

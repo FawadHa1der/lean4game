@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ → ℝ) (ha : ∀ n, a n = 1 / ↑n) : SeqLim a 0",
+ "name": "OneOverNLimZero",
+ "displayName": "OneOverNLimZero",
+ "content":
+ "If `a n = 1 / n`, then `SeqLim a 0`; that is, the sequence\n`1 / n` converges to zero.",
+ "category": "aₙ"}

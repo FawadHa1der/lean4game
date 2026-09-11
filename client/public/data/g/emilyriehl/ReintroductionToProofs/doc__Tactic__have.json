@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "have",
+ "displayName": "have",
+ "content":
+ "The `have` tactic can be used to add new hypotheses provided you can supply a proof. For example, given assumptions `p : P` and `h : P → Q`, type `have q : Q := h p` to add a proof `q : Q` defined by `h p`.",
+ "category": "📖︎"}

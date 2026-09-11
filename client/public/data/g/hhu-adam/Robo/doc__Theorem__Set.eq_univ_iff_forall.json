@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {s} : s = Set.univ ↔ ∀ (x : α), x ∈ s",
+ "name": "Set.eq_univ_iff_forall",
+ "displayName": "eq_univ_iff_forall",
+ "content": "(missing)",
+ "category": "Set"}

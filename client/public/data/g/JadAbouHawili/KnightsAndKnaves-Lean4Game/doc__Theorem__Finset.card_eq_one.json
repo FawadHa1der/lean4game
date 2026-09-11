@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {s} : s.card = 1 ↔ ∃ a, s = {a}",
+ "name": "Finset.card_eq_one",
+ "displayName": "Finset.card_eq_one",
+ "content": "(missing)",
+ "category": "Finset"}

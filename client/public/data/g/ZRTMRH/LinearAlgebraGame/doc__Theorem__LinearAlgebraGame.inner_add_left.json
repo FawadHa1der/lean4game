@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (u v w : V) :\n  ⟪u + v,w⟫ = ⟪u,w⟫ + ⟪v,w⟫",
+ "name": "LinearAlgebraGame.inner_add_left",
+ "displayName": "inner_add_left",
+ "content":
+ "For any vectors `u, v, w`, ⟪(u + v), w⟫ = ⟪u, w⟫ + ⟪v, w⟫. That is, inner products distribute over addition.\n\n**Usage:** Use the full name `LinearAlgebraGame.inner_add_left` when applying this theorem.",
+ "category": "Inner Product"}

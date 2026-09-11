@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V W : Type) [Field K] [AddCommGroup V] [AddCommGroup W] [LinearAlgebraGame.VectorSpace K V]\n  [LinearAlgebraGame.VectorSpace K W] (T : V → W) (hT : LinearAlgebraGame.is_linear_map_v K V W T)\n  (h_inj : LinearAlgebraGame.injective_v K V W T) (v : V) (a✝ : v ∈ LinearAlgebraGame.null_space_v K V W T) : v = 0",
+ "name": "LinearAlgebraGame.fundamental_theorem_educational",
+ "displayName": "LinearAlgebraGame.fundamental_theorem_educational",
+ "content":
+ "The Fundamental Theorem: educational insight about injective linear maps.\nThis demonstrates the core principle without requiring full dimension theory.",
+ "category": "LinearAlgebraGame"}

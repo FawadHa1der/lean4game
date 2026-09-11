@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rw",
+ "displayName": "rw",
+ "content":
+ "Given the following:\n```\nAssumptions:\nh : A = B\n\nGoal:\nsome expression involving A\n```\n\n`rw [h]` would change the goal by replacing every occurrence of `A` with `B`.\n\nMoreover `rw [h] at h'` would apply the rewrite on an assumption `h'` instead of the goal.\n\nBy default, rw uses an equation in the forward direction, matching the left-hand side of the equation `h` with an occurrence of `A` in the goal, and replaces it with the right-hand side, i.e. `B`.\n\nThe notation `rw [←h]` can be used to instruct the tactic to use the equality `h` in the reverse direction, i.e. replace an occurrence of `B` with `A`.\n\n## Behavior with `=` and `↔`\nFor `rw [h]`, the behavior is exactly the same for both, whether you had `h : x=2` or `h : P ↔ Q`.",
+ "category": "📖︎"}

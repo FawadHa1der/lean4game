@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {a} (amono : Monotone a) {L} (ha : SeqLim a L) (n : ℕ) : a n ≤ L",
+ "name": "MonotoneLimitBound",
+ "displayName": "MonotoneLimitBound",
+ "content":
+ "If `a : ℕ → ℝ` is `Monotone` and has limit `L`, then for all `n`, `a n ≤ L`.",
+ "category": "aₙ"}

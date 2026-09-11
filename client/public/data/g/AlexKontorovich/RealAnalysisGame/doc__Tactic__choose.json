@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "choose",
+ "displayName": "choose",
+ "content":
+ "The `choose` tactic extracts a witness from an existence statement in a hypothesis.",
+ "category": "📖︎"}

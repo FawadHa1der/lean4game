@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P Q} (h : P ↔ Q) (a✝ : Q) : P",
+ "name": "GameLogic.iff_mpr",
+ "displayName": "iff_mpr",
+ "content":
+ "If you have an assumption like `h : P ↔ Q`, then\n```\niff_mp h -- or\nh.mp     -- is evidence for P → Q\n\niff_mpr h -- or\nh.mpr     -- is evidence for Q → P\n```",
+ "category": "↔"}

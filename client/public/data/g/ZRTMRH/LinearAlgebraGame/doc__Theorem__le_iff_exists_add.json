@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [Add α] [LE α] [CanonicallyOrderedAdd α] {a b} : a ≤ b ↔ ∃ c, b = a + c",
+ "name": "le_iff_exists_add",
+ "displayName": "le_iff_exists_add",
+ "content":
+ "le_iff_exists_add is a proof that `a ≤ b ↔ ∃ (c : ℕ), a = b + c`.\n\nThe reason for the name is that two numbers are less than or equal to each other if and only if\nthere exists a number that you can add to the smaller one to make them equal.",
+ "category": "ℕ"}

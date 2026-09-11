@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Odd",
+ "displayName": "Odd",
+ "content":
+ "`Odd n` is the statement that `n : ℕ` is odd:\n```\n∃ k : ℕ, n = 2 * k + 1\n```\nYou can easily check this with `unfold Odd`.",
+ "category": "📖︎"}

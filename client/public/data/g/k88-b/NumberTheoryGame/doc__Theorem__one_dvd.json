@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} [Monoid α] (a : α) : 1 ∣ a",
+ "name": "one_dvd",
+ "displayName": "one_dvd",
+ "content": "**One Divides Everything**\n\nFor any integer $a$: $1 \\mid a$.",
+ "category": "Divisibility"}

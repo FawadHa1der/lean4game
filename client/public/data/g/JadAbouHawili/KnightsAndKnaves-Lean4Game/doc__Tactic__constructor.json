@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "constructor",
+ "displayName": "constructor",
+ "content":
+ "The `constructor` tactic will split a goal of the form `P ∧ Q` into two subgoals `P`,`Q` where you can deal with each one separately.",
+ "category": "📖︎"}

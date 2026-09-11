@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {R} {M} {M₂} [Semiring R] [AddCommMonoid M] [AddCommMonoid M₂] [Module R M] [Module R M₂] (fₗ : M →ₗ[R] M₂) (c : R)\n  (x : M) : fₗ (c • x) = c • fₗ x",
+ "name": "LinearMap.map_smul",
+ "displayName": "LinearMap.map_smul",
+ "content": "(missing)",
+ "category": "Matrix"}

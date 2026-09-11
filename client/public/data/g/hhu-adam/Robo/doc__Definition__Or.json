@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Or",
+ "displayName": "∨",
+ "content":
+ "`A ∨ B` (“or”) is the statement that at least one of the statements `A`, `B` is true.\n\n## `A ∨ B` as proof goal\n\nYou can use the tactics `left` or `right` to decide\nwhich statement you want to prove.\n\n## `A ∨ B` as an assumption\n\nSince you do not know which of the statements `A` or `B` you can assume,\nyou may have to show the proof goal twice:\nonce under the assumption `A` and once under the assumption `B`.\nTo do this, use the tactic\n```\nobtain h | h := h\n```",
+ "category": "Logic"}

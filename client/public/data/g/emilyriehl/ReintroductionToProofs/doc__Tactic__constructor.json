@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "constructor",
+ "displayName": "constructor",
+ "content":
+ "The `constructor` tactic can be used when the goal is a conjunction (among other settings) to split the goal into cases.",
+ "category": "📖︎"}

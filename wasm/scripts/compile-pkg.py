@@ -12,7 +12,7 @@ import os, re, subprocess, sys
 src, out = sys.argv[1], sys.argv[2]
 roots = sys.argv[3:]
 opts = os.environ.get("LEAN_OPTS", "").split()
-IMP = re.compile(r"^\s*(?:public\s+|private\s+)?(?:meta\s+)?import\s+([A-Za-z0-9_.\u00AB\u00BB]+)", re.M)
+IMP = re.compile(r"^\s*(?:public\s+|private\s+)?(?:meta\s+)?import\s+([A-Za-z0-9_.'\u00AB\u00BB]+)", re.M)
 
 def path_of(mod):
     p = os.path.join(src, mod.replace(".", "/") + ".lean")

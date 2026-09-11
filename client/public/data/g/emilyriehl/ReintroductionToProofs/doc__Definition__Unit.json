@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Unit",
+ "displayName": "Unit",
+ "content":
+ "The unit type `Unit` has a single canonical element `⟨⟩`, which may be typed using `\\<` and `\\>`.",
+ "category": "Type"}

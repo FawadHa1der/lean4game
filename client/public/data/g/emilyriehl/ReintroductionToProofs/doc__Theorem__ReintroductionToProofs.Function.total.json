@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {A B} (f : A → B) (a : A) : ∃ b, f a = b",
+ "name": "ReintroductionToProofs.Function.total",
+ "displayName": "total",
+ "content":
+ "A function `f : A → B` must be *total* meaning for each `a : A` there is some `b : B` so\nthat `f a = b`.",
+ "category": "Function"}

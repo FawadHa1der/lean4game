@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rcases",
+ "displayName": "rcases",
+ "content":
+ "`rcases` is a tactic that will perform `cases` recursively, according to a pattern. One use is to provide explicit names for variables in each subgoal. For example, given a hypothesis `h : P ∨ Q`, `rcases h with p | q` can be used in place of `cases h` to give hypotheses `p : P` in the first case and `q : Q`.",
+ "category": "📖︎"}

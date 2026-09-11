@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "contradiction",
+ "displayName": "contradiction",
+ "content":
+ "Contradiction is a tactic that detects if you have contradictory assumptions and if so, closes the goal.\n\nHaving\n```\nh : False\n```\nor\n```\nhP : P\nhnP : ¬P\n```\n(or other 'simple' contradictions)\n`contradiction` will close any goal.\n\nThis is because from `False`, anything follows. `contradiction` exemplifies this principle: [#False.elim](https://leanprover-community.github.io/mathlib4_docs/Init/Prelude.html#False.elim))\n\n## Intuitively\n\nLet's check the `→` truth table:\n$$\n\\\\begin{array}{|c|c|c|}\n\\\\hline\nP & Q & P → Q \\\\\\\\\n\\\\hline\nT & T & T \\\\\\\\\n\\\\hline\nT & F & F \\\\\\\\\n\\\\hline\nF & T & T \\\\\\\\\n\\\\hline\nF & F & T \\\\\\\\\n\\\\hline\n\\\\end{array}\n$$\n\nLet's focus on part of the truth table where `P` is `False`, because we want to see what `False` implies.\n$$\n\\\\begin{array}{|c|c|c|}\n\\\\hline\nQ & False → Q \\\\\\\\\n\\\\hline\nT & T \\\\\\\\\n\\\\hline\nF & T \\\\\\\\\n\\\\hline\n\\\\end{array}\n$$\n\nWe have that the implication `False → Q` is true regardless what `Q` represents.\n\nSo `False` implies any proposition. This principle is known as: 'From `False` anything follows'.",
+ "category": "📖︎"}

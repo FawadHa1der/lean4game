@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} [LinearOrder α] {a b} (h : ¬b ≤ a) : a < b",
+ "name": "lt_of_not_ge",
+ "displayName": "lt_of_not_ge",
+ "content": "If `¬ (m ≤ n)`, then `n < m`.",
+ "category": "Theorems"}

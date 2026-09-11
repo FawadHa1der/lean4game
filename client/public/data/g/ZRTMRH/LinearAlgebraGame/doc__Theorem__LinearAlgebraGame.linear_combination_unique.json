@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] [DecidableEq V] {S}\n  (hS : LinearAlgebraGame.linear_independent_v K V S) (s t : Finset V) (hs : ↑s ⊆ S) (ht : ↑t ⊆ S) (f g : V → K)\n  (hf0 : ∀ v, v ∉ s → f v = 0) (hg0 : ∀ v, v ∉ t → g v = 0) (heq : ∑ v ∈ s, f v • v = ∑ v ∈ t, g v • v) : f = g",
+ "name": "LinearAlgebraGame.linear_combination_unique",
+ "displayName": "linear_combination_unique",
+ "content":
+ "`linear_combination_unique` is a proof that representation as a linear combination of a linearly independent\nset of vectors is unique. It takes in two subsets of a linearly independent set, along with two functions\nrepresenting the linear combinations. The functions must be zero outside of the sets, and their sums\nmust be equal. In this case, this proves that functions will be equal.",
+ "category": "Vector Spaces"}

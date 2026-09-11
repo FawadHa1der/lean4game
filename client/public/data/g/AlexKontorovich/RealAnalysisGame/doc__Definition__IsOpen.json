@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "IsOpen",
+ "displayName": "IsOpen",
+ "content":
+ "`(S : Set ℝ) : Prop := ∀ x ∈ S, ∃ r > 0, Ball x r ⊆ S`\n\nA set is open if for every point `x` in the set, there exists a radius `r > 0` such that the ball of radius `r` centered at `x` is entirely contained within the set.",
+ "category": "📖︎"}

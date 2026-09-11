@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Set.fpreimage",
+ "displayName": "f ⁻¹'",
+ "content":
+ "For a mapping `f : A → B` and a subset `T` of `B`,\n```\nf ⁻¹' T = { a | f a ∈ T}\n```\nis its preimage under `f`.\nYou write this as `f \\-1'`.\nNote the space between `f` and `\\-1'`.",
+ "category": "Set"}

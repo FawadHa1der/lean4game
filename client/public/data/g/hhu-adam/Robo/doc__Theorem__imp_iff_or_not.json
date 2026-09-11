@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {b a} : b → a ↔ a ∨ ¬b",
+ "name": "imp_iff_or_not",
+ "displayName": "imp_iff_or_not",
+ "content": "[Doc.Theorem] `tauto` can be used instead",
+ "category": "Logic"}

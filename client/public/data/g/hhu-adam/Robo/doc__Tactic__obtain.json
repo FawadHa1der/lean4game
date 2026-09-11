@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "obtain",
+ "displayName": "obtain",
+ "content":
+ "The `obtain` tactic breaks down an assumption into its individual parts.\n\n| before       | tactic                 | after                                   |\n|:------------------ |:--------------------- - |:------------------------------------------ |\n| `h : A ∧ B`        | `obtain ⟨h₁, h₂⟩ := h` | `h₁ : A` and `h₂ : B`                      |\n| `h : A ↔ B`        | `obtain ⟨h₁, h₂⟩ := h` | `h₁ : A → B` and `h₂ : B → A`              |\n| `h : Nonempty X`   | `obtain ⟨x⟩ := h`      | `x : X`                                    |\n| `h : ∃ x : X, P x` | `obtain ⟨x, hx⟩ := h`  | `x : X` and `hx : P x`                     |\n| `h : A ∨ B`        | `obtain h \\| h := h`   | a target with `h : A`, a target with `h : B` |\n\nType the brackets in the first four examples as `\\<` or `\\>`.\nHere, `⟨_, _⟩` is the *anonymous constructor*.\nYou can think of it as similar to the tuple notation in\n“an abelian group is a tuple $(G, 0, +)$ such that ...”.",
+ "category": "📖︎"}

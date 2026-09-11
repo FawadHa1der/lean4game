@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "exact",
+ "displayName": "exact",
+ "content":
+ "# Summary\nThe `exact` tactic is a means through which you give the game your answer. Many levels can be done in multiple steps. You'll use the `exact` tactic when you're ready to create the final expression. It will be evaluated to see whether it matches the goal.\n\n`exact` will work with any expression and attempt to unify it with the current goal. The simplest such expression is just a name that — `:` — “is evidence for” the goal. More complicated expressions often make use of unlocked definitions and theorems as well as function abstraction and application.\n\n# Errors\nBecause most of the starting levels use only the `exact` tactic and an expression, it's common to forget to specify the tactic. Sometimes this raises the error:\n```\nunknown tactic\n```\nand other times the much more ambiguous message:\n```\nno goals left\nThis probably means you solved the level with warnings or Lean encountered a parsing error.\n```\nHopefully we'll have better error messages in the future ☺\n\n### Example\n```\nObjects:\nP : Prop\nAssumptions:\nh : P\nGoal:\nP\n```\n----\n```\nexact h\n```\n\n### Example\n```\nObjects:\nP Q: Prop\nAssumptions:\nh : (P → Q) ∧ ¬Q\nGoal:\n¬P\n```\n----\n```\nexact λp ↦ and_right h (and_left h p)\n```",
+ "category": "📖︎"}

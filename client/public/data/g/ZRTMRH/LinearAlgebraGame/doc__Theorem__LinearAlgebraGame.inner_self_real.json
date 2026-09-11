@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (v : V) :\n  ⟪v,v⟫ = ↑⟪v,v⟫.re",
+ "name": "LinearAlgebraGame.inner_self_real",
+ "displayName": "inner_self_real",
+ "content":
+ "`inner_self_real` states that in a complex inner product space, `⟪v,v⟫` is always a real number:\n`⟪v,v⟫ = (⟪v,v⟫.re : ℂ)`.",
+ "category": "Inner Product"}

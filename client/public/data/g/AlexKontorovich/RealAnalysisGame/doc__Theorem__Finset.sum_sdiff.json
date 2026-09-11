@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {M} {s₁ s₂} [AddCommMonoid M] {f} [DecidableEq ι] (h : s₁ ⊆ s₂) :\n  ∑ x ∈ s₂ \\ s₁, f x + ∑ x ∈ s₁, f x = ∑ x ∈ s₂, f x",
+ "name": "Finset.sum_sdiff",
+ "displayName": "sum_sdiff",
+ "content":
+ "If `s₁ ⊆ s₂`, then `∑ x ∈ s₂ \\ s₁, f x + ∑ x ∈ s₁, f x = ∑ x ∈ s₂, f x`.",
+ "category": "∑aₙ"}

@@ -1,0 +1,358 @@
+From ddb4b8f9cab502022d0b7300f9d70da00629d7be Mon Sep 17 00:00:00 2001
+From: wasm64 port <wasm64@localhost>
+Date: Fri, 11 Sep 2026 14:36:08 -0400
+Subject: [PATCH] Port to the wasm64 lean4game build (Lean 4.33.0-pre, Mathlib
+ de3a9cf)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Import layer (no level or world removed, nothing a player types changed):
+- Game/Data.lean: drop 22 Mathlib.Data.* imports that are not in the essential Mathlib
+  pack (none is used by any level); follow the Data.Matrix -> LinearAlgebra.Matrix
+  and Data.Real.{Cardinality,Sqrt} -> Analysis.Real.* moves; import
+  Mathlib.LinearAlgebra.Basis.VectorSpace so the root `VectorSpace` namespace that
+  every level's `open VectorSpace` relies on stays in the closure.
+- InnerProductWorld/LemmasAndDefs.lean: drop `Mathlib.Analysis.Complex.AbsMax`
+  (245-module closure outside the pack; `Complex.abs` only appears in comments) and
+  use Mathlib.Analysis.Real.Sqrt directly (Data.Real.Sqrt is a deprecated shim).
+- Game.lean: `Languages "English"` -> `Languages "en"`; the Tutorial -> VectorSpace
+  `Dependency` moves here because the current GameServer rejects a source world that
+  is not imported by the file declaring the edge (VectorSpaceWorld.lean does not
+  import TutorialWorld).
+
+Mathlib drift (taught names kept as aliases of the identical statements):
+- `MulAction.mul_smul` -> `SemigroupAction.mul_smul` in the VectorSpaceWorld/Level01
+  inventory (players type `mul_smul`, which still resolves).
+- `alias Finset.sum_eq_sum_diff_singleton_add := Finset.sum_eq_sum_sdiff_singleton_add`
+  (LIS Level08; the old additive name was removed upstream).
+- `alias sq_eq_sq := sq_eq_sq₀` (InnerProductWorld Level03).
+
+Proof drift (`field_simp` rewrite, unused simp args):
+- InnerProductWorld Level06: the taught `field_simp [h_nonzero]` now leaves
+  `⟪u,v⟫ * (1 - 1) = 0`; the level closes with an extra `ring` step (hint added).
+- LemmasAndDefs.ortho_decom_parts: `ring` after `field_simp`; Level07 helper
+  `norm_sq_scaled_eq`: redundant `ring` removed; Level07 `simp [div_mul_cancel,
+  v_norm_zero] at h_mul` -> `simp [v_norm_zero] at h_mul` (unused arg, hint updated);
+  two unused simp arguments dropped in LemmasAndDefs helper proofs.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+---
+ Game.lean                                     |  5 +-
+ Game/Data.lean                                | 79 ++++++++++++-------
+ .../InnerProductWorld/LemmasAndDefs.lean      | 10 ++-
+ Game/Levels/InnerProductWorld/Level03.lean    |  4 +
+ Game/Levels/InnerProductWorld/Level06.lean    |  4 +
+ Game/Levels/InnerProductWorld/Level07.lean    |  7 +-
+ .../LinearIndependenceSpanWorld/Level08.lean  |  4 +
+ Game/Levels/VectorSpaceWorld.lean             |  5 +-
+ Game/Levels/VectorSpaceWorld/Level01.lean     |  4 +-
+ 9 files changed, 83 insertions(+), 39 deletions(-)
+
+diff --git a/Game.lean b/Game.lean
+index e9b2300..b41c7fe 100644
+--- a/Game.lean
++++ b/Game.lean
+@@ -51,13 +51,16 @@ please file them at: https://github.com/ZRTMRH/LinearAlgebraGame/issues
+ * **Cover Image:** Daniel Zhou, Nina Ma
+ "
+ 
+-Languages "English"
++Languages "en"
+ CaptionShort "Linear Algebra Game"
+ CaptionLong "Learn linear algebra through interactive theorem proving in Lean 4. Prove famous results like the Cauchy-Schwarz inequality and work through vector spaces, linear independence, and inner products based on Axler's 'Linear Algebra Done Right'."
+ CoverImage "images/cover.png"
+ 
+ namespace LinearAlgebraGame
+ 
++-- wasm64 port: moved here from `Game/Levels/VectorSpaceWorld.lean` (see the note there)
++Dependency TutorialWorld → VectorSpaceWorld
++
+ MakeGame
+ 
+ end LinearAlgebraGame
+diff --git a/Game/Data.lean b/Game/Data.lean
+index bb24734..d6f1f23 100644
+--- a/Game/Data.lean
++++ b/Game/Data.lean
+@@ -70,7 +70,8 @@ import Mathlib.Data.FinEnum-/
+ -- import Mathlib.Data.Finite.Card
+ -- import Mathlib.Data.Finite.Defs
+ -- import Mathlib.Data.Finite.Set
+-import Mathlib.Data.Finmap
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Finmap
+ -- import Mathlib.Data.Finset.Antidiagonal
+ -- import Mathlib.Data.Finset.Attr
+ -- import Mathlib.Data.Finset.Basic
+@@ -243,22 +244,34 @@ import Mathlib.Data.MLList.Dedup
+ import Mathlib.Data.MLList.DepthFirst
+ import Mathlib.Data.MLList.IO
+ import Mathlib.Data.MLList.Split-/
+-import Mathlib.Data.Matrix.Auto
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Matrix.Auto
+ import Mathlib.Data.Matrix.Basic
+ import Mathlib.Data.Matrix.Basis
+ import Mathlib.Data.Matrix.Block
+-import Mathlib.Data.Matrix.CharP
+-import Mathlib.Data.Matrix.ColumnRowPartitioned
+-import Mathlib.Data.Matrix.DMatrix
+-import Mathlib.Data.Matrix.DualNumber
+-import Mathlib.Data.Matrix.Hadamard
+-import Mathlib.Data.Matrix.Invertible
+-import Mathlib.Data.Matrix.Kronecker
+-import Mathlib.Data.Matrix.Notation
+-import Mathlib.Data.Matrix.PEquiv
+-import Mathlib.Data.Matrix.Rank
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Matrix.CharP
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Matrix.ColumnRowPartitioned
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Matrix.DMatrix
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Matrix.DualNumber
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Matrix.Hadamard
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Matrix.Invertible
++import Mathlib.LinearAlgebra.Matrix.Kronecker  -- wasm64 port: was Mathlib.Data.Matrix.Kronecker
++import Mathlib.LinearAlgebra.Matrix.Notation  -- wasm64 port: was Mathlib.Data.Matrix.Notation
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Matrix.PEquiv
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Matrix.Rank
++-- wasm64 port: keeps the root `VectorSpace` namespace (`VectorSpace.card_fintype`) in the closure, which
++-- the levels' `open VectorSpace` needs; it was reached through the imports dropped above
++import Mathlib.LinearAlgebra.Basis.VectorSpace
+ import Mathlib.Data.Matrix.Reflection
+-import Mathlib.Data.Matrix.RowCol
++import Mathlib.LinearAlgebra.Matrix.RowCol  -- wasm64 port: was Mathlib.Data.Matrix.RowCol
+ /-import Mathlib.Data.Matroid.Basic
+ import Mathlib.Data.Matroid.Dual
+ import Mathlib.Data.Matroid.IndepAxioms
+@@ -374,11 +387,16 @@ import Mathlib.Data.NNRat.Lemmas-/
+ -- import Mathlib.Data.Nat.Units
+ -- import Mathlib.Data.Nat.Upto
+ -- import Mathlib.Data.Nat.WithBot
+-import Mathlib.Data.Num.Basic
+-import Mathlib.Data.Num.Bitwise
+-import Mathlib.Data.Num.Lemmas
+-import Mathlib.Data.Num.Prime
+-import Mathlib.Data.Opposite
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Num.Basic
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Num.Bitwise
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Num.Lemmas
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Num.Prime
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Opposite
+ /-import Mathlib.Data.Option.Basic
+ import Mathlib.Data.Option.Defs
+ import Mathlib.Data.Option.NAry
+@@ -393,11 +411,16 @@ import Mathlib.Data.PFunctor.Univariate.Basic
+ import Mathlib.Data.PFunctor.Univariate.M-/
+ import Mathlib.Data.PNat.Basic
+ import Mathlib.Data.PNat.Defs
+-import Mathlib.Data.PNat.Factors
+-import Mathlib.Data.PNat.Find
+-import Mathlib.Data.PNat.Interval
+-import Mathlib.Data.PNat.Prime
+-import Mathlib.Data.PNat.Xgcd
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.PNat.Factors
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.PNat.Find
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.PNat.Interval
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.PNat.Prime
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.PNat.Xgcd
+ /-import Mathlib.Data.PSigma.Order
+ import Mathlib.Data.Part
+ import Mathlib.Data.Pi.Interval
+@@ -476,9 +499,10 @@ import Mathlib.Data.Rbtree.Init
+ import Mathlib.Data.Rbtree.Insert
+ import Mathlib.Data.Rbtree.Main
+ import Mathlib.Data.Rbtree.MinMax-/
+-import Mathlib.Data.Real.Archimedean
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Real.Archimedean
+ import Mathlib.Data.Real.Basic
+-import Mathlib.Data.Real.Cardinality
++import Mathlib.Analysis.Real.Cardinality  -- wasm64 port: was Mathlib.Data.Real.Cardinality
+ /-import Mathlib.Data.Real.ConjExponents
+ import Mathlib.Data.Real.ENatENNReal
+ import Mathlib.Data.Real.EReal
+@@ -490,8 +514,9 @@ import Mathlib.Data.Real.Pi.Bounds
+ import Mathlib.Data.Real.Pi.Leibniz
+ import Mathlib.Data.Real.Pi.Wallis
+ import Mathlib.Data.Real.Pointwise-/
+-import Mathlib.Data.Real.Sign
+-import Mathlib.Data.Real.Sqrt
++-- wasm64 port: not in the essential Mathlib pack (unused by any level)
++-- import Mathlib.Data.Real.Sign
++import Mathlib.Analysis.Real.Sqrt  -- wasm64 port: was Mathlib.Data.Real.Sqrt
+ /-import Mathlib.Data.Rel
+ import Mathlib.Data.SProd
+ import Mathlib.Data.Semiquot
+diff --git a/Game/Levels/InnerProductWorld/LemmasAndDefs.lean b/Game/Levels/InnerProductWorld/LemmasAndDefs.lean
+index 3841260..c430600 100644
+--- a/Game/Levels/InnerProductWorld/LemmasAndDefs.lean
++++ b/Game/Levels/InnerProductWorld/LemmasAndDefs.lean
+@@ -4,10 +4,11 @@ import Game.Levels.VectorSpaceWorld
+ -- Minimal Mathlib imports for Lean 4.21.0 - avoiding conflicts with custom definitions
+ import Mathlib.Data.Complex.Basic
+ import Mathlib.Data.Real.Basic
+-import Mathlib.Analysis.Complex.AbsMax  -- For Complex absolute value
++-- wasm64 port: `Mathlib.Analysis.Complex.AbsMax` dropped (not in the essential pack; `Complex.abs`
++-- is only mentioned in comments; the norm lemmas used come from Mathlib.Analysis.Complex.Basic)
+ import Mathlib.Analysis.Normed.Group.Basic
+ import Mathlib.Analysis.Complex.Basic  -- For Complex.normSq_eq_norm_sq
+-import Mathlib.Data.Real.Sqrt  -- For Real.sq_sqrt
++import Mathlib.Analysis.Real.Sqrt  -- For Real.sq_sqrt (wasm64 port: was Mathlib.Data.Real.Sqrt)
+ 
+ open Function Set VectorSpace
+ 
+@@ -125,7 +126,7 @@ theorem conj_mull (a b : ℂ) : conj (a * b) = conj a * conj b := by
+ 
+ /-- `conj 0 = 0`-/
+ theorem conj_zero : conj (0 : ℂ) = 0 := by
+-  apply Complex.ext <;> simp [Complex.conj_re, Complex.conj_im]
++  apply Complex.ext <;> simp
+ 
+ /--This is another way to state that `⟪v, v⟫` is real: `⟪v, v⟫ = ⟪v, v⟫.re`."-/
+ theorem inner_self_re_v (V : Type) [AddCommGroup V] [VectorSpace ℂ V] [InnerProductSpace_v V] (v : V) :
+@@ -204,7 +205,7 @@ theorem ortho_decom_parts (u v : V) (h : v ≠ 0) :
+   let c := ⟪u,v⟫ / (‖v‖^2)  
+   let w := u - c • v
+   constructor
+-  · simp [w]
++  · simp
+   · -- Prove orthogonality directly (same as Level06 ortho_decom)
+     unfold orthogonal
+     rw[inner_minus_left]
+@@ -220,6 +221,7 @@ theorem ortho_decom_parts (u v : V) (h : v ≠ 0) :
+       apply h
+       exact (inner_self_eq_zero v).1 contr
+     field_simp [h_nonzero]
++    ring  -- wasm64 port: the current `field_simp` leaves `⟪u,v⟫ * (1 - 1) = 0`
+ 
+ -- Lemma that the real part of a complex number is bounded by its norm
+ theorem re_le_abs (z : ℂ) : z.re ≤ ‖z‖ := by
+diff --git a/Game/Levels/InnerProductWorld/Level03.lean b/Game/Levels/InnerProductWorld/Level03.lean
+index ff3a3d6..8fc3448 100644
+--- a/Game/Levels/InnerProductWorld/Level03.lean
++++ b/Game/Levels/InnerProductWorld/Level03.lean
+@@ -53,6 +53,10 @@ If you have hypotheses `h1 : 0 ≤ a`, `h2 : 0 ≤ b`, then `Left.mul_nonneg h1
+ -/
+ TheoremDoc Left.mul_nonneg as "Left.mul_nonneg" in "ℂ"
+ 
++-- wasm64 port: Mathlib removed `sq_eq_sq` (it was a deprecated alias of `sq_eq_sq₀`); keep the name
++-- this level teaches as an alias of the same statement.
++alias _root_.sq_eq_sq := sq_eq_sq₀
++
+ /--
+ `sq_eq_sq` is a proof that if `a` and `b` are nonnegative, `a^2 = b^2` if and only if `a = b`. If you
+ have hypotheses `h1 : 0 ≤ a`, `h2 : 0 ≤ b`, then `sq_eq_sq h1 h2` is a proof that `a ^ 2 = b ^ 2 ↔ a = b`.
+diff --git a/Game/Levels/InnerProductWorld/Level06.lean b/Game/Levels/InnerProductWorld/Level06.lean
+index c5efe05..39aefa1 100644
+--- a/Game/Levels/InnerProductWorld/Level06.lean
++++ b/Game/Levels/InnerProductWorld/Level06.lean
+@@ -71,6 +71,10 @@ Statement ortho_decom (u v : V) (h : v ≠ 0) : orthogonal (u - (⟪u,v⟫ / (
+   suffices h_nonzero : ⟪v, v⟫ ≠ 0
+   Hint (hidden := true) "Try `field_simp [h_nonzero]`"
+   · field_simp [h_nonzero]
++    -- wasm64 port: the current `field_simp` leaves `⟪u,v⟫ * (1 - 1) = 0`; one more step closes it
++    Hint "`field_simp` has cleared the denominator; finish the algebra."
++    Hint (hidden := true) "Try `ring`"
++    ring
+   Hint "Now prove that ⟪v,v⟫ ≠ 0 when v ≠ 0"
+   Hint (hidden := true) "Try `intro contr`"
+   intro contr
+diff --git a/Game/Levels/InnerProductWorld/Level07.lean b/Game/Levels/InnerProductWorld/Level07.lean
+index e473758..c88e501 100644
+--- a/Game/Levels/InnerProductWorld/Level07.lean
++++ b/Game/Levels/InnerProductWorld/Level07.lean
+@@ -122,8 +122,7 @@ lemma norm_sq_scaled_eq {V : Type} [AddCommGroup V] [VectorSpace ℂ V]  [InnerP
+   rw [sca_mul c v]
+   ring_nf
+   simp [c_def]
+-  field_simp [ne_of_gt v_pos]
+-  ring
++  field_simp [ne_of_gt v_pos]  -- wasm64 port: the current `field_simp` closes the goal (no `ring` needed)
+ 
+ NewTheorem LinearAlgebraGame.norm_zero_v LinearAlgebraGame.pythagorean LinearAlgebraGame.inner_self_nonneg
+   LinearAlgebraGame.inner_self_eq_zero LinearAlgebraGame.sca_mul LinearAlgebraGame.ortho_decom
+@@ -225,8 +224,8 @@ Statement Cauchy_Schwarz (u v : V) : ‖⟪u,v⟫‖ ≤ ‖u‖ * ‖v‖ := by
+     -- Get the squared inequality by multiplying both sides by ‖v‖^2
+     Hint (hidden := true) "Try `have h_mul := mul_le_mul_of_nonneg_right cv_le_u (sq_nonneg ‖v‖)`"
+     have h_mul := mul_le_mul_of_nonneg_right cv_le_u (sq_nonneg ‖v‖)
+-    Hint (hidden := true) "Try `simp [div_mul_cancel, v_norm_zero] at h_mul`"
+-    simp [div_mul_cancel, v_norm_zero] at h_mul
++    Hint (hidden := true) "Try `simp [v_norm_zero] at h_mul`"
++    simp [v_norm_zero] at h_mul
+     Hint (hidden := true) "Try `have sq_ineq : ‖⟪u,v⟫‖^2 ≤ ‖u‖^2 * ‖v‖^2 := h_mul`"
+     have sq_ineq : ‖⟪u,v⟫‖^2 ≤ ‖u‖^2 * ‖v‖^2 := h_mul
+     
+diff --git a/Game/Levels/LinearIndependenceSpanWorld/Level08.lean b/Game/Levels/LinearIndependenceSpanWorld/Level08.lean
+index 28a7889..20bff46 100644
+--- a/Game/Levels/LinearIndependenceSpanWorld/Level08.lean
++++ b/Game/Levels/LinearIndependenceSpanWorld/Level08.lean
+@@ -78,6 +78,10 @@ give you a hypothesis `h : isRational √2`.
+ -/
+ TacticDoc by_contra
+ 
++-- wasm64 port: Mathlib renamed this lemma to `Finset.sum_eq_sum_sdiff_singleton_add` (2026-06-03) and the
++-- old additive name no longer exists; keep the name the game teaches as an alias of the same statement.
++alias _root_.Finset.sum_eq_sum_diff_singleton_add := Finset.sum_eq_sum_sdiff_singleton_add
++
+ /--
+ If you have some set s, where you know `h : i ∈ s`, then `sum_eq_sum_diff_singleton_add h` is a proof that
+ `(Finset.sum s fun x => f x) = (Finset.sum (s \ {i}) fun x => f x) + f i`
+diff --git a/Game/Levels/VectorSpaceWorld.lean b/Game/Levels/VectorSpaceWorld.lean
+index 7ba1a7a..f48f015 100644
+--- a/Game/Levels/VectorSpaceWorld.lean
++++ b/Game/Levels/VectorSpaceWorld.lean
+@@ -9,7 +9,10 @@ namespace LinearAlgebraGame
+ World "VectorSpaceWorld"
+ Title "Vector Space World"
+ 
+-Dependency TutorialWorld → VectorSpaceWorld
++-- wasm64 port: this file does not import `Game.Levels.TutorialWorld`, and the current GameServer's
++-- `Dependency` command rejects a world that is not yet in the environment; the edge is declared in
++-- `Game.lean` instead (same graph).
++-- Dependency TutorialWorld → VectorSpaceWorld
+ 
+ Introduction
+ "
+diff --git a/Game/Levels/VectorSpaceWorld/Level01.lean b/Game/Levels/VectorSpaceWorld/Level01.lean
+index 4d9836a..ac2b7c2 100644
+--- a/Game/Levels/VectorSpaceWorld/Level01.lean
++++ b/Game/Levels/VectorSpaceWorld/Level01.lean
+@@ -181,7 +181,7 @@ TheoremDoc add_smul as "add_smul" in "Vector Spaces"
+ then `∀ (a b : K) (x : V), (a * b) • x = a • (b • x)`. It can be considered as associativity of scalar
+ multiplication.
+ -/
+-TheoremDoc MulAction.mul_smul as "mul_smul" in "Vector Spaces"
++TheoremDoc SemigroupAction.mul_smul as "mul_smul" in "Vector Spaces"
+ 
+ /--
+ `one_smul` is one of the axioms of a vector space. It is a proof that if we know `vs : VectorSpace K V`,
+@@ -204,7 +204,7 @@ TheoremDoc zero_add as "zero_add" in "Groups"
+ -/
+ TheoremDoc add_zero as "add_zero" in "Groups"
+ 
+-NewTheorem add_right_cancel add_left_cancel smul_add add_smul MulAction.mul_smul one_smul symm zero_add add_zero
++NewTheorem add_right_cancel add_left_cancel smul_add add_smul SemigroupAction.mul_smul one_smul symm zero_add add_zero
+ 
+ TheoremTab "Groups"
+ 
+-- 
+2.50.1 (Apple Git-155)
+

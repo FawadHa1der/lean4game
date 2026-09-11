@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "SeriesConv",
+ "displayName": "SeriesConv",
+ "content":
+ "`(a : ℕ → ℝ) : Prop := SeqConv (Series a)`\n\nThe Series of a sequence `a : N → ℝ` converges if the sequence of its partial sums converges.",
+ "category": "📖︎"}

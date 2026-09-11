@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "ite",
+ "displayName": "ite",
+ "content":
+ "`ite` stands for `if then else`. If is used when creating functions. You can think of `ite P f1 f2` as\n\"If P then f1 else f2\". This function gives you f1 when P is True, and f2 otherwise. This can help you\ndesign functions that are 0 outside of certain sets.",
+ "category": "📖︎"}

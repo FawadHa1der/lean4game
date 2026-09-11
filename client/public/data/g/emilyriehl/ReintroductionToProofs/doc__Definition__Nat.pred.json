@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Nat.pred",
+ "displayName": "pred",
+ "content":
+ "The function `Nat.pred : ℕ → ℕ` is defined by recursion to send `0` to `0` and `succ n` to `n`.",
+ "category": "ℕ"}

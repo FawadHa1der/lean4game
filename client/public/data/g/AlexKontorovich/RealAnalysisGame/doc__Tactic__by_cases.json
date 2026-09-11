@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "by_cases",
+ "displayName": "by_cases",
+ "content":
+ "The `by_cases` tactic has syntax `by_cases h : fact`, where `h` is your name for a new hypothesis,\nand `fact` is the fact claimed in the hypothesis. Calling `by_cases` creates two subgoals, one with\nthe additional hypothesis `h : fact`, and the second has the hypothesis `h : ¬ fact`.",
+ "category": "📖︎"}

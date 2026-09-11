@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (m n : ℕ) (a✝ : m.succ = n.succ) : m = n",
+ "name": "ReintroductionToProofs.Nat.succ_injective",
+ "displayName": "succ_injective",
+ "content": "The successor function is injective.",
+ "category": "ℕ"}

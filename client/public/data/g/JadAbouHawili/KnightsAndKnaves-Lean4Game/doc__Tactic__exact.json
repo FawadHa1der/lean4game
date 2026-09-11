@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "exact",
+ "displayName": "exact",
+ "content":
+ "## Overview\nFor the following proof state:\n```\nObjects\nP : Prop\n\nAssumptions\nhP : P\n\nGoal:\nP\n```\nRemember that `hP : P` where `P : Prop` means `hP` is a proof of `P`.\n\nSince the goal is to prove `P`, the only thing we have to do is to let Lean know that we do have such a proof. This is done by `exact hP`.\n\nIn other words, `hP` is EXACTLY whats needed to prove the goal, the type of `hP` EXACTLY matches the goal, so `exact h` will do the job.",
+ "category": "📖︎"}

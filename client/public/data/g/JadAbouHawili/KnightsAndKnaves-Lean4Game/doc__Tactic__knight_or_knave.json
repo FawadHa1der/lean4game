@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "knight_or_knave",
+ "displayName": "knight_or_knave",
+ "content":
+ "For an islander `A`,\n```\nknight_or_knave A\n```\ntakes two cases, the first being `h : A.isKnight` and the second being `h:A.isKnave`\n\nYou can choose the name of the hypothesis of each case by\n```\nknight_or_knave A with AKnight AKnave\n```\nwhich gives the first case `AKnight : A.isKnight` and the second case `AKnave : A.isKnave`.\n\n# Under the hood\n`knight_or_knave A` is just a macro for\n```\ncases isKnight_orisKnave A\n```\nwhere `isKnight_or_isKnave A : A.isKnight or A.isKnave`",
+ "category": "KnightsAndKnaves"}

@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (x y : Bool) (a✝ : (!x) = !y) : x = y",
+ "name": "ReintroductionToProofs.Bool.not_injective",
+ "displayName": "not_injective",
+ "content": "The function `not : Bool → Bool` is surjective.",
+ "category": "Bool"}

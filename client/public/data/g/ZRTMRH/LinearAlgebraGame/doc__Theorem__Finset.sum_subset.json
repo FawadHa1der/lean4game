@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {M} {s₁ s₂} [AddCommMonoid M] {f} (h : s₁ ⊆ s₂) (hf : ∀ x, x ∈ s₂ → x ∉ s₁ → f x = 0) :\n  ∑ x ∈ s₁, f x = ∑ x ∈ s₂, f x",
+ "name": "Finset.sum_subset",
+ "displayName": "sum_subset",
+ "content":
+ "`sum_subset` is a proof that if you have a function that is zero outside of some set, then a sum\non a superset of that set is equal to a sum on that set. If you have a hypothesis `hSub : a ⊆ b`, another hypothesis\n`hZero : ∀ x ∈ b, x ∉ a → f x = 0`, then `sum_subset hSub hZero` is a proof that\n`Finset.sum b f = Finset.sum a f`",
+ "category": "Sets"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} {β} {f} (hf : Function.Surjective f) (s : Set β) : f '' f ⁻¹' s = s",
+ "name": "Function.Surjective.image_preimage",
+ "displayName": "Surjective.image_preimage",
+ "content": "(missing)",
+ "category": "Function"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "orthogonal",
+ "displayName": "orthogonal",
+ "content":
+ "`orthogonal` is how we say vectors are orthogonal. The syntax is `orthogonal v w`. This means that the\ninner product of `v` and `w` is `0`. In Lean, we define it by saying\n\n```\ndef orthogonal (u v : V) : Prop := ⟪u, v⟫ = (0 : ℂ)\n```",
+ "category": "📖︎"}

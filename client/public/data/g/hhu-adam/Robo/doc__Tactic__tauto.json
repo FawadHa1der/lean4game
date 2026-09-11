@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "tauto",
+ "displayName": "tauto",
+ "content":
+ "The tactic `tauto` proves logical tautologies.\n\n# Friends and relatives\n\nSometimes the proof target must first be abstracted with `generalize` so that `tauto` recognizes the tautology.",
+ "category": "📖︎"}

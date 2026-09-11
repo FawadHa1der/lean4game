@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "have",
+ "displayName": "have",
+ "content":
+ "## Summary\n`have` allows you to create your own statements. It allows you to prove hypotheses which you can then\nuse to prove the goal.\n\nThe syntax for `have` is `have h : Hypothesis := proof` to create a hypothesis `h : Hypothesis` where\n`proof` is a proof of the hypothesis\n\n## `by`\n`by` allows you to write muli-line proofs. When your have statement is a lemma that will take multiple\nsteps to prove, replacing your proof with `by` will add a subgoal to prove your hypothesis. All the\nlines proving this hypothesis will need to be indented.\n\nUsing `by` can also only be done in editor mode, which can be accessed by clicking the \"<\\>\" button in the\ntop right.\n\n## Example\nIf you want to have a hypothesis `h : 0 • v = 0`, then `have h : 0 • v = 0 := zero_smul_v v` will create\nthat hypothesis\n\n## Example\nIf you want to prove a lemma `simple_lemma : ∀ (a b c n : ℕ+), n > 2 → a ^ n + b ^ n ≠ c ^ n`, then\n`have simple_lemma : ∀ (a b c n : ℕ+), n > 2 → a ^ n + b ^ n ≠ c ^ n := by` will change the goal to\nproving your lemma, and once you prove it, you can then use the lemma.",
+ "category": "📖︎"}

@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " : Nat.Prime 2",
+ "name": "Nat.prime_two",
+ "displayName": "prime_two",
+ "content": "(missing)",
+ "category": "ℕ"}

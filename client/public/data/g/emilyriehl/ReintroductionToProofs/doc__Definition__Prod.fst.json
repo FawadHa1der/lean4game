@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Prod.fst",
+ "displayName": "fst",
+ "content":
+ "For any types `A` and `B`, `Prod.fst : A × B → A` is the function that sends `p : A × B` to its first coordinate `p.1 : A`.",
+ "category": "Prod"}

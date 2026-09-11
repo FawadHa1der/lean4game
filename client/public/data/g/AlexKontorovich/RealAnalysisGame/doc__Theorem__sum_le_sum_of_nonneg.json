@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {N} [AddCommMonoid N] [PartialOrder N] [IsOrderedAddMonoid N] {f} {s t} (h : s ⊆ t) (hf : ∀ i, i ∈ t → 0 ≤ f i) :\n  ∑ i ∈ s, f i ≤ ∑ i ∈ t, f i",
+ "name": "sum_le_sum_of_nonneg",
+ "displayName": "sum_le_sum_of_nonneg",
+ "content":
+ "If `s ⊆ t`, and `0 ≤ f i`, for all `i ∈ t`, then `∑ i ∈ s, f i ≤ ∑ i ∈ t, f i`.",
+ "category": "∑aₙ"}

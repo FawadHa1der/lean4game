@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {s t} : s \\ t ⊆ s",
+ "name": "Set.diff_subset",
+ "displayName": "diff_subset",
+ "content":
+ "`diff_subset` is a proof that `s ⊆ s \\ t`. The syntax is `diff_subset s t`.",
+ "category": "Sets"}

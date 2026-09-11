@@ -76,7 +76,8 @@ body.lean-boot-banner-visible .app {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 248, 225, 0.96);
+  /* solid: at 96 % the Execute button underneath showed through as a ghost */
+  background: rgb(255, 248, 225);
   border-top: 1px solid #e2c76b;
   color: #6b5900;
   font-size: 0.9rem;

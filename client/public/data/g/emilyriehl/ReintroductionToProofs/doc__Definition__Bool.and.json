@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Bool.and",
+ "displayName": "and",
+ "content":
+ "The function `and : Bool → Bool → Bool` captures the logical operation of conjunction.",
+ "category": "Bool"}

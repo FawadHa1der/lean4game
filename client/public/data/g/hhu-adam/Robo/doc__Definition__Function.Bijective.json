@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.Bijective",
+ "displayName": "Bijective",
+ "content": "A mapping ist bijectiv, if it is injektiv and surjektiv.",
+ "category": "Function"}

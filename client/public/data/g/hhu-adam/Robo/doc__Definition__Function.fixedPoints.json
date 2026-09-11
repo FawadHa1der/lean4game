@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.fixedPoints",
+ "displayName": "fixedPoints",
+ "content":
+ "For a mapping `f : A → A`, `fixedPoints f : Set A` is the set of fixed points of `f `.\nLook up definition with `unfold fixedPoints`.",
+ "category": "Function"}

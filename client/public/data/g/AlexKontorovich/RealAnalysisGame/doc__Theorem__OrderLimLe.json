@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a : ℕ → ℝ) (L : ℝ) (ha : SeqLim a L) (K : ℝ) (hK : SeqBddBy a K) : L ≤ K",
+ "name": "OrderLimLe",
+ "displayName": "OrderLimLe",
+ "content":
+ "If a sequence `a` converges to `L` and `a n ≤ K` for all `n`, then `L ≤ K`.",
+ "category": "aₙ"}

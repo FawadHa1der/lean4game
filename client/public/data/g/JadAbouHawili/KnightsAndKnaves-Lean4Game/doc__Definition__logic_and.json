@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "logic_and",
+ "displayName": "and",
+ "content":
+ "`∧` read as 'and'\nTruth table:\n\n# Truth table\n\nThe only way to introduce the symbol `∧` i.e prove a statement involving `∧` is to use the\n`And.intro` introduction rule which requires a proof of `P` and a proof of `Q`.\n\nWe can conclude from this that `P ∧ Q` is true in only one case: when `P` is true and `Q` is true. It is false otherwise\n\nIn truth table form, this looks like:\n\n$$\n\\\\begin{array}{|c|c|c|}\n\\\\hline\nx=2 & y=6 & x=2 ∧ y=6 \\\\\\\\\\\\\\\\\n\\\\hline\nT & T & T \\\\\\\\\\\\\\\\\n\\\\hline\nT & F & F \\\\\\\\\\\\\\\\\n\\\\hline\nF & T & F \\\\\\\\\\\\\\\\\n\\\\hline\nF & F & F \\\\\\\\\\\\\\\\\n\\\\hline\n\\\\end{array}\n$$\n\nRestart the level and use these two alternative techniques to solve it:\n- Moreover, instead of `And.intro hP hQ` you can use the notation `\\\\<hP,hQ\\\\>` which means the same thing.",
+ "category": "Prop"}

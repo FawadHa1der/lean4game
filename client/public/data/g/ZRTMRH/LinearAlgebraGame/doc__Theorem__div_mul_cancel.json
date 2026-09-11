@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {G} [Group G] (a b : G) : a / b * b = a",
+ "name": "div_mul_cancel",
+ "displayName": "div_mul_cancel",
+ "content":
+ "`div_mul_cancel` shows that division followed by multiplication cancels.",
+ "category": "Inner Product"}

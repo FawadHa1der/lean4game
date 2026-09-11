@@ -89,10 +89,21 @@
   "Ready — plays offline": "Ready — plays offline",
   "Download ≈{{mb}} MB": "Download ≈{{mb}} MB",
   "Not available on this build": "Not available on this build",
+  "Prepare offline": "Prepare offline",
+  "Remove download": "Remove download",
+  "Preparing… {{done}} / {{total}} MB": "Preparing… {{done}} / {{total}} MB",
+  "Prepare note": "Keeps downloading while you browse this site; reloading the page cancels it.",
+  "Prepare memory note": "Preparing a game while another one is loaded needs extra memory on this device.",
+  "Preparation failed: {{error}}": "Preparation failed: {{error}}",
+  "Prepare busy": "Already being downloaded — by the game loaded in this tab or by another tab.",
+  "Caching the checker": "Environment downloaded — caching the checker so this game plays offline…",
+  "In use by this tab": "Loaded in this tab — its download is managed by the game.",
+  "Offline storage unavailable": "This browser mode cannot keep games offline; each visit downloads the game again.",
+  "Storage meter": "Games cached in this browser: {{n}} ({{used}} GB of the {{quota}} GB this site may use)",
   "Progress": "Progress",
   "{{done}} of {{total}} levels done": "{{done}} of {{total}} levels done",
   "Wasm notice": {
-    "description": "Games run <strong>fully in your browser</strong> — no server. Each game's environment is downloaded on first play and cached by your browser (the tiles below say how much); later visits start in seconds. The first game also downloads the checker once (about 260 MB)."
+    "description": "Games run <strong>fully in your browser</strong> — no server. Each game's environment is downloaded on first play and cached by your browser (the tiles below say how much); later visits start in seconds. The first game also downloads the checker once (about 150 MB)."
   },
   "Small device notice": "This device reports about {{gb}} GB of memory; the checker needs roughly 8 GB free while it starts and may not start here.",
   "RAM": "RAM",

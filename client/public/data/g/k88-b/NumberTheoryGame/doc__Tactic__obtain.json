@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "obtain",
+ "displayName": "obtain",
+ "content":
+ "The `obtain` tactic extracts a witness from a hypothesis that contains an \\\"exists\\\" ($\\exists$) or a logical AND ($\\wedge$).\nIf you have a hypothesis `h : x ∣ y` (which means `∃ k, y = x * k`), you can type\n`obtain ⟨k, hk⟩ := h` to get the variable `k` and the equation `hk : y = x * k`.\n*(To type `⟨` and `⟩`, write `\\<` and `\\>`, then press Space.)*\n\n**Nested and multiple arguments:**\nFor more complex hypotheses, such as `IsGCD(c, m) 1` (which contains multiple nested `∧` and `∃`), you can extract everything at once by providing up to 4 arguments.\nFor example: `obtain ⟨_, x, y, hxy⟩ := h`.\nThe underscore `_` is used to discard parts of the hypothesis you don't need (like the divisibility facts), while binding the Bézout witnesses to `x` and `y` and the equation to `hxy`.\n\n**Dot notation alternative:**\nIf a hypothesis is just a nested logical AND (`∧`), you can extract its pieces directly using **dot notation** without destroying the original hypothesis via `obtain`. For example, `h.1.1` gets the first fact, and `h.1.2` gets the second.",
+ "category": "📖︎"}

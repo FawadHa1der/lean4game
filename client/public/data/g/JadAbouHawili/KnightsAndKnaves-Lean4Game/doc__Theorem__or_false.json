@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (p : Prop) : (p or False) = p",
+ "name": "or_false",
+ "displayName": "or_false",
+ "content":
+ "Either `P` being true or `False` being true is equivalent to `P` being true",
+ "category": "Logic"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "field_simp",
+ "displayName": "field_simp",
+ "content":
+ "The `field_simp` tactic tries to clear denominators, if it can figure out that the denominators are non-zero (or in the case of inequalities, positive).",
+ "category": "📖︎"}

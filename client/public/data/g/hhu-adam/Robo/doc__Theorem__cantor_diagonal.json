@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {A Y} (f : A → A → Y) (hf : Function.Surjective f) (s : Y → Y) : Nonempty ↑(Function.fixedPoints s)",
+ "name": "cantor_diagonal",
+ "displayName": "cantor_diagonal",
+ "content": "(missing)",
+ "category": "Function"}

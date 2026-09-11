@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "GameLogic.FunElim",
+ "displayName": "→ elim",
+ "content":
+ "# Function Application/Implication Elimination\n`P → Q` is propostion given to functions from evidence of `P` to evidence of `Q`.\n# Juxtaposition\nJuxtaposition just means “to place next to each other,” which is what we'll do to give a parameter to a function.\n### Example\n```\n-- Assumptions\ne₁ : P\ne₂ : Q\nGoal:\nP ∧ Q\n```\n----\n```\nexact (and_intro e₁ e₂)\n```\n### Example\n```\n-- Assumptions\na : A\nh₁ : A → B\n-- Goal\nB\n```\n---\n```\nexact (h₁ a)\n```\nTakes `h₁` and applies `a` to it.",
+ "category": "📖︎"}

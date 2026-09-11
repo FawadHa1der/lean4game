@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {S} (hA : Inhabitant'.A ∈ S) (hB : Inhabitant'.B ∈ S) (hC : Inhabitant'.C ∈ S) :\n  S = {Inhabitant'.A, Inhabitant'.B, Inhabitant'.C}",
+ "name": "full3",
+ "displayName": "full3",
+ "content": "(missing)",
+ "category": "[anonymous]"}

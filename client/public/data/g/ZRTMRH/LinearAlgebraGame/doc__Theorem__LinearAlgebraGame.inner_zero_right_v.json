@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (v : V) : ⟪v,0⟫ = 0",
+ "name": "LinearAlgebraGame.inner_zero_right_v",
+ "displayName": "inner_zero_right_v",
+ "content":
+ "`inner_zero_right_v` states that the inner product of any vector with the zero vector is zero:\n`⟪v, 0⟫ = 0`.",
+ "category": "Inner Product"}

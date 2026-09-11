@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {s} {a} : s = {a} ↔ a ∈ s and ∀ x ∈ s, x = a",
+ "name": "Finset.eq_singleton_iff_unique_mem",
+ "displayName": "Finset.eq_singleton_iff_unique_mem",
+ "content": "(missing)",
+ "category": "Finset"}

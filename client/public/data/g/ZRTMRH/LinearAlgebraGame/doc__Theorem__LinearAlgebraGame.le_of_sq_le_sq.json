@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {a b} (h : a ^ 2 ≤ b ^ 2) (hb : 0 ≤ b) : a ≤ b",
+ "name": "LinearAlgebraGame.le_of_sq_le_sq",
+ "displayName": "le_of_sq_le_sq",
+ "content":
+ "If `a² ≤ b²` and `b ≥ 0`, then `a ≤ b`. This is useful for converting squared inequalities\nback to regular inequalities when working with norms.\n\n**Usage:** Use the full name `LinearAlgebraGame.le_of_sq_le_sq` when applying this theorem.",
+ "category": "Inner Product"}

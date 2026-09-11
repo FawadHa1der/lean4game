@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {p q} : ¬(p or q) ↔ ¬p and ¬q",
+ "name": "not_or",
+ "displayName": "not_or",
+ "content":
+ "Notice that `¬(P or Q)`,\n$\n\\begin{array}{|c | c|c|}\n\\hline\nP & Q & \\text{¬(P or Q)} \\\\\\\\\n\\hline\nT & T & F \\\\\\\\\n\\hline\nT & F & F \\\\\\\\\n\\hline\nF & T & F \\\\\\\\\n\\hline\nF & F & T \\\\\\\\\n\\hline\n\\end{array}\n$\n\nhas the same truth table as `¬P and ¬Q`\n$\n\\begin{array}{|c | c|c|}\n\\hline\nP & Q & \\text{¬P and ¬Q} \\\\\\\\\n\\hline\nT & T & F \\\\\\\\\n\\hline\nT & F & F \\\\\\\\\n\\hline\nF & T & F \\\\\\\\\n\\hline\nF & F & T \\\\\\\\\n\\hline\n\\end{array}\n$\n\nTherefore, they are equivalent and can be interchanged.",
+ "category": "Logic"}

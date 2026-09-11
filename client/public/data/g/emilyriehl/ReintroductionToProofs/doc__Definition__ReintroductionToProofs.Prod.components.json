@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "ReintroductionToProofs.Prod.components",
+ "displayName": "components",
+ "content":
+ "For types `X`, `A`, and `B`, `Prod.components : (X → A × B) → (X → A) × (X → B)` decomposes a function into a product type into its component functions.",
+ "category": "Prod"}

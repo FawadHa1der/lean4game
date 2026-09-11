@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "is_linear_combination",
+ "displayName": "is_linear_combination",
+ "content":
+ "`is_linear_combination` is how we define a vector `x` to be a linear combination of some set `S ⊆ V`.\nTo say this, we write `is_linear_combination K V S x`. It is defined by the existance of some set `s ⊆ S`,\nand a function `f : V → K`, such that `x` is the sum over `s` of `f(v) • v`.",
+ "category": "📖︎"}

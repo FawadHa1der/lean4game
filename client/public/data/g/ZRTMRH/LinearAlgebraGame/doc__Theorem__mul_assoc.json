@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {G} [Semigroup G] (a b c : G) : a * b * c = a * (b * c)",
+ "name": "mul_assoc",
+ "displayName": "mul_assoc",
+ "content":
+ "`mul_assoc` is a proof that multiplication is associative. That is, that if you have `a, b, c`, then\n`a * (b * c) = (a * b) * c`.",
+ "category": "Groups"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "have",
+ "displayName": "have",
+ "content":
+ "The `have` tactic is used to prove your own subgoal.\n\n## One step\nIf the proof is one step, then the following:\n```\nhave theorem-name := expression\n```\nwill do, where `expression : P` with `P : Prop`, i.e. `expression` is a proof of `P`\n\nThe result would be adding the following to the hypothesis:\n```\ntheorem-name : P\n```\n\nYou are storing the proof of `P` in `theorem-name` so that you don't have to construct this proof everytime you need it.\n\n## Multiple steps\nIf the proof is multiple steps, then:\n```\nhave theorem-name : theorem-prop\n```\nwill change the current goal to `theorem-prop : Prop` which is what you want to prove.\n\nAfter being proven, the original goal is restored with `theorem-name : theorem-prop` added (which is a proof of the proposition `theorem-prop`)\n\n### Example\n```\nhave a : 2=2\n```\nwill change the goal to `2=2`, which after proving would restore the original goal with the theorem `a : 2=2` added and ready to be used.",
+ "category": "📖︎"}

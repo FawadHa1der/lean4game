@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " : (∀ (x y : Bool), (!x) = !y → x = y) ∧ ∀ (x : Bool), ∃ y, (!y) = x",
+ "name": "ReintroductionToProofs.Bool.not_bijective",
+ "displayName": "not_bijective",
+ "content": "The function `not : Bool → Bool` is bijective.",
+ "category": "Bool"}

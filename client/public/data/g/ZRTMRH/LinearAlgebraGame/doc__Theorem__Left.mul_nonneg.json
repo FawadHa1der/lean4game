@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [MulZeroClass α] {a b} [Preorder α] [PosMulMono α] (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ a * b",
+ "name": "Left.mul_nonneg",
+ "displayName": "Left.mul_nonneg",
+ "content":
+ "`Left.mul_nonneg` is a proof that multiplying two nonnegative numbers will give a nonnegative value.\nIf you have hypotheses `h1 : 0 ≤ a`, `h2 : 0 ≤ b`, then `Left.mul_nonneg h1 h2` is a proof that `0 ≤ a * b`.",
+ "category": "ℂ"}

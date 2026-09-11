@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "omega",
+ "displayName": "omega",
+ "content":
+ "The tactic `omega` can show that a linear equation or inequality in `ℕ` or `ℤ`\nfollows from given equations or inequalities.\nUnlike `linarith`, it can also handle logical connections between (in)equations.",
+ "category": "📖︎"}

@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {n} : ∑ i : Fin n, Matrix.E i i = 1",
+ "name": "Matrix.ebasis_diag_sum_eq_one",
+ "displayName": "ebasis_diag_sum_eq_one",
+ "content": "(missing)",
+ "category": "Matrix"}

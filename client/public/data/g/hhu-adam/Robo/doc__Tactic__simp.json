@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "simp",
+ "displayName": "simp",
+ "content":
+ "The `simp` tactic attempts to apply a large number of lemmas to simplify a given expression.\n(Technically, these are all lemmas in `mathlib` that are marked with `@[simp]`.)\n\n## Variants\n\n* `simp [h]` additionally uses the assumption `h` or the lemma `h` for simplification\n* `simp [F]` additionally uses the definition of `F`\n* `simp only [h,f,g]` exclusively uses the assumptions/lemmas/definitions `h`, `f`, and `g`\n* `simp?` shows you which lemmas were used",
+ "category": "📖︎"}

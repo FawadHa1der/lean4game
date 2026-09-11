@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (K V W : Type) [Field K] [AddCommGroup V] [AddCommGroup W] [LinearAlgebraGame.VectorSpace K V]\n  [LinearAlgebraGame.VectorSpace K W] (T : V → W) (hT : LinearAlgebraGame.is_linear_map_v K V W T) : T 0 = 0",
+ "name": "LinearAlgebraGame.linear_map_preserves_zero",
+ "displayName": "linear_map_preserves_zero",
+ "content": "Linear maps preserve zero: $T(0) = 0$.",
+ "category": "Linear Maps"}

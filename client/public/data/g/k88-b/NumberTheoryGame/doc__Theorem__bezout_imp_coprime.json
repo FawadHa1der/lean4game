@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (c m : ℤ) (h : ∃ x y, c * x + m * y = 1) : IsGCD(c, m) 1",
+ "name": "bezout_imp_coprime",
+ "displayName": "bezout_imp_coprime",
+ "content":
+ "**A Bézout Identity with 1 Implies Coprimality**\n\nIf there exist integers $x, y$ with $c \\cdot x + m \\cdot y = 1$, then `IsGCD(c, m) 1`.",
+ "category": "GCD"}

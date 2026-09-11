@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Set.empty",
+ "displayName": "∅",
+ "content":
+ "`∅ : Set T` is the empty subset.\nIn the Formaloverse `∅ : Set ℕ` is something different than `∅ : Set ℝ`\n– one is a subset of ℕ, the other is a subset of ℝ!\n\nWith `rw [eq_empty_iff_forall_notMem]` you translate the equation `S = ∅` into the\nstatement `∀ (x : T), x ∉ s`.\n\n`∅` is written as `\\emptyset`.",
+ "category": "Set"}

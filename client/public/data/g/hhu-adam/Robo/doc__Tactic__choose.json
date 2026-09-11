@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "choose",
+ "displayName": "choose",
+ "content":
+ "An assumption of the form\n```\nh : ∃ (b : B), P b\n```\ncan be decomposed, using `choose b hb using h`, into the components `b : B` and `hb : P b`.\n\nMore generally, you can use `choose` to select elements using the choice axiom:\nfrom an assumption of the form\n```\nh : ∀ (a : A), ∃ (b : B), P a b\n```\nextracts `choose f hf using h`\na mapping `f : A → B` and the assumption `hf : ∀ (a : A), P a (f a)`.\n\n(Here, `P : A → (B → Prop)` is a predicate that depends on two variables `a` and `b`.)",
+ "category": "📖︎"}

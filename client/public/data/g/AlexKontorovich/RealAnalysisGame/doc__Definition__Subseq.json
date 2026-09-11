@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Subseq",
+ "displayName": "Subseq",
+ "content":
+ "`(σ : ℕ → ℕ) := ∀ i j, i < j → σ i < σ j`\n\nA sequence `σ : ℕ → ℕ` is a *subsequence* if `∀ i j, i < j → σ (i) < σ (j)`.",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "IsCompact",
+ "displayName": "IsCompact",
+ "content":
+ "`IsCompact (S : Set ℝ) : Prop :=\n  ∀ (ι : Type) (xs : ι → ℝ) (δs : ι → ℝ), (∀ i, 0 < δs i) → (S ⊆ ⋃ i, Ball (xs i) (δs i)) →\n    ∃ (V : Finset ι), S ⊆ ⋃ i ∈ V, Ball (xs i) (δs i)`\n\nA set `S` is compact if for every cover of `S` by balls, there exists a finite subcover.",
+ "category": "📖︎"}

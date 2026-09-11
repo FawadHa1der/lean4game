@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {Inhabitant} [DecidableEq Inhabitant] {A} (stA : A ∈ Knight ↔ A ∈ Knave) : False",
+ "name": "IamKnave",
+ "displayName": "IamKnave",
+ "content": "(missing)",
+ "category": "[anonymous]"}

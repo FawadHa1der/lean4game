@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [MulZeroClass α] {a b} [Preorder α] [PosMulMono α] (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ a * b",
+ "name": "mul_nonneg",
+ "displayName": "mul_nonneg",
+ "content": "The product of two non-negative real numbers is non-negative.",
+ "category": "ℝ"}

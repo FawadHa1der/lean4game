@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "intro",
+ "displayName": "intro",
+ "content":
+ "The `intro` tactic introduces variables and hypotheses from ∀ statements or implications.",
+ "category": "📖︎"}

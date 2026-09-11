@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {G} [AddGroup G] {a b} : a - b = 0 ↔ a = b",
+ "name": "sub_eq_zero",
+ "displayName": "sub_eq_zero",
+ "content": "`sub_eq_zero` is a proof that `a - b = 0` if and only if `a = b`.",
+ "category": "Groups"}

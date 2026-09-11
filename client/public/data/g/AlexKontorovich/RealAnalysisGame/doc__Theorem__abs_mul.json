@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [Ring α] [LinearOrder α] [IsOrderedRing α] (a b : α) : |a * b| = |a| * |b|",
+ "name": "abs_mul",
+ "displayName": "abs_mul",
+ "content": "For any real numbers `x` and `y`, we have `|x * y| = |x| * |y|`.",
+ "category": "|x|"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.LeftInverse",
+ "displayName": "LeftInverse",
+ "content":
+ "`LeftInverse g f` means `g ∘ f = id`, or more exactly:\n`∀ x, g (f x) = x`, as can be seen with `unfold`.",
+ "category": "Function"}

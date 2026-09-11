@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "revert",
+ "displayName": "revert",
+ "content":
+ "The tactic `revert h` adds the assumption `h` as an implication premise to the proof goal:\nfrom `h : A` and `⊢ B`, we get `⊢ A → B`.\n\n## Friends and relatives\n\nThe tactic `intro h` does the exact opposite of `revert h`.",
+ "category": "📖︎"}

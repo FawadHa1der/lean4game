@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a : ℕ → ℝ) (σ τ : ℕ → ℕ) (σsub : Subseq σ) (τsub : Subseq τ) (L M : ℝ) (hσ : SeqLim (a ∘ σ) L) (hτ : SeqLim (a ∘ τ) M)\n  (hLM : L ≠ M) : ¬SeqConv a",
+ "name": "Diverge_of_DiffSubseqLim",
+ "displayName": "Diverge_of_DiffSubseqLim",
+ "content":
+ "If a sequence `a : ℕ → ℝ` has two convergent subsequences, `a ∘ σ` converges to `L` and `a ∘ τ` converges to `M ≠ L`, then `a` is not convergent.",
+ "category": "aₙ"}

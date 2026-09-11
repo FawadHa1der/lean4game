@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Set.inter",
+ "displayName": "∩",
+ "content":
+ "For two subsets `A` and `B` of `S` (i.e. `A B : Set S`), `A ∩ B` is their intersection.\n`∩` is written as `\\\\inter`.",
+ "category": "Set"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "neg",
+ "displayName": "¬",
+ "content":
+ "`¬ P`, read as &ldquo; not `P`&rdquo; is an abbreviation for `P → False`. Use `\\neg` to type `¬`.",
+ "category": "Logic"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {A B} (f : A → B) (inv : ∃ g, (∀ a, g (f a) = a) ∧ ∀ b, f (g b) = b) :\n  (∀ (x y : A), f x = f y → x = y) ∧ ∀ (b : B), ∃ x, f x = b",
+ "name": "ReintroductionToProofs.Function.bijective_of_invertible",
+ "displayName": "bijective_of_invertible",
+ "content": "An invertible function is bijective.",
+ "category": "Function"}

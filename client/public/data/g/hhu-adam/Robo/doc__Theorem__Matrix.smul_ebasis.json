@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {n} (A : Mat[n,n][ℝ]) (i j : Fin n) : A i j • Matrix.E i j = Matrix.single i j (A i j)",
+ "name": "Matrix.smul_ebasis",
+ "displayName": "smul_ebasis",
+ "content": "(missing)",
+ "category": "Matrix"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "split_ands",
+ "displayName": "split_ands",
+ "content":
+ "The `split_ands` tactic breaks apart \\\"and\\\" Goals into individual pieces. If your goal is `h₁ ∧ h₂ ∧ h₃`, then calling `split_ands` will break that into three separate goals, the first being\n`h₁`, the second `h₂`, and of course `h₃`.",
+ "category": "📖︎"}

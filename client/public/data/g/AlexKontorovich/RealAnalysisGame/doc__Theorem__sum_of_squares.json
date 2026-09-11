@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (n : ℕ) : ∑ i ∈ Finset.range n, (↑i + 1) ^ 2 = ↑n * (↑n + 1) * (2 * ↑n + 1) / 6",
+ "name": "sum_of_squares",
+ "displayName": "sum_of_squares",
+ "content":
+ "The sum of the squares of the first `n` natural numbers is given by the formula:\n$$\\\\sum_{i=0}^{n-1} (i+1)^2 = \\frac{n(n+1)(2n+1)}{6}.$$",
+ "category": "∑aₙ"}

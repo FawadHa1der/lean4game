@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (v : V) : 0 ≤ ‖v‖",
+ "name": "LinearAlgebraGame.norm_nonneg_v",
+ "displayName": "norm_nonneg_v",
+ "content": "The norm of any vector is non-negative.",
+ "category": "Inner Product"}

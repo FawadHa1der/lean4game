@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "intro",
+ "displayName": "intro",
+ "content":
+ "The `intro` tactic is used to introduce variables from a \\\"For all\\\" ($\\\\forall$) statement\nor to assume the premise of an implication ($\\\\implies$).\nFor example, if the goal is `∀ a, P a`, typing `intro a` moves `a` into your context.",
+ "category": "📖︎"}

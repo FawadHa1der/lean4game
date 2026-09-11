@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} {β} {f} : Function.Surjective f ↔ Function.HasRightInverse f",
+ "name": "Function.surjective_iff_hasRightInverse",
+ "displayName": "surjective_iff_hasRightInverse",
+ "content": "(missing)",
+ "category": "Function"}

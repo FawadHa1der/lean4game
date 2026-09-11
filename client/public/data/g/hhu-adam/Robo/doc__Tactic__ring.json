@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "ring",
+ "displayName": "ring",
+ "content":
+ "The `ring` tactic proves equations with the operations `+, -, *, ^` in semirings,\nin particular in ℕ, ℤ, ℚ, ℝ, …   It works particularly well in commutative rings.",
+ "category": "📖︎"}

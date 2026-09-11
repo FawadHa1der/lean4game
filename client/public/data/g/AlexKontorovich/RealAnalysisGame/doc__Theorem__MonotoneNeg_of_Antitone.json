@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {X} [LinearOrder X] [AddCommGroup X] [IsOrderedAddMonoid X] (a : ℕ → X) (ha : Antitone a) : Monotone (-a)",
+ "name": "MonotoneNeg_of_Antitone",
+ "displayName": "MonotoneNeg_of_Antitone",
+ "content": "If `a` is `Antitone`, then `-a` is `Monotone`.",
+ "category": "aₙ"}

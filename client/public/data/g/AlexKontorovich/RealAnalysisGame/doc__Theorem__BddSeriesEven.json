@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {a} (ha : Antitone a) (apos : ∀ n, 0 ≤ a n) (n : ℕ) : ∑ k ∈ Finset.range (2 * n), (-1) ^ k * a k ≤ a 0",
+ "name": "BddSeriesEven",
+ "displayName": "BddSeriesEven",
+ "content":
+ "If `a : ℕ → ℝ` is `Antitone` and `∀ n, 0 ≤ a n`, then the even alternating series `n ↦ ∑ k ∈ range (2n), (-1)^k * a k` is bounded by `a 0`.",
+ "category": "∑aₙ"}

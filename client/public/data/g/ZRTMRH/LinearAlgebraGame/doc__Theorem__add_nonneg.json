@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [AddZeroClass α] [Preorder α] [AddLeftMono α] {a b} (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ a + b",
+ "name": "add_nonneg",
+ "displayName": "add_nonneg",
+ "content": "The sum of two non-negative real numbers is non-negative.",
+ "category": "ℝ"}

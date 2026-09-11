@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Bool.not",
+ "displayName": "not",
+ "content":
+ "The negation function `Bool.not : Bool → Bool` sends the boolean `false` to `true` and `true` to `false`.",
+ "category": "Bool"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "exfalso",
+ "displayName": "exfalso",
+ "content":
+ "If the goal is to prove a proposition `P`, then the tactic `exfalso` applies the implication `False.elim : False → P` to reduce to the goal of proving `False`.",
+ "category": "📖︎"}

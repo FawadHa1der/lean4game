@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {Inhabitant} [DecidableEq Inhabitant] {A} (AKnight : A ∈ Knight) (AKnave : A ∈ Knave) : False",
+ "name": "disjoint",
+ "displayName": "disjoint",
+ "content": "(missing)",
+ "category": "[anonymous]"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "field_simp",
+ "displayName": "field_simp",
+ "content":
+ "## Summary\n\n`field_simp` simplifies expressions involving division in fields. It clears denominators and simplifies fractions.\n\n## Example\n\n`field_simp` will simplify:\n- `x / y * y` to `x` (assuming `y ≠ 0`)\n- `1 / x + 1 / y` to `(y + x) / (x * y)`\n\n## Common usage\n\nEssential when working with fractions, division, or expressions with denominators in fields.",
+ "category": "📖︎"}

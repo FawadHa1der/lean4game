@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " : Nat.pred ∘ Nat.succ = id",
+ "name": "ReintroductionToProofs.Nat.pred_comp_succ",
+ "displayName": "pred_comp_succ",
+ "content":
+ "The composite of `succ : ℕ → ℕ` followed by `pred : ℕ → ℕ` is the identity function.",
+ "category": "ℕ"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {n} (A : Mat[n,n][ℝ]) : A = ∑ i : Fin n, ∑ j : Fin n, A i j • Matrix.E i j",
+ "name": "Matrix.matrix_eq_sum_ebasis",
+ "displayName": "matrix_eq_sum_ebasis",
+ "content":
+ "[Doc.Theorem] Matrix.matrix_eq_sum_ebasis\nevery $(n × n)$ matrix $A$ over $\\mathbb{R}$ an be expressed as\n$$A = \\sum_{i=0}^{n-1}\\sum_{j=0}^{n-1} A_{ij} \\cdot E(i, j)$$\nmore generally, use `matrix_eq_sum_single` for $(m × n)$ matrices over any $R$",
+ "category": "Matrix"}

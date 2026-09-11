@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {n} {α} [DecidableEq n] [Zero α] [One α] {i j} : 1 i j = if i = j then 1 else 0",
+ "name": "Matrix.one_apply",
+ "displayName": "Matrix.one_apply",
+ "content": "(missing)",
+ "category": "Matrix"}

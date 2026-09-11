@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] (a : K) : a • 0 = 0",
+ "name": "LinearAlgebraGame.smul_zero_v",
+ "displayName": "smul_zero_v",
+ "content":
+ "This is a proof that `a • 0 = 0`, or that scaling the zero vector by any scalar gives the zero vector.\n\nIt is called \"smul_zero_v\", since you perform scalar multiplication by the zero vector. The \"v\" means that it is\nscalar multiplication of a vector.",
+ "category": "Vector Spaces"}

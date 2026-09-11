@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {G} [AddSemigroup G] (a b c : G) : a + b + c = a + (b + c)",
+ "name": "add_assoc",
+ "displayName": "add_assoc",
+ "content": "(missing)",
+ "category": "+ *"}

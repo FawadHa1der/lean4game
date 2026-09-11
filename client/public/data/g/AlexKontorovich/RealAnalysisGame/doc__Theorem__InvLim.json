@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a : ℕ → ℝ) (L : ℝ) (aToL : SeqLim a L) (LneZero : L ≠ 0) (b : ℕ → ℝ) (bEqInva : ∀ n, b n = 1 / a n) : SeqLim b (1 / L)",
+ "name": "InvLim",
+ "displayName": "InvLim",
+ "content":
+ "If `a : ℕ → ℝ` converges to `L`, and `b : ℕ → ℝ` is its inverse, `b n = 1 / a n` for all `n`, then `b` converges to `1 / L`, provided `L ≠ 0`.",
+ "category": "aₙ"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (K V W : Type) [Field K] [AddCommGroup V] [AddCommGroup W] [LinearAlgebraGame.VectorSpace K V]\n  [LinearAlgebraGame.VectorSpace K W] (T : V → W) (hT : LinearAlgebraGame.is_linear_map_v K V W T) :\n  LinearAlgebraGame.isSubspace (LinearAlgebraGame.null_space_v K V W T)",
+ "name": "LinearAlgebraGame.null_space_is_subspace",
+ "displayName": "null_space_is_subspace",
+ "content": "The null space of a linear map is a subspace.",
+ "category": "Linear Maps"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "by_contra",
+ "displayName": "by_contra",
+ "content":
+ "## Summary\n`by_contra` allows you to prove theorems by contradiction. When your goal is `P`, `by_contra h` will\ncreate a hypothesis `h : ¬P` and change the goal to `False`.\n\n## Example\nIf your goal is `¬(isRational √2)`, using `by_contra h` will change the goal to `False`, and\ngive you a hypothesis `h : isRational √2`.",
+ "category": "📖︎"}

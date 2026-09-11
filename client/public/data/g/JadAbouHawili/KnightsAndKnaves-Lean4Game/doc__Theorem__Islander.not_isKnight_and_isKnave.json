@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {A} (AKnight : A.isKnight) (AKnave : A.isKnave) : False",
+ "name": "Islander.not_isKnight_and_isKnave",
+ "displayName": "not_isKnight_and_isKnave",
+ "content":
+ "You can't be a knight and a knave at the same time.\n\nYou can't lie and tell the truth at the same time.",
+ "category": "DSL"}

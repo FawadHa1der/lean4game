@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.Injective",
+ "displayName": "Injective",
+ "content":
+ "A mapping `f` is injectiv, if:\n\n```\n∀ a b, f a = f b → a = b\n```",
+ "category": "Function"}

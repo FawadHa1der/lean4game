@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "suffices",
+ "displayName": "suffices",
+ "content":
+ "With `suffices h : P`, you introduce a proof section in which you show\nthat the desired proof goal follows from `P`.\nThen you prove `P`.\n\n## Friends and relatives\n`have h : P` works the same way, except that you must first prove `P` before you can\ncontinue with the main proof.",
+ "category": "📖︎"}

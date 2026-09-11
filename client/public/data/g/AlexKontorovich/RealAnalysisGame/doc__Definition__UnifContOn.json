@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "UnifContOn",
+ "displayName": "UnifContOn",
+ "content":
+ "`(f : ℝ → ℝ) (S : Set ℝ) :=\n  ∀ ε > 0, ∃ δ > 0, ∀ x ∈ S, ∀ y ∈ S, |y - x| < δ → |f y - f x| < ε`\n\nFor any `ε > 0`, there exists a `δ > 0` such that for all `x, y ∈ S`, if `|x - y| < δ`, then `|f x - f y| < ε`.",
+ "category": "📖︎"}

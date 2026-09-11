@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {a b} (H1 : 0 ≤ a) (H2 : 0 ≤ b) (a✝ : a ∣ b) (a✝ : b ∣ a) : a = b",
+ "name": "Int.dvd_antisymm",
+ "displayName": "dvd_antisymm",
+ "content":
+ "**Antisymmetry of Divisibility (for non-negative integers)**\n\nIf $0 \\le d_1$, $0 \\le d_2$, $d_1 \\mid d_2$, and $d_2 \\mid d_1$, then $d_1 = d_2$.\n\n**Why we need it:**\nDivisibility on all of $\\mathbb{Z}$ only forms a *pre-order*: two different numbers can divide each other, as long as one is the negative of the other. Restricted to non-negative integers, though, divisibility becomes a genuine **partial order**: \"mutual divisibility\" really does collapse to equality.\n\nIn this boss level, we will show two gcd-witnesses divide each other, and use exactly this theorem to conclude they must be the *same* number.",
+ "category": "Divisibility"}

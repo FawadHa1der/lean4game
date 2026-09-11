@@ -21,15 +21,105 @@ import { preferencesAtom } from '../store/preferences-atoms';
 import { completedLevelCountsAtom } from '../store/progress-atoms';
 import { gameTilesAtom } from '../store/tiles-atoms';
 import { fallbackSnapshotName, gameIdOf, tileSnapshotStates, type ApiGame, type TileSnapshotState } from '../wasm/games-api';
+import { prepareGame, prepareStatusesAtom, removeRawSnapshot, storageSummary } from '../wasm/game-cache';
+import { boundEnvironmentAtom } from '../wasm/game-boot';
+import { bootStatusAtom } from '../store/boot-atoms';
 
 /** The snapshot a tile's game boots (the catalog's name; the boot's fallback
  * for a row that predates the field). */
 const tileSnapshotName = (row: ApiGame): string => row.snapshot || fallbackSnapshotName(gameIdOf(row))
 
-function Tile({tileWithName, snapshot, done}: {tileWithName: ApiGame, snapshot?: TileSnapshotState, done?: number}) {
+/** Enter / Space on a click-handled element that is not a native button:
+ * dispatch its click (React's onClick and the bubbling stay the same). */
+const activateOnKey = (ev: React.KeyboardEvent<HTMLElement>) => {
+  if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.currentTarget.click() }
+}
+
+function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithName: ApiGame, snapshot?: TileSnapshotState, done?: number, opfs: boolean | null, onCacheChanged: () => void}) {
   const { t, i18n } = useTranslation()
   const [, navigateToGame] = useAtom(gameIdAtom)
   const [preferences] = useAtom(preferencesAtom)
+  // "Prepare offline" / "Remove download": the environment cache without a
+  // boot (game-cache.ts). The prepare runs in a worker of this document —
+  // navigating within the app keeps it, a reload cancels it (said on the
+  // tile; a game switch waits for it before its reload) — and its status is
+  // a page-level atom the boot reads too.
+  const [prepares] = useAtom(prepareStatusesAtom)
+  const [boundEnv] = useAtom(boundEnvironmentAtom)
+  const snapshotName = tileSnapshotName(tileWithName)
+  const prep = prepares[snapshotName]
+  // The region is in OPFS from 'warming' on (the runtime warm-up still runs):
+  // the availability row and the meter re-probe then, and once more at 'done'.
+  React.useEffect(() => { if (prep?.phase === 'warming' || prep?.phase === 'done') onCacheChanged() }, [prep?.phase])
+  const entry = snapshot?.entry
+  const mb = (n: number) => Math.round(n / 1048576)
+  // The game loaded in this tab: its session's own prefetch worker owns the
+  // region file (a Prepare would find it busy and fail), and removing its
+  // region would make the next crash-reboot download it again mid-play —
+  // neither action is offered while it is bound.
+  const inUse = boundEnv?.snapshot === snapshotName
+  // Progress in the units the availability row promised (the transfer size:
+  // gzip on the wire); the prefetch worker reports inflated offsets, which
+  // are scaled here (the bar itself keeps the raw value/max).
+  const transfer = entry ? (entry.transfer ?? entry.bytes) : 0
+  const scaled = (bytes: number, total: number) => total > 0 ? Math.min(transfer, Math.round((bytes / total) * transfer)) : 0
+  // Keyboard focus across the cell's button swaps: Prepare unmounts on
+  // click (progress replaces it) and Remove is replaced by a fresh Prepare
+  // node, so the browser dropped focus to <body>. A keyboard activation
+  // (click detail 0) marks the cell; after each state change the focus is
+  // put back on the cell's button, or on the cell itself while it has none.
+  const cellRef = React.useRef<HTMLTableCellElement>(null)
+  const keepFocus = React.useRef(false)
+  const prepare = (ev: React.MouseEvent) => {
+    ev.stopPropagation()
+    keepFocus.current = ev.detail === 0
+    if (entry) void prepareGame(entry, { sessionBound: boundEnv !== null })
+  }
+  const remove = async (ev: React.MouseEvent) => {
+    ev.stopPropagation()
+    keepFocus.current = ev.detail === 0
+    if (entry) { await removeRawSnapshot(entry); onCacheChanged() }
+  }
+  React.useEffect(() => {
+    const cell = cellRef.current
+    if (!keepFocus.current || !cell) return
+    const active = document.activeElement
+    if (active !== document.body && active !== null && !cell.contains(active)) { keepFocus.current = false; return }
+    const target = cell.querySelector<HTMLElement>('button') ?? cell
+    if (active !== target) target.focus({ preventScroll: true })
+  }, [prep?.phase, prep?.result, snapshot?.state, inUse])
+  let cacheActions: React.ReactNode = null
+  if (entry && (prep?.phase === 'running' || prep?.phase === 'warming')) {
+    const progressText = prep.phase === 'warming'
+      ? t("Caching the checker", { defaultValue: "Environment downloaded — caching the checker so this game plays offline…" })
+      : t("Preparing… {{done}} / {{total}} MB", { done: mb(scaled(prep.bytes, prep.total)), total: mb(transfer) })
+    cacheActions = <>
+      <progress aria-label={progressText} value={prep.bytes} max={prep.total} />
+      <div>{progressText}</div>
+      <div className="note">
+        {t("Prepare note", { defaultValue: "Keeps downloading while you browse this site; reloading the page cancels it." })}
+        {prep.memoryNote ? ` ${t("Prepare memory note", { defaultValue: "Preparing a game while another one is loaded needs extra memory on this device." })}` : ''}
+      </div>
+    </>
+  } else if (entry && inUse) {
+    cacheActions = <div className="note">{t("In use by this tab", { defaultValue: "Loaded in this tab — its download is managed by the game." })}</div>
+  } else if (opfs === false) {
+    cacheActions = null // no offline storage: the page-level note says so once
+  } else if (entry && snapshot?.state === 'download') {
+    // The worker's exit status in the user's words; a Retry only where one
+    // can succeed (a bare error, or a file another tab held).
+    const failure = prep?.phase !== 'failed' ? null
+      : prep.result === 'busy' ? t("Prepare busy", { defaultValue: "Already being downloaded — by the game loaded in this tab or by another tab." })
+      : prep.result === 'unavailable' ? t("Offline storage unavailable", { defaultValue: "This browser mode cannot keep games offline; each visit downloads the game again." })
+      : t("Preparation failed: {{error}}", { error: prep.error ?? prep.result })
+    const retryable = prep?.phase === 'failed' && prep.result !== 'unavailable'
+    cacheActions = <>
+      {failure && <div className="note failed">{failure}</div>}
+      {(prep?.phase !== 'failed' || retryable) && <button onClick={prepare}>{retryable ? t("Retry") : t("Prepare offline")}</button>}
+    </>
+  } else if (entry && snapshot?.state === 'ready') {
+    cacheActions = <button onClick={remove}>{t("Remove download")}</button>
+  }
 
   const gameTile = tileWithName.tile
   const gameId = gameIdOf(tileWithName)
@@ -44,9 +134,17 @@ function Tile({tileWithName, snapshot, done}: {tileWithName: ApiGame, snapshot?:
     : snapshot.state === 'download' ? t("Download ≈{{mb}} MB", { mb: snapshot.transferMB })
     : t("Not available on this build")
 
-  return <div className={"game" + (unavailable ? " unavailable" : "")} onClick={() => { if (!unavailable) navigateToGame(gameId) }}>
+  // The tile is the game's link: in the tab order, named by its title,
+  // opened by Enter / Space as well as by click (the Prepare / Remove
+  // buttons inside it keep their own keys — stopPropagation on their
+  // clicks; the key handler only acts on the tile itself).
+  const titleId = `game-title-${gameId.replace(/[^A-Za-z0-9_-]/g, '-')}`
+  const open = () => { if (!unavailable) navigateToGame(gameId) }
+  return <div className={"game" + (unavailable ? " unavailable" : "")} onClick={open}
+      role="link" tabIndex={unavailable ? -1 : 0} aria-disabled={unavailable || undefined} aria-labelledby={titleId}
+      onKeyDown={(ev) => { if (ev.target !== ev.currentTarget) return; if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open() } }}>
       <div className="wrapper">
-        <div className="title">{t(gameTile.title, {ns: gameId})}</div>
+        <div className="title" id={titleId}>{t(gameTile.title, {ns: gameId})}</div>
         <div className="short-description">{t(gameTile.short, { ns: gameId })}
         </div>
         { gameTile.image ? <img className="image" src={`/data/${gameId}/${gameTile.image}`} alt="" /> : <div className="image"/> }
@@ -56,7 +154,7 @@ function Tile({tileWithName, snapshot, done}: {tileWithName: ApiGame, snapshot?:
         <tbody>
         <tr>
           <td title="consider playing these games first.">{t("Prerequisites")}</td>
-          <td><Markdown>{t(gameTile.prerequisites.join(', '), { ns: gameId })}</Markdown></td>
+          <td><Markdown>{gameTile.prerequisites.map((p) => t(p, { ns: gameId })).filter((p) => !/^\[Game\]/.test(p)).join(', ')}</Markdown></td>
         </tr>
         <tr>
           <td>{t("Worlds")}</td>
@@ -85,6 +183,13 @@ function Tile({tileWithName, snapshot, done}: {tileWithName: ApiGame, snapshot?:
           <td>{t("Environment")}</td>
           <td>{availability}</td>
         </tr>}
+        {cacheActions !== null &&
+        <tr className="cache-actions">
+          {/* polite live region: the Prepare button unmounts on click, so the
+              running / ready / failed text is what a screen reader hears */}
+          <td colSpan={2} aria-live="polite" tabIndex={-1} ref={cellRef}
+              onBlur={(ev) => { if (ev.relatedTarget && !ev.currentTarget.contains(ev.relatedTarget as Node)) keepFocus.current = false }}>{cacheActions}</td>
+        </tr>}
         {done !== undefined &&
         <tr className="progress">
           <td>{t("Progress")}</td>
@@ -109,6 +214,24 @@ function LandingPage() {
   // mounted, and games-api memoises the requests it shares with the boot.
   const [snapshotStates, setSnapshotStates] = React.useState<Map<string, TileSnapshotState>>(new Map())
   const snapshotNames = tiles.map(tileSnapshotName).join(' ')
+  // Bumped by a tile when it changed the cache (a prepare finished, a
+  // download was removed): the tile states and the storage meter re-probe.
+  const [cacheGeneration, setCacheGeneration] = React.useState(0)
+  const onCacheChanged = React.useCallback(() => setCacheGeneration((n) => n + 1), [])
+  // The game loaded in this tab caches its region through its own boot (no
+  // prepare status flips for it): re-probe the tiles once that boot is ready.
+  const [bootStatus] = useAtom(bootStatusAtom)
+  const [boundEnv] = useAtom(boundEnvironmentAtom)
+  React.useEffect(() => { if (boundEnv && bootStatus.state === 'ready') onCacheChanged() }, [boundEnv?.snapshot, bootStatus.state])
+  // Offline storage at all? Firefox private mode throws on getDirectory (the
+  // tiles would offer a Prepare that can only fail): probed once per page;
+  // false hides Prepare / Remove and the meter and says so once.
+  const [opfs, setOpfs] = React.useState<boolean | null>(null)
+  React.useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => navigator.storage.getDirectory()).then(() => true, () => false).then((ok) => { if (!cancelled) setOpfs(ok) })
+    return () => { cancelled = true }
+  }, [])
   React.useEffect(() => {
     if (!snapshotNames) return
     let cancelled = false
@@ -116,7 +239,18 @@ function LandingPage() {
       (states) => { if (!cancelled) setSnapshotStates(states) },
       (e) => console.warn('[landing] snapshot states unavailable:', e))
     return () => { cancelled = true }
-  }, [snapshotNames])
+  }, [snapshotNames, cacheGeneration])
+  // The storage meter: navigator.storage.estimate() (hidden where it is
+  // unavailable — Firefox private mode) and the count of tiles whose
+  // region is in OPFS.
+  const [storage, setStorage] = React.useState<{ usage: number; quota: number } | null>(null)
+  React.useEffect(() => {
+    let cancelled = false
+    storageSummary().then((s) => { if (!cancelled) setStorage(s) })
+    return () => { cancelled = true }
+  }, [cacheGeneration])
+  const cachedGames = [...snapshotStates.values()].filter((s) => s.state === 'ready').length
+  const gb = (n: number) => (n / 1e9).toFixed(1)
   // Chrome reports navigator.deviceMemory in {0.25 … 8}: below 8 the device
   // really is small; 8 means "8 or more". Said here, before the first click,
   // and again in the level pane (deep links never see this page).
@@ -128,6 +262,27 @@ function LandingPage() {
 
   // Load the namespaces of all games
   i18n.loadNamespaces(tiles.map(tileWithName => `g/${tileWithName.owner}/${tileWithName.game}`))
+  // Offline landing: those namespace fetches happen before the service
+  // worker controls a first-visit page (index.tsx registers it on 'load'),
+  // so the worker never stored them, and an offline landing then retried
+  // each one six times (console errors; the Robo tile showed raw keys).
+  // Once the worker is in control, fetch them again through it — its
+  // network-first path keeps them in the runtime cache; the HTTP cache
+  // answers the second fetch. i18next holds them in memory already, so this
+  // is invisible to the page.
+  React.useEffect(() => {
+    if (!snapshotNames || !('serviceWorker' in navigator)) return
+    let cancelled = false
+    const langs = [...new Set([i18n.language, 'en'])]
+    const urls = tiles.flatMap((row) => langs.map((lng) => `/i18n/g/${row.owner}/${row.game}/${lng}`))
+    const warm = () => {
+      if (cancelled || !navigator.serviceWorker.controller) return
+      for (const u of urls) fetch(u).catch(() => {})
+    }
+    navigator.serviceWorker.ready.then(warm, () => {})
+    navigator.serviceWorker.addEventListener('controllerchange', warm)
+    return () => { cancelled = true; navigator.serviceWorker.removeEventListener('controllerchange', warm) }
+  }, [snapshotNames, i18n.language])
 
   return <div className="landing-page">
     <header style={{backgroundImage: `url(${bgImage})`}}>
@@ -157,7 +312,7 @@ function LandingPage() {
         <p className="wasm-notice">
           <Trans
             i18nKey="Wasm notice.description"
-            defaults="Games run <strong>fully in your browser</strong> — no server. Each game's environment is downloaded on first play and cached by your browser (the tiles below say how much); later visits start in seconds. The first game also downloads the checker once (about 260 MB)."
+            defaults="Games run <strong>fully in your browser</strong> — no server. Each game's environment is downloaded on first play and cached by your browser (the tiles below say how much); later visits start in seconds. The first game also downloads the checker once (about 150 MB)."
           />
         </p>
         {smallDevice &&
@@ -168,6 +323,14 @@ function LandingPage() {
       </div>
     </header>
     <div className="game-list">
+      {opfs === false &&
+        <p className="storage-meter">
+          {t("Offline storage unavailable", { defaultValue: "This browser mode cannot keep games offline; each visit downloads the game again." })}
+        </p>}
+      {opfs !== false && storage !== null && snapshotStates.size > 0 &&
+        <p className="storage-meter">
+          {t("Storage meter", { defaultValue: "Games cached in this browser: {{n}} ({{used}} GB of the {{quota}} GB this site may use)", n: cachedGames, used: gb(storage.usage), quota: gb(storage.quota) })}
+        </p>}
       {
       tiles.map((tileWithName, i) => {
           return <Tile
@@ -175,6 +338,8 @@ function LandingPage() {
             tileWithName={tileWithName}
             snapshot={snapshotStates.get(tileSnapshotName(tileWithName))}
             done={completedCounts.get(gameIdOf(tileWithName))}
+            opfs={opfs}
+            onCacheChanged={onCacheChanged}
           />
         })
       }
@@ -244,8 +409,8 @@ function LandingPage() {
     </section>
     <footer>
       {/* Do not translate "Impressum", it's needed for German GDPR */}
-      <a className="link" onClick={() => {setPopup(PopupType.impressum)}}>Impressum</a>
-      <a className="link" onClick={() => {setPopup(PopupType.privacy)}}>{t("Privacy Policy")}</a>
+      <a className="link" role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => {setPopup(PopupType.impressum)}}>Impressum</a>
+      <a className="link" role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => {setPopup(PopupType.privacy)}}>{t("Privacy Policy")}</a>
     </footer>
   </div>
 }

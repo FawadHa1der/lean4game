@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "ReintroductionToProofs.Prod.lift",
+ "displayName": "lift",
+ "content":
+ "For types `X`, `A`, and `B`, `Prod.lift : (X → A) × (X → B) → (X → A × B)` combines a pair of functions of types `X → A` and `X → B` to define a single function of type `X → A × B`.",
+ "category": "Prod"}

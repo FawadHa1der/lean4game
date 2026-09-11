@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b c d : ℤ) (h : IsGCD(a, b) d) (hca : c ∣ a) (hcb : c ∣ b) : c ∣ d",
+ "name": "gcd_is_greatest",
+ "displayName": "gcd_is_greatest",
+ "content":
+ "**The Bézout Definition Really Gives the Greatest Common Divisor**\n\nIf `IsGCD(a, b) d`, and $c$ is *any* common divisor of $a$ and $b$ (i.e. $c \\mid a$ and $c \\mid b$), then $c \\mid d$.\n\n**Intuition:**\nThis is what actually justifies the name \"IsGCD\": our Bézout-style definition doesn't just hand you *a* common divisor, it hands you the *greatest* one — every other common divisor is forced to divide it too. For example, $2$ and $3$ both divide $12$ and $18$, and indeed $2 \\mid 6$ and $3 \\mid 6$, where $6 = \\text{IsGCD}(12, 18)$'s witness.\n\nThe proof works because $d$ is built from $a$ and $b$ via $a \\cdot x + b \\cdot y = d$: anything that divides both $a$ and $b$ automatically divides this whole combination, and hence divides $d$.",
+ "category": "GCD"}

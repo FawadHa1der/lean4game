@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "cases'",
+ "displayName": "cases'",
+ "content":
+ "## Summary\n\nIf `h` is a proof (for example a hypothesis), then `cases' h with...` will break the\nproof up into the pieces used to prove it.\n\n## Example\n\nIf `h : P ∨ Q` is a hypothesis, then `cases' h with hp hq` will turn one goal\ninto two goals, one with a hypothesis `hp : P` and the other with a\nhypothesis `hq : Q`.\n\n## Example\n\nIf `h : False` is a hypothesis, then `cases' h` will turn one goal into no goals,\nbecause there are no ways to make a proof of `False`! And if you have no goals left,\nyou have finished the level.\n\n\n## Example\n\nIf `h : ∃ (a : ℝ), a * a = 0` is a hypothesis, then `cases' h with a ha` will create a variable\n`a : Nat` and a hypothesis `ha : a * a = 0`",
+ "category": "📖︎"}

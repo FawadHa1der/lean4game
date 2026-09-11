@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {p} (h : ¬p → False) : p",
+ "name": "Classical.byContradiction",
+ "displayName": "byContradiction",
+ "content":
+ "For any proposition `P`, `Classical.byContradiction : ¬ ¬ P → P` proves that if `P` is not false, then `P` is true.",
+ "category": "Classical"}

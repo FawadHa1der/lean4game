@@ -1,0 +1,63 @@
+{"worlds":
+ {"nodes":
+  {"VectorSpaceWorld":
+   {"title": "Vector Space World",
+    "name": "VectorSpaceWorld",
+    "introduction":
+    "## Welcome to Vector Space World!\n\nIn this world, you'll build up the basic theory of vector spaces through formal proofs in Lean.\n\n### What You'll Learn\n\nVector spaces are fundamental structures in linear algebra. You will learn:\n\n- **Vector Space Definition**: A vector space V over a field K with four key axioms\n- **Zero Properties**: How multiplication by zero scalars and zero vectors behaves\n- **Inverse Operations**: Understanding scalar multiplication by -1\n- **Subspaces**: Subsets of vector spaces that preserve vector space structure\n\n### The Mathematical Foundation\n\nWe define a vector space `V` over a field `K` as an abelian group with four fundamental axioms:\n\n- **Distributivity over vector addition:** `a • (x + y) = a • x + a • y`\n- **Distributivity over scalar addition:** `(a + b) • x = a • x + b • x`\n- **Associativity:** `(a * b) • x = a • (b • x)`\n- **Identity:** `1 • x = x`\n\nIn this game, `VectorSpace K V` is built on Mathlib's robust `Module K V` over a field, which provides standard mathematical notation and many helpful theorems.\n\n### Getting Started\n\nNote that to write the scalar multiplication symbol `•`, type `\\smul`.\n\nReady to begin your journey into vector spaces? Let's start proving theorems!",
+    "image": ""},
+   "TutorialWorld":
+   {"title": "Tutorial World",
+    "name": "TutorialWorld",
+    "introduction":
+    "Welcome to the tutorial world! This world is designed to introduce you to Lean 4.\n\nIn this world, we start with proving 'x=x', and then move on to solve basic logic problems and\nsimple theorems about the natural numbers.\n\nIf you already know how to use Lean 4, you can skip this world, although we recommend playing through it.\n\nClick start to begin solving your first level!",
+    "image": ""},
+   "LinearMapsWorld":
+   {"title": "Linear Maps World",
+    "name": "LinearMapsWorld",
+    "introduction":
+    "Welcome to Linear Maps World! This world will introduce you to formalizing proofs about linear maps\nin Lean. This world includes proofs about bases and dimension, for example if a subspace has the same\ndimension as the whole space, it is the whole space.",
+    "image": ""},
+   "LinearIndependenceSpanWorld":
+   {"title": "Linear Independence and Span World",
+    "name": "LinearIndependenceSpanWorld",
+    "introduction":
+    "## Welcome to Linear Independence and Span World!\n\nThis world introduces the fundamental concepts of linear independence, linear dependence, and the span of a set of vectors.\n\n### What You'll Learn\n\nLinear independence and span are central concepts in linear algebra that help us understand:\n\n- **Linear Combinations**: How to express vectors as sums of scaled vectors\n- **Linear Independence**: When vectors don't depend on each other\n- **Linear Dependence**: When one vector can be written in terms of others\n- **Span**: The set of all possible linear combinations of a given set\n- **Bases and Dimensions**: Minimal spanning sets and vector space structure\n\n### Mathematical Foundation\n\nA **linear combination** of vectors v₁, v₂, ..., vₙ is any expression of the form:\n```\na₁ • v₁ + a₂ • v₂ + ... + aₙ • vₙ\n```\nwhere a₁, a₂, ..., aₙ are scalars from the field K.\n\nA set of vectors is **linearly independent** if the only way to make a linear combination equal zero is by setting all coefficients to zero.\n\nThe **span** of a set S is the collection of all possible linear combinations of vectors from S.\n\n### What Makes This World Challenging\n\nThe proofs in this world are more sophisticated than previous worlds. You'll work with:\n- Set theory and subset relationships\n- Existential and universal quantifiers\n- Proof by cases and contradiction\n- Complex logical structures\n\nThe real mathematical journey begins with linear combinations - let's get started!",
+    "image": ""},
+   "InnerProductWorld":
+   {"title": "Inner Product World",
+    "name": "InnerProductWorld",
+    "introduction":
+    "Welcome to the Inner Product World! In this world, we introduce the idea of the inner product,\nalong with orthogonality and vector norms. You will prove many familiar theorems, such as the Pythagorean\nTheorem and the Cauchy Schwarz Inequality.",
+    "image": ""}},
+  "edges":
+  [["TutorialWorld", "VectorSpaceWorld"],
+   ["VectorSpaceWorld", "LinearIndependenceSpanWorld"],
+   ["LinearIndependenceSpanWorld", "InnerProductWorld"],
+   ["LinearIndependenceSpanWorld", "LinearMapsWorld"]]},
+ "worldSize":
+ {"VectorSpaceWorld": 5,
+  "TutorialWorld": 10,
+  "LinearMapsWorld": 11,
+  "LinearIndependenceSpanWorld": 9,
+  "InnerProductWorld": 8},
+ "title": "Linear Algebra Game",
+ "tile":
+ {"worlds": 5,
+  "title": "Linear Algebra Game",
+  "short": "Linear Algebra Game",
+  "prerequisites": [],
+  "long":
+  "Learn linear algebra through interactive theorem proving in Lean 4. Prove famous results like the Cauchy-Schwarz inequality and work through vector spaces, linear independence, and inner products based on Axler's 'Linear Algebra Done Right'.",
+  "levels": 43,
+  "languages": ["en"],
+  "image": "images/cover.png"},
+ "settings": {"unbundleHyps": false},
+ "name": "MyGame",
+ "introduction":
+ "# Welcome to the Linear Algebra Game!\n\nThis game works as a learning tool for linear algebra,\nbased on the textbook \"Linear Algebra Done Right\" by Sheldon Axler. It also serves as an\nintroduction to Lean 4, a proof assistant that provides an environment to encode proofs formally.\n\nProofs in Lean can are written in precise syntax, using tactics and theorems, and can be algorithmically\nchecked for correctness by a computer.\n\nThis game covers many areas of linear algebra, including vector spaces, linear independence, bases,\nlinear mappings, and isomorphisms.\n\nTo start, click on \"Tutorial World\"",
+ "info":
+ "*Game version: 1.0*\n\n## Progress saving\n\nThe game stores your progress in your local browser storage.\nIf you delete it, your progress will be lost!\n\nWarning: In most browsers, deleting cookies will also clear the local storage\n(or \"local site data\"). Make sure to download your game progress first!\n\n## Issues and Feedback\n\nIf you encounter any bugs, have suggestions, or want to report issues,\nplease file them at: https://github.com/ZRTMRH/LinearAlgebraGame/issues\n\n## Credits\n\n* **Team:** Huiyu Chen, Adam Kern, Justin Morrill, and Letian Yang\n* **Project Manager:** Daniel Zhou\n* **Project Leader:** Professor Colleen Robles\n* **2023 Lean 3 Version:** Yannan Bai, Annapurna Bhattacharya, Chun-Hsien Hsu, Stavan Jain, Kurt Ma, Ricardo Prado Cunha, Anoushka Sinha (Project Manager: Chun-Hsien Hsu)\n* **Game Engine:** Alexander Bentkamp, Jon Eugster, Patrick Massot\n* **Inspiration:** Kevin Buzzard's Natural Number Game (https://adam.math.hhu.de/#/g/leanprover-community/nng4)\n* **Cover Image:** Daniel Zhou, Nina Ma",
+ "image": "",
+ "conclusion": "",
+ "authors": []}

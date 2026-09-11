@@ -9,7 +9,7 @@ tier: R2 10 GB with zero egress, Workers 100 k requests/day.
 | Piece | Where | Size |
 |---|---|---|
 | App shell (`client/dist` minus artifact dirs) | Workers static assets, `wasm/out/deploy` | ~40 MB, 450 files, largest 22.9 MiB (cap 25 MiB) |
-| Runtime chunks, core profile pack, snapshots | R2 bucket `qed64-artifacts`, prefix `lean4game/` | runtime 147 MB, profiles 115 MB, one `.snapz` per catalog game plus `init` (100–430 MB each; the served set is `client/public/snapshots/index.json`) |
+| Runtime chunks, core profile pack, snapshots | R2 bucket `qed64-artifacts`, prefix `lean4game/` | runtime 154 MB, profiles 121 MB, ten slim game snapshots 2,142 MB on the wire (7.75 GB raw; each game is downloaded only when first played) |
 
 The bucket is shared with the editor; the `lean4game/` prefix keeps the two
 mutable manifest sets apart and lets the existing bucket-scoped upload token
@@ -140,6 +140,10 @@ It must be served `must-revalidate`, which `infra/worker.js` does for
 every non-digest path, so a new build's worker (new version hash) replaces
 the old one on the next online load; the old shell cache is deleted on
 activation.
+The `warm` message contract (`{type: "warm", urls}` on a MessageChannel,
+reply `{cached, pruned, total}`) is unchanged; since 2026-09-11 the landing
+page's "Prepare offline" sends it too (`client/src/wasm/game-cache.ts`),
+so a prepared game's runtime is cached before any boot.
 
 ## Caching and compression
 

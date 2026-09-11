@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "push_cast",
+ "displayName": "push_cast",
+ "content":
+ "The `push_cast` tactic handles coercions between number types, particularly useful when working with natural numbers that need to be treated as real numbers (or integers, or rationals).",
+ "category": "📖︎"}

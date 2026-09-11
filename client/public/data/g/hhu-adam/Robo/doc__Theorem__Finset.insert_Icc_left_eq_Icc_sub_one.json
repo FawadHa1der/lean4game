@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [LinearOrder α] [One α] [LocallyFiniteOrder α] [Sub α] [PredSubOrder α] {a b} (h : a - 1 ≤ b) :\n  insert (a - 1) (Finset.Icc a b) = Finset.Icc (a - 1) b",
+ "name": "Finset.insert_Icc_left_eq_Icc_sub_one",
+ "displayName": "insert_Icc_left_eq_Icc_sub_one",
+ "content": "(missing)",
+ "category": "≤"}

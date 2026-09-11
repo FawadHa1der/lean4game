@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {X} [NormedField X] [LinearOrder X] [IsStrictOrderedRing X] (a : ℕ → X) (N n : ℕ) (a✝ : n < N) :\n  |a n| ≤ ∑ k ∈ Finset.range N, |a k|",
+ "name": "TermLeSum",
+ "displayName": "TermLeSum",
+ "content":
+ "If `a : ℕ → X` (where `X` could be `ℚ` or `ℝ`) is a sequence, then any term `|a n|`\nfor `n < N` is less than the sum of all the terms for `n = 0` to `N - 1`.",
+ "category": "∑aₙ"}

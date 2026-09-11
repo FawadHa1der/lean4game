@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "induction'",
+ "displayName": "induction'",
+ "content":
+ "The `induction'` tactic is used to prove statements for all natural numbers `n`.\nTyping `induction' n with d ih` splits your goal into two cases: the base case (`n = 0`) and the inductive step (`n = d + 1`), giving you the induction hypothesis `ih`.",
+ "category": "📖︎"}

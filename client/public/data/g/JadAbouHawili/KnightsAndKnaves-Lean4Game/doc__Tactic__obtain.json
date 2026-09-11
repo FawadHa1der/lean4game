@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "obtain",
+ "displayName": "obtain",
+ "content":
+ "*(lean docstring)*\\\nThe `obtain` tactic is a combination of `have` and `rcases`. See `rcases` for\na description of supported patterns.\n\n```lean\nobtain ⟨patt⟩ : type := proof\n```\nis equivalent to\n```lean\nhave h : type := proof\nrcases h with ⟨patt⟩\n```\n\nIf `⟨patt⟩` is omitted, `rcases` will try to infer the pattern.\n\nIf `type` is omitted, `:= proof` is required.\n",
+ "category": "📖︎"}

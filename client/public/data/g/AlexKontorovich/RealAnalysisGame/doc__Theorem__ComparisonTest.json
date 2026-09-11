@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {a b} (ha : ∀ n, 0 ≤ a n) (hab : ∀ n, a n ≤ b n) (hb : SeriesConv b) : SeriesConv a",
+ "name": "ComparisonTest",
+ "displayName": "ComparisonTest",
+ "content":
+ "If `0 ≤ a n ≤ b n` and `Series b` converges, then so does `Series a`.",
+ "category": "∑aₙ"}

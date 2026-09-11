@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "specialize",
+ "displayName": "specialize",
+ "content":
+ "The `specialize` tactic applies a universal statement in a hypothesis to a specific value.",
+ "category": "📖︎"}

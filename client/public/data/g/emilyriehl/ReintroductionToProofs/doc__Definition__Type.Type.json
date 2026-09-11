@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Type.Type",
+ "displayName": "Type",
+ "content":
+ "The type `Type` is the type of types at the smallest universe level.",
+ "category": "Type"}

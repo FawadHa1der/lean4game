@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Nat.add",
+ "displayName": "+",
+ "content":
+ "The binary addition function `ℕ → ℕ → ℕ` is called `Nat.add m n`, with notation `m + n`. This is the usual sum of natural numbers, defined via the following two hypotheses:\n\n`add_zero m : m + 0 = m`\n\n`add_succ m n : m + succ n = succ (m + n)`\n\nOther theorems about naturals, such as `add_assoc a b c : (a + b) + c = a + (b + c)`, are proved by induction using these two basic theorems.\"",
+ "category": "ℕ"}

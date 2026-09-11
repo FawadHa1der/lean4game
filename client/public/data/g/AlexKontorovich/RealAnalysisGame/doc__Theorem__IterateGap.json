@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {X} [NormedField X] [LinearOrder X] [IsStrictOrderedRing X] (a : ℕ → X) (ha : Monotone a) (ε : X) (εpos : ε > 0)\n  (τ : ℕ → ℕ) (hτ : ∀ n, τ n ≥ n) (σ : ℕ → ℕ) (hσ : ∀ n, σ n ≥ τ n) (hgap : ∀ n, ε ≤ |a (σ n) - a (τ n)|) (k : ℕ) :\n  ↑k * ε ≤ a (σ^[k] 0) - a 0",
+ "name": "IterateGap",
+ "displayName": "IterateGap",
+ "content":
+ "If a sequence `a : ℕ → X` (where `X` could be `ℚ` or `ℝ`) is `Monotone` and grows along some subsequences by `ε`, then it eventually grows by `k * ε` for any `k`.",
+ "category": "aₙ"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {a} (ha : Antitone a) (aLim : SeqLim a 0) : SeriesConv fun n => (-1) ^ n * a n",
+ "name": "AlternatingSeriesTest",
+ "displayName": "AlternatingSeriesTest",
+ "content":
+ "If `a` decreases to `0`, then the alternating series `Series (fun n ↦ (-1)^n * a n)` converges.",
+ "category": "∑aₙ"}

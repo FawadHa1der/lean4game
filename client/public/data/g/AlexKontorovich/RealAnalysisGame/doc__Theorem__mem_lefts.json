@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {α β} (s : Finset (α ⊕ β)) (a : α) : a ∈ s.lefts ↔ Sum.inl a ∈ s",
+ "name": "mem_lefts",
+ "displayName": "mem_lefts",
+ "content":
+ "A point `a : α` is in the `lefts` of a finite set `s : Finset (α ⊕ β)` if and only if the element `Sum.inl a` is in `s`.",
+ "category": "x∈U"}

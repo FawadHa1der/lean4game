@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} {β} {f} : Function.Bijective f ↔ ∃ (g : β → α), Function.LeftInverse g f ∧ Function.RightInverse g f",
+ "name": "Function.bijective_iff_has_inverse",
+ "displayName": "bijective_iff_has_inverse",
+ "content": "(missing)",
+ "category": "Function"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [Module K V] [DecidableEq V] (s t : Finset V) (f g : V → K)\n  (hf0 : ∀ v, v ∉ s → f v = 0) (hg0 : ∀ v, v ∉ t → g v = 0) (heq : ∑ v ∈ s, f v • v = ∑ v ∈ t, g v • v) :\n  ∑ v ∈ s ∪ t, (f - g) v • v = 0",
+ "name": "LinearAlgebraGame.sum_diff_eq_zero_of_equal_combinations",
+ "displayName": "LinearAlgebraGame.sum_diff_eq_zero_of_equal_combinations",
+ "content":
+ "*(lean docstring)*\\\n**Helper Lemma: Sum of difference functions equals zero**\n\nWhen we have two linear combinations that are equal, the sum of their \ndifference over the union of their supports equals zero.\n\nThis technical lemma supports the proof of linear combination uniqueness.\n",
+ "category": "LinearAlgebraGame"}

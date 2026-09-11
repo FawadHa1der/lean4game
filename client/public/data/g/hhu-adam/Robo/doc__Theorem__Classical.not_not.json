@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {a} : ¬¬a ↔ a",
+ "name": "Classical.not_not",
+ "displayName": "not_not",
+ "content": "[Doc.Theorem] `tauto` or `simp` can be used instead",
+ "category": "Logic"}

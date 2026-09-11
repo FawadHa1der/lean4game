@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {n} : ¬Odd n ↔ Even n",
+ "name": "Nat.not_odd_iff_even",
+ "displayName": "not_odd_iff_even",
+ "content": "(missing)",
+ "category": "ℕ"}

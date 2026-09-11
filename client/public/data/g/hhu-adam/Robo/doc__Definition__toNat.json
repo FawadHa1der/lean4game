@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "toNat",
+ "displayName": "toNat",
+ "content":
+ "If `n : ℤ` is an integer greater than or equal to 0, then `n.toNat : ℕ` is the same number, interpreted as a natural number.\n(If `n : ℤ` is a negative integer, then `n.toNat : ℕ` is also defined, but its value has no mathematical meaning.)\n\n## Friends and relatives\n\nA natural number `n : ℕ` can always be interpreted as an integer.\nTo do this, you either write it explicitly as `(n : ℤ)` or as `↑n`.",
+ "category": "📖︎"}

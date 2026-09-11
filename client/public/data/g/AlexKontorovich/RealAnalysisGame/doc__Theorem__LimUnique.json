@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (a : ℕ → ℝ) (L M : ℝ) (aToL : SeqLim a L) (aToM : SeqLim a M) : L = M",
+ "name": "LimUnique",
+ "displayName": "LimUnique",
+ "content": "If `a : ℕ → ℝ` converges to `L` and `M`, then `L = M`.",
+ "category": "aₙ"}

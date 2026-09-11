@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Finset.lefts",
+ "displayName": "Finset.lefts",
+ "content":
+ "`(s : Finset (α ⊕ β)) : Finset α`\n\nThe `lefts` of a finite set `s` of elements from the disjoint union `α ⊕ β` is the finite set of all elements from `α` that appear in `s`.",
+ "category": "📖︎"}

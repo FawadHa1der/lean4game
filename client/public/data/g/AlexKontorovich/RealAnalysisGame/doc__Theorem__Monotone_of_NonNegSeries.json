@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {a} (ha : ∀ n, 0 ≤ a n) : Monotone (Series a)",
+ "name": "Monotone_of_NonNegSeries",
+ "displayName": "Monotone_of_NonNegSeries",
+ "content": "If `a : ℕ → ℝ` is nonnegative, then `Series a` is `Monotone`.",
+ "category": "∑aₙ"}

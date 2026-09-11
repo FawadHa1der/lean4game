@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "induction",
+ "displayName": "induction",
+ "content":
+ "## Summary\n\nIf `n : ℕ` is an object, and the goal mentions `n`, then `induction n with | zero => ... | succ n h => ...`\nattempts to prove the goal by induction on `n`, with the base case being `zero`\nand the inductive case being `succ n` with hypothesis `h`.\n\n### Example:\nIf the goal is\n```\n0 + n = n\n```\n\nthen\n\n`induction n with | zero => ... | succ n h => ...`\n\nwill turn it into two goals. The first is `0 + 0 = 0`;\nthe second has an assumption `h : 0 + n = n` and goal\n`0 + succ n = succ n`.\n\nNote that you must prove the first\ngoal before you can access the second one.",
+ "category": "📖︎"}

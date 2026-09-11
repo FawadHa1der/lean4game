@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Not",
+ "displayName": "¬",
+ "content":
+ "## Implication defintion\n`¬P` is equivalent to `P → False`\n\nGiven\n```\nhnP : ¬P\n```\n`unfold Not at hnP` will result in:\n```\nhnP : P → False\n```\n\n## Truth table\n$\n\\begin{array}{|c|c|}\n\\hline\nP & ¬P \\\\\\\\\n\\hline\nT & F \\\\\\\\\n\\hline\nF & T \\\\\\\\\n\\hline\n\\end{array}\n$\n\nNotice that this definition is an implication and that the truth table with `¬P` and the truth table with `P → False` are identical.\n\n## `¬P` as the goal\nWhat this means is that to prove `¬P`, we assume `P` and derive a contradiction, i.e. constructing an object of type `False`.\nIn other words, having `¬P` as a goal, you have to start the proof with `intro` because you are proving an implication.",
+ "category": "Prop"}

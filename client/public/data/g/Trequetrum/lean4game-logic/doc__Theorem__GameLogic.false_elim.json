@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P} (h : False) : P",
+ "name": "GameLogic.false_elim",
+ "displayName": "false_elim",
+ "content":
+ "If\n```\n-- Assumptions\nh : False\n```\nthen\n```\nhave t : T := false_elim h\n```\nwill allow you to write any well formed proposition in place of `T`. This makes `false_elim` the \\\"From `False`, anything goes\\\" function. **Ex falso quodlibet**.",
+ "category": "¬"}

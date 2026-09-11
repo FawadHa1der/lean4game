@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b d : ℤ) (h : IsGCD(a, b) d) : IsGCD(b, a) d",
+ "name": "gcd_symm",
+ "displayName": "gcd_symm",
+ "content":
+ "**Symmetry of the GCD**\n\nIf `IsGCD(a, b) d`, then `IsGCD(b, a) d`.",
+ "category": "GCD"}

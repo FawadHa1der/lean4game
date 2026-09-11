@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Iff",
+ "displayName": "↔",
+ "content":
+ "## Truth Table\n`P ↔ Q`  is defined as `(P → Q) ∧ (Q → P)`.\n\nIts truth table looks like the folowing:\n$\n\\begin{array}{|c c|c c|c|}\n\\hline\nP & Q & P → Q & Q → P & P ↔ Q \\\\\\\\\n\\hline\nT & T & T & T & T \\\\\\\\\n\\hline\nT & F & F & T & F \\\\\\\\\n\\hline\nF & T & T & F & F \\\\\\\\\n\\hline\nF & F & T & T & T \\\\\\\\\n\\hline\n\\end{array}\n$\n\nSo, `P ↔ Q` is true when `P,Q` are true or `P,Q` are false, i.e. when `P` and `Q` have the same truth value. Therefore, `P` and `Q` are equivalent from a truth value perspective regardless what the statement of `P` and of `Q` is.\n\n## Extracting Each Implication\n```\nh : P ↔ Q\nh.mp : P → Q\nh.mpr : Q → P\n```\n`h.mp` is the forward direction and `h.mpr` is the backward direction.\n\n## `P ↔ Q` is `P = Q`\nSince `P`, `Q` have the same truth value, they can be used interchangeably.\nYou can think of `P ↔ Q` as `P = Q` and use `rw` in the same way you would if there was an actual `=` in the expression.\n\nFor example:\n```\nh : P ↔ Q\nhP : P\n```\nDoing `rw [h] at hP` results in:\n```\nh : P ↔ Q\nhP : Q\n```",
+ "category": "Prop"}

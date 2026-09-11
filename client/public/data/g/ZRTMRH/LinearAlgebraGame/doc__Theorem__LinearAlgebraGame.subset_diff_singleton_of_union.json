@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] [DecidableEq V] (S : Set V) (v : V)\n  (s : Finset V) (hs : ↑s ⊆ S ∪ {v}) : ↑(s \\ {v}) ⊆ S",
+ "name": "LinearAlgebraGame.subset_diff_singleton_of_union",
+ "displayName": "subset_diff_singleton_of_union",
+ "content":
+ "`subset_diff_singleton_of_union` is a helper proof that if a finset `s` is a subset of `S ∪ {v}`,\nthen `s \\ {v}` is a subset of `S`. The syntax is as follows: if you have a hypothesis\n`hs : ↑s ⊆ S ∪ {v}`, then `subset_diff_singleton_of_union K V S v s hs` is a proof of\n`↑(s \\ {v}) ⊆ S`.",
+ "category": "Sets"}

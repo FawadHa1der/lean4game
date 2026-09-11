@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "match",
+ "displayName": "match",
+ "content":
+ "The tactic `match` can be used to define a function by cases. For example, in the context of an\nelement `b : Bool`, `match b with | false => ? | true => ?` splits the construction into the case where `b` is false followed by the case where `b` is true. Here both `?` should be replaced by the appropriate sequence of tactics for each case, using semicolons if more than one tactic is needed. In the context of `x y : Bool`,\n`match x y with | false, false => ? | false, true => ? | true, false => ? | true, true => ?` splits into the four possible cases.",
+ "category": "📖︎"}

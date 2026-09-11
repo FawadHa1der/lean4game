@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : ∑ i ∈ Finset.range n, (↑i + 1) = ↑n * (↑n + 1) / 2",
+ "name": "sum_range_add_one",
+ "displayName": "sum_range_add_one",
+ "content": "The sum `∑ i ∈ range n, ((i : ℝ) + 1) = (n * (n + 1)) / 2`.",
+ "category": "∑aₙ"}

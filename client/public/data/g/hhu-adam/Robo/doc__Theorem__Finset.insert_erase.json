@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [DecidableEq α] {s} {a} (h : a ∈ s) : insert a (s.erase a) = s",
+ "name": "Finset.insert_erase",
+ "displayName": "insert_erase",
+ "content": "(missing)",
+ "category": "Set"}

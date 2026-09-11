@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "intro",
+ "displayName": "intro",
+ "content":
+ "## Summary\n\nIntro introduces a new hypothesis and changes your goal. If you have a goal of the form `P → Q`,\n`intro h` will change the goal to `Q` and create a new hypothesis `h : P`.\n\n## Example\n\nIf your goal is `x = 1 → x + x = 2`, `intro h` will create the hypothesis `h: x = 1`, and change the\ngoal to `x + x = 2`.\n\n## Other usage\n\nThe `intro` tactic also works with goals using `∀` (\"for all\"). If your goal is of the form `∀ x : T, P`,\n`intro x` will create a new variable `x : T`, and change the goal to `P`.\n\n## Example\n\nIf your goal is `∀ x : Nat, x ≥ 0`, `intro x` will create a variable `x : Nat`, and change the goal\nto `x ≥ 0`.",
+ "category": "📖︎"}

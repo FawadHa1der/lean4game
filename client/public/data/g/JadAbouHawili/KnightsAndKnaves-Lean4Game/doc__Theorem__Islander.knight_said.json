@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {A} {P} (stA : A said P) (AKnight : A.isKnight) : P",
+ "name": "Islander.knight_said",
+ "displayName": "knight_said",
+ "content": "A is a knight, so whatever A said is true",
+ "category": "DSL"}

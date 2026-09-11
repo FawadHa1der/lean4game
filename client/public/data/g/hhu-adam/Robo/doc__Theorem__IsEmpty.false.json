@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} [IsEmpty α] (a✝ : α) : False",
+ "name": "IsEmpty.false",
+ "displayName": "IsEmpty.false",
+ "content": "(missing)",
+ "category": "Logic"}

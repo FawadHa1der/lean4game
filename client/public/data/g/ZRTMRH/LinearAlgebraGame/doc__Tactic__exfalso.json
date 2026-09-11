@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "exfalso",
+ "displayName": "exfalso",
+ "content":
+ "## Summary\n\n`exfalso` changes any goal to `False` this works because proving `False` is a contradiction and can\nthus prove anything else. Mathematically, this means that for any proposition `P`, `False → P`.\n\n## Example\n\nIf you have a hypothesis `h: False`, and a goal `Q`, `exfalso; exact h` will solve the goal`",
+ "category": "📖︎"}

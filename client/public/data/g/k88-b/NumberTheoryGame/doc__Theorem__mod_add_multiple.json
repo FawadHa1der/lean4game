@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a k m : ℤ) : (a + k * m) ≡ a (mod m)",
+ "name": "mod_add_multiple",
+ "displayName": "mod_add_multiple",
+ "content":
+ "**Shifting by a Multiple of the Modulus**\n\nFor any integer $k$: $a + k \\cdot m \\equiv a \\pmod m$.",
+ "category": "Congruence"}

@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} [CommSemigroup α] {a b} : a ∣ b ↔ ∃ (c : α), b = c * a",
+ "name": "dvd_iff_exists_eq_mul_left",
+ "displayName": "dvd_iff_exists_eq_mul_left",
+ "content": "(missing)",
+ "category": "ℕ"}

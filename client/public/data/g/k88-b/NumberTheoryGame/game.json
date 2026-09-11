@@ -1,0 +1,72 @@
+{"worlds":
+ {"nodes":
+  {"Problems":
+   {"title": "Problems",
+    "name": "Problems",
+    "introduction":
+    "Welcome to World 6: Problems!\n\nThis is it. The grand finale of the Number Theory Game.\n\nYou've built a massive toolkit of abstract theorems. You've conquered the Chinese Remainder Theorem and relaxed with the divisibility rules. But math isn't just about abstract variables like $a$, $b$, and $m$. It's about solving real problems.\n\nIn this final world, we will use your theorems to crush concrete numerical problems that would be too massive to compute directly. You'll see how abstract algebra gives you elegant shortcuts to the right answers. Let's put your theory to the ultimate test!",
+    "image": ""},
+   "LinCong":
+   {"title": "Linear Congruences and CRT",
+    "name": "LinCong",
+    "introduction":
+    "Welcome to World 4: Linear Congruences!\n\nBrace yourself — this is the hardest and most complex world in the game.\nIn this world, we bring everything together. You will use your knowledge of the GCD, Bézout's identity, and modular arithmetic to solve actual equations of the form $a \\cdot x \\equiv b \\pmod m$.\n\nWe will discover when these equations have solutions, how to find modular inverses, prove the famous Euclid's Lemma, and finally face the ultimate boss of the game: the Chinese Remainder Theorem!",
+    "image": ""},
+   "GCD":
+   {"title": "In Search of the GCD",
+    "name": "GCD",
+    "introduction":
+    "Welcome to World 3: In Search of the GCD!\n\nIn the previous worlds, you learned how to add and multiply congruences. But what about division? Can we just cancel out common factors? Not always! To safely cancel factors in modular arithmetic, we need to deeply understand the Greatest Common Divisor (GCD).\n\nIn this world, we will define the GCD using Bezout's identity, prove its properties, unlock the ultimate tool for number theory: the General Cancellation Law, and finish by proving the shift invariance that powers the Euclidean Algorithm. Let's find that GCD!",
+    "image": ""},
+   "Divisibility":
+   {"title": "Divisibility Club",
+    "name": "Divisibility",
+    "introduction":
+    "Welcome to World 1: The Divisibility Club!\n\nIn this first world, you will learn the basics of Lean 4, how to interact with the system, and how to write your very first proofs. We will explore the mathematical concept of divisibility ($a \\mid b$).\n\nBy the end of this world, you will have built a solid foundation for integer arithmetic and proven that divisibility chains perfectly (transitivity). Take your time, read the explanations carefully, and have fun!",
+    "image": ""},
+   "DivRules":
+   {"title": "Divisibility Rules",
+    "name": "DivRules",
+    "introduction":
+    "Welcome to World 5: Divisibility Rules!\n\nYou have already defeated the final boss of the abstract theory and conquered the hardest world in the game. Consider this world a breather — a fun interlude and a warm-up for the real numerical challenges that await you in the grand finale.\n\nDo you remember learning divisibility rules in school? \"A number is divisible by 9 if the sum of its digits is divisible by 9\", or \"A number is divisible by 10 if it ends in 0\".\n\nIn this world, we won't just memorize these rules — we will prove them! Let's enjoy a short rest by seeing how your massive toolkit trivially solves these classic rules, before we head into the ultimate proving grounds.",
+    "image": ""},
+   "Congruence":
+   {"title": "Congruences in Action",
+    "name": "Congruence",
+    "introduction":
+    "Welcome to World 2: Congruences in Action!\n\nHere we introduce a massive concept: **Modular Arithmetic (Congruences)**.\n\nFirst, you will prove that modular arithmetic forms an equivalence relation. Then, we will unlock its real power: its arithmetic properties. You will prove that you can safely add, multiply, and raise congruences to powers, just like regular equations!\n\nYou will also learn how to manipulate the modulus $m$ itself, breaking it apart or scaling it up. Let us dive into the algebra!",
+    "image": ""}},
+  "edges":
+  [["LinCong", "DivRules"],
+   ["DivRules", "Problems"],
+   ["GCD", "LinCong"],
+   ["Divisibility", "Congruence"],
+   ["Congruence", "GCD"]]},
+ "worldSize":
+ {"Problems": 6,
+  "LinCong": 11,
+  "GCD": 10,
+  "Divisibility": 5,
+  "DivRules": 7,
+  "Congruence": 11},
+ "title": "Number Theory Game",
+ "tile":
+ {"worlds": 6,
+  "title": "Number Theory Game",
+  "short":
+  "An interactive introduction to Number Theory and modular arithmetic.",
+  "prerequisites": [],
+  "long":
+  "In this game, you will learn the foundations of number theory.\nStarting with basic divisibility, you will construct a full toolkit for\nmodular arithmetic (congruences) and prove theorems like a real mathematician.",
+  "levels": 50,
+  "languages": ["en", "ru"],
+  "image": "images/cover.jpg"},
+ "settings": {"unbundleHyps": false},
+ "name": "MyGame",
+ "introduction":
+ "# Welcome to the Number Theory Game\n#### An introduction to integer arithmetic and formal proofs.\n\nIn this game, we will explore the fascinating world of Number Theory.\nWe will start from the basic definition of divisibility and build our way up\nto modular arithmetic and congruences.\n\nOur ultimate goal is to understand how remainders work, how to safely manipulate\nequations modulo $m$, and eventually reach powerful results like the\nChinese Remainder Theorem. We will do this by solving levels in a computer\npuzzle game called Lean.\n\n# Read this.\n\nLearning how to use an interactive theorem prover takes time.\nTests show that the people who get the most out of this game are\nthose who read the help texts on the left side of the screen.\n\nTo start, click on the **Divisibility Club**.",
+ "info":
+ "*Game version: 1.0*\n\n## Progress saving\n\nThe game stores your progress in your local browser storage.\nIf you clear your cookies or site data, your progress will be lost!\nMake sure to download your game progress if you switch browsers.\n\n## About\n\nThis game was created to teach Number Theory using formal verification in Lean 4.\nIt introduces players to fundamental properties of integers, modular arithmetic,\nand divisibility, translating classical pen-and-paper mathematics into rigorous code.",
+ "image": "",
+ "conclusion": "",
+ "authors": []}

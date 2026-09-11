@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} [Lattice α] [AddGroup α] (a b : α) : |a - b| = |b - a|",
+ "name": "abs_sub_comm",
+ "displayName": "abs_sub_comm",
+ "content":
+ "Usage: `have factName : |x - y| = |y - x| := by apply abs_sub_comm`",
+ "category": "|x|"}

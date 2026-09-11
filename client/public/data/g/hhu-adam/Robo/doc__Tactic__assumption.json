@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "assumption",
+ "displayName": "assumption",
+ "content":
+ "The `assumption` tactic closes the proof if one of the assumptions corresponds exactly to the proof target.",
+ "category": "📖︎"}

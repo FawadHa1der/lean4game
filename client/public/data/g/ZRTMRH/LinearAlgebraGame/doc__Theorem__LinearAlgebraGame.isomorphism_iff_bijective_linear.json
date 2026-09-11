@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (K V W : Type) [Field K] [AddCommGroup V] [AddCommGroup W] [LinearAlgebraGame.VectorSpace K V]\n  [LinearAlgebraGame.VectorSpace K W] (T : V → W) (hT : LinearAlgebraGame.is_linear_map_v K V W T) :\n  LinearAlgebraGame.isomorphism_v K V W T ↔\n    LinearAlgebraGame.injective_v K V W T ∧ LinearAlgebraGame.surjective_v K V W T",
+ "name": "LinearAlgebraGame.isomorphism_iff_bijective_linear",
+ "displayName": "isomorphism_iff_bijective_linear",
+ "content": "Isomorphisms are bijective linear maps.",
+ "category": "Linear Maps"}

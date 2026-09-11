@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Ball",
+ "displayName": "Ball",
+ "content":
+ "`Ball (x : ℝ) (r : ℝ) : Set ℝ := Ioo (x - r) (x + r)`\n\nA ball of radius `r` centered at `x` is the open interval `(x - r, x + r)`.",
+ "category": "📖︎"}

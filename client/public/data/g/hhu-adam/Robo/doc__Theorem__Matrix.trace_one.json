@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {n} {R} [Fintype n] [DecidableEq n] [AddCommMonoidWithOne R] : Matrix.trace 1 = ↑(Fintype.card n)",
+ "name": "Matrix.trace_one",
+ "displayName": "trace_one",
+ "content": "(missing)",
+ "category": "Matrix"}

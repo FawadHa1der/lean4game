@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (p : Prop) : (False → p) = True",
+ "name": "false_implies",
+ "displayName": "false_implies",
+ "content": "(missing)",
+ "category": "Logic"}

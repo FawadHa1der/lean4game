@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Iff",
+ "displayName": "↔",
+ "content":
+ "`A ↔ B` means that statements `A` and `B` are logically equivalent (“if and only if”).\n\n## `↔` as proof target\n\nTo show `A ↔ B`, you can, for example, call `constructor`\nand then prove `A → B` and `B → A` separately.\n\n## `↔` as an assumption\n\nYou can break down an assumption of the form `h : A ↔ B` using `obtain ⟨h₁, h₂⟩ := h` into its two components\n`h₁ : A → B` and `h₂ : B → A`.\nHowever, you can also refer directly to these components with `h.mp` and `h.mpr`.\n(The abbreviation `mp` stands for “modus ponens”.)",
+ "category": "Logic"}

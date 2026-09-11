@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] {S} {v} (hv : v ∈ S) :\n  v ∈ LinearAlgebraGame.span K V S",
+ "name": "LinearAlgebraGame.mem_span_of_mem",
+ "displayName": "mem_span_of_mem",
+ "content":
+ "`mem_span_of_mem` is a proof that if a vector `v ∈ S`, then `v ∈ span K V S`",
+ "category": "Vector Spaces"}

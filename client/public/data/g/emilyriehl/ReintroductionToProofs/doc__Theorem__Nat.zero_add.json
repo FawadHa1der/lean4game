@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : 0 + n = n",
+ "name": "Nat.zero_add",
+ "displayName": "zero_add",
+ "content": "For `n : ℕ`, `Nat.zero_add n` is the proof that `0 + n = n`.",
+ "category": "ℕ"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] {A B} (hBsubA : B ⊆ A)\n  (hA : LinearAlgebraGame.linear_independent_v K V A) : LinearAlgebraGame.linear_independent_v K V B",
+ "name": "LinearAlgebraGame.subset_linear_independent",
+ "displayName": "subset_linear_independent",
+ "content":
+ "`subset_linear_independent` is a proof that if `A` is a linearly independent set, and we have `B ⊆ A`,\nthen `B` is also linearly independent. The syntax is as follows: if `hBsubA : B ⊆ A` and `hA : linear_independent_v K V A`\nare hypotheses, then `subset_linear_independent hBsubA hA` is a proof that `linear_independent_v K V B`.",
+ "category": "Vector Spaces"}

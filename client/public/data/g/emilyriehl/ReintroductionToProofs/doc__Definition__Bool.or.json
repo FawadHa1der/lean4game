@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Bool.or",
+ "displayName": "or",
+ "content":
+ "The function `or : Bool → Bool → Bool` captures the logical operation of conjunction.",
+ "category": "Bool"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "assumption",
+ "displayName": "assumption",
+ "content":
+ "The `assumption` tactic tries to prove the goal using one of the assumptions.\n\nGiven,\n```\nObjects\nP : Prop\n\nAssumptions\nhP : P\n\nGoal\nP\n```\n`assumption` will close the goal.",
+ "category": "📖︎"}

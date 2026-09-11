@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {a b} {L M} (ha : SeqLim a L) (hb : SeqLim b M) (hab : SeqLim (fun n => a n - b n) 0) : L = M",
+ "name": "CoherenceOfReals",
+ "displayName": "CoherenceOfReals",
+ "content": "If `a → L` and `b → M` and `a - b → 0`, then `L = M`.",
+ "category": "aₙ"}

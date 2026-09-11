@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "intro",
+ "displayName": "intro",
+ "content":
+ "`intro` is the `→` introduction rule , proving goals of the form `P → Q`\n\nHaving the following:\n```\nGoal:\nP → Q\n```\nWe want to prove that 'If `P` is true, then `Q` is true'.\n\nTo do this, we first need to assume `P` then prove `Q`. Assuming `P` is done using `intro name` for any 'name'.",
+ "category": "📖︎"}

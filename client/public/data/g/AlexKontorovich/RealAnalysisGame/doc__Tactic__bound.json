@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "bound",
+ "displayName": "bound",
+ "content":
+ "The `bound` tactic can solve many \\\"trivial\\\" inequalities involving standard functions and basic arithmetic.",
+ "category": "📖︎"}

@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {x} (h : 0 < |x|) : x ≠ 0",
+ "name": "nonzero_of_abs_pos",
+ "displayName": "nonzero_of_abs_pos",
+ "content": "If `0 < |x|`, then `x ≠ 0`.",
+ "category": "|x|"}

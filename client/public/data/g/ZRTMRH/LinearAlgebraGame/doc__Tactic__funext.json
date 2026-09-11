@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "funext",
+ "displayName": "funext",
+ "content":
+ "## Summary\nThe `funext` tactic is very helpful when dealing with functions. It uses the idea that for two functions\n`f : A → B` and `g : A → B`, `f = g` if and only if `f x = g x` for all `x ∈ A`. This means that if you\nhave a goal `f = g`, where both functions have domain `A`, `funext x` will create an arbitrary `x : A`,\nand change the goal to `f x = g x`.",
+ "category": "📖︎"}

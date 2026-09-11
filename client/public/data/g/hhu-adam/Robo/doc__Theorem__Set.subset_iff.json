@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {s t} : (s ⊆ t) = ∀ x ∈ s, x ∈ t",
+ "name": "Set.subset_iff",
+ "displayName": "subset_iff",
+ "content": "*(lean docstring)*\\\nsubset.def versus subset_iff -",
+ "category": "Set"}

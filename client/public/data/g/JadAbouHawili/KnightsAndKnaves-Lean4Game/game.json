@@ -1,0 +1,70 @@
+{"worlds":
+ {"nodes":
+  {"Simp_World":
+   {"title": "Simplification",
+    "name": "Simp_World",
+    "introduction":
+    "In the previous world, we introduced logical connectives and how to construct new propositions using them.\n\nIn this world, we will simplify logical expressions involving these connectives using the `simp`",
+    "image": ""},
+   "SetTheory_Knights_Knaves":
+   {"title": "SetTheory Knights and Knaves",
+    "name": "SetTheory_Knights_Knaves",
+    "introduction":
+    "In this world , we use set theory instead of a `DSL` to represent and solve knights and knaves\npuzzles.\n\nHere's a table with a correspondence\n| Set Theory       | DSL           |\n| ------------- |:-------------:|\n| `h : A ∈ Knight`  | `h : A.isKnight` |\n| `h : A ∉ Knight` | `h : ¬A.isKnight` |\n| `h : A ∈ Knave`  | `h : A.isKnave` |\n| `h : A ∉ Knave`  | `h : ¬A.isKnave` |\n| `h : A ∈ Knight ∨ A ∈ Knave` | `h : A.isKnight or A.isKnave` |\n| `h : Knight ∩ Knave = ∅` | `h : not (A.isKnight and A.isKnave)` |\n\n\nYou will not have to use `h : A ∈ Knight ∨ A ∈ Knave` directly but you will use the tactic\n`knight_or_knave A with AKnight AKnave` to take cases\n\nMoreover , if you know that `A ∈ Knight` and `A ∈ Knave` then this would contradict `h : Knight ∩\nKnave = ∅` which says that the sets `Knight` `Knave` have an empty intersection i.e no common\nelement. You will not have to use `h` directly , you can just use `contradiction` and the goal will\nbe closed",
+    "image": ""},
+   "Logic":
+   {"title": "Logic",
+    "name": "Logic",
+    "introduction":
+    "In this world, we will be working with `Objects` of type `Prop`, i.e. propositions.\n\nYou can think of a proposition as a statement that is either true or false. You have seen propositions before like `x = 2`, `y = 6` etc..\n\nGiven `h : P` where `P : Prop`, we say that `h` is a proof of the statement `P`.\n\nFor example `h : x = 2` is a proof that `x = 2`\n\n\nIn a proof state, this would look like the following:\n```\nObjects\nP : Prop\nAssumptions\nh : P\n```",
+    "image": ""},
+   "KnightsAndKnaves2":
+   {"title": "Propositional Knights and Knaves",
+    "name": "KnightsAndKnaves2",
+    "introduction":
+    "Say we have an islander `A` who could be a knight or a knave.\n\n`A` is represented as\n```\nA : Prop\n```\nwhere having the proposition `A` being true means the islander `A` is a knight and having the proposition `A` being false means the islander `A` is a knave.\n\nNow, we intrepret having a proof of `A` as `A` being a knight, and having a proof of `¬A` as `A` being a knave.\n\nFrom this, every islander being a knight or a knave is represented as follows:\n```\nA or ¬A\n```\n\nKnights always tell the truth, so if `A` makes some statement `P` we have that `A` being a knight implies that the statement `P` is true\n```\nA → P\n```\nMoreover, the statement `P` being true means that `A` is telling the truth, i.e. is a knight\n```\nP → A\n```\nwhich can be combined as\n```\nA ↔ P\n```\n\nSimilarly for `A` being a knave which implies that the statement `P` is false\n```\n¬A → ¬P\n```\nMoreover, the statement `P` being false means that `A` is lying, i.e. is a knave\n```\n¬P → ¬A\n```\nwhich are combined as\n```\n¬A ↔ ¬P\n```\n\nNo islander can be a knight and a knave at the same time because\n```\nA ∧ ¬A\n```\nis false.\n\nThis representation captures the rules of the knights and knaves puzzle which are:\n- Every islander is either a knight or a knave\n- No islander is both a knight and a knave at the same time\n- Knights always tell the truth, knaves always lie.\n\nNote that you could also take a more explicit truth table approach, where you list all the cases in a truth table and eliminate the cases which contradict the rules of the game (e.g `A` being a knight but `A`'s statement being false). If you are left with one possibility then the puzzle has a unique solution, otherwise it has multiple solutions.\nThis can be done in [prolog](https://www.youtube.com/watch?v=oEAa2pQKqQU) and [other provers](https://summerofgodel.blogspot.com/2019/04/part-6-propositional-logic-approach-to.html)",
+    "image": ""},
+   "EquationalReasoning":
+   {"title": "Equational Reasoning",
+    "name": "EquationalReasoning",
+    "introduction": "In this world, you will learn how to solve equations.",
+    "image": ""},
+   "DSL_Knights_Knaves":
+   {"title": "DSL Knights and Knaves",
+    "name": "DSL_Knights_Knaves",
+    "introduction":
+    "We will introduce the knights and knaves puzzle here explaining rules of the game and the corresponding `Lean` representation.\n\nThe setting is an island.\nEvery islander will make a statement. There are two types of islanders, 'knights' and 'knaves'.\n\nFor a given islander `A`,\n- The proposition that `A` is a knight:\n```\nA.isKnight\n```\n- The proposition that `A` is a knave:\n```\nA.isKnave\n```\n\nEvery islander is either a knight or a knave:\n```\nisKnight_or_isKnave (A : Islander)\n: A.isKnight ∨ A.isKnave\n```\n\nKnights always tell the truth, and knaves always lie.\n\n\n```\n-- `knight_said`.\n-- Whatever a knight says,\n-- it is true.\n-- A is a knight,\n-- so whatever A said is true\nknight_said\n(stA : A said P)\n(AKnight : A.isKnight) : P\n```\n\n\n```\n-- `said_knight`\n-- If what is said is true,\n-- then knight.\n-- A said something true,\n-- so A is a knight.\nsaid_knight\n(stA : A said P)\n(hP : P) : A.isKnight\n```\n\n\n```\n-- `knave_said`\n-- Whatever a knave says,\n-- it is false.\n-- A is a knave,\n-- so whatever A said is false\nknave_said\n(stA : A said P)\n(AKnave : A.isKnave) : ¬P\n```\n\n```\n-- `said_knave`\n-- If what is said is false,\n-- then knave.\n-- A said something that is false\n-- (a lie),\n-- so A is a knave\nsaid_knave\n(stA : A said P)\n(hnP : ¬P) : A.isKnave\n```\n\nSince knights always tell the truth and knaves always lie, no islander can be both a knight and a knave.\n```\nnot_isKnight_and_isKnave\n(A : Islander)\n  : ¬ (A.isKnight ∧ A.isKnave)\n```\n\nThe objective is to conclude who is a knight and who is a knave, based on the statements of several islanders. This will be done using logical reasoning.",
+    "image": ""}},
+  "edges":
+  [["Simp_World", "KnightsAndKnaves2"],
+   ["DSL_Knights_Knaves", "SetTheory_Knights_Knaves"],
+   ["Simp_World", "DSL_Knights_Knaves"],
+   ["EquationalReasoning", "Logic"],
+   ["Logic", "Simp_World"]]},
+ "worldSize":
+ {"Simp_World": 9,
+  "SetTheory_Knights_Knaves": 14,
+  "Logic": 11,
+  "KnightsAndKnaves2": 8,
+  "EquationalReasoning": 3,
+  "DSL_Knights_Knaves": 14},
+ "title": "Knights And Knaves Game",
+ "tile":
+ {"worlds": 6,
+  "title": "Knights And Knaves Game",
+  "short": "From the basics to Knights And Knaves",
+  "prerequisites": [],
+  "long":
+  "A guided experience that teaches you everything you need to know to understand and solve knights and knaves logic puzzles, including the basics of lean and logic.\n\nBased on statements made, you will deductively conclude who is a knight (truthful) and who is a knave (liar).",
+  "levels": 59,
+  "languages": ["en"],
+  "image": "images/knights-and-knaves.jpg"},
+ "settings": {"unbundleHyps": false},
+ "name": "MyGame",
+ "introduction":
+ "This is a gamification of mathematical proofs. Every level has a `Goal`, which is what you are trying to prove. You will use tactics and theorems provided by the `Lean` theorem prover and its mathematical library `mathlib` to close the `Goal`.\n\n# Helpful Links\nYou can click the hamburger menu in the top right then 'Game Info' for more information:\n- Official Documentation\n- Community Chat\n- Sources Of Puzzles",
+ "info":
+ "# Official Documentation\n\nMany technical details have been skipped for the sake of not getting bogged down with `Lean` and its mathematical library `mathlib`, but focus on the aspects of reasoning and proof.\n\nMoreover, the Docs in the right side pane are custom written to provide only what you need to progress through the game.\n\nYou can of course go deeper by searching through the [official docs](https://leanprover-community.github.io/mathlib4_docs/)\n\n# Zulip Community Chat\n\nZulip chat for `Lean` has been a very useful resource to resolve issues when formalizing the exercises, you can visit it and ask questions in the '#new members' stream. You can also view messages without signing up. There are other streams dedicated to various topics you can check out as well.\n\nhttps://leanprover.zulipchat.com/\n\nhttps://zulip.com/case-studies/lean/\n\n# Sources for Puzzles:\n\nSome puzzles were taken as is, others were modified or inspired variations.\n\n- Wolfram Cloud [Puzzle\nGenerator](https://www.wolframcloud.com/objects/demonstrations/KnightsAndKnavesPuzzleGenerator-source.nb)\n\n- [382 Puzzles](https://philosophy.hku.hk/think/logic/knights.php)\n\n- [What Is The Name Of This Book](https://raymondsmullyan.com/books/what-is-the-name-of-this-book/) by Raymond Smullyan\n\n- Knights and Knaves in a logic programming language (prolog):\nhttps://www.youtube.com/watch?v=oEAa2pQKqQU\n\n- Blog post series, includes introduction, representation and formalization, automated solutions using other provers, and creating your own puzzles.\nhttps://summerofgodel.blogspot.com/2019/04/table-of-contents-for-series-of-posts.html?\n\n\n# Editor Mode\n\nEditor mode mimics the `Lean` experience in vscode which is the most common way to use `Lean`.\n\nTo access editor mode, click on the icon next to the hamburger menu in the top right when in a level.\n\n# Links\n## Documentation\nhttps://leanprover-community.github.io/mathlib4_docs/\n\nhttps://lean-lang.org/documentation/\n\nhttps://leanprover-community.github.io/\n\nhttps://lean-lang.org/\n\nhttps://github.com/leanprover-community/mathlib4\n\n# Rules\nYou can relax the rules and skip levels.\n\nThis is not recommended for if you have never used `Lean` before because every level depends on\nintroduced tactics/theorems/ideas in previous levels. Moreover, relaxing the rules would ruin the\nstructured/guided experience this game is supposed to offer. If that is what you are looking for, then don't relax the rules.\n\n# Solutions\n[Github Repository](https://github.com/JadAbouHawili/KnightsAndKnaves-Lean4Game)\n\nYou can view the `Lean` code for every level there (and the solution if you are really stuck).\n\n# Other Knights and Knaves Educational Games\n[Timer Game](https://en.oiler.education/bul)\n\n[Terminal-Like](https://christopherphelps.trinket.io/sites/knight_knave_puzzler)",
+ "image": "",
+ "conclusion": "",
+ "authors": []}

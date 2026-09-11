@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Series",
+ "displayName": "Series",
+ "content":
+ "`(a : ℕ → ℝ) : ℕ → ℝ := fun n ↦ ∑ k ∈ range n, a k`\n\nGiven a sequence `a : ℕ → ℝ`, the `Series a` is the sequence of its partial sums.",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "induction'",
+ "displayName": "induction'",
+ "content":
+ "The syntax for induction is: `induction' n with k hk`. This means: apply induction on the\nvariable `n`, use `k` for the new dummy variable (which could be `n` itself), and `hk` for\nthe induction hypothesis on `k`.",
+ "category": "📖︎"}

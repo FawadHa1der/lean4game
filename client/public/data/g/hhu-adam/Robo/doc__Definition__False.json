@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "False",
+ "displayName": "False",
+ "content":
+ "The statement `False : Prop` is always false.\n\n## `False` as proof target\n\nIf `False` is your proof target, you can try to find a contradiction in your assumptions, for example.\nOnce the contradiction is sufficiently evident, `contradiction` concludes such a proof.\n\nIf `False` is your proof goal and you have an assumption or lemma of the form `h : ¬ A` available,\nyou can use `apply h` to change the proof goal to `A`\n(because `¬ A` means `A → False`).\n\n## `False`  as an assumption\n\nIf you have `False` as an assumption, you can immediately end the proof with `contradiction`\n– because, as is well known, any other statement follows from a false statement.",
+ "category": "Logic"}

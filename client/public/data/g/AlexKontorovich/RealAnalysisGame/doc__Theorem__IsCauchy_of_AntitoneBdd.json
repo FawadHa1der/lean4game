@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {X} [NormedField X] [LinearOrder X] [IsStrictOrderedRing X] [FloorSemiring X] {a} {M} (ha : Antitone a)\n  (hM : ∀ n, M ≤ a n) : IsCauchy a",
+ "name": "IsCauchy_of_AntitoneBdd",
+ "displayName": "IsCauchy_of_AntitoneBdd",
+ "content":
+ "If a sequence `a : ℕ → X` (where `X` can be `ℚ` or `ℝ`) is antitone and bounded, then it is Cauchy.",
+ "category": "aₙ"}

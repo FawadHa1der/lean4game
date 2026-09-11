@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (f : ℝ → ℝ) (hf : FunCont f) (S : Set ℝ) (hS : RealAnalysisGame.IsCompact S) : UnifContOn f S",
+ "name": "RealAnalysisGame.UnifContOn_of_Compact",
+ "displayName": "UnifContOn_of_Compact",
+ "content":
+ "A continuous function on a compact set is uniformly continuous on that set.",
+ "category": "f(x)"}

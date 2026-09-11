@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "HasIntegral",
+ "displayName": "HasIntegral",
+ "content":
+ "`(f : ℝ → ℝ) (a b : ℝ) (I : ℝ) := SeqLim (fun N ↦ RiemannSum f a b N) I`\n\nA function `f : ℝ → ℝ` has integral `I` from `a` to `b` if the sequence of Riemann sums converges to `I`.",
+ "category": "📖︎"}

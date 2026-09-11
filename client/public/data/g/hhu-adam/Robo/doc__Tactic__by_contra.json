@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "by_contra",
+ "displayName": "by_contra",
+ "content":
+ "The tactic `by_contra h` initiates a proof by contradiction.\nIf `P` is your current proof goal, `by_contra h` generates a new assumption `(h : ¬ P)`\nand sets the proof goal to `False`.\n\n## Friends and relatives\n\n* At the end of a proof by contradiction, there is usually `contradiction`:\nthis tactic closes the proof when it finds two obviously contradictory assumptions.\n* If the proof goal is of the form `A → B`, you can use `contrapose`\nto start a proof by contraposition.",
+ "category": "📖︎"}

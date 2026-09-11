@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "IsLUB",
+ "displayName": "IsLUB",
+ "content":
+ "`(S : Set ℝ) (L : ℝ) : Prop := IsUB S L ∧ ∀ M, IsUB S M → L ≤ M`\n\nThe point `L` is a least upper bound (supremum) of the set `S` if `L` is an upper bound of `S`, and for any other upper bound `M` of `S`, we have `L ≤ M`.",
+ "category": "📖︎"}

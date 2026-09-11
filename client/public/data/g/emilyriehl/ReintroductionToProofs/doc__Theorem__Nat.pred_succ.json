@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : n.succ.pred = n",
+ "name": "Nat.pred_succ",
+ "displayName": "pred_succ",
+ "content":
+ "For all natural numbers `n`, `Nat.pred_succ n` proves that `Nat.pred (succ n) = n`.",
+ "category": "ℕ"}

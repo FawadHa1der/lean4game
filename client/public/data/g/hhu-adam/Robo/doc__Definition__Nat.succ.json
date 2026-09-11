@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Nat.succ",
+ "displayName": "succ",
+ "content":
+ "`succ : ℕ → ℕ` is the mapping `n ↦ n + 1`.\nIt therefore maps a natural number to its successor.",
+ "category": "📖︎"}

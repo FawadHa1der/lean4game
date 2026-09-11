@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] {W} (hW : LinearAlgebraGame.isSubspace W) :\n  0 ∈ W",
+ "name": "LinearAlgebraGame.subspace_contains_zero",
+ "displayName": "subspace_contains_zero",
+ "content": "This is a proof that any subspace contains the zero vector.",
+ "category": "Vector Spaces"}

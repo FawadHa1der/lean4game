@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a c m : ℤ) (h_div : m ∣ a * c) (h_coprime : IsGCD(c, m) 1) : m ∣ a",
+ "name": "euclids_lemma",
+ "displayName": "euclids_lemma",
+ "content":
+ "**Euclid's Lemma**\n\nIf $m \\mid (a \\cdot c)$ and $c$ is coprime to $m$, then $m \\mid a$.",
+ "category": "LinCong"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Subset",
+ "displayName": "⊆",
+ "content":
+ "For `A B : Set T`, `A ⊆ B` means that `A` is contained in `B`.\n\nWith `rw [subset_iff]`, you can rewrite `A ⊆ B` as `∀ x, x ∈ A → x ∈ B`.\n\nIf `A ⊆ B` is the proof goal, you can also directly use `intro a ha`\nto select an element `a` with `ha : a ∈ A` (and then show `a ∈ B`).\n\nIf `h : A ⊆ B` is an assumption and an element `a` with `ha : a ∈ A` is given,\nyou can use `have hb := h ha` to obtain the statement `hb : a ∈ B`.\n\nYou write `⊆` as `\\subset`.",
+ "category": "Set"}

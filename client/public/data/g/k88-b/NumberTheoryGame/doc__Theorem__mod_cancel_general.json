@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b c m d c1 m1 : ℤ) (hd : d ≠ 0) (h1 : (a * c) ≡ b * c (mod m)) (h2 : IsGCD(c, m) d) (hc : c = c1 * d)\n  (hm : m = m1 * d) : a ≡ b (mod m1)",
+ "name": "mod_cancel_general",
+ "displayName": "mod_cancel_general",
+ "content":
+ "**The General Cancellation Law**\n\nIf $a \\cdot c \\equiv b \\cdot c \\pmod m$, `IsGCD(c, m) d` with $d \\neq 0$, $c = c_1 \\cdot d$ and $m = m_1 \\cdot d$, then $a \\equiv b \\pmod{m_1}$.\n\n**Intuition:**\nThis is the fully general version of \"dividing\" a congruence: you can always cancel a factor $c$ out of a congruence, as long as you also divide the modulus by whatever $c$ and $m$ have in common (`such that IsGCD(c, m) d)`. The coprime case (Level 6) is just the special case $d = 1$, where the modulus doesn't need to shrink at all.",
+ "category": "Congruence"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {σ} (hσ : Rearrangement σ) (M : ℕ) : ∃ N, ∀ n ≥ N, Finset.range M ⊆ Finset.image σ (Finset.range n)",
+ "name": "EventuallyCovers_of_Rearrangement",
+ "displayName": "EventuallyCovers_of_Rearrangement",
+ "content":
+ "If `σ` is a `Rearrangement`, then for any `M`, there is an `N`, so that,\n  for all `n ≥ N`, the `range M` is contained in `image σ (range n)`.",
+ "category": "∑aₙ"}

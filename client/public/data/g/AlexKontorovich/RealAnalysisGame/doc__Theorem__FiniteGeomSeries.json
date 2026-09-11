@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (x : ℝ) (n : ℕ) : (1 - x) * ∑ k ∈ Finset.range n, x ^ k = 1 - x ^ n",
+ "name": "FiniteGeomSeries",
+ "displayName": "FiniteGeomSeries",
+ "content":
+ "For any real `x` and natural number `n`,\n`(1-x)*(1+...+x^(n-1)) = 1- x^n`.",
+ "category": "∑aₙ"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a : ℕ → ℝ) (σ : ℕ → ℕ) (hσ : Function.Injective σ) (n : ℕ) :\n  Series (a ∘ σ) n = ∑ k ∈ Finset.image σ (Finset.range n), a k",
+ "name": "Series_image",
+ "displayName": "Series_image",
+ "content":
+ "For a sequence `a : ℕ → ℝ` and an injective `σ : ℕ → ℕ`, we have that:\n`Series (a ∘ σ) n = ∑ k ∈ image σ (range n), a k` holds for any `n`.",
+ "category": "∑aₙ"}

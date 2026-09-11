@@ -26,7 +26,12 @@ while IFS=$'\t' read -r _snapshot _owner _game id _listed src _rest; do
   if [ -f "$SRC/.lake/gamedata/game.json" ]; then
     mkdir -p "$PUB/data/$id" "$PUB/i18n/$id"
     cp "$SRC"/.lake/gamedata/*.json "$PUB/data/$id/"
-    if [ -d "$SRC/.lake/gamedata/images" ]; then cp -R "$SRC/.lake/gamedata/images" "$PUB/data/$id/"; fi
+    # images/ as the game ships it, minus source files that are not web content
+    # (Keynote decks, licences, fetch scripts — MakeGame copies the whole dir).
+    if [ -d "$SRC/.lake/gamedata/images" ]; then
+      rm -rf "$PUB/data/$id/images"
+      rsync -a --include='*/' --include='*.png' --include='*.jpg' --include='*.jpeg' --include='*.gif' --include='*.svg' --include='*.webp' --exclude='*' "$SRC/.lake/gamedata/images/" "$PUB/data/$id/images/"
+    fi
     # every translation the game ships (the source language has only a .pot)
     for f in "$SRC"/.i18n/*/Game.json; do
       [ -f "$f" ] || continue

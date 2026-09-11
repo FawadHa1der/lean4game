@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {X} [NormedField X] [LinearOrder X] [IsStrictOrderedRing X] [FloorSemiring X] (a : ℕ → X) (ha : ¬UnBddPeaks a) :\n  ∃ σ, Subseq σ ∧ Monotone (a ∘ σ)",
+ "name": "MonotoneSubseq_of_BddPeaks",
+ "displayName": "MonotoneSubseq_of_BddPeaks",
+ "content":
+ "If a sequence `a : ℕ → X` (where `X` could be `ℚ` or `ℝ`) does not have unbounded peaks, then it has a `Monotone` subsequence.",
+ "category": "aₙ"}

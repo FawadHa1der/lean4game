@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "specialize",
+ "displayName": "specialize",
+ "content":
+ "`specialize h a₁ a₂` is equivalent to `have h := h a₁ a₂`: the tactic replaces an assumption\n`h : ∀ m₁ m₂, P m₁ m₂` with the special case `h : P a₁ a₂`.\n\nIf you want to specialize multiple times, instead of `specialize` you should use `have`,\nsince `specialize h …` overwrites the old assumption `h`.\nFrom the above assumption `h`, you can obtain the following three assumptions with\n```\nhave ha := h a₁ a₂\nhave hb := h b₁ b₂\n```\n:\n```\nh : ∀ m₁ m₂, P m₁ m₂\nha : P a₁ a₂\nhb : P b₁ b₂\n```",
+ "category": "📖︎"}

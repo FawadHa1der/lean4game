@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} [DecidableEq α] {s₁ s₂} : s₂ ⊆ s₁ ∪ s₂",
+ "name": "Finset.subset_union_right",
+ "displayName": "Finset.subset_union_right",
+ "content": "(missing)",
+ "category": "Finset"}

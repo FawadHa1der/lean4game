@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {X} [Preorder X] (a : ℕ → X) (ha : ∀ n, a (n + 1) ≤ a n) : Antitone a",
+ "name": "Antitone_of_succ",
+ "displayName": "Antitone_of_succ",
+ "content": "If `a (n+1) ≤ a n` holds for all `n`, then `a` is `Antitone`.",
+ "category": "aₙ"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "apply",
+ "displayName": "apply",
+ "content":
+ "With `apply`, you apply an implication `hAB : A → B`:\n\n| before | tactic           | after |\n|:------------ |:---------------- |:-------- |\n| `⊢ B`        | `apply hAB`      | `⊢ A`    |\n| `h : A `     | `apply hAB at h` | `h : B`  |\n\nIn both cases, the implication `hAB` can either be\ngiven as an assumption or be an already known lemma.",
+ "category": "📖︎"}

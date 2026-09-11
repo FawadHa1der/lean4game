@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b x m d : ℤ) (hd : IsGCD(a, m) d) (hx : (a * x) ≡ b (mod m)) : d ∣ b",
+ "name": "lin_cong_nec",
+ "displayName": "lin_cong_nec",
+ "content":
+ "**Solvability (Necessary Condition)**\n\nIf $d = \\gcd(a, m)$ and $a \\cdot x \\equiv b \\pmod m$ has a solution, then $d \\mid b$.",
+ "category": "LinCong"}

@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) (h : Even n) : Even (n ^ 2)",
+ "name": "Nat.even_square",
+ "displayName": "even_square",
+ "content": "[Doc.Theorem] Nat.even_square",
+ "category": "ℕ"}

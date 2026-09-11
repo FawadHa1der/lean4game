@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (u v : V) :\n  ‖u + v‖ ≤ ‖u‖ + ‖v‖",
+ "name": "LinearAlgebraGame.triangle_v",
+ "displayName": "Triangle Inequality",
+ "content":
+ "The triangle inequality is a fundamental property of norms in inner product spaces.\nIt states that `‖u+v‖ ≤ ‖u‖ + ‖v‖` for any vectors `u` and `v`.\nThis ensures that the norm defines a proper distance on the vector space.",
+ "category": "Norms"}

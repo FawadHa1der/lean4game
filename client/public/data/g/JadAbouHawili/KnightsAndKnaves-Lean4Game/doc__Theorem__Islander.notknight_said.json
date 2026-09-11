@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {A} {P} (a✝ : A said P) (a✝ : ¬A.isKnight) : ¬P",
+ "name": "Islander.notknight_said",
+ "displayName": "notknight_said",
+ "content": "Similar to `knave_said`.",
+ "category": "DSL"}

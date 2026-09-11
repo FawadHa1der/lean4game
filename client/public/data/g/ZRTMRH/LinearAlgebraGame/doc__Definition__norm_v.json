@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "norm_v",
+ "displayName": "Norm",
+ "content":
+ "`norm_v` is how we define vector norms. It can also be written as `‖v‖`. We define the norm of a vector\n`v` as the square root of it's inner product with itself. The lean code defining this is\n\n```\ndef norm_v (v : V) : ℝ := Real.sqrt ⟪v, v⟫.re\n```",
+ "category": "📖︎"}

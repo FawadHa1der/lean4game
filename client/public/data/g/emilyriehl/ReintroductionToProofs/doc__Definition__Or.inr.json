@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Or.inr",
+ "displayName": "inr",
+ "content":
+ "For propositions `P` and `Q`, `Or.inr` is a proof that `Q → (P ∨ Q)`.",
+ "category": "Or"}

@@ -478,6 +478,208 @@ HTTP 200). The per-game console error is the known world-intro
 (2026-09-08, init still loaded) measured the first visit at 146–187 s and
 the return visit at 11 s.
 
+### Client features 2026-09-11 (core-pack skip, Prepare, storage meter)
+
+Three client-only changes on top of the multi-game architecture (no vendored
+code touched; `client/src/wasm/game-cache.ts` is the new shared OPFS /
+prefetch / service-worker-warm helper, `installGameArtifacts` in
+`game-boot.ts` replaces the vendored `installArtifacts`):
+
+- **Core profile pack skipped for game sessions.** A game never imports
+  from oleans (its snapshot is one complete environment; the kernel's
+  header resolver serves headers from cached environments only), so the
+  session boots with `installed` empty → `leanPath ""`, no packs (the
+  worker's `mountPacks([])` and `mkdirp("")` are no-ops). Measured on a
+  fresh profile (`qed64/work/cf-pack-skip.mjs`, local `serve-dist` on
+  :3006): NNG4 first visit **582.0 MB on the wire** (runtime 153.6 MB +
+  nng4 428.4 MB; `/profiles/*.part-*` requests: **0** page-side and
+  0 service-worker-side, where the previous matrix read 702 MB with the
+  120 MB pack), OPFS afterwards holds only `qed64-snapshots/` (no
+  `qed64-packs`; `navigator.storage.estimate()` usage 1.66 GB instead of
+  ~2.05 GB), relay serving at 11.1 s (local), `rfl` completed, the
+  inventory doc opens and the goal-term tooltip answers from the
+  interactive RPC (`@OfNat.ofNat ℕ 37 instofNat : ℕ`). The first-visit copy
+  now says "about 150 MB" for the checker (landing line and level pane).
+- **"Prepare offline"** on a tile in the `download` state runs the
+  disposable snapshot-prefetch worker (raw region into OPFS) and, through
+  the service worker's existing `warm` message, the runtime chunks —
+  without booting Lean. A page-level map of in-flight prepares makes the
+  boot await a running prepare of its own snapshot instead of spawning a
+  second prefetch worker. Measured (`cf-prepare.mjs`, two fresh profiles,
+  STG4): prepare finished in 2.1 s locally with **0 page-side
+  `/runtime/chunks` requests** (the service worker's own warm-up fetched
+  the 10 chunks, 153.6 MB, plus the 181.0 MB `.snapz`), the raw file
+  reached exactly 665,285,845 bytes, the tile flipped to "Ready — plays
+  offline", the meter to "1 (0.9 GB of the 11.6 GB …)", and entering the
+  game then served in **4.9 s** with no further network bytes. The race
+  (Prepare, then the tile 0.3 s later) served in 6.1 s with exactly **one**
+  `snapshot-prefetch.worker.js` construction.
+- **Storage meter + "Remove download" + stale sweep.** The landing page
+  shows "Games cached in this browser: N (X GB of the Y GB this site may
+  use)" from `navigator.storage.estimate()` (hidden where it throws);
+  "Remove download" on a `ready` tile deletes that game's
+  `qed64-snapshots/<cacheKey>.raw` only; the boot sweeps, once per page
+  after the pairing check, `<name>.*.snapz.raw` files of index names whose
+  key is not the served key. Measured (`cf-storage.mjs` on the profile
+  above): meter "1 (1.7 GB of the 12.4 GB …)" → Remove → tile "Download
+  ≈409 MB", OPFS empty, meter "0 (0.2 GB of the 10.9 GB …)"; a planted
+  `nng4.deadbeef00000000.snapz.raw` was removed by the next boot
+  (`[game-boot] removed 1 stale cached region(s)`), which re-downloaded
+  the live region (428.4 MB) and served in 10 s.
+
+Review fixes (same day, local `serve-dist` on :3006, headless Chromium):
+
+- **Game switch no longer kills a running prepare.** `bootGameRuntime`'s
+  switch branch waits for every in-flight prepare's REGION (the raw file
+  committed; the runtime warm-up is the service worker's and survives a
+  reload) and mirrors it on the boot banner before `location.reload()`;
+  the outgoing relay's status is muted meanwhile. Probe (NNG4 bound,
+  SPA home, Prepare STG4, tile 200 ms later): banner "preparing the game
+  environment · 64 … 576 / 634 MB", reload deferred 1.2 s until
+  `prepare stg4: region done`, exactly one page-level `.snapz` GET (none
+  after the reload), raw complete, no partials — before the fix the
+  region was fetched twice.
+- **One runtime warm-up per build.** `warmRuntimeCache` shares one
+  in-flight `warm` per `buildId` page-side, and the service worker keeps
+  one fetch per URL across concurrent warms (two tabs). Two Prepares
+  0.1 s apart, counted on the server: 10 `/runtime/chunks` hits /
+  153.6 MB (was 17–20 / 269–307 MB).
+- **Region ready ≠ warm done.** `PrepareStatus.phase` gained `warming`
+  (region in OPFS, warm-up running): the tile flips to "Ready — plays
+  offline" the moment the region lands and says "caching the checker…"
+  under it; the boot awaits the region only (`inFlightPrepare`) and
+  renders the current status immediately. With chunks delayed 8 s the
+  stale window went from 79.8 s to 0.0 s. `warmTarget` gives up on
+  `serviceWorker.ready` once the page has loaded and no registration
+  appears within 3 s (the dev server registers none) instead of 30 s.
+- **The bound game's tile** shows "Loaded in this tab — its download is
+  managed by the game." instead of Prepare/Remove (`boundEnvironmentAtom`),
+  `prepareGame` refuses a snapshot the boot has claimed
+  (`claimSnapshotForBoot`), and the landing page re-probes the tiles when
+  the bound boot turns ready. Probe: no Prepare button while the boot
+  streams, one prefetch worker, row "Ready — plays offline" after the boot
+  (was: "Preparation failed: … createSyncAccessHandle …" + Retry, 2 workers).
+- **Copy/units.** The tile's progress is scaled to the transfer size it
+  promised ("Preparing… 393 / 409 MB" under "Download ≈409 MB"; the bar's
+  value/max stay raw); the banner keeps raw bytes and the level pane now
+  says "(about 173 MB to download, 634 MB once unpacked)". Worker exits
+  read as user copy (`busy`, `unavailable` without Retry); `Prepare note`,
+  `Prepare memory note`, `Storage meter` carry English defaultValues;
+  `<progress>` has an aria-label and the status cell is `aria-live=polite`.
+- **No OPFS (Firefox private mode).** The landing page probes
+  `getDirectory()` once; when it throws, no Prepare/Remove, no meter, one
+  note "This browser mode cannot keep games offline…" (simulated in
+  Chromium with a rejecting getDirectory: 0 buttons, note shown).
+- **Sweep.** Skipped under `?snapshots=<dir>` (the unpromoted index's
+  keys are not the served ones — it deleted the promoted 1.47 GB region);
+  matches the exact key shape after a listed name (`nng4.dev.*` next to
+  `nng4` is left alone); reclaims stale-key `.partial` files (the
+  15-minute prefetch bail also removes its own). Verified with the real
+  function in Node and the dev-index browser probe (`stale region sweep
+  skipped: unpromoted index ?snapshots=staging`, promoted key kept).
+
+## Nine games (2026-09-11)
+
+Every game of https://adam.math.hhu.de is now a catalog row (`wasm/catalog.json`,
+ten rows with TestGame), each baked slim on the served runtime from its own
+overlay; the init snapshot is retired (no game session loads it) and the
+core profile pack is no longer installed by a game session. Per game, the
+one-time download on first play and the region held in the browser:
+
+| game | snapshot | on the wire | raw region |
+| --- | --- | --- | --- |
+| djvelleman/STG4 | stg4 | 181 MB | 665 MB |
+| test/TestGame | testgame | 149 MB | 547 MB |
+| hhu-adam/NNG4 | nng4 | 154 MB | 569 MB |
+| emilyriehl/ReintroductionToProofs | reintro | 153 MB | 563 MB |
+| JadAbouHawili/KnightsAndKnaves-Lean4Game | knights | 199 MB | 729 MB |
+| k88-b/NumberTheoryGame | ntg | 232 MB | 836 MB |
+| AlexKontorovich/RealAnalysisGame | rag | 282 MB | 1005 MB |
+| hhu-adam/Robo | robo | 281 MB | 1002 MB |
+| Trequetrum/lean4game-logic | logic | 231 MB | 835 MB |
+| ZRTMRH/LinearAlgebraGame | lag | 280 MB | 999 MB |
+| **all ten** | | **2,142 MB** | **7.75 GB** |
+
+A first visit of any game now transfers the runtime (154 MB) plus that
+game's snapshot; a second game costs only its own row. The landing page
+lists nine tiles with live state (Ready / Download ≈N MB / Not available on
+this build), a Prepare button, the storage meter and Remove download; the
+service worker precaches the shell and the nine cover images only (per-game
+level data is cached on use). Ports are documented per game in
+`wasm/PORTING.md` §8. The local test campaign (2026-09-11, three testers +
+adversarial verification + fixes, client/dist on :3006) is summarised here;
+evidence lives under the session scratchpad `tc-shots/` and `tc-res-*.log`.
+
+**Landing, Prepare, storage, visuals, accessibility (tester "landing").**
+9/9 tiles show "Download ≈N MB" with N = round(transfer/1048576) on a fresh
+profile and "Ready — plays offline" after play; a snapshot removed from the
+index or baked for another runtime renders "Not available on this build"
+(no navigation) and a direct level URL shows the failure card naming the
+reason in 0.5 s with zero snapshot bytes requested. Prepare: keyboard
+activation, `<progress>` with an aria-label, region complete in 1.1 s on
+localhost, then entering the game reaches serving in 3.7 s; the Prepare→
+enter race constructs exactly one prefetch worker. Storage meter counts the
+cached regions; Remove download deletes exactly that region and the tile
+flips back; the stale-region sweep removed two planted stale `.raw` files
+and kept the live ones. Screenshots at 1400×900 and 390×844: no horizontal
+overflow, tiles three per row at desktop after the grid fix.
+
+**Switching, offline, i18n, low memory, Cypress, SW upgrade, memory
+(tester "resilience").** Switch matrix over NNG4/STG4/ReintroductionToProofs:
+7/7 transitions serving (downloads 5.1–6.2 s to serving on localhost, cached
+4.1–4.6 s, wire bytes equal to the index's transfer sizes). Offline with
+three games cached: reload → serving 5.8 s and `rfl` completes; hash to the
+second game offline → 6.2 s, `exact h` completes; landing offline renders
+nine tiles with images and correct states. i18n: STG4 es, NNG4 fr, Robo de
+and zh, NumberTheoryGame ru all switch intro, tabs, goal header and tactic
+docs; a game without the language falls back to English without errors.
+deviceMemory=4 shows the heads-up above the tiles and in the level pane.
+Cypress in Chrome 24/24 (a run under memory pressure from concurrent
+browsers crashed the renderer: run the suite alone). Service-worker upgrade
+from the live build's worker: new worker controlling in 5.7 s, 0 HTML
+bodies under non-HTML names, offline reload serves the new shell.
+
+**Defects found (17, all reproduced by a second agent) and their fate:**
+
+| id | severity | defect |
+| --- | --- | --- |
+| D1 | major | STG4 in Spanish: level statement stays English although the es dictionary contains its translation (game-namespace text translated without §-placehold |
+| D2 | major | Landing-page game tiles are not keyboard-operable (no role/tabindex/accessible name); keyboard and screen-reader users cannot open a game from the lan |
+| D3 | minor | Storage meter undercounts cached games: "3 (0.2 GB …)" while OPFS raw regions total ~1.7 GB (navigator.storage.estimate() appears to omit OPFS in that |
+| D4 | minor | Non-focusable controls: language menu opener "en" (<a> without href), the 9 language menu items, and footer "Impressum"/"Privacy Policy" (<a class="li |
+| D5 | minor | Hamburger menu button #menu-btn has no accessible name (AX role button, name "") |
+| D6 | minor | Keyboard focus is dropped to <body> after activating "Prepare offline" or "Remove download" (button unmounts); user must Tab from the top again |
+| D7 | minor | Leaving a level for the landing page fires GET /data/undefined/level__undefined__undefined.json (SPA-fallback 200 online; console error ERR_FAILED off |
+| D8 | minor | Offline landing page logs 24 console errors: i18n.loadNamespaces fetches /i18n/g/<owner>/<game>/en for each of the 6 never-played games (not in any ca |
+| D9 | minor | Empty-text console.error("") from the bundled vscode/monaco code on every level boot (1–2 per boot) and again after a tactic settles |
+| D10 | minor | Console error `Unable to read file 'extension-file://leanprover.lean4/language-configuration.json'` on level load (monaco-vscode extension file lookup |
+| D11 | minor | Local scripts/serve-dist.mjs has no .jpg MIME mapping: 2 of 9 cover images served as application/octet-stream (would break under X-Content-Type-Option |
+| D12 | minor | Cypress game-features.cy.ts crashes the Chrome renderer when the host is short of memory (each of its 19 tests re-boots TestGame in the same tab at ~8 |
+| D13 | cosmetic | Robo tile shows the raw i18n key "[Game] Prerequisites" in the Prerequisites cell |
+| D14 | cosmetic | No dark theme: 0 prefers-color-scheme rules in any stylesheet; landing and level pane (incl. failure card with hard-coded #333/#666 on white) render i |
+| D15 | cosmetic | Failure card (unpublished / runtime-mismatch environment) keeps an animated spinner and "0 s elapsed" on a terminal failure, and the typewriter input  |
+| D16 | cosmetic | Boot gate overlay is 96% opaque and shorter than the input row: the "Execute" button shows through at the right edge of the note during download/elabo |
+| D17 | cosmetic | Fixed-height .short-description (6.5 rem) leaves a 60–90 px blank band on tiles with one-line summaries (RAG, logic, LAG, knights); 9 listed tiles lea |
+
+Fixed in this build: D1–D8, D10, D15–D17 (statement translation through the
+game namespace, keyboard-operable tiles with `role="link"`, focus kept after
+Prepare/Remove, storage meter summing the OPFS regions, no
+`/data/undefined/…` request on leaving a level, no offline i18n error storm,
+failure card without a live spinner, opaque gate overlay, three-column grid)
+plus a service-worker fix found on the way (offline navigation after a
+deploy could serve the previous build's shell from the older cache — the
+lookup now checks the current shell cache first). Not fixed: D9 (empty
+`console.error` from lean4monaco's message strategy — upstream), D11 (local
+static server MIME table — fixed separately in `scripts/serve-dist.mjs`),
+D12 (Cypress renderer crashes under host memory pressure — run it alone),
+D13 (Robo's tile lists an untranslated `[Game] Prerequisites` key — the
+tile now drops untranslated keys), D14 (no dark theme — inherited from
+upstream, a theming pass is a separate item).
+
+**Deep play of every game (tester "play")** is recorded in the next
+subsection.
+
+
 ## Open
 
 - **Renderer crash: reloads then a 100 ms navigation storm (mitigated,

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "span",
+ "displayName": "span",
+ "content":
+ "The span of a set of vectors `S`, denoted `span K V S` is the set of all vectors that are a linear\ncombination of `S`. It is represented in Lean as\n\n``` { x : V | is_linear_combination K V S x } ```",
+ "category": "📖︎"}

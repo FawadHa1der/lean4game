@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} [LinearOrder α] {a b} : ¬a ≤ b ↔ b < a",
+ "name": "not_le",
+ "displayName": "not_le",
+ "content": "(missing)",
+ "category": "≤"}

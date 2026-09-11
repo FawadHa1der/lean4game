@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (ι : Type) (V : Finset ι) (δs : ι → ℝ) (hδs : ∀ i, δs i > 0) : ∃ δ > 0, ∀ i ∈ V, δ ≤ δs i",
+ "name": "RealAnalysisGame.FinMinPos",
+ "displayName": "FinMinPos",
+ "content":
+ "Given an indexing type `ι`, a finite subset `V` of `ι`, and a function `δs : ι → ℝ` that assigns a positive real number to each index, there exists a positive real number `δ` such that for all indices `i` in the finite set `V`, `δ` is less than or equal to `δs i`.",
+ "category": "Theorems"}

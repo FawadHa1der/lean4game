@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : ∑ i ∈ Finset.Icc 0 n, ↑i = 1 / 2 * ↑n * (↑n + 1)",
+ "name": "arithmetic_sum",
+ "displayName": "arithmetic_sum",
+ "content": "(missing)",
+ "category": "∑ Π"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [Lattice α] [AddGroup α] {a} [AddLeftMono α] (h : 0 ≤ a) : |a| = a",
+ "name": "abs_of_nonneg",
+ "displayName": "abs_of_nonneg",
+ "content":
+ "Usage: given hypothesis `h : 0 ≤ X`, you can prove: `have : |X| = X := by apply abs_of_nonneg h`",
+ "category": "|x|"}

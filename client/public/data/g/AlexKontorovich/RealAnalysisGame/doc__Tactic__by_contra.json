@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "by_contra",
+ "displayName": "by_contra",
+ "content":
+ "To give a proof by contradiction, the syntax is : `by_contra h`, which adds a hypothesis with the name `h` (or whatever you want), which is the negation of the current Goal, and changes the goal to `false`.",
+ "category": "📖︎"}

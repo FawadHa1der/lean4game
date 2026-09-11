@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "apply",
+ "displayName": "apply",
+ "content":
+ "# It suffices to show\nTo prove `Q` by `P → Q`, it suffices to show `P`.\n### More Generally\nTo prove `Q` by `P₁ → P₂ → P₃ → ... → Q`, it suffices to show `P₁, P₂, P₃, ...`. One way to convince yourself this is true is to prove that `(P₁ → P₂ → Q) → (P₁ ∧ P₂ → Q)` and convince yourself there exists a procedure for any `(P₁ → P₂ → ... → Q) → (P₁ ∧ P₂ ∧ ... → Q)`\n### In Practice\nThe `apply` tactic returns as many subgoals as the number of premises that have not been fixed by the Goal.\n### Example:\nIf you have:\n```\nAssumptions:\nh : P → Q\nGoal : Q\n```\nthen `apply h` will change your proof state to:\n```\nAssumptions:\nh : P → Q\nGoal : P\n```",
+ "category": "📖︎"}

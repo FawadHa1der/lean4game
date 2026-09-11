@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (u v : V)\n  (h : v ≠ 0) : LinearAlgebraGame.orthogonal (u - (⟪u,v⟫ / ↑‖v‖ ^ 2) • v) v",
+ "name": "LinearAlgebraGame.ortho_decom",
+ "displayName": "ortho_decom",
+ "content":
+ "`ortho_decom` is a proof that given vectors `u v : V` and `h : v ≠ 0`, then `orthogonal (u - (⟪u,v⟫ / (‖v‖^2)) • v) v`.\nThis allows you to rewrite `u` as a scalar multiple of `v` added to a vector orthogonal to `v`.",
+ "category": "Inner Product"}

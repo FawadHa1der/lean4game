@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "linear_independent_v",
+ "displayName": "linear_independent_v",
+ "content":
+ "`linear_independent_v` means that a set of vectors is linearly independent. To say a set `S : Set V`\nis linearly independent, we write `linear_independent_v K V S`. This is defined that any finite set of scalar\nmultiples of vectors in `S` that sum to `0` must all be `0`. It is written in Lean as\n\n```\ndef linear_independent_v (S : Set V) : Prop :=\n∀ (s : Finset V) (f : V → K),\n(↑s ⊆ S) → (Finset.sum s (fun v ↦ f v • v) = 0) → (∀ v ∈ s, f v = 0)\n```\n\nNote that we use `Finset` here, which means that even though `S` can be infinite, `s` must be finite.",
+ "category": "📖︎"}

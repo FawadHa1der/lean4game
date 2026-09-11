@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "all_possibilities",
+ "displayName": "all_possibilities",
+ "content":
+ "Considers cases of all possibilities of an inhabitant\n`x`\n\n`cases h` where `h : x = A ∨ x = B ∨ x = C`",
+ "category": "KnightsAndKnaves"}

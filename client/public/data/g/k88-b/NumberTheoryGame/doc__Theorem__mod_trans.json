@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b c m : ℤ) (h1 : a ≡ b (mod m)) (h2 : b ≡ c (mod m)) : a ≡ c (mod m)",
+ "name": "mod_trans",
+ "displayName": "mod_trans",
+ "content":
+ "**Transitivity of Modular Congruence**\n\nIf $a \\equiv b \\pmod m$ and $b \\equiv c \\pmod m$, then $a \\equiv c \\pmod m$.\n\n**Meaning:** This theorem proves that modular arithmetic is a true *equivalence relation*. It means you can chain congruences together step-by-step to reach a conclusion, exactly like you can chain regular equations ($a = b$ and $b = c \\implies a = c$).",
+ "category": "Congruence"}

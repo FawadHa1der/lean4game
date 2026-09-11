@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {n} {α} {R} [Fintype n] [AddCommMonoid R] [DistribSMul α R] (r : α) (A : Matrix n n R) : (r • A).trace = r • A.trace",
+ "name": "Matrix.trace_smul",
+ "displayName": "trace_smul",
+ "content": "(missing)",
+ "category": "Matrix"}

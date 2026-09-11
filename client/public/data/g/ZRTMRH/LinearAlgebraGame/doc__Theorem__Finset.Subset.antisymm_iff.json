@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {s₁ s₂} : s₁ = s₂ ↔ s₁ ⊆ s₂ ∧ s₂ ⊆ s₁",
+ "name": "Finset.Subset.antisymm_iff",
+ "displayName": "Finset.Subset.antisymm_iff",
+ "content":
+ "`Finset.Subset.antisymm_iff` is a proof that two Finsets are equal if and only if they are subsets of each other.",
+ "category": "Sets"}

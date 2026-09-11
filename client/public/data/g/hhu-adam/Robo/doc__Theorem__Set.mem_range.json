@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {ι} {f} {x} : x ∈ Set.range f ↔ ∃ (y : ι), f y = x",
+ "name": "Set.mem_range",
+ "displayName": "mem_range",
+ "content": "(missing)",
+ "category": "Function"}

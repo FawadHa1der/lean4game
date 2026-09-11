@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "assumption",
+ "displayName": "assumption",
+ "content":
+ "assumption tries to solve the main goal by searching your the assumptions in your proof state for a hypothesis with a compatible proposition",
+ "category": "📖︎"}

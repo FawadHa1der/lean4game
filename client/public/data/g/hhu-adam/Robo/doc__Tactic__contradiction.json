@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "contradiction",
+ "displayName": "contradiction",
+ "content":
+ "The tactic `contradiction` concludes the proof if it finds a contradiction in the assumptions.\nSuch a contradiction can look like this, for example:\n\n* `h : n ≠ n`\n* `h : A` and `h' : ¬A`\n* `h : False`\n\n## Friends and relatives\n\nNormally, `contradiction` is used to conclude a proof by contradiction\nthat was opened with `by_contra`.",
+ "category": "📖︎"}

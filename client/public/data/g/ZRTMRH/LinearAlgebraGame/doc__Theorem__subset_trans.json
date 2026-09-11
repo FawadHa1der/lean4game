@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [UsesSetNotationForOrder α] [Preorder α] {a b c} (a✝ : a ⊆ b) (a✝ : b ⊆ c) : a ⊆ c",
+ "name": "subset_trans",
+ "displayName": "subset_trans",
+ "content":
+ "`subset_trans` is a proof that subsets are transitive. The syntax is that if you have `h1 : A ⊆ B`\nand `h2 : B ⊆ C`, then `subset_trans h1 h2` is a proof that `A ⊆ C`.",
+ "category": "Sets"}

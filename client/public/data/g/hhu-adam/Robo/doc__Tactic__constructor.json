@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "constructor",
+ "displayName": "constructor",
+ "content":
+ "The `constructor` tactic breaks down a proof goal into its constituent parts:\n\n| before | after                |\n|:------------ |:----------------------- |\n| `⊢ A ∧ B`    | `⊢ A` and `⊢ B`         |\n| `⊢ A ↔ B`    | `⊢ A → B` and `⊢ B → A` |\n\n## Friends and relatives\n\n* You can break down an *assumption* into its components using `obtain`.\n* If you want to prove `A ∨ B`, you have to choose one side using `left` or `right`.",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {x} (h : 0 ≤ x) : √x ^ 2 = x",
+ "name": "Real.sq_sqrt",
+ "displayName": "sq_sqrt",
+ "content":
+ "`sq_sqrt` is a proof that if `0 ≤ x`, then `(sqrt x) ^ 2 = x`. It allows you to cancel out square roots.",
+ "category": "ℝ"}

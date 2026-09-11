@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {s t r} (sr : s ⊆ r) (tr : t ⊆ r) : s ∪ t ⊆ r",
+ "name": "Set.union_subset",
+ "displayName": "union_subset",
+ "content":
+ "`union_subset` is a proof that if `a ⊆ c` and `b ⊆ c`, then `a ∪ b ⊆ c`. This means that if you\nhave two sets that are subsets of the same set, their union is also a subset of that set.",
+ "category": "Sets"}

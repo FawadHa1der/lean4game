@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Surjective",
+ "displayName": "Surjective",
+ "content":
+ "A function `f : X → Y` called `Surjective` if: for all `y : Y`, `∃ x : X` so that `f x = y`.",
+ "category": "📖︎"}

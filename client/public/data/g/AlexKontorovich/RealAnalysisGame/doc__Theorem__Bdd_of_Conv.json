@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ → ℝ) (L : ℝ) (ha : SeqLim a L) : SeqBdd a",
+ "name": "Bdd_of_Conv",
+ "displayName": "Bdd_of_Conv",
+ "content": "If `a : ℕ → ℝ` is a sequence which converges, then it is bounded.",
+ "category": "aₙ"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "cases",
+ "displayName": "cases",
+ "content":
+ "`cases` exemplifies the `∨` elimination rule\n[#Or.elim](https://leanprover-community.github.io/mathlib4_docs/Init/Prelude.html#Or.elim)\n\n# Proof by cases\nThe `cases` tactic enables us to do a 'proof by cases'.\n\nGiven,\n```\nPorQ : P ∨ Q\n\nGoal\nsome-goal\n```\n`cases PorQ` will first assume `P` and ask you to prove `some-goal` and then it will assume `Q` and ask you to prove `some-goal`.\n\nSo in both cases, `some-goal` is true. Therefore we can conclude `some-goal`. This is called a proof by cases.",
+ "category": "📖︎"}

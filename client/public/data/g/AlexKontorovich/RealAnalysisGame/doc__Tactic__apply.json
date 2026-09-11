@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "apply",
+ "displayName": "apply",
+ "content":
+ "The `apply` tactic solves a goal when one of the hypotheses is the same as the goal. The syntax is `apply hypothesis_name`",
+ "category": "📖︎"}

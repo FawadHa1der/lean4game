@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (f : ℝ → ℝ) (c L k : ℝ) (hf : FunLimAt f L c) : FunLimAt (fun x => k * f x) (k * L) c",
+ "name": "ConstTimesLimAt",
+ "displayName": "ConstTimesLimAt",
+ "content": "If `f → L` as `x → c`, then `k · f → k · L`.",
+ "category": "f(x)"}

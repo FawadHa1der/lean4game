@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rfl",
+ "displayName": "rfl",
+ "content":
+ "The tactic `rfl` proves `X = X`.  More precisely, `rfl` closes every proof target of the form `A = B`,\nwhere `A` and `B` are identical in definition.",
+ "category": "📖︎"}

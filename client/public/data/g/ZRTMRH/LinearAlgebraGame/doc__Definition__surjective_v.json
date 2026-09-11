@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "surjective_v",
+ "displayName": "surjective_v",
+ "content": "`surjective_v K V W T` means T is onto.",
+ "category": "📖︎"}

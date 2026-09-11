@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {M} {N} {γ} [AddCommMonoid N] [DistribSMul M N] {r} {f} {s} : r • ∑ x ∈ s, f x = ∑ x ∈ s, r • f x",
+ "name": "Finset.smul_sum",
+ "displayName": "smul_sum",
+ "content":
+ "`smul_sum` is a proof that you can distribute scalar multiplication through `Finset.sum`.",
+ "category": "Sets"}

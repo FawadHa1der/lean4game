@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.curry",
+ "displayName": "curry",
+ "content":
+ "For any types `A`, `B`, and `C`, `Function.curry : (A × B → C) → (A → B → C)` is the function that sends `f : A × B → C` to the function that sends `a : A` and `b : B` to `f ⟨a, b⟩ : C`.",
+ "category": "Function"}

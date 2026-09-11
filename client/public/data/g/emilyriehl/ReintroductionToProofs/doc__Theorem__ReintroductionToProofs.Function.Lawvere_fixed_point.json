@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {A B} (f : A → A → B) (a✝ : ∀ g, ∃ a, f a = g) (n : B → B) : ∃ b, n b = b",
+ "name": "ReintroductionToProofs.Function.Lawvere_fixed_point",
+ "displayName": "Lawvere_fixed_point",
+ "content":
+ "If `f : A → A → B` is surjective as a function from `A` to `A → B`, then any endomorphism of `B` has a fixed point.",
+ "category": "Function"}

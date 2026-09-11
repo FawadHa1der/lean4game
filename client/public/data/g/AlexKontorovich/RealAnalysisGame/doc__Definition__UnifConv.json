@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "UnifConv",
+ "displayName": "UnifConv",
+ "content":
+ "`(f : ℕ → ℝ → ℝ) (F : ℝ → ℝ) :=\n∀ ε > 0, ∃ N, ∀ n ≥ N, ∀ x, |f n x - F x| < ε`\n\nThe sequence `f : ℕ → ℝ → ℝ` of functions converges uniformly to `F : ℝ → ℝ`.",
+ "category": "📖︎"}

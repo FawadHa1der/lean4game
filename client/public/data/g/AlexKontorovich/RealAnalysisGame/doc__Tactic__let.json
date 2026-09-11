@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "let",
+ "displayName": "let",
+ "content":
+ "The `let` tactic is like `have`, but for creating variable names or functions.",
+ "category": "📖︎"}

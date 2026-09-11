@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {G₀} [GroupWithZero G₀] {a} (h : a ≠ 0) : a⁻¹ * a = 1",
+ "name": "inv_mul_cancel₀",
+ "displayName": "inv_mul_cancel₀",
+ "content":
+ "`inv_mul_cancel₀` is a proof that multiplying a nonzero inverse gives 1. If you have a hypothesis `h : x ≠ 0`,\nthen  `inv_mul_cancel₀ h` is a proof that `x⁻¹ * x = 1`",
+ "category": "Groups"}

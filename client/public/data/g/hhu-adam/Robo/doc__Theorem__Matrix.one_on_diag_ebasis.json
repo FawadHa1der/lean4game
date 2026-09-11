@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {n} {f} (h₁ : ∀ A B, f (A * B) = f (B * A)) (h₂ : f 1 = ↑n) (i : Fin n) : f (Matrix.E i i) = 1",
+ "name": "Matrix.one_on_diag_ebasis",
+ "displayName": "one_on_diag_ebasis",
+ "content": "(missing)",
+ "category": "Matrix"}

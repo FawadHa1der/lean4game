@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "constructor",
+ "displayName": "constructor",
+ "content":
+ "The `constructor` tactic is used to prove goals consisting of a logical AND ($\\wedge$).\nIt splits the goal `P ∧ Q` into two separate goals: `P` and `Q`.",
+ "category": "📖︎"}

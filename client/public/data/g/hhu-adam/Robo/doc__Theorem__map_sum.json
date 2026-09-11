@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {M} {N} [AddCommMonoid M] [AddCommMonoid N] {G} [FunLike G M N] [AddMonoidHomClass G M N] (g : G) (f : ι → M)\n  (s : Finset ι) : g (∑ x ∈ s, f x) = ∑ x ∈ s, g (f x)",
+ "name": "map_sum",
+ "displayName": "map_sum",
+ "content":
+ "[Doc.Theorem] map_sum\nLinear mapping, or 'additive' mappings in general, can be exchanged with a sum.",
+ "category": "∑ Π"}

@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Eq",
+ "displayName": "=",
+ "content": "Useful tactics for equality are: `rfl`, `rw`, `trans`",
+ "category": "Logic"}

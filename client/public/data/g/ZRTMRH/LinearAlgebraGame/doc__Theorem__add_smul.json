@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {R} {M} [Semiring R] [AddCommMonoid M] [Module R M] (r s : R) (x : M) : (r + s) • x = r • x + s • x",
+ "name": "add_smul",
+ "displayName": "add_smul",
+ "content":
+ "`add_smul` is one of the axioms of a vector space. It is a proof that if we know `vs : VectorSpace K V`,\nthen `∀ (a b : K) (x : V), (a + b) • x = a • x + b • x`. It can be considered as left distributivity\nof scalar multiplication.",
+ "category": "Vector Spaces"}

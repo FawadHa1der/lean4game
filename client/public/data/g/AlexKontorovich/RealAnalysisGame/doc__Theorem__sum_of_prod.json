@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {X} [CommSemiring X] (f : ℕ → X) (m n : ℕ) :\n  ∑ i ∈ Finset.range (m * n), f i = ∑ j ∈ Finset.range m, ∑ k ∈ Finset.range n, f (j + k * m)",
+ "name": "sum_of_prod",
+ "displayName": "sum_of_prod",
+ "content":
+ "The sum over `m * n` terms can be expressed as a double sum over `m` and `n`.",
+ "category": "∑aₙ"}

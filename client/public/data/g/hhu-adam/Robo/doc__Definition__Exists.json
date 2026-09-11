@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Exists",
+ "displayName": "∃",
+ "content":
+ "Existential quantifier: If `P : A → Prop` is a predicate, then\n`∃ a : A, P a` is the statement that an element `a` in `A` (more precisely: of type `A`)\nexists for which the statement `P a` is true.\nA pure existence statement (\"there is an element of type `A`)\ncan be formulated, for example, as `∃ a : A, true` or as `Nonempty A`.\n\n## `∃` as a proof goal\n\nTo prove a statement of the form `∃ a : A, …`,\nyou construct a suitable element `a` and then use the `use` tactic (`use a`).\n\n## `∃` as an assumption\n\nYou can decompose an assumption of the form `h : ∃ a : A, P a` into its components using\n`choose a ha using h` or `obtain ⟨a, ha⟩ := h` into `a : A` and `ha : P a`.",
+ "category": "Logic"}

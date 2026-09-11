@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.RightInverse",
+ "displayName": "RightInverse",
+ "content":
+ "`Function.RightInverse f g` is defined as `LeftInverse g f`.\nIn other words: `∀ x, g (f x) = x`.\n\nYou have to write `Function.RightInverse`  instead of `RightInverse`,\nas `RightInverse` is ambigous in Leanic.",
+ "category": "Function"}

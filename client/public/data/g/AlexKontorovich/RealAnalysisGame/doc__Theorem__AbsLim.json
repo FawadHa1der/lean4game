@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a : ℕ → ℝ) (L : ℝ) (aToL : SeqLim a L) (b : ℕ → ℝ) (bEqAbsa : ∀ n, b n = |a n|) : SeqLim b |L|",
+ "name": "AbsLim",
+ "displayName": "AbsLim",
+ "content":
+ "If `a : ℕ → ℝ` converges to `L`, and `b : ℕ → ℝ` is its absolute value, `b n = |a n|` for all `n`, then `b` converges to `|L|`.",
+ "category": "aₙ"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] [DecidableEq V] {S} {v}\n  (hS : LinearAlgebraGame.linear_independent_v K V S) (hv_not_span : v ∉ LinearAlgebraGame.span K V S) :\n  LinearAlgebraGame.linear_independent_v K V (S ∪ {v})",
+ "name": "LinearAlgebraGame.linear_independent_insert_of_not_in_span",
+ "displayName": "linear_independent_insert_of_not_in_span",
+ "content":
+ "`linear_independent_insert_of_not_in_span` is a proof that if you have a linearly independent set, and\nyou insert an element not in the span of that set, the new set is also linearly independent. The syntax\nis as follows: if you have hypotheses `hS : linear_independent_v K V S`, and `hv_not_span : v ∉ span K V S`,\nthen `linear_independent_insert_of_not_in_span hS hv_not_span` is a proof of `linear_independent_v K V (S ∪ {v})`.",
+ "category": "Vector Spaces"}

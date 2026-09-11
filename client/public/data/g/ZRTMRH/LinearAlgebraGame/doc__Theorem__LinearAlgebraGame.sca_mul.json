@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (a : ℂ) (v : V) :\n  ‖a • v‖ = ‖a‖ * ‖v‖",
+ "name": "LinearAlgebraGame.sca_mul",
+ "displayName": "sca_mul",
+ "content":
+ "The norm of a scalar multiple: `‖a • v‖= ‖a‖ * ‖v‖`.\nThis fundamental property shows how norms interact with scalar multiplication.",
+ "category": "Inner Product"}

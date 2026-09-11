@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "ext",
+ "displayName": "ext",
+ "content":
+ "## Summary\n\n`ext` proves two functions are equal by showing they agree at every point. It's the \"extensionality\" tactic.\n\n## Example\n\nIf your goal is to prove `f = g` where `f` and `g` are functions, then:\n```\next x\n-- Goal changes to: f x = g x\n```\n\nThis reduces proving function equality to proving pointwise equality.\n\n## Common usage\n\nEssential for proving equality of linear maps, where you need to show `T₁ = T₂` by proving `T₁ v = T₂ v` for all `v`.",
+ "category": "📖︎"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [DecidableEq α] (s₁ s₂ : Finset α) : ↑(s₁ ∪ s₂) = ↑s₁ ∪ ↑s₂",
+ "name": "Finset.coe_union",
+ "displayName": "coe_union",
+ "content":
+ "`coe_union` is a proof that `↑(a ∪ b) = ↑a ∪ ↑b`. The `↑` means type casting, which in this case\nspecifically means that if `a` is a `Finset`, then `↑a` is a `Set` containing the same elements. This\ntheorem shows that type casting passes through unions.",
+ "category": "Sets"}

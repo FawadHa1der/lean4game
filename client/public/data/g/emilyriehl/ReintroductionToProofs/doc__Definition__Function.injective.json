@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.injective",
+ "displayName": "injective",
+ "content":
+ "A function `f : A → B` is *injective* if `∀ x y : A, x = y → f x = f y`.",
+ "category": "Function"}

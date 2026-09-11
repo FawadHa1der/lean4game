@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [DecidableEq α] {t} {a} (s : Finset α) (h : a ∈ t) : a ∈ s ∪ t",
+ "name": "Finset.mem_union_right",
+ "displayName": "mem_union_right",
+ "content":
+ "`mem_union_right` is a proof that if `a ∈ t`, then `a ∈ s ∪ t`. The syntax is `mem_union_right s h`.",
+ "category": "Sets"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "contradiction",
+ "displayName": "contradiction",
+ "content":
+ "contradiction closes the current goal there are assumptions which are \"trivially contradictory\".\n\n### Example\n```\nAssumptions:\nh : False\n```\n### Example\n```\nAssumptions:\nh₁ : P\nh₂ : ¬P\n```",
+ "category": "📖︎"}

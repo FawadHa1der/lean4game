@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Finset.sum",
+ "displayName": "Finset.sum",
+ "content":
+ "`Finset.sum` is how we define summing over a set. It uses Mathlib's `Finset` Type, which means that we\ncan only sum over arbitrary finite sets. The syntax is as follows: With a additive group or field `K`, some Type `T`,\nsome `s : Finset T`, and some `f : T → K`, `Finset.sum s (fun x => f x)` sums `f x` over all `x ∈ s`.",
+ "category": "📖︎"}

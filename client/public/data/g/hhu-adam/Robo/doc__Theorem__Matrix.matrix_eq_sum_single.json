@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {m} {n} {α} [DecidableEq m] [DecidableEq n] [AddCommMonoid α] [Fintype m] [Fintype n] (x : Matrix m n α) :\n  x = ∑ i : m, ∑ j : n, Matrix.single i j (x i j)",
+ "name": "Matrix.matrix_eq_sum_single",
+ "displayName": "matrix_eq_sum_single",
+ "content": "(missing)",
+ "category": "Matrix"}

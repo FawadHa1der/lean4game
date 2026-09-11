@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {a} (ha : IsCauchy a) : SeqLim (fun x => ↑(a x)) (Real_of_CauSeq ha)",
+ "name": "SeqLim_of_Real_of_Cau",
+ "displayName": "SeqLim_of_Real_of_Cau",
+ "content":
+ "If a sequence `a : ℕ → ℚ` is Cauchy, then it converges (that is, `SeqLim` holds)\nto the real number defined in `Real_of_CauSeq`.",
+ "category": "aₙ"}

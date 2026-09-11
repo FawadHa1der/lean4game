@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "unfold",
+ "displayName": "unfold",
+ "content":
+ "The `unfold` tactic replaces a definition with its underlying meaning.\nIf your goal contains `a ≡ b (mod m)`, typing `unfold ModEq` will change it to `m ∣ a - b`.\n\n**Targeting hypotheses:**\nBy default, `unfold` applies only to the goal. You can unfold a definition inside a specific hypothesis `h` by typing `unfold ModEq at h`.\nTo unfold it everywhere (in all hypotheses and the goal at once), use `unfold ModEq at *`.",
+ "category": "📖︎"}

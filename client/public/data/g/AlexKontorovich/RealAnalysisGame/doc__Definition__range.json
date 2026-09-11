@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "range",
+ "displayName": "range",
+ "content":
+ "`range N`\n\nFor a natural number `N`, `range N` represents the numbers from\n`0` to `N-1` (there are `N` of them).\n\nUsage: `∑ k ∈ range N, k = N * (N + 1) / 2`.",
+ "category": "📖︎"}

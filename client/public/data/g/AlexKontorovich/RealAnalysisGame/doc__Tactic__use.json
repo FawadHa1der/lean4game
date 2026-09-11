@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "use",
+ "displayName": "use",
+ "content":
+ "The `use` tactic provides a specific value to prove an existence statement.",
+ "category": "📖︎"}

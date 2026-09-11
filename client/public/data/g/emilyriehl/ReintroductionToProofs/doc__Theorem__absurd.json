@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {a} {b} (h₁ : a) (h₂ : ¬a) : b",
+ "name": "absurd",
+ "displayName": "absurd",
+ "content":
+ "For any propositions `P` and `Q`, `absurd` proves that `P → ¬ P → Q`. So if `p : P` and `np : ¬ P`,\nthen `absurd p np` supplies a proof of any proposition.",
+ "category": "False"}

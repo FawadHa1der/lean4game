@@ -1,0 +1,61 @@
+From 2d147cd1274bf1cb3bfb89879e93627e052e3124 Mon Sep 17 00:00:00 2001
+From: wasm64 port <wasm64@localhost>
+Date: Fri, 11 Sep 2026 11:11:38 -0400
+Subject: [PATCH] wasm64 port: build against the QED64 Lean fork (4.33.0-pre)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Two one-line source changes; everything else the v4.7.0-era game needs
+is supplied by the build's compat tree (the `Mathlib.Tactic` umbrella
+that Game/Metadata.lean imports is provided under its real module name
+by wasm/compat/Mathlib/Tactic.lean, so the import is untouched):
+
+- Game.lean: `Languages "English"` -> `Languages "en"` (the client
+  matches ISO codes; "English" matched no UI language).
+- Game/Levels/OrIntro/L02.lean: bind `K` explicitly,
+  `Statement (K O S : Prop)`. Under v4.7.0 the `K` of the goal `K ∨ S`
+  was an auto-bound implicit; this GameServer's `Statement` elaborator
+  no longer auto-binds signature identifiers ("Unknown identifier `K`").
+  Auto-bound implicits were placed first, so the player's object list
+  (`K O S : Prop`) is unchanged.
+
+All 103 reachable modules compile with -Dlinter.all=false
+-Dtactic.hygienic=false -Dlinter.unusedVariables.funArgs=true; MakeGame
+emits the full 10-world / 88-level gamedata.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+---
+ Game.lean                    | 2 +-
+ Game/Levels/OrIntro/L02.lean | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Game.lean b/Game.lean
+index a28af4b..717eca7 100755
+--- a/Game.lean
++++ b/Game.lean
+@@ -174,7 +174,7 @@ Warning: In most browsers, deleting cookies will also clear the local storage
+ "
+ 
+ /-! Information to be displayed on the servers landing page. -/
+-Languages "English"
++Languages "en"
+ CaptionShort "Lean intro to Logic"
+ CaptionLong "A mostly self-contained introduction to constructive logic using Lean. Learn how each propositional connective can be introduced and eliminated using both terms and tactics."
+ CoverImage "images/logic0101_v4.png"
+diff --git a/Game/Levels/OrIntro/L02.lean b/Game/Levels/OrIntro/L02.lean
+index 2d75a68..f71dbc8 100755
+--- a/Game/Levels/OrIntro/L02.lean
++++ b/Game/Levels/OrIntro/L02.lean
+@@ -22,7 +22,7 @@ You've just unlocked `or_inr`. It turns evidence for the righthand of an `∨` p
+ "
+ 
+ /-- Or Introduction Right -/
+-Statement (O S : Prop)(s : S) : K ∨ S := by
++Statement (K O S : Prop)(s : S) : K ∨ S := by
+   exact or_inr s
+ 
+ Conclusion "
+-- 
+2.50.1 (Apple Git-155)
+

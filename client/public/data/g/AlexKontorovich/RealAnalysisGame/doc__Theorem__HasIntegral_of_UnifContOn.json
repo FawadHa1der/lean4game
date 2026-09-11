@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (f : ℝ → ℝ) (a b : ℝ) (hab : a < b) (hf : UnifContOn f (Set.Icc a b)) : IntegrableOn f a b",
+ "name": "HasIntegral_of_UnifContOn",
+ "displayName": "HasIntegral_of_UnifContOn",
+ "content":
+ "If a function `f` is uniformly continuous on `[a,b]`, then the Riemann sums of `f` converge to a limit as `N → ∞`.",
+ "category": "∫f"}

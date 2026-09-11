@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "GameLogic.false_def",
+ "displayName": "False",
+ "content":
+ "# False\nThis is a proposition for which there can never be any evidence. If your assumptions lead you to evidence for `False`, then your assumptions are inconsitent and you can use `false_elim` to deduce any proposition you like.",
+ "category": "📖︎"}

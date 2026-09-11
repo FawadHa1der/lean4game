@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "change",
+ "displayName": "change",
+ "content":
+ "The `change` tactic changes a goal to something definitionally equal to it. If the definition of `X` is `Y`, that is, `X := Y`, and the Goal is `X`, you can write `change Y` and the Goal will change to `Y`. You can also\ndo this at a hypothesis; if you have a hypothesis `h : X`, you can write `change Y at h`, and `h` will change to `h : Y`.",
+ "category": "📖︎"}

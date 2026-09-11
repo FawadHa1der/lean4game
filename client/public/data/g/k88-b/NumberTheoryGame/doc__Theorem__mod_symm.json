@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b m : ℤ) (h : a ≡ b (mod m)) : b ≡ a (mod m)",
+ "name": "mod_symm",
+ "displayName": "mod_symm",
+ "content":
+ "**Symmetry of Congruences**\n\nIf $a \\equiv b \\pmod m$, then $b \\equiv a \\pmod m$.\n\n**Intuition:**\nIf the difference between $a$ and $b$ is a multiple of $m$, the difference between $b$ and $a$ is just the same multiple with a negative sign.\nFor example, $17 \\equiv 5 \\pmod{12}$ because $17 - 5 = 12$.\nConversely, $5 \\equiv 17 \\pmod{12}$ because $5 - 17 = -12$, which is still a multiple of $12$ ($12 \\cdot -1$).",
+ "category": "Congruence"}

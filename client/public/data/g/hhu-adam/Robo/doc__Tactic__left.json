@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "left",
+ "displayName": "left",
+ "content":
+ "If the proof target is of the form `A ∨ B`, you choose `left` to show the left side.\n\n## Friends and relatives\n\nWith `right`, you choose the right side accordingly.",
+ "category": "📖︎"}

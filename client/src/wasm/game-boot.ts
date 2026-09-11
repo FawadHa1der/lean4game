@@ -15,6 +15,11 @@
  *                                           lsp-front-door.js, snapshot-prefetch.worker.js)
  *
  * Game-specific responsibilities here:
+ *  0. the artifacts: installGameArtifacts — the runtime manifest and the
+ *     snapshot index, NO library pack (the vendored installArtifacts installs
+ *     the core profile pack, 120 MB on the wire / 389 MB in OPFS, which a
+ *     game never reads: its snapshot is a complete environment and the
+ *     kernel serves headers from cached environments only);
  *  1. the boot policy: the game's snapshot, named by the catalog (/api/games,
  *     see games-api.ts) and checked against the served index and the runtime
  *     build BEFORE any artifact byte moves; its baked environment covers
@@ -28,7 +33,8 @@
  *  3. map the relay's status to the page's atoms (banner, input gating,
  *     readiness, boot failure).
  */
-import { installArtifacts, type Qed64Artifacts, type StatusSink } from "qed64/frontend/src/qed64-boot";
+import type { Qed64Artifacts, StatusSink } from "qed64/frontend/src/qed64-boot";
+import { fetchProfileIndex, type ProfileIndex } from "qed64/src/install/profiles";
 import { LspRelay, type RelayStatus, type RestartOptions } from "qed64/frontend/src/lsp-relay";
 import { ResidentSession, type ResidentHost, type ResidentPolicy } from "qed64/frontend/src/resident-session";
 import type { SnapshotEntry, SnapshotIndex } from "qed64/src/runtime/snapshots";
@@ -37,7 +43,8 @@ import { difficultyAtom, progressAtom } from "../store/progress-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
 import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing } from "../store/boot-atoms";
 import { rememberGamedata } from "./gamedata-cache";
-import { MiB, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId } from "./games-api";
+import { MiB, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
+import { claimSnapshotForBoot, inFlightPrepare, inFlightRegions, prepareStatusesAtom, sweepStaleSnapshots, warmRuntimeCache, type PrepareStatus } from "./game-cache";
 
 export interface GameDataBundle {
   gameName: string;
@@ -94,7 +101,7 @@ export interface BoundEnvironment {
 }
 export const boundEnvironmentAtom = atom<BoundEnvironment | null>(null);
 
-/** Fail fast — BEFORE the core pack install and before any snapshot byte:
+/** Fail fast — BEFORE the artifacts install and before any snapshot byte:
  * the bound snapshot must be in the served index, baked for the runtime
  * this shell boots (snapshots are function-table-paired to one binary; the
  * worker refuses an unpaired one, the relay reboots it three times, and only
@@ -128,11 +135,57 @@ async function checkSnapshotPairing(snapshot: string): Promise<{ entry: Snapshot
   return { entry, index, buildId };
 }
 
+/** The game's artifacts, in the vendored `Qed64Artifacts` shape, WITHOUT
+ * the core profile pack the editor's installArtifacts (qed64-boot.ts) puts
+ * in: a game session never imports from oleans — the game snapshot is one
+ * complete environment and the kernel's header resolver (FileWorker.lean →
+ * lookupPrebuiltEnv) serves headers only from cached environments on
+ * Emscripten — so the pack was 120 MB of first-visit wire and 389 MB of
+ * OPFS for nothing. With `installed` empty the session boots the worker
+ * with leanPath "" and no packs (resident-session.ts start: LEAN_PATH is
+ * joined from the installed ids; lean.worker.js mountPacks over [] is a
+ * no-op and mkdirp("") creates nothing; Lean parses LEAN_PATH "" as one
+ * empty entry, which nothing consults because headers never reach findOLean
+ * here). The runtime manifest is the ONE resolver's choice
+ * (resolveRuntimeManifest — the same manifest the pairing check read), the
+ * snapshot index the same memoised fetch (with the `?snapshots=` dev
+ * re-rooting), and the profile index is kept in the shape only: a missing
+ * one is not fatal for a game (an empty profile list; ensureProfile then
+ * answers "not published", which no game path asks). */
+async function installGameArtifacts(ui: StatusSink): Promise<Qed64Artifacts> {
+  ui.busy("fetching manifests");
+  const [runtime, snapshots] = await Promise.all([resolveRuntimeManifest(), fetchSnapshotIndexOnce()]);
+  const index: ProfileIndex = await fetchProfileIndex().catch((e) => {
+    console.warn(`[game-boot] profile index unavailable (${(e as Error).message}); a game needs no library pack`);
+    return { schema: "qed64.profile-index/v1", runtime: { buildId: runtime.buildId, leanVersion: runtime.leanVersion }, profiles: [] };
+  });
+  return { runtime, index, installed: new Map(), snapshots };
+}
+
 /** Worker cwd is /workspace (lean.worker.js boots there); Runner reads
  * `./.lake/gamedata/...` relative to it. */
 const WORKER_GAMEDATA_DIR = "/workspace/.lake/gamedata";
 
 let boundGameId: string | null = null;
+let sweptOnce = false;
+/** A game switch is waiting for running prepares before it reloads. */
+let switchPending = false;
+
+/** Mirror a prepare's status onto the boot banner while `until` runs: the
+ * running region's bytes as progress (the worker's inflated offsets — the
+ * level pane says what they unpack to), a plain busy label otherwise.
+ * Renders once immediately: jotai's sub fires only on the NEXT change, and
+ * a wait that started between two 64 MiB ticks showed no bytes at all. */
+async function mirrorPrepare<T>(ui: StatusSink, snapshot: string | null, label: string, until: Promise<T>): Promise<T> {
+  const store = getDefaultStore();
+  const render = () => {
+    const st: PrepareStatus | undefined = snapshot ? store.get(prepareStatusesAtom)[snapshot] : undefined;
+    if (st?.phase === "running") ui.progress(label, { phase: "snapshot", loaded: st.bytes, total: st.total, unit: "bytes" });
+    else ui.busy(label);
+  };
+  const unsub = store.sub(prepareStatusesAtom, render);
+  try { render(); return await until; } finally { unsub(); }
+}
 
 async function fetchJson(url: string): Promise<any> {
   const r = await fetch(url);
@@ -254,8 +307,8 @@ const ROUTINE_BUSY = /elaborating|checking the new imports|imports changed/i;
  * load"), so no per-game data flows into the label layer; init/core/mathlib
  * read as "game" too, as before. The generic words are excluded so the
  * worker's own "Loading environment snapshot" / "Loading the environment
- * into Lean" stay untouched. (The pack labels "re-preparing the <id>
- * library" carry a profile id — core/essential — never a snapshot name.) */
+ * into Lean" stay untouched. (No pack label occurs on the game path any
+ * more — installGameArtifacts installs none — but the rule is harmless.) */
 function humanizeLabel(label: string): string {
   // Per-module progress reports the module name ("Mathlib.Tactic.Attr.Register").
   if (/^[A-Z][\w']*(\.[\w']+)+$/.test(label.trim())) return "loading the game's modules";
@@ -329,34 +382,28 @@ function markServed(ui: StatusSink): void {
 /** Offline reloads: the service worker (client/src/sw) caches the runtime
  * chunks and manifests it sees pass through — but on a first visit the boot
  * fetched them before the worker controlled the page. Once the checker is
- * up, ask the worker itself to fetch them (through the HTTP cache: no
- * second download) and to prune chunks of superseded runtimes. Needs no
- * page control, so it works on the very first visit. Snapshots and pack
- * parts are not needed here (OPFS). */
+ * up, ask the worker itself (game-cache.ts warmRuntimeCache, the same call
+ * a landing-page Prepare makes) to fetch them through the HTTP cache — no
+ * second download — and to prune chunks of superseded runtimes. Snapshots
+ * are not needed here (OPFS). */
 let warmedArtifacts: Qed64Artifacts | null = null;
 async function warmOfflineCache(): Promise<void> {
   const a = warmedArtifacts; warmedArtifacts = null;
-  if (!a || !("serviceWorker" in navigator)) return;
+  if (!a) return;
   try {
-    const reg = await navigator.serviceWorker.ready;
-    const urls: string[] = ["/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json"];
-    for (const f of Object.values((a.runtime as { files?: Record<string, { chunks?: { url: string }[] }> }).files ?? {})) {
-      for (const c of f.chunks ?? []) urls.push(c.url);
-    }
-    const reply = await new Promise<{ cached: number; pruned: number; total: number } | null>((resolve) => {
-      const ch = new MessageChannel();
-      const t = window.setTimeout(() => resolve(null), 120000);
-      ch.port1.onmessage = (e) => { window.clearTimeout(t); resolve(e.data); };
-      reg.active?.postMessage({ type: "warm", urls }, [ch.port2]);
-    });
+    const reply = await warmRuntimeCache(a.runtime);
     if (reply) console.info(`[game-boot] offline cache: ${reply.cached}/${reply.total} runtime files cached, ${reply.pruned} superseded pruned`);
-    else console.warn("[game-boot] offline cache warm-up: no reply from the service worker");
+    else console.warn("[game-boot] offline cache warm-up: no service worker reply");
   } catch (e) {
     console.warn("[game-boot] offline cache warm-up skipped:", e);
   }
 }
 
 function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
+  // A game switch is waiting for running prepares before it reloads: the
+  // banner shows THAT wait, and the outgoing game's relay (still serving,
+  // its document closing) must not blank it with a "ready" in between.
+  if (switchPending) return;
   const death = st.lastDeath ? `${st.lastDeath.message || st.lastDeath.reason}` : "";
   if (st.relay === "halted") {
     relayRebooting = false;
@@ -432,9 +479,25 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     // The wasm session is bound to another game's environment; a clean
     // reload rebinds everything (snapshots reload from OPFS in seconds).
     // Nothing may run after the reload: returning the bound promise would
-    // hand the caller game A's runtime under game B's route.
-    console.warn(`[game-boot] switching game ${boundGameId} → ${here}: reloading`);
-    window.location.reload();
+    // hand the caller game A's runtime under game B's route. But a reload
+    // kills the prepare workers of this document and discards their
+    // partials (the tile only warned about a USER reload) — so every
+    // running prepare's region is waited for first, shown on the banner,
+    // and the reloaded boot then finds the region cached instead of
+    // downloading it again from zero.
+    if (!switchPending) {
+      switchPending = true;
+      const regions = inFlightRegions();
+      console.warn(`[game-boot] switching game ${boundGameId} → ${here}: reloading${regions.length ? ` after ${regions.length} running prepare(s) commit (${regions.map((r) => r.name).join(", ")})` : ""}`);
+      void (async () => {
+        if (regions.length) {
+          const target = await resolveSnapshotName(here);
+          const label = regions.some((r) => r.name === target) ? `preparing the ${target} environment` : "finishing the download you started before switching games";
+          await mirrorPrepare(ui, target, label, Promise.allSettled(regions.map((r) => r.region)));
+        }
+        window.location.reload();
+      })();
+    }
     return new Promise<GameRuntime>(() => {});
   }
   if (!bootPromise && !here) {
@@ -450,9 +513,23 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     ui.busy("checking this game's environment");
     const snapshot = await resolveSnapshotName(boundGameId!);
     const { entry, index } = await checkSnapshotPairing(snapshot);
-    getDefaultStore().set(boundEnvironmentAtom, { gameId: boundGameId!, snapshot, bytes: entry.bytes, transfer: entry.transfer ?? entry.bytes });
-    const bundle = await ensureBundle();
     const store = getDefaultStore();
+    store.set(boundEnvironmentAtom, { gameId: boundGameId!, snapshot, bytes: entry.bytes, transfer: entry.transfer ?? entry.bytes });
+    // One sweep per page of raw regions a rebake superseded (the served
+    // index is the truth about each name's live key); never a boot blocker.
+    // Not under the `?snapshots=<dir>` dev re-rooting: that index's keys are
+    // an unpromoted bake's, and the sweep would take the promoted regions
+    // for stale (and the next plain visit the unpromoted ones).
+    if (!sweptOnce) {
+      sweptOnce = true;
+      const dev = devSnapshotsDir();
+      if (dev) console.info(`[game-boot] stale region sweep skipped: unpromoted index ?snapshots=${dev}`);
+      else try {
+        const removed = await sweepStaleSnapshots(index);
+        if (removed.length) console.info(`[game-boot] removed ${removed.length} stale cached region(s): ${removed.join(", ")}`);
+      } catch (e) { console.warn("[game-boot] stale region sweep skipped:", e); }
+    }
+    const bundle = await ensureBundle();
     translation.configure({
       gameName: bundle.gameName,
       levelData: (w, l) => bundle.levels.get(`${w}/${l}`),
@@ -473,7 +550,16 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
         throw new Error(`this deployment is missing ${script} (${r ? `HTTP ${r.status}${html ? ", HTML page" : ""}` : "unreachable"}) — the site needs a rebuild that stages the worker scripts`);
       }
     }
-    const artifacts: Qed64Artifacts = await installArtifacts(ui);
+    // A landing-page Prepare of THIS environment still running: wait for it
+    // (its bytes show on the banner) rather than spawn a second prefetch
+    // worker, which would find the file busy and leave the Lean worker to
+    // stream the region itself — the heavy path.
+    const pending = inFlightPrepare(snapshot);
+    if (pending) await mirrorPrepare(ui, snapshot, `preparing the ${snapshot} environment`, pending);
+    // From here the session's own prefetch worker owns the region file: a
+    // Prepare of this snapshot started later would only collide with it.
+    claimSnapshotForBoot(snapshot);
+    const artifacts = await installGameArtifacts(ui);
     warmedArtifacts = artifacts;
 
     const files = bundle.rawFiles.map((f) => ({ path: `${WORKER_GAMEDATA_DIR}/${f.name}`, text: f.text }));

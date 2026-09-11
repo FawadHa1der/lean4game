@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {M} {s} [AddCommMonoid M] {f g} : ∑ x ∈ s, (f x + g x) = ∑ x ∈ s, f x + ∑ x ∈ s, g x",
+ "name": "Finset.sum_add_distrib",
+ "displayName": "sum_add_distrib",
+ "content":
+ "Summation distributes: `∑ i ∈ s, (f i + g i) = ∑ i ∈ s, f i + ∑ i ∈ s, g i`",
+ "category": "∑aₙ"}

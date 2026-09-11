@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {f g} {c} (hf : FunContAt f c) (hg : FunContAt g c) : FunContAt (fun x => f x + g x) c",
+ "name": "FunContAtAdd",
+ "displayName": "FunContAtAdd",
+ "content": "The sum of continuous functions is continuous.",
+ "category": "f(x)"}

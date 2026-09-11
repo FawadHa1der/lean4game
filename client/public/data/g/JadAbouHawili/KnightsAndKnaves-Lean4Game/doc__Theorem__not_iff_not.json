@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {a b} : (¬a ↔ ¬b) ↔ (a ↔ b)",
+ "name": "not_iff_not",
+ "displayName": "not_iff_not",
+ "content":
+ "If we know that `¬P`,`¬Q` have the same truth value then `P`,`Q` have the same truth value.",
+ "category": "Logic"}

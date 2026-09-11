@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {n k m} (h1 : n * k < m) (h2 : m < n * (k + 1)) : ¬n ∣ m",
+ "name": "Nat.not_dvd_of_lt_of_lt_mul_succ",
+ "displayName": "not_dvd_of_lt_of_lt_mul_succ",
+ "content":
+ "*(lean docstring)*\\\n`m` is not divisible by `n` if it is between `n * k` and `n * (k + 1)` for some `k`. ",
+ "category": "ℕ"}

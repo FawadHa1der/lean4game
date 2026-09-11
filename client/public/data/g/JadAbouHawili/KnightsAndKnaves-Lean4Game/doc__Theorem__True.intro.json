@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " : True",
+ "name": "True.intro",
+ "displayName": "True.intro",
+ "content":
+ "*(lean docstring)*\\\n`True` is true, and `True.intro` (or more commonly, `trivial`)\nis the proof. ",
+ "category": "True"}

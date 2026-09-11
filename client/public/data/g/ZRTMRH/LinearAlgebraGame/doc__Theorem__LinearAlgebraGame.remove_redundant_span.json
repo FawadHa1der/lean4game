@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] [DecidableEq V] {S} {w}\n  (hcomb : w ∈ LinearAlgebraGame.span K V (S \\ {w})) :\n  LinearAlgebraGame.span K V S = LinearAlgebraGame.span K V (S \\ {w})",
+ "name": "LinearAlgebraGame.remove_redundant_span",
+ "displayName": "remove_redundant_span",
+ "content": "(missing)",
+ "category": "Vector Spaces"}

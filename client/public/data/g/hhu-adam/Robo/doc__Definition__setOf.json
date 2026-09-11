@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "setOf",
+ "displayName": "{·|·}",
+ "content":
+ "For a predicate `P : T → Prop`, `{ a : T | P a } : Set P` is the subset\nconsisting of all elements that satisfy the predicate.  For example,\n```\n{ n : ℕ | Even n }\n```\nis the set of even natural numbers.\nYou can simplify the statement `a ∈ { a : T | P a }`, using `simp`, to `P a` .",
+ "category": "Set"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {n} {f} (h₁ : ∀ A B, f (A * B) = f (B * A)) (A : Mat[n,n][ℝ]) : f A = ∑ i : Fin n, A i i * f (Matrix.E i i)",
+ "name": "Matrix.eq_sum_apply_diag_ebasis",
+ "displayName": "eq_sum_apply_diag_ebasis",
+ "content": "(missing)",
+ "category": "Matrix"}

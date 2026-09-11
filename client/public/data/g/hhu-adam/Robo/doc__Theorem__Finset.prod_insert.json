@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {M} {s} {a} [CommMonoid M] {f} [DecidableEq ι] (a✝ : a ∉ s) : ∏ x ∈ insert a s, f x = f a * ∏ x ∈ s, f x",
+ "name": "Finset.prod_insert",
+ "displayName": "prod_insert",
+ "content": "(missing)",
+ "category": "∑ Π"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (v : V) :\n  ⟪v,v⟫ = 0 ↔ v = 0",
+ "name": "LinearAlgebraGame.inner_self_eq_zero",
+ "displayName": "inner_self_eq_zero",
+ "content":
+ "For any vector `v`, `⟪v, v⟫ = 0` if and only if `v` is the zero vector.\n\n**Usage:** Use the full name `LinearAlgebraGame.inner_self_eq_zero` when applying this theorem.",
+ "category": "Inner Product"}

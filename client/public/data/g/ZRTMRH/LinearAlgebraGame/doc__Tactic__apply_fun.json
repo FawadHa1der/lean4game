@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "apply_fun",
+ "displayName": "apply_fun",
+ "content":
+ "## Summary\n`apply_fun` allows you to apply functions to both sides of an equality in the hypothesis. This can also\nbe done simply with a `have`, `rw`, and `rfl` statement, but it is nice to be able to do that in one line.\n\n## Example\nIf you have `h : sqrt x = 0`, using `apply_fun (fun v => v ^ 2) at h` will change `h` to `h : (sqrt x) ^ 2 = 0 ^ 2`.",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {a b} (h : a = b) : b = a",
+ "name": "Eq.symm",
+ "displayName": "symm",
+ "content":
+ "Given elements `x y : A` and a proof `p : x = y`, `Eq.symm p` or `p.symm` are two names for the corresponding proof `y = x`.",
+ "category": "Eq"}

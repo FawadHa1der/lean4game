@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {n} (i j k : Fin n) : Matrix.E i j * Matrix.E j k = Matrix.E i k",
+ "name": "Matrix.E.mul_same",
+ "displayName": "E.mul_same",
+ "content": "(missing)",
+ "category": "Matrix"}

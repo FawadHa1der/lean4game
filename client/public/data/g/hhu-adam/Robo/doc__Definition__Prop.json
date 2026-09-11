@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Prop",
+ "displayName": "Prop",
+ "content":
+ "`(A : Prop)` is any statement, without further specification as to whether it is true, false, or\nunprovable.\n\nSee also `(True : Prop)` and `(False : Prop)` for the unconditionally true and false\nstatements, respectively.",
+ "category": "Logic"}

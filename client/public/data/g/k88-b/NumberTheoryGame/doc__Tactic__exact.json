@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "exact",
+ "displayName": "exact",
+ "content":
+ "The `exact` tactic closes a goal if you provide a theorem that perfectly matches the goal.",
+ "category": "📖︎"}

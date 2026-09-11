@@ -76,6 +76,19 @@ self.addEventListener("activate", (event) => {
 const headOf = (res) => new Response(null, { status: res.status, statusText: res.statusText, headers: res.headers });
 const bypass = (req) => req.cache === "reload" || req.cache === "no-store";
 
+/** A cached answer, this build's shell first. The previous shell cache is
+ * kept one generation (its tabs lazy-load their chunks from it) and was
+ * created earlier, so a global caches.match would find ITS copy of every
+ * unhashed name first — offline after a deploy, the old build's document,
+ * worker scripts and snapshot index were served for the new one. */
+async function lookup(req, opts) {
+  for (const name of [SHELL, RUNTIME]) {
+    const hit = await (await caches.open(name)).match(req, opts);
+    if (hit) return hit;
+  }
+  return caches.match(req, opts);
+}
+
 async function putIfStorable(cacheName, req, res) {
   const p = new URL(req.url).pathname;
   if (req.method !== "GET" || !storable(p, res)) return;
@@ -84,7 +97,7 @@ async function putIfStorable(cacheName, req, res) {
 
 async function cacheFirst(req, cacheName) {
   if (!bypass(req)) {
-    const hit = await caches.match(req, { ignoreMethod: req.method === "HEAD" });
+    const hit = await lookup(req, { ignoreMethod: req.method === "HEAD" });
     if (hit) return req.method === "HEAD" ? headOf(hit) : hit;
   }
   const res = await fetch(req);
@@ -100,10 +113,16 @@ async function networkFirst(req, cacheName) {
   // Offline, or a 404/5xx for something we hold (a redeployed shell no
   // longer serving an old hashed name): the cache is the answer.
   if (!bypass(req)) {
-    const hit = await caches.match(req, { ignoreMethod: req.method === "HEAD" });
+    const hit = await lookup(req, { ignoreMethod: req.method === "HEAD" });
     if (hit) return req.method === "HEAD" ? headOf(hit) : hit;
   }
   if (res) return res;
+  // An offline miss on a game's i18n namespace: an empty dictionary (not
+  // stored) — i18next then falls back to the keys, instead of retrying the
+  // fetch six times with a console error each (the landing page asks for
+  // every game's namespace; a first-visit page fetched them before this
+  // worker controlled it, so they may be missing).
+  if (/^\/i18n\//.test(p)) return new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } });
   throw new TypeError(`offline: ${p}`);
 }
 
@@ -117,7 +136,7 @@ self.addEventListener("fetch", (event) => {
   if (req.mode === "navigate") {
     event.respondWith((async () => {
       try { return await fetch(req); } catch (err) {
-        return (await caches.match(p)) ?? (await caches.match(DOC)) ?? Promise.reject(err);
+        return (await lookup(p)) ?? (await lookup(DOC)) ?? Promise.reject(err);
       }
     })());
     return;
@@ -128,7 +147,11 @@ self.addEventListener("fetch", (event) => {
 
 // Warm + prune the runtime cache on the page's request (it knows the
 // manifest): fetch each URL through the HTTP cache (the boot just
-// downloaded them), keep exactly the chunks of the current manifest.
+// downloaded them), keep exactly the chunks of the current manifest. One
+// fetch per URL at a time across concurrent warms (two tabs preparing at
+// once): a second loop would miss every cache.match the first has not put
+// yet and download the runtime again.
+const warmFetches = new Map();
 self.addEventListener("message", (event) => {
   const data = event.data;
   if (!data || data.type !== "warm" || !Array.isArray(data.urls)) return;
@@ -140,8 +163,17 @@ self.addEventListener("message", (event) => {
       try {
         const req = new Request(u);
         if (await cache.match(req)) { cached += 1; continue; }
-        const res = await fetch(req);
-        if (storable(new URL(req.url).pathname, res)) { await cache.put(req, res); cached += 1; }
+        let job = warmFetches.get(req.url);
+        if (!job) {
+          job = (async () => {
+            const res = await fetch(req);
+            if (!storable(new URL(req.url).pathname, res)) return false;
+            await cache.put(req, res);
+            return true;
+          })().finally(() => warmFetches.delete(req.url));
+          warmFetches.set(req.url, job);
+        }
+        if (await job) cached += 1;
       } catch { /* offline or quota: the next warm-up retries */ }
     }
     const keep = new Set(data.urls.map((u) => new URL(u, self.location.origin).pathname));

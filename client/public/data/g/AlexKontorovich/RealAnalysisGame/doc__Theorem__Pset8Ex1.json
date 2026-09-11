@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : 2 * n + 9 ≤ 2 ^ (n + 4)",
+ "name": "Pset8Ex1",
+ "displayName": "Pset8Ex1",
+ "content": "For all `n : ℕ`, `2 * n + 9 ≤ 2 ^ (n + 4)`.",
+ "category": "Temporary"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (M : Type u_1) {α} [Monoid M] [MulAction M α] (b : α) : 1 • b = b",
+ "name": "one_smul",
+ "displayName": "one_smul",
+ "content":
+ "`one_smul` is one of the axioms of a vector space. It is a proof that if we know `vs : VectorSpace K V`,\nthen `∀ (x : V), (1 : K) • x = x`. It can be thought of as `1` being a multiplicative identity not\nonly in `K`, but also through scalar multiplication in `V`.",
+ "category": "Vector Spaces"}

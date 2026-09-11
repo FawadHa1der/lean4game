@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {M} {s₁ s₂} [AddCommMonoid M] {f} (h : s₁ ⊆ s₂) (hf : ∀ x, x ∈ s₂ → x ∉ s₁ → f x = 0) :\n  ∑ x ∈ s₁, f x = ∑ x ∈ s₂, f x",
+ "name": "Finset.sum_subset",
+ "displayName": "sum_subset",
+ "content": "(missing)",
+ "category": "∑ Π"}

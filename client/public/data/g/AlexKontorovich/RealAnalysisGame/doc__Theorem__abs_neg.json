@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} [Lattice α] [AddGroup α] (a : α) : |(-a)| = |a|",
+ "name": "abs_neg",
+ "displayName": "abs_neg",
+ "content": "Usage: `have factName : |-x| = |x| := by apply abs_neg`",
+ "category": "|x|"}

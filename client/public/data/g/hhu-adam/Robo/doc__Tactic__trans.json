@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "trans",
+ "displayName": "trans",
+ "content":
+ "With `trans`, you insert an intermediate step into an equation or equivalence.\n\n| before | tactic    | after                |\n|:------------ |:--------- |:----------------------- |\n| `⊢ A = C`    | `trans B` | `⊢ A = B` and `⊢ B = C` |\n| `⊢ A ↔ C`    | `trans B` | `⊢ A ↔ B` and `⊢ B ↔ C` |\n\nSince you can repeat the tactic several times, it is suitable for\nperforming a “calculation” `A = B₁ = B₂ = B₃ … = C` step by step.\n\n(Outside of the game, however, the multi-line tactic `calc` is better suited for such calculations.)",
+ "category": "📖︎"}

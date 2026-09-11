@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {M} [AddCommMonoid M] (f : ℕ → M) (n : ℕ) : ∑ x ∈ Finset.range (n + 1), f x = ∑ x ∈ Finset.range n, f x + f n",
+ "name": "Finset.sum_range_succ",
+ "displayName": "sum_range_succ",
+ "content":
+ "Given a function `f : ℕ → ℝ` and a natural number `N`, `sum_range_succ f n` says that:\n`∑ n ∈ range (N + 1), f n = ∑ n ∈ range N, f n + f N`.",
+ "category": "∑aₙ"}

@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "injective_v",
+ "displayName": "injective_v",
+ "content": "`injective_v K V W T` means T is one-to-one.",
+ "category": "📖︎"}

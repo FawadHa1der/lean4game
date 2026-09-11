@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] {S} {v} (hv : v ∈ S) :\n  LinearAlgebraGame.is_linear_combination K V S v",
+ "name": "LinearAlgebraGame.linear_combination_of_mem",
+ "displayName": "linear_combination_of_mem",
+ "content":
+ "`linear_combination_of_mem` is a proof that if `v ∈ S` then `is_linear_combination K V S v`.",
+ "category": "Vector Spaces"}

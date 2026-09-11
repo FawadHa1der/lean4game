@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (f : ℕ → ℝ → ℝ) (hf : ∀ n, FunCont (f n)) (F : ℝ → ℝ) (hfF : UnifConv f F) : FunCont F",
+ "name": "Cont_of_UnifConv",
+ "displayName": "Cont_of_UnifConv",
+ "content":
+ "If a sequence of functions `fₙ` converges uniformly to `F`, and each `fₙ` is continuous, then `F` is continuous.",
+ "category": "f(x)"}

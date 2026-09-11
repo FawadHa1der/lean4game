@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "specialize",
+ "displayName": "specialize",
+ "content":
+ "## Summary\nThe `specialize` tactic can be thought of as the opposite of `use`. While `use` helps specify a value\nfor a `∃` in the goal, `specialize` specifies a value for a `∀` in a hypothesis. If you have a hypothesis\n`h`, `specialize h x1 x2 x3` will specify the values in `h` as `x1`, `x2`, and `x3`.\n\n## Example\nIf you have a hypothesis `h : ∀ x : V, f x = 0`, and some `v : V`, then `specialize h v` will\nchange the hypothesis to `h : f v = 0`\n\n## Example\nIf you have a hypothesis `h : x ∈ s → f x = 0`, and another hypothesis `h2 : x ∈ s`, then `specialize h h2`\nwill change h to `h : f x = 0`",
+ "category": "📖︎"}

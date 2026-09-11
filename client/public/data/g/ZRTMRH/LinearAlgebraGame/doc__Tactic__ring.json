@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "ring",
+ "displayName": "ring",
+ "content":
+ "## Summary\n`ring` acts very similar to `simp` and `linarith` in that it will attempt to solve the goal for you.\n`ring` works best with rings, which are objects where you can add and multiply. The most common rings\nyou will see are the real and complex numbers.\n\n## Example\nIf you have a goal `(a + b) ^ 2 = a ^ 2 + 2 * a * b + b ^2`, `ring` will solve the goal.",
+ "category": "📖︎"}

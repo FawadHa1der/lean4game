@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "contrapose",
+ "displayName": "contrapose",
+ "content":
+ "The tactic `contrapose` changes a proof goal of the form `A → B` to `¬B → ¬A`, thereby\ninitiating a proof by contraposition.\n\n## Friends and relatives\n\nThe tactic `revert h` can be useful for writing an assumption as an implication premise\nbefore you use `contrapose`.",
+ "category": "📖︎"}

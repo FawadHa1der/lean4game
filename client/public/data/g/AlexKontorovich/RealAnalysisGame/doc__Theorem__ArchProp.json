@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {ε} (hε : 0 < ε) : ∃ N, 1 / ε < ↑N",
+ "name": "ArchProp",
+ "displayName": "ArchProp",
+ "content":
+ "Given `ε` and the fact that `0 < ε`, the theorem `ArchProp` claims the existence of `N : ℕ` so that `1 / ε < N`. This is a formalization of the classical Archimedean Property.",
+ "category": "Theorems"}

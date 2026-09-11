@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {z w} (a✝ : z.re = w.re) (a✝ : z.im = w.im) : z = w",
+ "name": "Complex.ext",
+ "displayName": "Complex.ext",
+ "content":
+ "`Complex.ext` allows you to split complex numbers into their real and imaginary parts. If your goal is\nof the form `a = b`, where `(a b : ℂ)`, then `apply Complex.ext` will create two goals, one `a.re = b.re`,\nand the other `a.im = b.im`.",
+ "category": "ℂ"}

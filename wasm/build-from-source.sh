@@ -10,7 +10,7 @@
 #             → games  (each selected catalog game compiled → gamedata +
 #                       a slim per-game olean tree)
 #             → bake   (one environment snapshot per selected game, plus
-#                       init on a full run)
+#                       no init: no game session loads it)
 #             → bundle (stage into client/public, build the client, pack
 #                       the artifact bundle for publishing)
 #
@@ -32,7 +32,7 @@
 #   --lanes a,b,c          subset of: preflight runtime core trees compat games bake bundle
 #   --games a,b            catalog snapshot names (default: every catalog game).
 #                          A run WITHOUT --games is a FULL run: the snapshot
-#                          staging dir is wiped and init + every game is rebaked
+#                          staging dir is wiped and every game is rebaked
 #                          (slim, see SLIM_TREES) — the runtime-bump path.
 #   --tag <tag>            bundle tag (default artifacts-<runtime build id>)
 #   --reuse-core-pack      keep the tracked lean-core pack (parts must be in
@@ -209,9 +209,8 @@ while IFS= read -r line; do
 done < <(node "$G/scripts/games-manifest.mjs" --list)
 [ ${#CATALOG_ROWS[@]} -gt 0 ] || die "no games in wasm/catalog.json (node scripts/games-manifest.mjs --check)"
 for g in ${GAMES//,/ }; do has_word "$g" "$ALL_NAMES" || die "--games $g: no catalog game has that snapshot name (catalog: $ALL_NAMES)"; done
-FULL_RUN=1; [ -z "$GAMES" ] || FULL_RUN=0                 # full run = no --games: wipe staging, rebake init + every game
-FIRST_SNAP="${SELECTED_NAMES%% *}"                        # its tree also bakes init (any game tree does: init imports nothing)
-BAKE_NAMES="$SELECTED_NAMES"; [ "$FULL_RUN" = 0 ] || BAKE_NAMES="init $SELECTED_NAMES"
+FULL_RUN=1; [ -z "$GAMES" ] || FULL_RUN=0                 # full run = no --games: wipe staging, rebake every game
+BAKE_NAMES="$SELECTED_NAMES"                              # the init (core-only) snapshot is not baked: a game session loads its own region only
 
 # -------------------------------------------------------------- preflight --
 lane_preflight() {
@@ -234,7 +233,7 @@ lane_preflight() {
   if [ -d "$QED64_DIR/.git" ]; then local qhead; qhead="$(git -C "$QED64_DIR" rev-parse HEAD)"; [ "$qhead" = "$QPIN" ] || warn "qed64 checkout is at ${qhead:0:12}, the vendored pin is ${QPIN:0:12}"; fi
   note "kernel pin $PIN (clean)"
   node "$G/scripts/games-manifest.mjs" --check || die "wasm/catalog.json failed its check"
-  note "games: $SELECTED_NAMES$([ "$FULL_RUN" = 1 ] && echo '   (full run: staging wiped, init + every game rebaked)' || echo "   (--games: the other games' staged snapshots are kept)")   slim trees: $SLIM_TREES"
+  note "games: $SELECTED_NAMES$([ "$FULL_RUN" = 1 ] && echo '   (full run: staging wiped, every game rebaked)' || echo "   (--games: the other games' staged snapshots are kept)")   slim trees: $SLIM_TREES"
   local nv; nv="$(node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1 || echo 0)"; [ "${nv:-0}" -ge 24 ] || die "Node >= 24 required (Memory64), found $(node -v 2>/dev/null || echo none)"
   command -v python3 >/dev/null || die "python3 required"; command -v rsync >/dev/null || die "rsync required"
   if docker info >/dev/null 2>&1; then
@@ -410,16 +409,26 @@ lane_trees() {
 COMPAT_DONE=0
 lane_compat() {
   [ "$COMPAT_DONE" = 0 ] || return 0
-  say "compat: wasm/compat (Mathlib.Tactic.Have + Mathlib.Tactic.Cases) → game base tree"
+  # Every module under wasm/compat (Mathlib leaves the essential pack excludes,
+  # compiled from the pinned Mathlib sources) is compiled INTO the game base
+  # tree: Lean resolves a module in the first LEAN_PATH entry that holds its
+  # root directory (Mathlib/), so the compat oleans must live beside the pack's
+  # Mathlib oleans, never in a separate LEAN_PATH entry — and modules that
+  # import each other (the Mathlib.Tactic umbrella imports Have/Cases) resolve
+  # through that same tree as they are produced. The tree is FAT (it keeps the
+  # .olean.private facets the module-system Cases.lean needs via `import all`);
+  # the per-game overlays drop the private facets afterwards.
+  local roots; roots="$(cd "$G/wasm/compat" && find . -name '*.lean' | sed 's|^\./||; s|\.lean$||; s|/|.|g' | sort | tr '\n' ' ')"
+  say "compat: wasm/compat ($(echo "$roots" | wc -w | tr -d ' ') modules: ${roots}) → game base tree"
   check "fat olean tree present (trees lane)" test -d "$TREES/lib-tree/Mathlib/Tactic"
   check "game base tree present (trees lane)" test -f "$TREES/lib-tree-gamebase/GameServer/Runner.olean"
   # A pack that ships the real modules must not be shadowed by these copies: delete the compat file instead.
-  check "the Mathlib pack does not itself provide Mathlib.Tactic.Have / Cases (else drop the wasm/compat copy)" bash -c "! test -e '$TREES/lib-tree/Mathlib/Tactic/Have.olean' && ! test -e '$TREES/lib-tree/Mathlib/Tactic/Cases.olean'"
-  # compile-pkg.py skips oleans newer than their source: after a trees run they are stale, not fresh
-  [ "$PLAN" = 1 ] || rm -rf "$PKGS/compat"
-  compile_pkg compat "$G/wasm/compat" "$PKGS/compat" "Mathlib.Tactic.Have Mathlib.Tactic.Cases" "$TREES/lib-tree:$PKGS/compat"
-  check "compat oleans compiled" bash -c "test -f '$PKGS/compat/Mathlib/Tactic/Have.olean' && test -f '$PKGS/compat/Mathlib/Tactic/Cases.olean'"
-  run compat "$G" -- rsync -a "$PKGS/compat/" "$TREES/lib-tree-gamebase/"
+  local m
+  for m in $roots; do
+    check "the Mathlib pack does not itself provide $m (else drop the wasm/compat copy)" bash -c "! test -e '$TREES/lib-tree/$(echo "$m" | tr . /).olean'"
+  done
+  compile_pkg compat "$G/wasm/compat" "$TREES/lib-tree-gamebase" "$roots" "$TREES/lib-tree-gamebase"
+  for m in $roots; do check "compat olean compiled: $m" test -f "$TREES/lib-tree-gamebase/$(echo "$m" | tr . /).olean"; done
   COMPAT_DONE=1
 }
 
@@ -513,8 +522,6 @@ lane_bake() {
   fi
   [ "$PLAN" = 1 ] || mkdir -p "$STG/snapshots"
   local gprobe; gprobe="$(printf 'import Game\nimport GameServer.Runner\n#check (2 + 2 : Nat)')"
-  # init (the core-only environment) imports nothing: any game tree bakes it
-  if [ "$FULL_RUN" = 1 ]; then bake_one init "$TREES/lib-tree-$FIRST_SNAP" 1073741824; fi
   for row in "${ROWS[@]}"; do
     row_vars "$row"
     bake_one "$R_SNAP" "$TREES/lib-tree-$R_SNAP" "$R_RESERVE" "$gprobe"

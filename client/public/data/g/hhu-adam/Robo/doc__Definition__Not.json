@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Not",
+ "displayName": "¬",
+ "content":
+ "`¬ A` is the logical negation of `A`.\nIt is implemented internally as `A → False`.  You can see this with `unfold Not`.\n\nUseful tactics are: `push Not`, `by_contra`, `contrapose`.\nYou can also apply an assumption of the form `h : ¬ A` using `apply` to the proof target `False`.",
+ "category": "Logic"}

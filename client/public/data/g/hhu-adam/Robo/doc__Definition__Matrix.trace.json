@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Matrix.trace",
+ "displayName": "trace",
+ "content":
+ "For a matrix `A`, `trace A` is the trace of `A`. The expression is also equivalent to `∑ i, A i i` in Leanic.",
+ "category": "Matrix"}

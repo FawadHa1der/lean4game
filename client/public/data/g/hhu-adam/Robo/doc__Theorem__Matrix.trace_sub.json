@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {n} {R} [Fintype n] [AddCommGroup R] (A B : Matrix n n R) : (A - B).trace = A.trace - B.trace",
+ "name": "Matrix.trace_sub",
+ "displayName": "trace_sub",
+ "content": "(missing)",
+ "category": "Matrix"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Matrix.E",
+ "displayName": "E",
+ "content":
+ "`E i j` ist die `n × n`-Matrix (mit Werten in `ℝ`) mit einer `1` an\nStelle $(i, j)$ und Null überall sonst.\n\nDies ist eine spezialisierte Form der generellen `single i j (a : R)`,\nwelche auch nicht-quadratisch sein kann und einen beliebigen Wert `a` aus einem beliebigen\nRing annehmen kann. Wir benutzen hier `E` einfach als Abkürzung.",
+ "category": "Matrix"}

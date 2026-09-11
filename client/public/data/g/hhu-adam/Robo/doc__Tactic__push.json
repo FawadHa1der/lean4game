@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "push",
+ "displayName": "push",
+ "content":
+ "The tactic `push Not` or `push ¬ _ ` (`push`, `Not`, `¬ _`)  pushes negation past quantifiers:\n\n| before       | after      |\n|:------------ |:-------------|\n| `¬∀ x, P x`  | `∃ x, ¬P x`  |\n| `¬∃ x, P x`  | `∀ x, ¬P x`  |\n\nIn nested expressions, it pushes the negation `¬` as far to the right as possible.\nFor example, the proof goal\n```\n  ¬ ∀ ε, ∃ δ, ∀ y, | x - y | < δ → | f x - f y | < ε\n```\nwith `push Not`\n```\n  ∃ ε, ∀ δ, ∃ y, ¬ (| x - y | < δ → | f x - f y | < ε)\n```\n\n## Friends and relatives\n\nThe two lemmas `not_forall` and `not_exists` can be applied individually with `rw`.",
+ "category": "📖︎"}

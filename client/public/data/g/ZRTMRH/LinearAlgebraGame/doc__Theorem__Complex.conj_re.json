@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (z : ℂ) : ((starRingEnd ℂ) z).re = z.re",
+ "name": "Complex.conj_re",
+ "displayName": "Complex.conj_re",
+ "content":
+ "The real part of a complex conjugate equals the real part of the original number.",
+ "category": "ℂ"}

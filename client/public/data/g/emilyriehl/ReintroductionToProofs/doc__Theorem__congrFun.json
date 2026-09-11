@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {β} {f g} (h : f = g) (a : α) : f a = g a",
+ "name": "congrFun",
+ "displayName": "congrFun",
+ "content":
+ "For functions `f g : A → B` between types, a proof `p : f = g`, and an element `a : A`, then `congrFun p a : f a = g a`.",
+ "category": "Eq"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rw",
+ "displayName": "rw",
+ "content":
+ "## Summary\n\nIf `h₁` is a proof of an equivalence `P ↔ Q`, then `rw [h₁]` will change\nall `P`s in the goal to `Q`s. It's the way to “substitute in”.\n\n## Variants\n\n* `rw [← h₁]` — changes `Q`s to `P`s; get the back arrow by typing `\\left ` or `\\l`.\n\n* `rw [h₁, h₂, h₃, h₄]` — a sequence of rewrites\n\n* `rw [h₁] at h₂` — changes `P`s to `Q`s in hypothesis `h₂`\n\n* `rw [h₁] at h₂ h₃ ⊢` — changes `X`s to `Y`s in two hypotheses and the goal;\nget the `⊢` symbol with `\\|-`.\n\n* `repeat rw [h₁]` — keep attempting to `rw` until there are no more matches. For example, if the goal is `¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬P` you can use `rw [not_not_not]` 9 times or just use `repeat rw [not_not_not]` once to get `¬P`\n\n* `nth_rewrite 2 [h₁]` — will change only the second `P` in the goal to `Q`.",
+ "category": "📖︎"}

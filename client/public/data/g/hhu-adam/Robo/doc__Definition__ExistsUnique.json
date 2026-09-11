@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "ExistsUnique",
+ "displayName": "∃!",
+ "content":
+ "Existential quantifier: If `P : A → Prop` is a predicate, then\n`∃! a : A, P a` is the statement that *exactly one* element `a` in `A` (more precisely: of type `A`)\nexists for which the statement `P a` is true.\nThe statement therefore has two parts: first, such an `a` exists, and second, `a` is unique.\n## `∃!` as a proof goal\n\nTo prove a statement of the form `∃! a : A, …`, first construct a suitable element `a` and\nthen use the `use` tactic (`use a`), usually immediately followed by `simp`.\nThe proof goal should then have the following form:\n\n`P a ∧ ∀ a' : A, P a' → a' = a`\n\nOn the left is `P a`: you still have to show that `a` has the required property.\nOn the right is the uniqueness statement: every element with this property is equal to `a`.\n\n## `∃!` as an assumption\n\nYou can prove an assumption of the form `h : ∃! a : A, P a` with\n\n```\n  obtain ⟨a, h_exists, h_unique⟩ := h\n  simp at h_unique\n```\ninto its components\n```\n   a : A\n   h_exists : P a\n   h_unique : ∀ (y : A), P y → y = a\n```\n.",
+ "category": "Logic"}

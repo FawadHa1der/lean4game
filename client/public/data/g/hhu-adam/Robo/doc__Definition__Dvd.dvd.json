@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Dvd.dvd",
+ "displayName": "· ∣ ·",
+ "content":
+ "`a ∣ b` bedeutet `∃ k, b = a * k`.\n\n**Warnung**: Die Symbole `∣` (`\\\\dvd`) und `|` (ASCII vertikaler Strich) sind zwei unterschiedliche\nZeichen! Das erste wird ausschließlich für „teilt“ verwendet, das andere kommt zum Beispiel in der\nSyntax `obtain h₁ | h₂ := h` vor.",
+ "category": "📖︎"}

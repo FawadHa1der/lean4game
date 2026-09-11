@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "SeriesLim",
+ "displayName": "SeriesLim",
+ "content":
+ "`(a : ℕ → ℝ) (L : ℝ) : Prop := SeqLim (Series a) L`\n\nIf a sequence `a : N → ℝ` converges to `L`,\nwe say that `SeriesLim a L` holds.",
+ "category": "📖︎"}

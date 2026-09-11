@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "norm_num",
+ "displayName": "norm_num",
+ "content":
+ "The `norm_num` tactic can normalize numerical constants and functions of them.",
+ "category": "📖︎"}

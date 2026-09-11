@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {M₀} [MonoidWithZero M₀] [LinearOrder M₀] [PosMulStrictMono M₀] {a b} [MulPosMono M₀] (ha : 0 ≤ a) (hb : 0 ≤ b) :\n  a ^ 2 = b ^ 2 ↔ a = b",
+ "name": "sq_eq_sq₀",
+ "displayName": "sq_eq_sq₀",
+ "content": "`sq_eq_sq₀` relates squared values.",
+ "category": "Inner Product"}

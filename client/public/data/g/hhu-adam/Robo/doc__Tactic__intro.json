@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "intro",
+ "displayName": "intro",
+ "content":
+ "The tactic `intro` is used for   proof goals of the form `A → B` or `∀ x, P x`.\n\nIf your proof goal is `A → B`, `intro h` gives you the assumption `h : A`, and you then have to prove `B`.\nIf your proof goal is `∀ x, P x`, `intro x` gices you an arbitrary `x` and you have to prove `P x`.\n\n| before | tactic       | after                     |\n|:------------ |:------------ |:---------------------------- |\n| `⊢ A → B`    | `intro h`    | `h : A`, `⊢ B`               |\n| `⊢  x, P x`  | `intro x hx` | `x : X`, `hx : P x`, `⊢ P x` |\n\n\n## Friends and relatives\n\nThe tactic `revert h` does the exact opposite of `intro h`.",
+ "category": "📖︎"}

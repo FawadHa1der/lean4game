@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} [Semigroup α] {a b} (h : a ∣ b) (c : α) : a ∣ b * c",
+ "name": "dvd_mul_of_dvd_left",
+ "displayName": "dvd_mul_of_dvd_left",
+ "content":
+ "**A Divisor of a Factor Divides the Product**\n\nIf $d \\mid a$, then $d \\mid (a \\cdot b)$ for any integer $b$.\n\n**Intuition:**\nIf $a$ is built out of $k$ copies of $d$ (i.e. $a = d \\cdot k$), then $a \\cdot b$ is built out of $k \\cdot b$ copies of $d$.\nFor example, $3 \\mid 6$, so $3 \\mid (6 \\cdot 5) = 30$ as well.\n\nThis little lemma is a \"brick\" you will reuse constantly in this world: whenever you have a Bézout-style identity $a \\cdot x + b \\cdot y = d$ and you know some $c$ divides $a$ or $b$, this lemma lets you conclude $c$ divides the whole term $a \\cdot x$ or $b \\cdot y$.",
+ "category": "Divisibility"}

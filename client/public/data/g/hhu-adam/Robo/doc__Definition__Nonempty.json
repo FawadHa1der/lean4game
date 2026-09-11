@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Nonempty",
+ "displayName": "Nonempty",
+ "content":
+ "[Doc.Definition] Nonempty\n`Nonempty`\nfor `T`, `T : Type`, `Nonempty T` means T is non-empty\nfor `A`, `A : Set T`, `Nonempty A` means `∃ x, x ∈ A`; check this with `unfold Nonempty`\nAs goal:\ngiven `t`, `t : T`, use `use t`\ngiven `a`, `a : T` such that `a ∈ A`, `ha : a ∈ A`, use `use a`\nAs assumption:\ngiven `h : Nonempty T`, use `obtain ⟨t⟩ := h` to obtain `t`, `t : T`\ngiven `h : Nonempty A`, use `obtain ⟨a, ha⟩ := h` to obtain `a`, `a : T`, `a ∈ A`, `ha : a ∈ A`",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (p : Prop) : p ∨ ¬p",
+ "name": "Classical.em",
+ "displayName": "em",
+ "content":
+ "For any proposition `P`, `Classical.em P : P ∨ ¬ P ` proves that `P` or `¬ P` is true.",
+ "category": "Classical"}

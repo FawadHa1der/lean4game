@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {M} {s} {a} [AddCommMonoid M] {f} [DecidableEq ι] (a✝ : a ∉ s) : ∑ x ∈ insert a s, f x = f a + ∑ x ∈ s, f x",
+ "name": "Finset.sum_insert",
+ "displayName": "sum_insert",
+ "content": "(missing)",
+ "category": "∑ Π"}

@@ -19,6 +19,7 @@
 // runner (ts-resolve-hook.mjs) can import this module for the unit checks;
 // tsc and vite resolve both spellings to the same vendored file.
 import { fetchSnapshotIndex, snapshotCacheKey, type SnapshotEntry, type SnapshotIndex } from "./vendor/qed64/src/runtime/snapshots";
+import type { RuntimeManifest } from "./vendor/qed64/src/runtime/client";
 import type { GameInfo, GameTileWithName } from "../store/api";
 
 export const MiB = 1048576;
@@ -62,14 +63,17 @@ export async function findApiGame(gameId: string): Promise<ApiGame | null> {
 
 declare const __QED64_BUILD_ID__: string;
 
-let buildIdPromise: Promise<string> | null = null;
-/** The build id of the runtime this shell boots — the SAME manifest choice
- * the vendored installArtifacts makes (qed64-boot.ts): the immutable copy
- * pinned to the build the shell was built against, else the `?runtime=`
- * dev override, else the mutable manifest. Kept identical so the pairing
- * check here and the boot can never disagree about which runtime runs. */
-export function resolveRuntimeBuildId(): Promise<string> {
-  buildIdPromise ??= (async () => {
+let manifestPromise: Promise<RuntimeManifest> | null = null;
+/** The manifest of the runtime this shell boots — the ONE resolver (the
+ * pairing check, the landing tiles, the boot's artifact install and the
+ * Prepare warm-up all read it), making the SAME choice the vendored
+ * installArtifacts (qed64-boot.ts) makes: the immutable copy pinned to the
+ * build the shell was built against, else the `?runtime=` dev override,
+ * else the mutable manifest. Kept identical so the pairing check and the
+ * boot can never disagree about which runtime runs. A failure is not
+ * memoised, so a later caller retries. */
+export function resolveRuntimeManifest(): Promise<RuntimeManifest> {
+  manifestPromise ??= (async () => {
     let manifestResponse: Response | null = null;
     if (typeof __QED64_BUILD_ID__ === "string") {
       const pinned = await fetch(`/runtime/runtime-manifest.${__QED64_BUILD_ID__}.json`);
@@ -79,13 +83,23 @@ export function resolveRuntimeBuildId(): Promise<string> {
     if (devRuntime) manifestResponse = await fetch(`/runtime/runtime-manifest.${devRuntime}.json`, { cache: "no-cache" });
     if (!manifestResponse) manifestResponse = await fetch("/runtime/runtime-manifest.json", { cache: "no-cache" });
     if (!manifestResponse.ok) throw new Error(`runtime manifest: HTTP ${manifestResponse.status}`);
-    const manifest = (await manifestResponse.json()) as { buildId?: unknown };
+    const manifest = (await manifestResponse.json()) as RuntimeManifest;
     if (typeof manifest.buildId !== "string" || !manifest.buildId) throw new Error("runtime manifest: no buildId");
-    return manifest.buildId;
+    return manifest;
   })();
-  buildIdPromise.catch(() => { buildIdPromise = null; });
-  return buildIdPromise;
+  manifestPromise.catch(() => { manifestPromise = null; });
+  return manifestPromise;
 }
+
+/** The build id of the runtime this shell boots (see resolveRuntimeManifest). */
+export const resolveRuntimeBuildId = (): Promise<string> => resolveRuntimeManifest().then((m) => m.buildId);
+
+/** The `?snapshots=<dir>` dev re-rooting, if active: an unpromoted bake
+ * served from public/<dir> whose index the page reads instead of the
+ * promoted one. Its keys differ from the served bake's by design (content-
+ * addressed), so anything that treats the index's keys as "the live ones"
+ * (the stale-region sweep) must stand down while it is active. */
+export const devSnapshotsDir = (): string | null => new URLSearchParams(location.search).get("snapshots") || null;
 
 let indexPromise: Promise<SnapshotIndex | null> | null = null;
 /** The served snapshot index, fetched once per page, honouring the
@@ -94,7 +108,7 @@ let indexPromise: Promise<SnapshotIndex | null> | null = null;
  * promoted dir). `null` (unreadable) is not memoised. */
 export function fetchSnapshotIndexOnce(): Promise<SnapshotIndex | null> {
   indexPromise ??= (async () => {
-    const devSnapshots = new URLSearchParams(location.search).get("snapshots");
+    const devSnapshots = devSnapshotsDir();
     if (!devSnapshots) return fetchSnapshotIndex();
     const idx = await fetchSnapshotIndex(`/${devSnapshots}/index.json`);
     return idx && {
@@ -144,6 +158,9 @@ export interface TileSnapshotState {
   state: SnapshotState;
   /** Whole MB the first play transfers (`download` and `ready` states). */
   transferMB?: number;
+  /** The served index entry (`download` and `ready` states): what Prepare
+   * downloads and what Remove download deletes (its cache key). */
+  entry?: SnapshotEntry;
 }
 
 /** The tile states for a set of snapshot names, from one index fetch, one
@@ -158,7 +175,7 @@ export async function tileSnapshotStates(names: readonly string[]): Promise<Map<
   await Promise.all(names.map(async (name) => {
     const entry = findSnapshotEntry(index, name);
     const state = await snapshotStateFor(entry, buildId);
-    out.set(name, entry && state !== "unavailable" ? { state, transferMB: snapshotTransferMB(entry) } : { state });
+    out.set(name, entry && state !== "unavailable" ? { state, transferMB: snapshotTransferMB(entry), entry } : { state });
   }));
   return out;
 }

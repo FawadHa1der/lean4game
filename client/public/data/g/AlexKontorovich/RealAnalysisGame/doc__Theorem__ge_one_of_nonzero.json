@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {n} (h : n ≠ 0) : 1 ≤ n",
+ "name": "ge_one_of_nonzero",
+ "displayName": "ge_one_of_nonzero",
+ "content": "If a natural number `n ≠ 0`, then `1 ≤ n`.",
+ "category": "Theorems"}

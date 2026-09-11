@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "by_cases",
+ "displayName": "by_cases",
+ "content":
+ "The tactic `by_cases h : P` begins a case distinction as to whether `P` is true or false.\nFor example, `by cases h : a = b` distinguishes between the cases `a = b` and `a ≠ b`.\n\nThe proof goal is duplicated for this purpose, and\nthe assumption `(h : P)` is added to the first “copy,”\nwhile the assumption `(h : ¬P)` is added to the second “copy.”",
+ "category": "📖︎"}

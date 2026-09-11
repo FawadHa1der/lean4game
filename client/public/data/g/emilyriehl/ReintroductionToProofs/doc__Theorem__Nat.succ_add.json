@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (n m : ℕ) : n.succ + m = (n + m).succ",
+ "name": "Nat.succ_add",
+ "displayName": "succ_add",
+ "content":
+ "For `m n : Nat`, `Nat.succ_add m n` is the proof that `(succ m) + n = succ (m + n)`.",
+ "category": "ℕ"}

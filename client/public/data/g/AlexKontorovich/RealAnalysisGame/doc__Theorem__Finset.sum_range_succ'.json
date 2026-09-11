@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {M} [AddCommMonoid M] (f : ℕ → M) (n : ℕ) : ∑ k ∈ Finset.range (n + 1), f k = ∑ k ∈ Finset.range n, f (k + 1) + f 0",
+ "name": "Finset.sum_range_succ'",
+ "displayName": "sum_range_succ'",
+ "content":
+ "`∑ k ∈ range (m + 1), f k = f 0 + ∑ k ∈ range m, f (k+1)`. This pulls out the first\nterm in the sum instead of `sum_range_succ`, which pulls out the last term.",
+ "category": "∑aₙ"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (K V W : Type) [Field K] [AddCommGroup V] [AddCommGroup W] [LinearAlgebraGame.VectorSpace K V]\n  [LinearAlgebraGame.VectorSpace K W] (T : V → W) (hT : LinearAlgebraGame.is_linear_map_v K V W T) (a1 a2 : K)\n  (v1 v2 : V) : T (a1 • v1 + a2 • v2) = a1 • T v1 + a2 • T v2",
+ "name": "LinearAlgebraGame.linear_map_preserves_combination",
+ "displayName": "linear_map_preserves_combination",
+ "content": "Linear maps preserve linear combinations.",
+ "category": "Linear Maps"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (σ : ℕ → ℕ) (hσ : ∀ n, σ n < σ (n + 1)) : Subseq σ",
+ "name": "subseq_of_succ",
+ "displayName": "subseq_of_succ",
+ "content":
+ "For a function `σ : ℕ → ℕ`, if `σ n < σ (n+1)`, then\nfor any `i < j`, `σ i < σ j` -- that is, `Subseq σ` holds.",
+ "category": "aₙ"}

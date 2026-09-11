@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (u v : V) (c : ℂ)\n  (v_pos : 0 < ‖v‖) (c_def : c = ⟪u,v⟫ / ↑‖v‖ ^ 2) : ‖c • v‖ ^ 2 = ‖⟪u,v⟫‖ ^ 2 / ‖v‖ ^ 2",
+ "name": "LinearAlgebraGame.norm_sq_scaled_eq",
+ "displayName": "norm_sq_scaled_eq",
+ "content":
+ "`norm_sq_scaled_eq` is a helper proof that if `0 < ‖v‖` and `c = ⟪u,v⟫ / ‖v‖^2`, then\n`‖c • v‖^2 = ‖⟪u,v⟫‖^2 / ‖v‖^2`. The syntax is `norm_sq_scaled_eq u v c v_pos c_def`.",
+ "category": "Inner Product"}

@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} [Mul α] (a b : α) : a • b = a * b",
+ "name": "smul_eq_mul",
+ "displayName": "smul_eq_mul",
+ "content": "(missing)",
+ "category": "Matrix"}

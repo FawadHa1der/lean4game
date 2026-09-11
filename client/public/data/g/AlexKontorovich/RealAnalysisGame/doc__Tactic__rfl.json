@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rfl",
+ "displayName": "rfl",
+ "content":
+ "The `rfl` tactic proves goals of the form `A = A` where both sides are *identical*.",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {a b} (hab : a < b) : RealAnalysisGame.IsCompact (Set.Icc a b)",
+ "name": "RealAnalysisGame.IsCompact_of_ClosedInterval",
+ "displayName": "IsCompact_of_ClosedInterval",
+ "content":
+ "Any closed interval `[a, b]` (which is closed and bounded) is compact.",
+ "category": "x∈U"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {M} [CommMonoid M] {x y z} (hy : x * y = 1) (hz : x * z = 1) : y = z",
+ "name": "inv_unique",
+ "displayName": "inv_unique",
+ "content":
+ "**Uniqueness of Inverse**\n\nIf $a \\cdot x \\equiv 1 \\pmod m$ and $a \\cdot y \\equiv 1 \\pmod m$, then $x \\equiv y \\pmod m$.",
+ "category": "LinCong"}

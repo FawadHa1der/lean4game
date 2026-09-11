@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {p} : (¬∃ (x : α), p x) ↔ ∀ (x : α), ¬p x",
+ "name": "not_exists",
+ "displayName": "not_exists",
+ "content": "[Doc.Theorem] can use `push Not` instead",
+ "category": "Logic"}

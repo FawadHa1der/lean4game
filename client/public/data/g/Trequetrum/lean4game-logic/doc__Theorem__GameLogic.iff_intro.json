@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P Q} (mp : P → Q) (mpr : Q → P) : P ↔ Q",
+ "name": "GameLogic.iff_intro",
+ "displayName": "iff_intro",
+ "content":
+ "# Propositional Equivalence\n`P ↔ Q` means that `P` and `Q` must have the same truth value. This is often said as “`P` if and only iff `Q`” or “`P` is logically equivalent to `Q`”.\n\n`iff_intro` is the way to prove a biconditional like `P ↔ Q`. It requires you to show evidence for both `P → Q` and `Q → P`.",
+ "category": "↔"}

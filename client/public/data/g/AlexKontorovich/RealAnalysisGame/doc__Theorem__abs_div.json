@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [Field α] [LinearOrder α] [IsStrictOrderedRing α] (a b : α) : |a / b| = |a| / |b|",
+ "name": "abs_div",
+ "displayName": "abs_div",
+ "content": "For any real numbers `x` and `y`, we have `|x / y| = |x| / |y|`.",
+ "category": "|x|"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {R} [NonUnitalNonAssocSemiring R] (s : Finset ι) (f : ι → R) (a : R) : (∑ i ∈ s, f i) * a = ∑ i ∈ s, f i * a",
+ "name": "Finset.sum_mul",
+ "displayName": "sum_mul",
+ "content":
+ "Summation multiplication: `∑ i ∈ s, (f i * c) = (∑ i ∈ s, f i) * c`.",
+ "category": "∑aₙ"}

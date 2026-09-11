@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (k d : ℤ) : (100 * k + d) ≡ d (mod 4)",
+ "name": "div4_rule",
+ "displayName": "div4_rule",
+ "content":
+ "**Divisibility by 4**\n\nSince 4 divides 100, the remainder of any number modulo 4 depends only on its last two digits.\n$100 \\cdot k + d \\equiv d \\pmod 4$.",
+ "category": "DivRules"}

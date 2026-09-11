@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "symm",
+ "displayName": "symm",
+ "content":
+ "With `symm` (for “symmetry”), you swap the sides of an equation (`=`) or equivalence (`↔`) in the proof target.\n\n## Variants\n* `symm at h` operates on the assumption `h` instead of the proof target\n* `h.symm` is the result of `symm at h` and can be used like `h`\n\nEach of the following three tactics or tactic sequences therefore has the same effect:\n* `rw [←h]`\n* ```\n  symm at h\n  rw [h]\n  ```\n* `rw [h.symm]`",
+ "category": "📖︎"}

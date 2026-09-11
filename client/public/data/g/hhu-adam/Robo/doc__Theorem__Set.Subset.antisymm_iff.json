@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {a b} : a = b ↔ a ⊆ b ∧ b ⊆ a",
+ "name": "Set.Subset.antisymm_iff",
+ "displayName": "Subset.antisymm_iff",
+ "content": "(missing)",
+ "category": "Set"}

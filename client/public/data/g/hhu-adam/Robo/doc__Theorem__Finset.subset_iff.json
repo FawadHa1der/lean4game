@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {s₁ s₂} : s₁ ⊆ s₂ ↔ ∀ ⦃x : α⦄, x ∈ s₁ → x ∈ s₂",
+ "name": "Finset.subset_iff",
+ "displayName": "subset_iff",
+ "content": "(missing)",
+ "category": "Set"}

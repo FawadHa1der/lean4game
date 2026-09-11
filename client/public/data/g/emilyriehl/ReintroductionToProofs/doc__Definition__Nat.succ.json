@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Nat.succ",
+ "displayName": "succ",
+ "content":
+ "An introduction rule for the type of natural numbers defines the *successor function* `succ : ℕ → ℕ`, which sends each natural number `n` to `n + 1`. Note,\nhowever, that formally speaking, addition is defined in terms of the successor and not the other way around.",
+ "category": "ℕ"}

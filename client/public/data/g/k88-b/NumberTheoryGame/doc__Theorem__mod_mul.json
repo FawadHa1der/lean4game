@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b c d m : ℤ) (h1 : a ≡ b (mod m)) (h2 : c ≡ d (mod m)) : (a * c) ≡ b * d (mod m)",
+ "name": "mod_mul",
+ "displayName": "mod_mul",
+ "content":
+ "**Multiplying Congruences**\n\nIf $a \\equiv b \\pmod m$ and $c \\equiv d \\pmod m$, then $(a \\cdot c) \\equiv (b \\cdot d) \\pmod m$.\n\n**Intuition:**\nJust like addition, you can multiply remainders directly!\nModulo 10: $12 \\equiv 2$ and $13 \\equiv 3$.\nIf we multiply them: $12 \\cdot 13 = 156$.\nAnd $156 \\equiv 6 \\pmod{10}$. Notice that $2 \\cdot 3$ is exactly $6$.",
+ "category": "Congruence"}

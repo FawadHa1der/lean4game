@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {M₀} [MonoidWithZero M₀] [LinearOrder M₀] [PosMulStrictMono M₀] {a b} [MulPosMono M₀] (ha : 0 ≤ a) (hb : 0 ≤ b) :\n  a ^ 2 = b ^ 2 ↔ a = b",
+ "name": "sq_eq_sq",
+ "displayName": "sq_eq_sq",
+ "content":
+ "`sq_eq_sq` is a proof that if `a` and `b` are nonnegative, `a^2 = b^2` if and only if `a = b`. If you\nhave hypotheses `h1 : 0 ≤ a`, `h2 : 0 ≤ b`, then `sq_eq_sq h1 h2` is a proof that `a ^ 2 = b ^ 2 ↔ a = b`.",
+ "category": "ℝ"}

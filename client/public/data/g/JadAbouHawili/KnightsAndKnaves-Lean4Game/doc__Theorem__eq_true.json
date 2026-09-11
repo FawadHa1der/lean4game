@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {p} (h : p) : p = True",
+ "name": "eq_true",
+ "displayName": "eq_true",
+ "content": "(missing)",
+ "category": "Logic"}

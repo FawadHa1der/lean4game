@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (c0 c1 c2 : ℤ) : (c2 * 10 ^ 2 + c1 * 10 + c0) ≡ c2 * (-1) ^ 2 + c1 * -1 + c0 (mod 11)",
+ "name": "div11_rule_3",
+ "displayName": "div11_rule_3",
+ "content":
+ "**Divisibility by 11**\n\nA number is congruent to the alternating sum of its digits modulo 11.\nThis works because $10 \\equiv -1 \\pmod{11}$, so evaluating the digit polynomial at 10 is congruent to evaluating it at -1!",
+ "category": "DivRules"}

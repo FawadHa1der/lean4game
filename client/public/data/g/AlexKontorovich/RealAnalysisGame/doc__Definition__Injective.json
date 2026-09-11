@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Injective",
+ "displayName": "Injective",
+ "content":
+ "A function `f` is called `Injective` if: for all `i, j`, `f i = f j → i = j`.",
+ "category": "📖︎"}

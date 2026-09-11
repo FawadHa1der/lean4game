@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {a} : a = a",
+ "name": "rfl",
+ "displayName": "rfl",
+ "content":
+ "For a type `A` and element `a : A`, the proposition `a = a` is true because there is a proof\n`rfl : a = a` witnessing the reflexivity of equality.",
+ "category": "Eq"}

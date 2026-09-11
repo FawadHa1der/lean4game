@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] {A B} (hAB : A ⊆ B) :\n  LinearAlgebraGame.span K V A ⊆ LinearAlgebraGame.span K V B",
+ "name": "LinearAlgebraGame.span_mono",
+ "displayName": "span_mono",
+ "content":
+ "`span_mono` is a proof that the span of sets is monotonic. Simply, this means that if you have `h : A ⊆ B`,\nthen `span_mono K V h` is a proof that `span K V A ⊆ span K V B`.",
+ "category": "Vector Spaces"}

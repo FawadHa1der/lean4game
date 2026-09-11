@@ -70,8 +70,11 @@ function MobileNavButtons({pageNumber, setPageNumber}:
 
 /** button to toggle dropdown menu. */
 export function MenuButton() {
+  const { t } = useTranslation()
   const [navOpen, setNavOpen] = useAtom(navOpenAtom)
-  return <Button  className="btn toggle-width" id="menu-btn" onClick={(ev) => {setNavOpen(!navOpen)}}>
+  // Icon-only: the title is its accessible name (the icon svg is aria-hidden).
+  return <Button  className="btn toggle-width" id="menu-btn" onClick={(ev) => {setNavOpen(!navOpen)}}
+      title={navOpen ? t("close menu") : t("open menu")} aria-expanded={navOpen}>
     {navOpen ? <FontAwesomeIcon icon={faXmark} /> : <FontAwesomeIcon icon={faBars} />}
   </Button>
 }
@@ -141,6 +144,7 @@ export function LanguageButton() {
       iconElement={langNavOpen ? undefined : <Flag iso={i18n.language} />}
       icon={langNavOpen ? faXmark : undefined}
       title={langNavOpen ? t('close language menu') : t('open language menu')}
+      expanded={langNavOpen}
       onClick={() => {setLangNavOpen(!langNavOpen)}}
     />
   )

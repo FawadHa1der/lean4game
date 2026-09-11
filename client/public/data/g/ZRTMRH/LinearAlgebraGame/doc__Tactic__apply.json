@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "apply",
+ "displayName": "apply",
+ "content":
+ "## Summary\n\nIf `t : P → Q` is a proof that $P \\implies Q$, and `h : P` is a proof of `P`,\nthen `apply t at h` will change `h` to a proof of `Q`. The idea is that if\nyou know `P` is true, then you can deduce from `t` that `Q` is true.\n\nIf the *goal* is `Q`, then `apply t` will \\\"argue backwards\\\" and change the\ngoal to `P`. The idea here is that if you want to prove `Q`, then by `t`\nit suffices to prove `P`, so you can reduce the goal to proving `P`.\n\n### Example:\n\n`succ_inj x y` is a proof that `succ x = succ y → x = y`.\n\nSo if you have a hypothesis `h : succ (a + 37) = succ (b + 42)`\nthen `apply succ_inj at h` will change `h` to `a + 37 = b + 42`.\nYou could write `apply succ_inj (a + 37) (b + 42) at h`\nbut Lean is smart enough to figure out the inputs to `succ_inj`.\n\n### Example\n\nIf the goal is `a * b = 7`, then `apply succ_inj` will turn the\ngoal into `succ (a * b) = succ 7`.",
+ "category": "📖︎"}

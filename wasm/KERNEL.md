@@ -50,7 +50,7 @@ requests a death orphaned, and breaks crash loops (three deaths in two
 minutes → halted). What the game wires (`client/src/wasm/game-boot.ts`):
 `GameSession extends ResidentSession` (writes the gamedata JSON into the
 worker FS inside `start()`, so it is there on every boot and reboot before
-the relay arms the loop), a policy of `["init", <game snapshot>]` with a
+the relay arms the loop), a policy of `[<game snapshot>]` (the init region left the game session on 2026-09-08: no level header can be served by it) with a
 2 GiB initial commit under a 3 GiB cap, `translation.attachServer(relay.clientPort)`,
 `pagehide → relay.unload()` (dispose + the synchronous kill), and the
 relay's status as the only source of ready / elaborating / halted for the
@@ -129,7 +129,7 @@ operator as the GitHub release of that name and into R2 with
 | artifact | digest / build id | transfer bytes | raw bytes |
 | --- | --- | --- | --- |
 | runtime | `wasm64-d77d34b97592d014` (source `qed64-wasm64@992dc94b2`) | 153,673,728 (tar) | — |
-| init | `sha256:da2ed4de9dabfb73…` | 107,410,385 | 342,124,389 |
+| init (retired 2026-09-11: no game session loads it; dropped from the served index, the object stays in R2) | `sha256:da2ed4de9dabfb73…` | 107,410,385 | 342,124,389 |
 | nng4 | `sha256:3613d20f2f3545d1…` | 428,354,712 | 1,466,403,813 |
 | testgame | `sha256:aee31c25b23c454c…` | 413,599,933 | 1,412,288,317 |
 | stg4 (added 2026-09-08, slim) | `sha256:5dbab231c29a9c13…` | 180,977,642 | 665,285,845 |
@@ -156,10 +156,39 @@ runtime ~12 min, core/trees/games ~8 min, bakes ~10 min, bundle ~2 min.
 per-game tree is SLIM (`*.olean.private` dropped from the base overlay):
 665 MB raw / 181 MB on the wire against nng4's fat 1,466 MB / 428 MB with a
 larger Mathlib closure — the ~55 % saving qed64 measured for its umbrella
-(docs/SERVER-SLIM-REBAKE.md). The served init/nng4/testgame stay fat until
+(docs/SERVER-SLIM-REBAKE.md). The served nng4/testgame stay fat until
 the next full run (a full run is a full slim rebake; `SLIM_TREES=0` is the
 fat escape hatch). `expectedRaw` for stg4 is keyed
 `wasm64-d77d34b97592d014+slim` in `wasm/catalog.json`.
+
+**Ten-game bundle (2026-09-11, same runtime).** Every catalog game is baked
+slim from its own overlay (`--games …`, sequential bakes); init retired.
+Served index (`client/public/snapshots/index.json`):
+
+| snapshot | digest | transfer bytes | raw bytes |
+| --- | --- | --- | --- |
+| stg4 (djvelleman/STG4, slim) | `sha256:5dbab231c29a9c13…` | 180,977,642 | 665,285,845 |
+| testgame (test/TestGame, slim) | `sha256:d5c4280126015f3a…` | 148,560,924 | 546,755,869 |
+| nng4 (hhu-adam/NNG4, slim) | `sha256:db264c5f3eb7c69c…` | 154,373,030 | 569,269,949 |
+| reintro (emilyriehl/ReintroductionToProofs, slim) | `sha256:eccae8a265ecef22…` | 152,685,936 | 562,887,317 |
+| knights (JadAbouHawili/KnightsAndKnaves-Lean4Game, slim) | `sha256:0894a607d8c019d1…` | 199,226,176 | 728,516,269 |
+| ntg (k88-b/NumberTheoryGame, slim) | `sha256:dfa69f626e1cf8e8…` | 231,509,452 | 835,759,917 |
+| rag (AlexKontorovich/RealAnalysisGame, slim) | `sha256:a7a0c2f7f57b3ce2…` | 281,959,968 | 1,004,806,229 |
+| robo (hhu-adam/Robo, slim) | `sha256:5e905b3459712762…` | 281,145,882 | 1,002,146,453 |
+| logic (Trequetrum/lean4game-logic, slim) | `sha256:72eeb282456209b3…` | 231,335,507 | 835,310,405 |
+| lag (ZRTMRH/LinearAlgebraGame, slim) | `sha256:f84d616679d0ceb0…` | 280,060,218 | 998,558,821 |
+| **total** | | **2,141,834,735** | **7,749,297,074** |
+
+Compat modules compiled into the game base tree by the `compat` lane
+(`wasm/compat/`): Mathlib.Tactic (umbrella of the pack's 244 tactic
+leaves), .Have, .Cases (full de3a9cf), .Generalize, Algebra.Order.Ring.Star,
+Data.Int.Star, Data.Rat.Star. Bundle tarballs repacked
+(`snapshots.tar` 2,141,870,080 B, 11 files); the release and R2 uploads are the
+operator's. Lane economics on this Mac: compiles 3–30 min per game (Robo
+189 modules ≈ 30 min uncontended; the 7.6 GiB Docker VM OOM-kills `lean`
+silently when several compiles share it — the games lane is sequential by
+design, port agents must not run in parallel), bakes 8–15 min each, probes
+≈ 1.3 s of elaboration.
 
 ## Served bundle since 2026-09-03: built from source
 
@@ -241,7 +270,7 @@ snapshot names) restricts the games, bake and bundle lanes to those games —
 one game while the other games' staged snapshots are kept. Which games exist
 is `wasm/catalog.json`, read only through `scripts/games-manifest.mjs`; the
 script names no game. A run **without** `--games` is a full run: the
-snapshot staging dir is wiped and init + every game is rebaked slim (the
+snapshot staging dir is wiped and every game is rebaked slim (the
 runtime-bump path).
 
 | lane | does | needs |
@@ -252,7 +281,7 @@ runtime-bump path).
 | trees | unpack the core pack and the **Mathlib pack** into an olean tree; compile lean-i18n (`vendor/i18n`) and `server/GameServer` with the native stage0; overlay Lake; then runs `compat` | the Mathlib pack (below) |
 | compat | compile `wasm/compat` (`Mathlib.Tactic.Have`, `Mathlib.Tactic.Cases` — leaves the essential pack excludes) against the fat tree into the game base tree; refuses if the pack itself provides them (`wasm/compat/README.md`) | — |
 | games | per selected catalog row: clone `source.url` @ `rev` + `git am` the patch when `src` is absent; compile with the row's `leanOptions` (`-D` flags) → gamedata; restore the regenerated `.i18n/*/*.pot` templates (only those — translations beside them are left alone); overlay a per-game tree — **slim** by default (`SLIM_TREES=1` drops the pack's `*.olean.private` facets; `SLIM_TREES=0` = fat) | — |
-| bake | `bake-snapshot.mjs` per selected game (reserve = the row's `reserveBytes`), plus init on a full run; raw size checked against the row's `expectedRaw` when its `runtime` equals this run's pairing key — the build id, plus `+slim` when the per-game trees are slim (`SLIM_TREES=1`; a slim bake is ~60 % smaller, so a fat record is never asserted against it) — ±5 % stops the run, otherwise the value to paste is printed; raw > reserve only warns; superseded `.snapz` pruned; `--verify-snapshots` runs each game's catalog probe (`games-manifest.mjs --probe`) through `snapshot-probe.mjs --via-mem` | ~40 GB scratch |
+| bake | `bake-snapshot.mjs` per selected game (reserve = the row's `reserveBytes`; no init snapshot — a game session loads its own region only); raw size checked against the row's `expectedRaw` when its `runtime` equals this run's pairing key — the build id, plus `+slim` when the per-game trees are slim (`SLIM_TREES=1`; a slim bake is ~60 % smaller, so a fat record is never asserted against it) — ±5 % stops the run, otherwise the value to paste is printed; raw > reserve only warns; superseded `.snapz` pruned; `--verify-snapshots` runs each game's catalog probe (`games-manifest.mjs --probe`) through `snapshot-probe.mjs --via-mem` | ~40 GB scratch |
 | bundle | stage into `client/public` (`stage-game-assets.sh`, `stage-snapshots.py` for the selected names), client build, `pack-artifacts.sh` | — |
 
 The pipeline scripts run from a copy of the vendored `wasm/vendor/qed64-pipeline`

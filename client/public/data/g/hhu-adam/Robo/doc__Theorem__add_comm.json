@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {G} [AddCommMagma G] (a b : G) : a + b = b + a",
+ "name": "add_comm",
+ "displayName": "add_comm",
+ "content": "(missing)",
+ "category": "+ *"}

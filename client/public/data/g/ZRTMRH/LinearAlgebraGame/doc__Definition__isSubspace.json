@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "isSubspace",
+ "displayName": "isSubspace",
+ "content":
+ "A subspace is a subset of a vector space that acts similarly to a vector space itself. It has three\nmain properties:\n- Nonempty: a subspace cannot be empty\n- Closure under addition: adding any two elements of a subspace should remain in that subspace\n- Closure under scalar multiplication: scaling any vector in a subspace should remanin in that subspace\n\nSubspaces are formalized by having the `isSubspace` proposition, which simply combines the three\nproperties into one proposition.",
+ "category": "📖︎"}

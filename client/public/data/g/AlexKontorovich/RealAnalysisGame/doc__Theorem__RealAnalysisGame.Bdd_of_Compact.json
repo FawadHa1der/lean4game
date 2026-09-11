@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (S : Set ℝ) (hcomp : RealAnalysisGame.IsCompact S) : ∃ M, ∀ s ∈ S, |s| < M",
+ "name": "RealAnalysisGame.Bdd_of_Compact",
+ "displayName": "Bdd_of_Compact",
+ "content": "A compact set is bounded.",
+ "category": "x∈U"}

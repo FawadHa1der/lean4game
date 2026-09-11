@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {a b c} (h₁ : a = b) (h₂ : b = c) : a = c",
+ "name": "Eq.trans",
+ "displayName": "trans",
+ "content":
+ "Given elements `x y z : A` and proofs `p : x = y` and `q : y = z`, `Eq.trans p q` or `p.trans q` are two names for the corresponding proof `x = z`.",
+ "category": "Eq"}

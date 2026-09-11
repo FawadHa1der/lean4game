@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : n < 2 ^ n",
+ "name": "IdLeTwoPow",
+ "displayName": "IdLeTwoPow",
+ "content": "For all `n`, `n < 2 ^ n`.",
+ "category": "Theorems"}

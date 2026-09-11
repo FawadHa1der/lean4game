@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P Q} (left : P) (right : Q) : P ∧ Q",
+ "name": "GameLogic.and_intro",
+ "displayName": "and_intro",
+ "content":
+ "# and_intro\n### `and_intro : P -> Q -> P ∧ Q`\n`and_intro` is a function with two parameters. It takes two disparate pieces of evidence and combines them into a single piece of evidence. If `(e₁ : P)` and `(e₂ : Q)` are evidence, then\n```\nhave h : P ∧ Q := and_intro e₁ e₂\n```",
+ "category": "∧"}

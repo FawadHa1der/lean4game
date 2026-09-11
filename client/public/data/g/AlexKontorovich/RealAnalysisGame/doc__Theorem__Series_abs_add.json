@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (a : ℕ → ℝ) {n m} (hmn : n ≤ m) : |∑ k ∈ Finset.Ico n m, a k| ≤ ∑ k ∈ Finset.Ico n m, |a k|",
+ "name": "Series_abs_add",
+ "displayName": "Series_abs_add",
+ "content": "If `n ≤ m`, then `|∑ k ∈ Ico n m, a k| ≤ ∑ k ∈ Ico n m, |a k|`.",
+ "category": "∑aₙ"}

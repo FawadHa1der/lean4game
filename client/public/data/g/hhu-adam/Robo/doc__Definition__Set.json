@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Set",
+ "displayName": "Set",
+ "content":
+ "`A : Set T` means that `A` is a subset of `T`\n(or, more precisely, that `A` is a set consisting of elements of type `T`).",
+ "category": "Set"}

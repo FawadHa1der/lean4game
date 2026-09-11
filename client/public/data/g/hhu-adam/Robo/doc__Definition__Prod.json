@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Prod",
+ "displayName": "∏",
+ "content":
+ "For a finite index set `I : Finset T`, `∏ i ∈ I, f i` is the Leanic notation for the product\n$\\prod_{i\\in I} f(i)$.  You write the product symbol as `\\prod`.",
+ "category": "📖︎"}

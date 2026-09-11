@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (z : ℂ) : z * (starRingEnd ℂ) z = ↑(Complex.normSq z)",
+ "name": "Complex.mul_conj",
+ "displayName": "mul_conj",
+ "content": "`mul_conj` is a proof that `z * conj z = ↑(normSq z)`",
+ "category": "ℂ"}

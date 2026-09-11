@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "exfalso",
+ "displayName": "exfalso",
+ "content":
+ "Change the goal to `False`. This is only helpful when there are assumptions which are in some way contradictory.\n### Example\n```\nAssumptions\nh : P ∧ ¬P\nGoal: Q\n```\nI cannot show evidence for `Q` directly, but because `False → Q` is trivially true (False implies anything), I can use the tactic `exfalso` which changes the Goal:\n```\nAssumptions\nh : P ∧ ¬P\nGoal: Q\n```\nAfter which `exact h.right r.left` meets the current goal.\n### Apply\n`exfalso` is the same as `apply false_elim`.\n∴ to show `Q` by `False → Q`, it suffices to show `False`.",
+ "category": "📖︎"}

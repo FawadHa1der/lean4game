@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "unfold",
+ "displayName": "unfold",
+ "content":
+ "With `unfold F`, you can write out the definition `F` in the proof goal.\nWith `unfold F at h`, you do the same thing, but in the assumption `h`.\n\nAlthough the proof goal or assumption before and after `unfold` are identical in definition,\nmany tactics (e.g., `push Not` or `rw`) operate on a syntactic level;\nthey do not “see through definitions.”\n\n## Friends and Relatives\n\nThe tactics `unfold F` and `simp only [F]` do practically the same thing.",
+ "category": "📖︎"}

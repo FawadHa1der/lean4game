@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "IsClosed",
+ "displayName": "IsClosed",
+ "content":
+ "`(S : Set ℝ) : Prop := IsOpen Sᶜ`\n\nA set is closed if its complement is open.",
+ "category": "📖︎"}

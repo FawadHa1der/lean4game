@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {M} [AddCommMonoid M] {a b} (hab : a ≤ b) (f : ℕ → M) :\n  ∑ k ∈ Finset.Ico a (b + 1), f k = ∑ k ∈ Finset.Ico a b, f k + f b",
+ "name": "sum_Ico_succ",
+ "displayName": "sum_Ico_succ",
+ "content": "This is the analog of `sum_range_succ` to summing on intervals.",
+ "category": "∑aₙ"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "ReintroductionToProofs.Sum.lift",
+ "displayName": "lift",
+ "content":
+ "For types `A`, `B`, and `C`, `Sum.lift : (A → C) → (B → C) → (A ⊕ B → C)` combines a pair of functions of types `A → C` and `B → C` to define a single function of type `A ⊕ B → C`.",
+ "category": "Sum"}

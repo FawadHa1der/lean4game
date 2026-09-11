@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Set.Finite",
+ "displayName": "Set.Finite",
+ "content":
+ "For a subset `A : Set T`, `Set.Finite A` means that `A` has only a finite number of elements.\nIf `h : Set.Finite A` is given as an assumption, then `h.toFinset : Finset T` is the same subset `A`,\nbut now explicitly understood as a finite subset.",
+ "category": "Set"}

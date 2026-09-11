@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [Preorder α] [LocallyFiniteOrder α] {a b x} : x ∈ Finset.Ico a b ↔ a ≤ x ∧ x < b",
+ "name": "Finset.mem_Ico",
+ "displayName": "mem_Ico",
+ "content": "For `a` and `b`, `x ∈ Ico a b ↔ a ≤ x ∧ x < b`.",
+ "category": "x∈U"}

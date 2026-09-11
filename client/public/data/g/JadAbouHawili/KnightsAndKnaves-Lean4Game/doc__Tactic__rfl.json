@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rfl",
+ "displayName": "rfl",
+ "content":
+ "`rfl` is short for reflexivity. In the context of numbers, it is the property that for any number `a`, `a = a`.\n\n`rfl` also applies more generally, `rfl` will close any goal of the form `A=B` where `A`,`B` are identical. If needed, `rfl` will unfold both sides into their definitions and then check if they are equal. In other words, `rfl` can prove the equality of two things that are 'equal by definition'.\n\nIn fact, `rfl` is not a tactic but syntactic sugar for `exact rfl`. `rfl` is of type `a = a` for any `a`.\n\n## Examples\n```\nx - 7 = x - 7\n```\n`rfl` will close this goal.",
+ "category": "📖︎"}

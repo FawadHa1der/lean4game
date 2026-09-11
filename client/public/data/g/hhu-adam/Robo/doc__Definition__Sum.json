@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Sum",
+ "displayName": "∑",
+ "content":
+ "For a finite index set `I : Finset T`, `∑ i ∈ I, f i` is Leanic notation for the sum\n$\\sum_{i\\in I} f(i)$.  You write the summation sign as `\\sum`.",
+ "category": "📖︎"}

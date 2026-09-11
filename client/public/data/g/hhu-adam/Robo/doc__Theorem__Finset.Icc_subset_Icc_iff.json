@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} {a₁ a₂ b₁ b₂} [Preorder α] [LocallyFiniteOrder α] (h₁ : a₁ ≤ b₁) :\n  Finset.Icc a₁ b₁ ⊆ Finset.Icc a₂ b₂ ↔ a₂ ≤ a₁ ∧ b₁ ≤ b₂",
+ "name": "Finset.Icc_subset_Icc_iff",
+ "displayName": "Icc_subset_Icc_iff",
+ "content": "(missing)",
+ "category": "≤"}

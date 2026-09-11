@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "decide",
+ "displayName": "decide",
+ "content":
+ "With `decide`, you can prove statements that can be decided using a simple algorithm.\nThese include, in particular, `True` and statements about concrete numbers such as:\n- `Even 4`\n- `2 ≤ 5`\n- `4 ≠ 6`\n- `Prime 7`",
+ "category": "📖︎"}

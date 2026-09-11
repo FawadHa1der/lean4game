@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (f : ℝ → ℝ) {a b} (hab : a < b) {n k} (hn : n ≠ 0) (hk : k ≠ 0) {ε δ} (hε : ε > 0) (hδ : δ > 0)\n  (hunif : ∀ x, x ∈ Set.Icc a b → ∀ y, y ∈ Set.Icc a b → |y - x| < δ → |f y - f x| < ε) (hfine : 2 * (b - a) / ↑n < δ) :\n  |RiemannSum f a b (n * k) - RiemannSum f a b n| < (b - a) * ε",
+ "name": "RiemannSumRefinement",
+ "displayName": "RiemannSumRefinement",
+ "content":
+ "If a function `f` is uniformly continuous on `[a,b]`, then the Riemann sum at `n * k` differs\nfrom that at `n` by at most `(b - a) * ε`, provided the partition is fine enough.",
+ "category": "∫f"}

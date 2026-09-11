@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {M} {s} [AddCommMonoid M] (b : M) : ∑ _x ∈ s, b = s.card • b",
+ "name": "Finset.sum_const",
+ "displayName": "sum_const",
+ "content": "Summation of a constant: `∑ i ∈ s, c = c * s.card`.",
+ "category": "∑aₙ"}

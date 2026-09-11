@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "have",
+ "displayName": "have",
+ "content":
+ "With `have h : P`, you introduce an intermediate result.\nYou must then prove this intermediate result\nbefore you can continue with the actual proof.\n\n## Friends and relatives\n`suffices h : P` works in exactly the same way, except that you can continue with the main proof first and\nonly have to prove your intermediate result at the very end.",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a m : ℤ) (h : IsGCD(a, m) 1) : ∃ x, (a * x) ≡ 1 (mod m)",
+ "name": "inv_exists",
+ "displayName": "inv_exists",
+ "content":
+ "**Modular Inverse Existence**\n\nIf $\\text{IsGCD}(a, m) 1$, then there exists an integer $x$ such that $a \\cdot x \\equiv 1 \\pmod m$.\n\n**Intuition:**\nCoprimality gives $a \\cdot x + m \\cdot y = 1$, i.e. $a \\cdot x = 1 - m \\cdot y$ — meaning $a \\cdot x$ is exactly $1$ *shifted by a multiple of $m$*. That's precisely what \"$\\equiv 1 \\pmod m$\" means.\n\nFor example: $\\gcd(3, 7) = 1$, and $3 \\cdot (-2) + 7 \\cdot 1 = 1$. So $x = -2$ works: $3 \\cdot (-2) = -6$, and indeed $-6 \\equiv 1 \\pmod 7$ (since $-6 - 1 = -7 = 7 \\cdot (-1)$).",
+ "category": "LinCong"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {X} [Preorder X] (a : ℕ → X) (ha : ∀ n, a n ≤ a (n + 1)) : Monotone a",
+ "name": "Monotone_of_succ",
+ "displayName": "Monotone_of_succ",
+ "content": "If `a n ≤ a (n+1)` holds for all `n`, then `a` is `Monotone`.",
+ "category": "aₙ"}

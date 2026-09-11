@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Arrow",
+ "displayName": "→",
+ "content":
+ "For `A B : Prop`, `A → B` is the implication “`A` implies `B`.”\nFor other `X Y : Type`, `X → Y` is a mapping that maps values from `X` to `Y`.\n\n## Implication as proof goal\n\nIf your proof goal is an implication `A → B`, with `intro h` you can assume `h : A`,\nand then you must prove `B`.\n\n## Implication as assumption\n\nTo use an implication among your assumptions, use the tactic `apply`.",
+ "category": "Logic"}

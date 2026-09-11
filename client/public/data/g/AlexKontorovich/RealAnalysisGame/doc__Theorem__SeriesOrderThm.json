@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {a b} (hab : ∀ n, a n ≤ b n) (n : ℕ) : Series a n ≤ Series b n",
+ "name": "SeriesOrderThm",
+ "displayName": "SeriesOrderThm",
+ "content": "If `a n ≤ b n`, then `∑ k, a n ≤ ∑ k, b n`.",
+ "category": "∑aₙ"}

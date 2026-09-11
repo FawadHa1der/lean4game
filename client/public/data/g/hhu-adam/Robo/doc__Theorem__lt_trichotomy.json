@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} [LinearOrder α] (a b : α) : a < b ∨ a = b ∨ b < a",
+ "name": "lt_trichotomy",
+ "displayName": "lt_trichotomy",
+ "content":
+ "Wird typischerweise mit `obtain` verwendet, um in einem Beweis die drei Fälle `x < y`, `x = y` und `x > y` zu unterscheiden:\n\n```\nobtain h | h | h := lt_trichotomy x y\n```",
+ "category": "≤"}

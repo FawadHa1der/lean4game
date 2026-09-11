@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.bijective",
+ "displayName": "bijective",
+ "content": "A function is *bijective* if it is both injective and surjective.",
+ "category": "Function"}

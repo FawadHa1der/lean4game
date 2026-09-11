@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (n m : ℕ) : n + m = m + n",
+ "name": "Nat.add_comm",
+ "displayName": "add_comm",
+ "content":
+ "For `m n : Nat`, `Nat.add_comm m n` is the proof that `m + n = n + m`.",
+ "category": "ℕ"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {X} [NormedField X] [LinearOrder X] [IsStrictOrderedRing X] [FloorSemiring X] (a : ℕ → X) (ha : SeqBdd a) :\n  ∃ σ, Subseq σ ∧ IsCauchy (a ∘ σ)",
+ "name": "BolzanoWeierstrass",
+ "displayName": "BolzanoWeierstrass",
+ "content":
+ "If a sequence `a : ℕ → X` (where `X` could be `ℚ` or `ℝ`) is bounded, then it has a subsequence which is Cauchy.",
+ "category": "aₙ"}

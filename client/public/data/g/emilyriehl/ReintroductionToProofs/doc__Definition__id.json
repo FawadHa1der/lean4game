@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "id",
+ "displayName": "id",
+ "content":
+ "For a type `A`, `id : A → A` is the function defined by sending `a : A` to `a : A`.",
+ "category": "Function"}

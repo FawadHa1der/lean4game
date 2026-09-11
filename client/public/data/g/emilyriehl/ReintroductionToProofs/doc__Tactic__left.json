@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "left",
+ "displayName": "left",
+ "content":
+ "For propositions `P` and `Q`, the `left` tactic converts a goal of `P ∨ Q` to a goal of `P`. For types `A` and `B`, the `left` tactic converts a goal of `A ⊕ B` into a goal of `A`.",
+ "category": "📖︎"}

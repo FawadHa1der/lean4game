@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {a} (ha : Antitone a) {L} (aLim : SeqLim a L) (n : ℕ) : L ≤ a n",
+ "name": "AntitoneLimitBound",
+ "displayName": "AntitoneLimitBound",
+ "content":
+ "If `a : ℕ → ℝ` is `Antitone` and converges to `L`, then for all `n`, `L ≤ a n`. Analogous to `MonotoneLimitBound`.",
+ "category": "aₙ"}

@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {β} {f g} (h : f = g) (a : α) : f a = g a",
+ "name": "congr_fun",
+ "displayName": "congr_fun",
+ "content": "*(lean docstring)*\\\n**Alias** of `congrFun`.",
+ "category": "Function"}

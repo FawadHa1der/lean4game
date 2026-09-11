@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "repeat",
+ "displayName": "repeat",
+ "content":
+ "## Summary\n\n`repeat t` repeatedly applies the tactic `t`\nto the goal. You don't need to use this\ntactic, it just speeds things up sometimes.\n\n## Example\n\n`repeat rw [add_zero]` will turn the goal\n`a + 0 + (0 + (0 + 0)) = b + 0 + 0`\ninto the goal\n`a = b`.",
+ "category": "📖︎"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (v : V)\n  (v_zero : v ≠ 0) : 0 < ‖v‖",
+ "name": "LinearAlgebraGame.norm_pos_of_nonzero",
+ "displayName": "norm_pos_of_nonzero",
+ "content":
+ "`norm_pos_of_nonzero` is a helper proof that if `v ≠ 0`, then `0 < ‖v‖`. The syntax is\n`norm_pos_of_nonzero v v_zero`.",
+ "category": "Inner Product"}

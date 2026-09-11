@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "FunDerivAt",
+ "displayName": "FunDerivAt",
+ "content":
+ "`FunLimAt (fun h ↦ (f (c + h) - f c) / h) L 0`\n\nThe derivative of `f` at `x = c` is `L`.",
+ "category": "📖︎"}

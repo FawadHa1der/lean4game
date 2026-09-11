@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [Monoid α] [HasDistribNeg α] {n} (a✝ : Odd n) (a : α) : (-a) ^ n = -a ^ n",
+ "name": "Odd.neg_pow",
+ "displayName": "Odd.neg_pow",
+ "content": "(missing)",
+ "category": "ℕ"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {n} (i j : Fin n) {k l} (h : j ≠ k) : Matrix.E i j * Matrix.E k l = 0",
+ "name": "Matrix.E.mul_of_ne",
+ "displayName": "E.mul_of_ne",
+ "content": "(missing)",
+ "category": "Matrix"}

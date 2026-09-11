@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P Q} (p : P) : P ∨ Q",
+ "name": "GameLogic.or_inl",
+ "displayName": "or_inl",
+ "content":
+ "# Or Introduction Left\nTurns evidence for the lefthand of an `∨` proposition into a disjunction. The context must supply what the righthand side of the disjunction is.\n```\n-- Objects\nP Q : Prop\n-- Assumptions\np : P\n```\nallows:\n```\nhave h : P ∨ Q := or_inl p\nhave h := (or_inl p : P ∨ Q)\nhave h := show P ∨ Q from or_inl p\n```",
+ "category": "∨"}

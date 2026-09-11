@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "symm",
+ "displayName": "symm",
+ "content":
+ "## Summary\nThe `symm` tactic stands for symmetry of equality. It shows that if we know `a = b`, then `b = a`.\n\n## Example\nIf your goal is `a = b`, `symm` will change the goal to `b = a`.\n\n## Example\nIf you have a hypothesis `h: a = b`, `symm at h` will change the hypothesis to `h: b = a`.\n\n## Example\nIf you have a theorem `add_dist: ∀ a b c, (a + b) * c = a * c + b * c`, and a goal `2 * x + 5 * x = y`,\n`rw[(add_dist 2 5 x).symm]` will change the goal to `(2 + 5) * x = y`.",
+ "category": "📖︎"}

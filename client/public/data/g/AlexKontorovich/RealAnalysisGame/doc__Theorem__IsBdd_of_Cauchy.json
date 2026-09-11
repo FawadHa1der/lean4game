@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {X} [NormedField X] [LinearOrder X] [IsStrictOrderedRing X] (a : ℕ → X) (ha : IsCauchy a) : SeqBdd a",
+ "name": "IsBdd_of_Cauchy",
+ "displayName": "IsBdd_of_Cauchy",
+ "content": "If a sequence `a` is Cauchy, then it is eventually bounded.",
+ "category": "aₙ"}

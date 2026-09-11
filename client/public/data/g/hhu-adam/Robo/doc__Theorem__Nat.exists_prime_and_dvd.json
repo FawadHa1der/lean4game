@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {n} (hn : n ≠ 1) : ∃ (p : ℕ), Nat.Prime p ∧ p ∣ n",
+ "name": "Nat.exists_prime_and_dvd",
+ "displayName": "exists_prime_and_dvd",
+ "content": "(missing)",
+ "category": "ℕ"}

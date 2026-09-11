@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (S : Set ℝ) (hcomp : RealAnalysisGame.IsCompact S) : RealAnalysisGame.IsClosed S",
+ "name": "RealAnalysisGame.IsClosed_of_Compact",
+ "displayName": "IsClosed_of_Compact",
+ "content": "A compact set is closed.",
+ "category": "x∈U"}

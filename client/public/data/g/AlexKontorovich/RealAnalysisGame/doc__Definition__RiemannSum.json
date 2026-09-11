@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "RiemannSum",
+ "displayName": "RiemannSum",
+ "content":
+ "`(f : ℝ → ℝ) (a b : ℝ) (N : ℕ) :=\n  (b - a) / N * ∑ i ∈ range N, f (a + (i + 1) * (b - a) / N)`\n\n\nThe Riemann sum of `f` from `a` to `b` with `N` subintervals.",
+ "category": "📖︎"}

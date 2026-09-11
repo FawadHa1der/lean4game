@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Set.range",
+ "displayName": "range",
+ "content":
+ "For a mapping `f : A → B`, `range f` is the full image set of `f`:\n```\nrange f = {f a | a : A}\n        = {  b | ∃ a, f a = b}\n```\nIs a diffierent notation for `f '' univ`.\n`mem_range` is useful to work with it:\n```\nx ∈ range f ↔ ∃ a, f a = b\n```",
+ "category": "Set"}

@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : (Finset.range n).card = n",
+ "name": "Finset.card_range",
+ "displayName": "card_range",
+ "content": "Range cardinality: `card (range n) = n`.",
+ "category": "∑aₙ"}

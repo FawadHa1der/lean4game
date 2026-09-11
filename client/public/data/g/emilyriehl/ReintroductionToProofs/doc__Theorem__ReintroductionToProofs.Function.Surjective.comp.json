@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {A B C} (f : A → B) (g : B → C) (f_is_surj : ∀ b, ∃ a, f a = b) (g_is_surj : ∀ c, ∃ b, g b = c) (c : C) :\n  ∃ a, (g ∘ f) a = c",
+ "name": "ReintroductionToProofs.Function.Surjective.comp",
+ "displayName": "Surjective.comp",
+ "content":
+ "If `f : A → B` and `g : B → C` are both surjective then `g ∘ f : A → C` is also surjective.",
+ "category": "Function"}

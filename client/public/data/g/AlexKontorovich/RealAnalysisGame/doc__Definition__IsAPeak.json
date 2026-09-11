@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "IsAPeak",
+ "displayName": "IsAPeak",
+ "content":
+ "`(a : ℕ → X) (n : ℕ) := ∀ m > n, a m ≤ a n`\n\nFor a sequence `a : ℕ → X` (where `X` is `ℚ` or `ℝ`) and `n : ℕ`, we say that `IsAPeak a n` if: `∀ m > n, a m ≤ a n`.",
+ "category": "📖︎"}

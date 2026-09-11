@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "True",
+ "displayName": "True",
+ "content":
+ "The proposition `True` has a canonical element `⟨⟩ : True`, which may be typed using '\\<' and '\\>'.",
+ "category": "Prop"}

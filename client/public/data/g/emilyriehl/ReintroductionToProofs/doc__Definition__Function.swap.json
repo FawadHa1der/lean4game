@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.swap",
+ "displayName": "swap",
+ "content":
+ "For any types `A`, `B`, and `C` and function `f : A → B → C`, `Function.swap f : B → A → C` is the function that carries `b : B` and `a : A` to `f a b : C`.",
+ "category": "Function"}

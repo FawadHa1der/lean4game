@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {s} : s = ∅ ↔ ∀ (x : α), x ∉ s",
+ "name": "Set.eq_empty_iff_forall_notMem",
+ "displayName": "eq_empty_iff_forall_notMem",
+ "content": "(missing)",
+ "category": "Set"}

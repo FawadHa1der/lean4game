@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "show",
+ "displayName": "show",
+ "content":
+ "## Summary\n\n`show` lets you explicitly state what you're trying to prove. It helps clarify complex goals.\n\n## Syntax\n\n`show P` where `P` is the statement you want to prove\n\n## Example\n\nIf your goal is `(0 : V) ∈ null_space_v K V W T`, you can write:\n```\nshow T 0 = 0\n```\nto clarify that you're proving `T` maps zero to zero.\n\n## Common usage\n\nUseful when the goal involves definitions that need to be unfolded, or when you want to make your proof more readable.",
+ "category": "📖︎"}

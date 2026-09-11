@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "SeqBdd",
+ "displayName": "SeqBdd",
+ "content":
+ "`(a : ℕ → X) := ∃ M > 0, ∀ n, |a n| ≤ M`\n\n  A sequence `a : N → X` (where `X` could be `ℚ` or `ℝ`) is bounded (`SeqBdd` holds) if there exists some positive\n`M : X` so that `|a n| ≤ M`, for all `n`.",
+ "category": "📖︎"}

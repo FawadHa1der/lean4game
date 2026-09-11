@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "FunCont",
+ "displayName": "FunCont",
+ "content":
+ "`∀ x, FunContAt f x`\n\nThe function `f` is continuous on all of `ℝ`.",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (K V W : Type) [Field K] [AddCommGroup V] [AddCommGroup W] [LinearAlgebraGame.VectorSpace K V]\n  [LinearAlgebraGame.VectorSpace K W] (T : V → W) :\n  LinearAlgebraGame.is_linear_map_v K V W T ↔\n    (∀ (u v : V), T (u + v) = T u + T v) ∧ ∀ (a : K) (v : V), T (a • v) = a • T v",
+ "name": "LinearAlgebraGame.linear_map_def",
+ "displayName": "linear_map_def",
+ "content": "A linear map preserves vector addition and scalar multiplication.",
+ "category": "Linear Maps"}

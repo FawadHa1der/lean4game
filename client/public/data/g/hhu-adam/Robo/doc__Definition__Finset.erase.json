@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Finset.erase",
+ "displayName": "erase",
+ "content":
+ "For a finite subset `A : Finset T` and an element `a : T`,\n`erase A a` is another way of writing `A \\ {a}`.\nIf `a` is not in `A` at all, then obviously `erase A a = A`.",
+ "category": "Finset"}

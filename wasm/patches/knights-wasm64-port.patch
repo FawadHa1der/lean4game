@@ -1,0 +1,97 @@
+From a1b6fba5e2554ee80ecb85fba066ebc34664f4d5 Mon Sep 17 00:00:00 2001
+From: wasm64 port <wasm64@localhost>
+Date: Fri, 11 Sep 2026 10:18:17 -0400
+Subject: [PATCH] wasm64 port: Lean 4.33.0-pre / Mathlib de3a9cf
+
+- Game.lean: Languages "English" -> "en" (ISO code the client can match).
+- MathlibTheorems: drop the vestigial `import Mathlib.Tactic.Polyrith`
+  (not in the essential Mathlib pack; polyrith needs an external Sage
+  oracle and no level, hint or doc uses it).
+- LevelLemmas/settheory, settheory_knightsknavesfoundation: keep the
+  `[DecidableEq _]` binder on the `variable` line -- the newer parser ends
+  a command at a column-0 token, which orphaned the binder and lost every
+  Finset `Inter`/`Insert` instance in these files.
+- SetTheory_Knights_Knaves L09: remove `simp at diff` from the model proof
+  (no progress on this Mathlib; the following steps reach the same state).
+
+No level or world removed; nothing a player types changes.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+---
+ Game.lean                                               | 2 +-
+ Game/LevelLemmas/settheory.lean                         | 3 +--
+ Game/LevelLemmas/settheory_knightsknavesfoundation.lean | 3 +--
+ Game/Levels/SetTheory_Knights_Knaves/L09_same.lean      | 2 +-
+ Game/MathlibTheorems.lean                               | 2 +-
+ 5 files changed, 5 insertions(+), 7 deletions(-)
+
+diff --git a/Game.lean b/Game.lean
+index f594cfd..543338b 100644
+--- a/Game.lean
++++ b/Game.lean
+@@ -90,7 +90,7 @@ You can view the `Lean` code for every level there (and the solution if you are
+ "
+ 
+ /-! Information to be displayed on the servers landing page. -/
+-Languages "English"
++Languages "en"
+ CaptionShort "From the basics to Knights And Knaves"
+ CaptionLong "A guided experience that teaches you everything you need to know to understand and solve knights and knaves logic puzzles, including the basics of lean and logic.
+ 
+diff --git a/Game/LevelLemmas/settheory.lean b/Game/LevelLemmas/settheory.lean
+index 72ab43d..e4f39b5 100644
+--- a/Game/LevelLemmas/settheory.lean
++++ b/Game/LevelLemmas/settheory.lean
+@@ -2,8 +2,7 @@ import Mathlib.Data.Set.Basic
+ import Mathlib.Data.Fintype.Card
+ import Game.LevelLemmas.Logical
+ 
+-variable {K : Type} {A : K}
+-[DecidableEq K]
++variable {K : Type} {A : K} [DecidableEq K]
+ 
+ theorem disjoint_finset
+ {left right : Finset K}
+diff --git a/Game/LevelLemmas/settheory_knightsknavesfoundation.lean b/Game/LevelLemmas/settheory_knightsknavesfoundation.lean
+index bbad27a..8313fae 100644
+--- a/Game/LevelLemmas/settheory_knightsknavesfoundation.lean
++++ b/Game/LevelLemmas/settheory_knightsknavesfoundation.lean
+@@ -10,8 +10,7 @@ class World' (Inhabitant : Type u) [DecidableEq Inhabitant] where
+   dis : Knight ∩ Knave = ∅
+   KorKn : ∀ x : Inhabitant, x ∈ Knight ∨ x ∈ Knave
+ 
+-variable {Inhabitant : Type}
+-[DecidableEq Inhabitant]
++variable {Inhabitant : Type} [DecidableEq Inhabitant]
+ 
+ namespace hidden
+ axiom  Knight : Finset Inhabitant
+diff --git a/Game/Levels/SetTheory_Knights_Knaves/L09_same.lean b/Game/Levels/SetTheory_Knights_Knaves/L09_same.lean
+index 8e862c6..60ec51c 100644
+--- a/Game/Levels/SetTheory_Knights_Knaves/L09_same.lean
++++ b/Game/Levels/SetTheory_Knights_Knaves/L09_same.lean
+@@ -52,7 +52,7 @@ Therefore, from `B`'s statement, conclude that `A` and `C` are not the same, i.e
+   "
+   knave_interp at stB
+   have diff := stB.mp BKnave
+-  simp at diff
++  -- wasm64 port: `simp at diff` makes no progress on this Mathlib (removed; the state is unchanged)
+ 
+   Hint
+   "
+diff --git a/Game/MathlibTheorems.lean b/Game/MathlibTheorems.lean
+index 706219b..b4e5843 100644
+--- a/Game/MathlibTheorems.lean
++++ b/Game/MathlibTheorems.lean
+@@ -7,7 +7,7 @@ import Mathlib.Tactic.FieldSimp
+ import Mathlib.Data.Real.Basic
+ import Mathlib.Tactic.Linarith.Frontend
+ import Mathlib.Tactic.Qify
+-import Mathlib.Tactic.Polyrith
++-- import Mathlib.Tactic.Polyrith  -- wasm64 port: not in the essential pack; polyrith needs an external oracle and is never used by any level
+ import Mathlib.Algebra.Group.Basic
+ import Mathlib.Tactic.ApplyFun
+ import Mathlib.Data.Multiset.Basic
+-- 
+2.50.1 (Apple Git-155)
+

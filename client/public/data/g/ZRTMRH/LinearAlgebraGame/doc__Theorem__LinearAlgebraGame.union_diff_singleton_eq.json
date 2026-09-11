@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [DecidableEq V] (S : Set V) (sw sx : Finset V) (w : V) (hsw : ↑sw ⊆ S \\ {w}) : sw ∪ sx \\ {w} = (sw ∪ sx) \\ {w}",
+ "name": "LinearAlgebraGame.union_diff_singleton_eq",
+ "displayName": "union_diff_singleton_eq",
+ "content":
+ "`union_diff_singleton_eq` is a helper proof that if `↑sw ⊆ S \\ {w}`, then\n`sw ∪ (sx \\ {w}) = (sw ∪ sx) \\ {w}`. The syntax is\n`union_diff_singleton_eq S sw sx w hsw`.",
+ "category": "Sets"}

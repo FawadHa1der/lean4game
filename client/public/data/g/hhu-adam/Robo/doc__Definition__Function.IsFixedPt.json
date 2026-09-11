@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.IsFixedPt",
+ "displayName": "IsFixedPt",
+ "content":
+ "For a self-mapping `f : A → A` and an element `a : A`, `IsFixedPt f a` is the expression `f a = a`.\nLook up definition with `unfold IsFixedPt`.",
+ "category": "Function"}

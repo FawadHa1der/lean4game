@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "SeqConv",
+ "displayName": "SeqConv",
+ "content":
+ "`(a : ℕ → ℝ) := ∃ L, SeqLim a L`\n\nA sequence `a : N → ℝ` converges (`SeqConv a` holds) if there exists some\n`L : ℝ` so that `a → L`, that is, `SeqLim a L` holds.",
+ "category": "📖︎"}

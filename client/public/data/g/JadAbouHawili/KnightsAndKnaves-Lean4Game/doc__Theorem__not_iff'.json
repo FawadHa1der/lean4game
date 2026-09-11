@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P Q} : ¬(P ↔ Q) ↔ (P ↔ ¬Q)",
+ "name": "not_iff'",
+ "displayName": "not_iff'",
+ "content":
+ "`¬(P ↔ Q)` means that `P` ,`Q` don't have the same truth value, i.e. one of them is true and the other is false.\n\n$\n\\\\begin{array}{|c | c|c|}\n\\\\hline\nP & Q & \\\\text{¬(P ↔ Q)} \\\\\\\\\\\\\\\\\n\\\\hline\nT & T & F \\\\\\\\\\\\\\\\\n\\\\hline\nF & F & F \\\\\\\\\\\\\\\\\n\\\\hline\nT & F & T \\\\\\\\\\\\\\\\\n\\\\hline\nF & T & T \\\\\\\\\\\\\\\\\n\\\\hline\n\\\\end{array}\n$\n\nWe can conclude that for `¬(P ↔ Q)`:\n- `¬P`,`Q` have the same truth value (`¬P ↔ Q`)\n- `P`,`¬Q` have the same truth value (`P ↔ ¬Q`).",
+ "category": "Logic"}

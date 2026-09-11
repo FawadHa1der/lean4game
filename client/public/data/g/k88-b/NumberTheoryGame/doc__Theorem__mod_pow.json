@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b m : ℤ) (n : ℕ) (h : a ≡ b (mod m)) : (a ^ n) ≡ b ^ n (mod m)",
+ "name": "mod_pow",
+ "displayName": "mod_pow",
+ "content":
+ "**Powers of Congruences**\n\nIf $a \\equiv b \\pmod m$, then $a^n \\equiv b^n \\pmod m$ for any natural number $n$.",
+ "category": "Congruence"}

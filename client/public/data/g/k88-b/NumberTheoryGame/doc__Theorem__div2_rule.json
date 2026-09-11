@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (k d : ℤ) : (10 * k + d) ≡ d (mod 2)",
+ "name": "div2_rule",
+ "displayName": "div2_rule",
+ "content":
+ "**Divisibility by 2**\n\nSince 2 divides 10, the remainder of any number modulo 2 depends entirely on its last digit.",
+ "category": "DivRules"}

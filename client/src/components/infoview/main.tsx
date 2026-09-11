@@ -158,16 +158,17 @@ function DualEditorMain() {
 function ExerciseStatement({ showLeanStatement = false }) {
   const { t : gT } = useGameTranslation()
   const { t } = useTranslation()
-  const [gameId] = useAtom(gameIdAtom)
   const [{ data: levelInfo }] = useAtom(levelInfoAtom)
 
   if (!(levelInfo?.descrText || levelInfo?.descrFormat)) { return <></> }
+  // The statement goes through the game translator like every other game
+  // text: lean-i18n keys it with its `$…$` / code spans replaced by `§n`
+  // placeholders, which the plain `t(text, {ns})` lookup never matched (the
+  // statement stayed English while the rest of the level switched language).
+  // gT falls back to the raw key for dictionaries that predate placeholders.
   return <>
     <div className="exercise-statement">
-      {levelInfo?.descrText ?
-        <Markdown>
-          {(levelInfo?.displayName ? `**${t("Theorem")}** \`${levelInfo?.displayName}\`: ` : '') + t(levelInfo?.descrText, {ns: gameId})}
-        </Markdown> : levelInfo?.displayName &&
+      {(levelInfo?.descrText || levelInfo?.displayName) &&
         <Markdown>
           {(levelInfo?.displayName ? `**${t("Theorem")}** \`${levelInfo?.displayName}\`: ` : '') + gT(levelInfo?.descrText ?? "")}
         </Markdown>
@@ -470,6 +471,7 @@ export function TypewriterInterfaceWrapper() {
 /** The interface in command line mode */
 export function TypewriterInterface() {
   let { t } = useTranslation()
+  const { t: gT } = useGameTranslation()
   const ec = React.useContext(EditorContext)
   const [gameId, navigateToGame] = useAtom(gameIdAtom)
   const [worldId] = useAtom(worldIdAtom)
@@ -545,6 +547,12 @@ export function TypewriterInterface() {
     if (activity.busy || !effectiveUri) return
     if (proof === undefined || crashed) retry()
   }, [activity.busy])
+  // A failed boot (the failure card) leaves the input dead but enabled —
+  // its Monaco line is read-only while there is no proof state, so Execute
+  // was a clickable no-op. The failure is published as a status label
+  // (game-boot's ui.idle('Lean failed to start: …')), not as a crash.
+  const [bootStatus] = useAtom(bootStatusAtom)
+  const bootFailed = bootStatus.state !== 'busy' && /^Lean failed to start: /.test(bootStatus.label)
   // No state, checker idle, nothing in flight that would deliver one: retry
   // the first request every few seconds (a request lost to a session switch,
   // answered before the level existed, or asked of a dead session otherwise
@@ -677,10 +685,14 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
   // `since` is owned by the level (the pane re-renders its branch several
   // times during a cold start; a mount-local timer showed "0 s" repeatedly).
   const [elapsed, setElapsed] = React.useState(() => Math.max(0, Math.round((Date.now() - since) / 1000)))
+  // A boot failure is terminal: the clock stops and the spinner goes (a live
+  // timer and a spinning arc on "Lean could not start" read as still trying).
+  const bootFailure = status.state !== 'busy' ? /^Lean failed to start: (.*)$/s.exec(status.label)?.[1] : undefined
   React.useEffect(() => {
+    if (bootFailure !== undefined) return
     const id = setInterval(() => setElapsed(Math.max(0, Math.round((Date.now() - since) / 1000))), 1000)
     return () => clearInterval(id)
-  }, [since])
+  }, [since, bootFailure !== undefined])
   const secs = (n: number) => n < 60 ? `${n} s` : `${Math.floor(n / 60)} min ${n % 60} s`
   const downloading = status.unit === 'bytes' || /download|unpack|install|preparing the .* environment/i.test(status.label)
   // The "no answer yet" thresholds count from the moment the checker went
@@ -710,7 +722,6 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
     void clients[0].restart?.()
   }, [idle, noConnection, waited >= 20, clients.length])
   let headline: React.ReactNode, detail: React.ReactNode
-  const bootFailure = status.state !== 'busy' ? /^Lean failed to start: (.*)$/s.exec(status.label)?.[1] : undefined
   if (bootFailure !== undefined) {
     headline = <>Lean could not start in your browser</>
     detail = <>{bootFailure}. Reloading the page retries from the beginning; the downloaded environment stays cached.</>
@@ -738,11 +749,14 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
     const smallDevice = typeof deviceGb === 'number' && deviceGb < 8
       ? <> This device reports about {deviceGb} GB of memory; the checker needs roughly 8 GB free while it starts and may not start here.</>
       : null
-    // The environment's size is the bound snapshot's index entry (its
-    // transfer bytes), published by game-boot once the pairing check passed.
-    const envSize = boundEnv ? ` (about ${Math.round(boundEnv.transfer / 1048576)} MB)` : ''
+    // The environment's size is the bound snapshot's index entry, published
+    // by game-boot once the pairing check passed: the transfer bytes (what
+    // the download costs) and the raw bytes (what the banner's byte count
+    // above runs up to — the prefetch reports the inflated region).
+    const mb = (n: number) => Math.round(n / 1048576)
+    const envSize = boundEnv ? ` (about ${mb(boundEnv.transfer)} MB to download, ${mb(boundEnv.bytes)} MB once unpacked)` : ''
     detail = downloading
-      ? <>The first visit downloads the Lean checker (about 260 MB, once) and this game&apos;s mathematics{envSize} and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.{smallDevice}</>
+      ? <>The first visit downloads the Lean checker (about 150 MB, once) and this game&apos;s mathematics{envSize} and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.{smallDevice}</>
       : <>Starting the checker inside this tab: unpacking and loading the mathematics environment. On a laptop this takes about 10–30 seconds after the download.{smallDevice}</>
   } else if (activity.busy) {
     headline = <>Preparing this level — {activity.label}…</>
@@ -763,10 +777,10 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
   return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
     {/* explicit size + static position: the pane's spinner rule shifts it
         off-centre and it collapsed to a dot in the level-switch state */}
-    <CircularProgress size={40} style={{ position: 'static', margin: 0 }} />
+    {bootFailure === undefined && <CircularProgress size={40} style={{ position: 'static', margin: 0 }} />}
     <div style={{ color: '#333', fontSize: '0.95rem', textAlign: 'center', maxWidth: '30rem' }}>{headline}</div>
     <div style={{ color: '#666', fontSize: '0.85rem', textAlign: 'center', maxWidth: '30rem' }}>{detail}</div>
-    <div style={{ color: '#888', fontSize: '0.8rem' }}>{secs(elapsed)} elapsed</div>
+    {bootFailure === undefined && <div style={{ color: '#888', fontSize: '0.8rem' }}>{secs(elapsed)} elapsed</div>}
     {idle && waited >= 15 && onRetry &&
       <Button className="btn" onClick={onRetry}>Retry now</Button>}
     {bootFailure !== undefined &&
@@ -789,7 +803,7 @@ let lastStepErrors = proof?.steps.length ? hasInteractiveErrors(getInteractiveDi
     }
   })
 
-  let introText: Array<string> = t(gameInfo?.introduction ?? "", {ns: gameId}).split(/\n(\s*\n)+/)
+  let introText: Array<string> = gT(gameInfo?.introduction ?? "").split(/\n(\s*\n)+/)
 
   return <div className="typewriter-interface">
     <RpcContext.Provider value={rpcSess}>
@@ -906,7 +920,7 @@ let lastStepErrors = proof?.steps.length ? hasInteractiveErrors(getInteractiveDi
         }
       </div>
     </div>
-    <Typewriter disabled={disableInput || crashed}/>
+    <Typewriter disabled={disableInput || crashed || bootFailed}/>
     <LeanGateOverlay />
     </RpcContext.Provider>
   </div>

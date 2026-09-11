@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "push_neg",
+ "displayName": "push_neg",
+ "content":
+ "The `push_neg` tactic pushes negations through universal and existential quantifiers, inequalities, etc.",
+ "category": "📖︎"}

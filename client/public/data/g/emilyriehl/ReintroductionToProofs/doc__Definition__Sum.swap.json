@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Sum.swap",
+ "displayName": "swap",
+ "content":
+ "For types `A` and `B`, the function `Sum.swap : A ⊕ B → B ⊕ A` is defined to send elements of the form `Sum.inl a` to `Sum.inr a` and elements of the form `Sum.inr b` to `Sum.inl b`.",
+ "category": "Sum"}

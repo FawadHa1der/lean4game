@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {a} {L} (ha2n : SeqLim (fun n => a (2 * n)) L) (ha2np1 : SeqLim (fun n => a (2 * n + 1)) L) : SeqLim a L",
+ "name": "SeqEvenOdd",
+ "displayName": "SeqEvenOdd",
+ "content":
+ "Given `a : ℕ → ℝ`, if `a (2 n) → L` and `a (2n+1) → L`, then `a → L`.",
+ "category": "aₙ"}

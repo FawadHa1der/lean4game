@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "nth_rw",
+ "displayName": "nth_rw",
+ "content":
+ "## Summary\n\nIf `h : X = Y` and there are several `X`s in the goal, then\n`nth_rw 3 [h]` will just change the third `X` to a `Y`.\n\n## Example\n\nIf the goal is `2 + 2 = 4` then `nth_rw 2 [two_eq_succ_one]`\nwill change the goal to `2 + succ 1 = 4`. In contrast, `rw [two_eq_succ_one]`\nwill change the goal to `succ 1 + succ 1 = 4`.",
+ "category": "📖︎"}

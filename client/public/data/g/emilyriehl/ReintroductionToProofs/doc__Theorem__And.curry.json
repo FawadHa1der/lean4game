@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P Q R} (h : P ∧ Q → R) (a✝ : P) (a✝ : Q) : R",
+ "name": "And.curry",
+ "displayName": "curry",
+ "content":
+ "For propositions `P`, `Q`, and `R`, `And.curry` is a proof that `P ∧ Q → R` implies `P → Q → R`.",
+ "category": "And"}

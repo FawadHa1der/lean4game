@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {R} [Mul R] [Add R] [RightDistribClass R] (a b c : R) : (a + b) * c = a * c + b * c",
+ "name": "add_mul",
+ "displayName": "add_mul",
+ "content": "*(lean docstring)*\\\n**Alias** of `right_distrib`.",
+ "category": "+ *"}

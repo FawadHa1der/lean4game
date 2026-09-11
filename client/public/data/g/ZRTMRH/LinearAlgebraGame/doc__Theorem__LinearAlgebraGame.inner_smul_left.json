@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (a : ℂ) (v w : V) :\n  ⟪a • v,w⟫ = a * ⟪v,w⟫",
+ "name": "LinearAlgebraGame.inner_smul_left",
+ "displayName": "inner_smul_left",
+ "content":
+ "For any vectors `v, w`, and a scalar `a`, ⟪a • v, w⟫ = a * ⟪v, w⟫. This means that scalar multiplication\ncommutes with the inner product.\n\n**Usage:** Use `InnerProductSpace_v.inner_smul_left` when applying this theorem.",
+ "category": "Inner Product"}

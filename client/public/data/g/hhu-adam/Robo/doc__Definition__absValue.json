@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "absValue",
+ "displayName": "|·|",
+ "content":
+ "For `x : ℝ`, `|x|` is the absolute value of `x`.\n(Here, `|` is the usual vertical bar on the keyboard.)",
+ "category": "📖︎"}

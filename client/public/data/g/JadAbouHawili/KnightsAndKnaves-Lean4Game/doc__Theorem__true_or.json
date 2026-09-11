@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (p : Prop) : (True or p) = True",
+ "name": "true_or",
+ "displayName": "true_or",
+ "content": "(missing)",
+ "category": "Logic"}

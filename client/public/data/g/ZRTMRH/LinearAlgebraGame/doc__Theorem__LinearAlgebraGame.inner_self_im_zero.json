@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (v : V) :\n  ⟪v,v⟫.im = 0",
+ "name": "LinearAlgebraGame.inner_self_im_zero",
+ "displayName": "inner_self_im_zero",
+ "content":
+ "For any vector `v`, the imaginary part of `⟪v, v⟫` is zero. Equivalently, `⟪v, v⟫` is real.\n\n**Usage:** Use the full name `LinearAlgebraGame.inner_self_im_zero` when applying this theorem.",
+ "category": "Inner Product"}

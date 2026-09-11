@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (v : V) :\n  ‖v‖ ^ 2 = ⟪v,v⟫.re",
+ "name": "LinearAlgebraGame.norm_sq_eq",
+ "displayName": "norm_sq_eq",
+ "content":
+ "The square of the norm equals the real part of the inner product with itself:\n`‖v‖ ^ 2 = ⟪v, v⟫.re`. This connects the geometric notion of length with the algebraic inner product.",
+ "category": "Inner Product"}

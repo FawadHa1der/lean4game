@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "True",
+ "displayName": "True",
+ "content":
+ "The statement `True : Prop` is always true.\n\n## `True` as a proof target\n\nThe tactics `tauto` and `decide` conclude every proof with `True` as the proof target.\n\n## `True` as an assumption\n\nAs an assumption, `True` is not helpful at all.",
+ "category": "Logic"}

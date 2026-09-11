@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rewrite",
+ "displayName": "rewrite",
+ "content":
+ "The `rewrite` tactic replaces the left-hand side of an equality with the right-hand side in the goal. The syntax is `rewrite [hypothesis_name1, hypothesis_name2, etc]`.",
+ "category": "📖︎"}

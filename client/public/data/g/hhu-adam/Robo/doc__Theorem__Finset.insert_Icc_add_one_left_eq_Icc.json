@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [LinearOrder α] [One α] [LocallyFiniteOrder α] [Add α] [SuccAddOrder α] {a b} (h : a ≤ b) :\n  insert a (Finset.Icc (a + 1) b) = Finset.Icc a b",
+ "name": "Finset.insert_Icc_add_one_left_eq_Icc",
+ "displayName": "insert_Icc_add_one_left_eq_Icc",
+ "content": "(missing)",
+ "category": "≤"}

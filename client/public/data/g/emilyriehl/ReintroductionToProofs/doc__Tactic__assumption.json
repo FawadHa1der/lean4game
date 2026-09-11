@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "assumption",
+ "displayName": "assumption",
+ "content":
+ "The `assumption` tactic tries to solve the main goal using a hypothesis of compatible type, or else fails.",
+ "category": "📖︎"}

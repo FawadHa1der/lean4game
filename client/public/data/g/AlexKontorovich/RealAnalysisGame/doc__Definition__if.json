@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "if",
+ "displayName": "if then else",
+ "content": "If you have a proposition `P`, you can say `if P then x else y`.",
+ "category": "📖︎"}

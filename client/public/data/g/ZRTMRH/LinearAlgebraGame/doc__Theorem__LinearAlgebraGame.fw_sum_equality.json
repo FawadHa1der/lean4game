@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] [DecidableEq V] (w : V) (sw sx : Finset V)\n  (fx fw fw' : V → K) (hfw : w = ∑ v ∈ sw, fw v • v) (hfw' : fw' = fun v => if v ∈ sw then fx w * fw v else 0) :\n  fx w • w = ∑ v ∈ sw ∪ sx \\ {w}, fw' v • v",
+ "name": "LinearAlgebraGame.fw_sum_equality",
+ "displayName": "fw_sum_equality",
+ "content":
+ "`fw_sum_equality` is a helper proof that, given `hfw : w = sw.sum (fun v => fw v • v)`\nand `hfw' : fw' = fun v => ite (v ∈ sw) (fx w * fw v) 0`, the equality\n`fx w • w = (sw ∪ (sx \\ {w})).sum (fun v => fw' v • v)` holds. The syntax is\n`fw_sum_equality K V w sw sx fx fw fw' hfw hfw'`.",
+ "category": "Vector Spaces"}

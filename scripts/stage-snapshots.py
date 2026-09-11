@@ -5,7 +5,7 @@ Usage: scripts/stage-snapshots.py <staging-dir-with-index.json> [name ...]
 
 Copies the named snapshots' .snapz files (default: every entry in the staging
 index) into client/public/snapshots, replaces their entries in the public
-index.json (other entries, e.g. `init`, are kept), and removes the superseded
+index.json (entries for other names are kept), and removes the superseded
 .snapz files. The client resolves snapshots by name → digest-named URL, so a
 rebuild/restage of client/dist is needed afterwards.
 """

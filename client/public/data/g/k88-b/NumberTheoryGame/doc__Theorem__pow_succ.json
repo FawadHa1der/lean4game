@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {M} [Monoid M] (a : M) (n : ℕ) : a ^ (n + 1) = a ^ n * a",
+ "name": "pow_succ",
+ "displayName": "pow_succ",
+ "content":
+ "`pow_succ` is a theorem from Mathlib that states $a^{n+1} = a^n \\cdot a$.\nUse `rw [pow_succ]` when dealing with powers in induction.",
+ "category": "Algebra"}

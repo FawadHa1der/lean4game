@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] :\n  LinearAlgebraGame.linear_independent_v K V ∅",
+ "name": "LinearAlgebraGame.linear_independent_empty",
+ "displayName": "linear_independent_empty",
+ "content": "This is a proof that the empty set is linearly independent.",
+ "category": "Vector Spaces"}

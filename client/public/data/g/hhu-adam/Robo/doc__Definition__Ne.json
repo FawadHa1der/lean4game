@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Ne",
+ "displayName": "≠",
+ "content":
+ "Inequality `x ≠ y` is defined as `¬ x = y`.  You can see this with `unfold Ne`.",
+ "category": "Logic"}

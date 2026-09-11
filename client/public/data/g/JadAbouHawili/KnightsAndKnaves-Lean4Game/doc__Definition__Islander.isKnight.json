@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Islander.isKnight",
+ "displayName": "isKnight",
+ "content":
+ "For an Islander `A`,\n```\nisKnight A : Prop\n```\nor\n```\nA.isKnight : Prop\n```\nis the proposition that `A` is a knight.",
+ "category": "DSL"}

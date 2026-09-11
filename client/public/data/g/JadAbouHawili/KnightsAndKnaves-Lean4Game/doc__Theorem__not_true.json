@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " : ¬True ↔ False",
+ "name": "not_true",
+ "displayName": "not_true",
+ "content": "(missing)",
+ "category": "Logic"}

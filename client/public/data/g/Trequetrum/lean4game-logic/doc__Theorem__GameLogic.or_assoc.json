@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P Q R} : (P ∨ Q) ∨ R ↔ P ∨ Q ∨ R",
+ "name": "GameLogic.or_assoc",
+ "displayName": "or_assoc",
+ "content":
+ "# ∨ is Associative\n\n`or_assoc` is evidence that `P ∨ Q ∨ R ↔ (P ∨ Q) ∨ R`",
+ "category": "∨"}

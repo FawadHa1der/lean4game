@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {a} (ha : AbsSeriesConv a) : ∃ L, ∀ (σ : ℕ → ℕ), Rearrangement σ → SeriesLim (a ∘ σ) L",
+ "name": "RearrangementThm",
+ "displayName": "RearrangementThm",
+ "content":
+ "If `Series a` converges absolutely, then any rearrangement of `a` also converges, and to the same sum.",
+ "category": "∑aₙ"}

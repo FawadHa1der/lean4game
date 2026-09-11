@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "iff",
+ "displayName": "↔",
+ "content":
+ "`P ↔ Q`, read as &ldquo;`P` if and only if `Q`&rdquo; is an abbreviation for `(P → Q) ∧ (Q → P)`.",
+ "category": "Logic"}

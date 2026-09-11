@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "right",
+ "displayName": "right",
+ "content":
+ "When your goal is to prove an \\\"Or\\\" statement, `P ∨ Q`, you can do that by proving either `P` or `Q`. If you want to prove `Q`, then say `right`, and the Goal will turn into `Q`.",
+ "category": "📖︎"}

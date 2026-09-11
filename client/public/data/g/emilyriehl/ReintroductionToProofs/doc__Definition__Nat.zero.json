@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Nat.zero",
+ "displayName": "zero",
+ "content":
+ "An introduction rule for the type of natural numbers defines an element which may be written in Lean `0 : ℕ` or `zero : ℕ `.",
+ "category": "ℕ"}

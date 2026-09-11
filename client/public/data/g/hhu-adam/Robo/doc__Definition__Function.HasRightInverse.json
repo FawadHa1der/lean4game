@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.HasRightInverse",
+ "displayName": "Has…Inverse",
+ "content":
+ "`HasRightInverse f` means, that `f` has a right inverse.\n\n`HasLeftInverse f` means, that `f` has left inverse.",
+ "category": "Function"}

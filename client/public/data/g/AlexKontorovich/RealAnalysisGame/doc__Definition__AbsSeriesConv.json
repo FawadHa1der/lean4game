@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "AbsSeriesConv",
+ "displayName": "AbsSeriesConv",
+ "content":
+ "`(a : ℕ → ℝ) := SeriesConv (fun n ↦ |a n|)`\n\nWe say that a sequence `a : ℕ → ℝ` converges absolutely if `∑ |a n|` converges.",
+ "category": "📖︎"}

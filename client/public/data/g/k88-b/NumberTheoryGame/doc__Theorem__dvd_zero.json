@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} [SemigroupWithZero α] (a : α) : a ∣ 0",
+ "name": "dvd_zero",
+ "displayName": "dvd_zero",
+ "content":
+ "**Every Integer Divides Zero**\n\nFor any integer $a$: $a \\mid 0$.",
+ "category": "Divisibility"}

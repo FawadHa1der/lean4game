@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : Fintype.card (Fin n) = n",
+ "name": "Fintype.card_fin",
+ "displayName": "card_fin",
+ "content": "(missing)",
+ "category": "Set"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rw",
+ "displayName": "rw",
+ "content":
+ "If you have given an equation `h : X = Y` or an equivalence `h : X ↔ Y` as an assumption or lemma,\nyou can use `rw [h]` to replace all occurrences of `X` in the proof target with `Y`.\n\n## Variants\n\n* `rw [←h]` applies `h` backwards, i.e., replaces all `Y` with `X`.\n* `rw [h, g, ←f]` applies `h`, `g`, and (backwards) `f`.\n* `rw [h] at h₂` performs the replacements in the assumption `h₂`, not in the proof target\n* `nth_rw`: If `h` has arguments, e.g., `n` in\n```\n   h : ∀ n, 2*n = f n\n   ```\n   or in\n```\n   h (n : ℕ) : 2*n = f n\n   ```\n   `rw [h]` searches the proof target from left to right for a matching expression,\n   and then replaces *all* occurrences of *the first* expression that the tactic finds.\n   With `nth_rw k [h]`, you can replace all occurrences of the `k`th expression instead.\n\n  | before    | tactic       | after        |\n  |:----------------- |:------------- - |:----------------- |\n  | `2*a + 2*b > 2*a` | `rw [h]`       | `f a + 2*b > f a` |\n  |                   | `nth_rw 2 [h]` | `2*a + f b > 2*a` |",
+ "category": "📖︎"}

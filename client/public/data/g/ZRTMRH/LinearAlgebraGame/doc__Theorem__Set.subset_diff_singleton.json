@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} {s t} {a} (h : s ⊆ t) (ha : a ∉ s) : s ⊆ t \\ {a}",
+ "name": "Set.subset_diff_singleton",
+ "displayName": "subset_diff_singleton",
+ "content":
+ "`subset_diff_singleton` is a proof that if `h : s ⊆ t`, and `hx : x ∉ s`, then `s ⊆ t \\ {x}`. The syntax\nis `subset_diff_singleton h hx`.",
+ "category": "Sets"}

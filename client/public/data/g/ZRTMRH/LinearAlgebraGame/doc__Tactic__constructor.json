@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "constructor",
+ "displayName": "constructor",
+ "content":
+ "## Summary\n\nThe constructor tactic splits the goal into multiple parts. This is helpful for goals that are\ndifficult to solve all at once, like \"and\" (`∧`) and \"if and only if\" (`↔`).\n\n## Example\n\nIf we have the goal `P ∧ Q`, `constructor` will change the goal into two goals: `P` and `Q`.\n\n## Example\n\nIf we have the goal`P ↔ Q`, `constructor` will change the goal into two goals: `P → Q`, and `Q → P`.",
+ "category": "📖︎"}

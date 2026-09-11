@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {a b} (left : a) (right : b) : a and b",
+ "name": "And.intro",
+ "displayName": "And.intro",
+ "content":
+ "The theorem `And.intro` takes a proof of `P`, a proof of `Q`, and gives a proof of `P ∧ Q` where `P Q : Prop`.\n\nGiven,\n```\nhP : P\nhQ : Q\n```\nwe have `And.intro hP hQ : P ∧ Q`\n\n## Alternative Notation\nTyped as `\\<hP,hQ\\>`,\n```\n⟨hP,hQ⟩ : P ∧ Q\n```\ninstead of\n```\nAnd.intro hP hQ : P ∧ Q\n```",
+ "category": "And"}

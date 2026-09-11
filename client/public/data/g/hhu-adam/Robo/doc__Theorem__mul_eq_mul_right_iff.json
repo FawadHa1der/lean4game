@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {M₀} [MulZeroClass M₀] [IsRightCancelMulZero M₀] {a b c} : a * c = b * c ↔ a = b ∨ c = 0",
+ "name": "mul_eq_mul_right_iff",
+ "displayName": "mul_eq_mul_right_iff",
+ "content": "(missing)",
+ "category": "+ *"}

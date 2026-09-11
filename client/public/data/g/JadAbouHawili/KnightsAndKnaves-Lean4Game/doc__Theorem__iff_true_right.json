@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {a b} (ha : a) : (b ↔ a) ↔ b",
+ "name": "iff_true_right",
+ "displayName": "iff_true_right",
+ "content": "(missing)",
+ "category": "Logic"}

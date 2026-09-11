@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "constructor",
+ "displayName": "constructor",
+ "content":
+ "# Constructor\nWhenever there's a clear way to create new evidence **that matches the goal**, the constructor tactic will pick that for you. This replaces the current goal with one or more goals that together complete the construction.\n\nFor example, if your goal is `P ∧ Q` then the `constructor` tactic will replace that goal with two separate subgoals. First you'll need to show evidence for `P`, then you'll need to show evidence for `Q`.",
+ "category": "📖︎"}

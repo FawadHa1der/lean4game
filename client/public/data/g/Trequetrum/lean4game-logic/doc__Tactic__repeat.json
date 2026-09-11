@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "repeat",
+ "displayName": "repeat",
+ "content":
+ "## Summary\n`repeat t` repeatedly applies the tactic `t` to the goal. You don't need to use this tactic, it just speeds things up sometimes.",
+ "category": "📖︎"}

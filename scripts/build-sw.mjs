@@ -2,7 +2,8 @@
 // Generate client/dist/sw.js from client/src/sw/sw.template.js: the precache
 // list is every shell file in client/dist except the R2-served artifact
 // directories (runtime/, profiles/, snapshots/ — cached on demand or owned
-// by OPFS) and files over the size cap (the 23 MB emoji font is cached on
+// by OPFS), the per-game data/ and i18n/ trees (cached on use; only cover
+// images from api/games are precached) and files over the size cap (the 23 MB emoji font is cached on
 // first use instead). Run after `vite build` (client/package.json build).
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -12,6 +13,15 @@ const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const dist = join(root, "client/dist");
 const SKIP_DIRS = new Set(["runtime", "profiles", "snapshots"]);
 const SIZE_CAP = 8 * 1024 * 1024;
+// The landing tiles' cover images (each game's `tile.image`, relative to its
+// data dir) are the one piece of per-game content precached, so the landing
+// page renders offline.
+const TILE_IMAGES = new Set();
+try {
+  for (const g of JSON.parse(readFileSync(join(dist, "api/games"), "utf8"))) {
+    if (g.tile?.image) TILE_IMAGES.add(`/data/g/${g.owner}/${g.game}/${g.tile.image}`);
+  }
+} catch { /* no api/games in this dist: nothing to add */ }
 const files = [];
 (function walk(dir) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -19,6 +29,12 @@ const files = [];
     const rel = "/" + relative(dist, full).split("\\").join("/");
     if (e.isDirectory()) { if (dir === dist && SKIP_DIRS.has(e.name)) continue; walk(full); continue; }
     if (e.name === "sw.js" || e.name === "_headers") continue;
+    // Per-game content (data/<id>/level__*.json, docs, images; i18n/<id>/<lang>)
+    // is fetched when a level is opened and cached by the network-first path
+    // on use — with ten games it is ~75 MB / ~1,200 files, far more than the
+    // shell, and most visitors play one game. Only the landing page's cover
+    // images are precached so the tiles render offline.
+    if (/^\/(data|i18n)\//.test(rel) && !TILE_IMAGES.has(rel)) continue;
     const size = statSync(full).size;
     // Only fonts are optional enough to skip for size (the 23 MB emoji font
     // is cached on first use); the bundles and worker scripts are the shell.

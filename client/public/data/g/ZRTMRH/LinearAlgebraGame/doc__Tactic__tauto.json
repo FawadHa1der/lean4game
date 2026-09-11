@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "tauto",
+ "displayName": "tauto",
+ "content":
+ "## Summary\n`tauto` solves goals using simple logic. It works similarly to the `simp` and `linarith` tactics, in\nthat there is not just one use case. If there is a contradiction that can be easily inferred, or if\nthe goal is a direct result of the hypotheses, `tauto` will solve the goal.\n\n## Example\nIf your goal is of the form `P ∨ ¬P`, then `tauto will solve the goal.\n\n## Example\nIf your goal is of the form `A ∨ B`, and you have a hypothesis `h : A ∨ (B ∧ C)`, then `tauto` will\nsolve the goal.",
+ "category": "📖︎"}

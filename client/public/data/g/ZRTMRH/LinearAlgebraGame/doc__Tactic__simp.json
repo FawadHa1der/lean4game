@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "simp",
+ "displayName": "simp",
+ "content":
+ "### Summary\n\nThe `simp` tactic tries to simplify the goal, and will solve it if possible. It acts similar to the\n`rw` tactic, although it is able to rewrite with many different statements many times in order to\nsimplify the goal. `simp` will try to use all the theorems available if not told explicitly what\ntheorems to use.\n\nUsing `simp only [tactic1, tactic2, ...]` will simplify only using the theorems listed.\n\n### Example\n\nIf your goal is something simple like `0 + 0 = 0`, `simp` will know enough about the natural numbers\nto solve the goal.\n\n### Example\n\nIf your goal is `(d + f) + (h + (a + c)) + (g + e + b) = a + b + c + d + e + f + g + h`, which seems\ncomplicated, but you only need to use associativity and commutativity of addition,\n`simp only [add_assoc, add_left_comm, add_comm]` will solve the goal.",
+ "category": "📖︎"}

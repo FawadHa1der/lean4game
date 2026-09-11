@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Rearrangement",
+ "displayName": "Rearrangement",
+ "content":
+ "A `Rearrangement` `σ : ℕ → ℕ` is a function that is `Injective` and `Surjective`.",
+ "category": "📖︎"}

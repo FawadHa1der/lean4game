@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "GameLogic.AsciiTable",
+ "displayName": "Unicode Table",
+ "content":
+ "### **Logic Constants & Operators**\n| $Name~~~$ | $Ascii~~~$ | $Unicode$ | $Unicode Cmd$ |\n| --- | :---: | :---: | --- |\n| True | `True` |  |  |\n| False | `False` |  |  |\n| Not | `Not` | ¬ | `\\n` `\\not` `\\neg` `\\lnot` |\n| And | `/` | ∧ | `\\and` `\\an` `\\wedge` |\n| Or | `\\/` | ∨ | `\\v` `\\or` `\\vee` |\n| Implies | `->` | → | `\\r` `\\imp` `\\->` `\\to` `\\r-` `\\rightarrow` |\n| Iff | `<->` | ↔ | `\\iff` `\\lr-` `\\lr` `\\<->` `\\leftrightarrow` |\n| For All | `foral` | ∀ | `\\all` `\\forall` |\n| Exists | `exists` | ∃ | `\\ex` `\\exists` |\n\n### **Anonymous Function**\nExample:\nAn anonymous function that swaps a conjunction\n```\n-- Ascii\nfun h : P ∧ Q => and_intro (and_right h) (and_left h)\n-- Unicode\nλh : P ∧ Q ↦ ⟨h.right, h.left⟩\n```\n| $Ascii~~~$ | $Unicode~~~$ | $Unicode Cmd$ |\n| --- | :---: | --- |\n| `fun` | λ | `\\fun` `\\la` `\\lambda` `\\lamda` `\\lam` `\\Gl` |\n| `=>` | ↦ | `\\map` `\\mapsto` |\n\n### **Other Unicode**\n| $Name$ | $Unicode~~~$ | $Unicode Cmd$ |\n| --- | :---: | --- |\n| Angle brackets | ⟨ ⟩ | `\\<` `\\>` `\\langle` `\\rangle` |\n| Subscript Numbers | ₁ ₂ ₃ ... | `\\1` `\\2` `\\3` ... |\n| Left Arrow | ← | `\\l` `\\leftarrow` `\\gets` `\\<-` |\n| Turnstyle | ⊢ | `\\│-` `\\entails` `\\vdash` `\\goal` |",
+ "category": "📖︎"}

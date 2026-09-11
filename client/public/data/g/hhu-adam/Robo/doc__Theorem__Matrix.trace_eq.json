@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {n} (f : Mat[n,n][ℝ] →ₗ[ℝ] ℝ) (h₁ : ∀ A B, f (A * B) = f (B * A)) (h₂ : f 1 = ↑n) : Matrix.trace = ⇑f",
+ "name": "Matrix.trace_eq",
+ "displayName": "trace_eq",
+ "content": "(missing)",
+ "category": "Matrix"}

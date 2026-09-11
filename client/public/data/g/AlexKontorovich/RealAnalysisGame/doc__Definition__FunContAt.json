@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "FunContAt",
+ "displayName": "FunContAt",
+ "content":
+ "`∀ ε > 0, ∃ δ > 0, ∀ x, |x - c| < δ → |f x - f c| < ε`\n\n\nThe function `f` is continuous at `x = c`.",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "MvPolynomial",
+ "displayName": "MvPolynomial",
+ "content":
+ "`P : MvPolynomial (Fin n) R` means that `P` is a polynomial in `n` indeterminates\n`X 0`, …, `X (n-1)` with coefficients in `R`.",
+ "category": "📖︎"}

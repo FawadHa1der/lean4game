@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (n : ℕ) : Even n ∨ Odd n",
+ "name": "Nat.even_or_odd",
+ "displayName": "even_or_odd",
+ "content":
+ "A natural number `n` is either `Even` (that is, `∃ k, n = 2 * k`), or `Odd` (that is, `∃ k, n = 2 * k + 1`)",
+ "category": "Theorems"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rfl",
+ "displayName": "rfl",
+ "content":
+ "The tactic `rfl` tries to solve a goal whose type is an equality where the left hand side and right hand side are equal by definition.",
+ "category": "📖︎"}

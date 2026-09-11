@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "use",
+ "displayName": "use",
+ "content":
+ "If the proof target is of the form `∃x, P x`, you can use `use x` to specify a concrete element\nfor which you want to prove `P x`.",
+ "category": "📖︎"}

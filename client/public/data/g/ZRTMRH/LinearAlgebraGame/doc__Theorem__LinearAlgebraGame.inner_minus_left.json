@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (u v w : V) :\n  ⟪u - v,w⟫ = ⟪u,w⟫ - ⟪v,w⟫",
+ "name": "LinearAlgebraGame.inner_minus_left",
+ "displayName": "inner_minus_left",
+ "content":
+ "`inner_minus_left` extends linearity of the inner product in the first argument to subtraction:\n`⟪u - v, w⟫ = ⟪u, w⟫ - ⟪v, w⟫`.",
+ "category": "Inner Product"}

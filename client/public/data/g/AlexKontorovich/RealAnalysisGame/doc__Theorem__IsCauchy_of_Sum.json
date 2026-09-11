@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {X} [NormedField X] [LinearOrder X] [IsStrictOrderedRing X] (a b : ℕ → X) (ha : IsCauchy a) (hb : IsCauchy b) :\n  IsCauchy (a + b)",
+ "name": "IsCauchy_of_Sum",
+ "displayName": "IsCauchy_of_Sum",
+ "content": "If sequences `a` and `b` are Cauchy, then so is their sum.",
+ "category": "aₙ"}

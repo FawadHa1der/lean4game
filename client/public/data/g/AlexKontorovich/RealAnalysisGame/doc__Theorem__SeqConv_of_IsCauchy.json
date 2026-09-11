@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {a} (ha : IsCauchy a) : SeqConv a",
+ "name": "SeqConv_of_IsCauchy",
+ "displayName": "SeqConv_of_IsCauchy",
+ "content": "If a sequence `a : ℕ → ℝ` is Cauchy, then it converges.",
+ "category": "aₙ"}

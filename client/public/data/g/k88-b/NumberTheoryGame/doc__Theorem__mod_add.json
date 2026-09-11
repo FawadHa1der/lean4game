@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b c d m : ℤ) (h1 : a ≡ b (mod m)) (h2 : c ≡ d (mod m)) : (a + c) ≡ b + d (mod m)",
+ "name": "mod_add",
+ "displayName": "mod_add",
+ "content":
+ "**Adding Congruences**\n\nIf $a \\equiv b \\pmod m$ and $c \\equiv d \\pmod m$, then $(a + c) \\equiv (b + d) \\pmod m$.\n\n**Intuition:**\nIf two pairs of numbers have the same remainder when divided by $m$, their sums will also have the same remainder.\nFor example, modulo 10 (which just looks at the last digit):\nIf $12 \\equiv 2 \\pmod{10}$ and $25 \\equiv 5 \\pmod{10}$, then $12 + 25 = 37$, which is $\\equiv 7 \\pmod{10}$.\nNotice that $2 + 5 = 7$. We just added the remainders safely!",
+ "category": "Congruence"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P Q R} (hpq : P → Q) (hqr : Q → R) (p : P) : R",
+ "name": "GameLogic.imp_trans",
+ "displayName": "imp_trans",
+ "content":
+ "# → is transitive\n`P → Q` and `Q → R` implies `P → R`\n```\nimp_trans : (P → Q) → (Q → R) → P → R\n```\n\nOf course, because of `and_comm`, you know you can flip this around too.\n`Q → R` and `P → Q` implies `P → R` has a near-identical proof.\n\n### Infix Operator:\n`imp_trans` has an infix operator. This looks like `≫` (which is written as “`\\gg`”).\n\nFor the math-inclined, because the expression for an implication is a function, you can also use function composition for the same purpose (`∘` is written as “`\\o`”). Just remember that `∘` has the parameters swapped from the way `imp_trans` is defined.",
+ "category": "→"}

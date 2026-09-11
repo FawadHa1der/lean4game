@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Finset.card",
+ "displayName": "card",
+ "content":
+ "For a finite subset `A : Finset T`, `card A : ℕ` is the cardinality of `A`,\ni.e., the number of elements in `A`.",
+ "category": "Finset"}

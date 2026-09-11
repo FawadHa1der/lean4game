@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "cases",
+ "displayName": "cases",
+ "content":
+ "# Conjunction/Biconditional\n`cases` will deconstruct an `∧` or an `↔` into it's parts, removing the assumption and replacing it with two new assumptions.\n# Disjunction\nUsed with an `∨` cases will split the main goal, replacing it with a goal for each of the two possibilities.",
+ "category": "📖︎"}

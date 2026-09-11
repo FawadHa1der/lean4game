@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "norm_cast",
+ "displayName": "norm_cast",
+ "content":
+ "## Summary\n\n`norm_cast` normalizes type coercions between numeric types. It pushes coercions as far inward as possible.\n\n## Example\n\n`norm_cast` will transform:\n- `↑(n + m) = ↑n + ↑m` where the coercions are from ℕ to ℝ\n- `↑n < ↑m ↔ n < m` for appropriate coercions\n\n## Common usage\n\nUse when dealing with mixed numeric types (ℕ, ℤ, ℚ, ℝ, ℂ) to simplify coercion expressions.",
+ "category": "📖︎"}

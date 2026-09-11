@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b c0 c1 c2 m : ℤ) (h : a ≡ b (mod m)) : (c2 * a ^ 2 + c1 * a + c0) ≡ c2 * b ^ 2 + c1 * b + c0 (mod m)",
+ "name": "polynomial_cong",
+ "displayName": "polynomial_cong",
+ "content":
+ "**Polynomial Congruences**\n\nIf $a \\equiv b \\pmod m$, then $P(a) \\equiv P(b) \\pmod m$ for any integer polynomial $P$.\n\n**Intuition:**\nThis is the reason modular arithmetic is genuinely useful and not just a curiosity: congruence mod $m$ is compatible with *every* polynomial operation, so you can reduce numbers mod $m$ at any point in a calculation without changing the final remainder. It's what makes \"clock arithmetic\" behave like real arithmetic.",
+ "category": "LinCong"}

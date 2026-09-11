@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V : Type) [Field K] [AddCommGroup V] [LinearAlgebraGame.VectorSpace K V] [DecidableEq V] (S : Set V) (v : V)\n  (s : Finset V) (f : V → K) (hv_not_span : ∀ t, ↑t ⊆ S → ∀ g, ¬v = ∑ x ∈ t, g x • x) (hvIns : v ∈ s)\n  (subset : ↑(s \\ {v}) ⊆ S) (hf : ∑ w ∈ s \\ {v}, f w • w + f v • v = 0) : f v = 0",
+ "name": "LinearAlgebraGame.zero_coeff_from_not_in_span",
+ "displayName": "zero_coeff_from_not_in_span",
+ "content":
+ "`zero_coeff_from_not_in_span` is a helper proof that if `v` is not in the span of `S`, `v ∈ s`,\n`s \\ {v} ⊆ S`, and a linear combination over `s` with coefficient function `f` sums to zero,\nthen `f v = 0`. The syntax is as follows: given the hypotheses described above named\n`hv_not_span`, `hvIns`, `subset`, and `hf`, the term\n`zero_coeff_from_not_in_span K V S v s f hv_not_span hvIns subset hf` is a proof of `f v = 0`.",
+ "category": "Vector Spaces"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {a} (ha : ∀ n, a n = 1 / ((↑n + 1) * (↑n + 2))) (n : ℕ) : ∑ k ∈ Finset.range n, a k = 1 - 1 / (↑n + 1)",
+ "name": "LeibnizSeriesFinite",
+ "displayName": "LeibnizSeriesFinite",
+ "content": "The series `∑ k, 1 / ((k + 1) * (k + 2))` converges.",
+ "category": "∑aₙ"}

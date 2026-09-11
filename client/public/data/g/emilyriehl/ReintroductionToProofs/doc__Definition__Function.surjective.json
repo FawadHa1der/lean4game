@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.surjective",
+ "displayName": "surjective",
+ "content":
+ "A function `f : A → B` is *surjective* if `∀ y : B, ∃ x : A, f x = y`.",
+ "category": "Function"}

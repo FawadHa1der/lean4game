@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {a} (ha : Antitone a) (apos : ∀ n, 0 ≤ a n) (n : ℕ) : 0 ≤ ∑ k ∈ Finset.range (2 * n + 1), (-1) ^ k * a k",
+ "name": "BddSeriesOdd",
+ "displayName": "BddSeriesOdd",
+ "content":
+ "If `a : ℕ → ℝ` is `Antitone` and `∀ n, 0 ≤ a n`, then the odd alternating series `n ↦ ∑ k ∈ range (2n+1), (-1)^k * a k` is bounded below by `0`.",
+ "category": "∑aₙ"}

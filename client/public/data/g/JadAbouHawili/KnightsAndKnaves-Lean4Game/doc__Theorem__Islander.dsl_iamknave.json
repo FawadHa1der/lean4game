@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {A} (hAKn : A said A.isKnave) : False",
+ "name": "Islander.dsl_iamknave",
+ "displayName": "dsl_iamknave",
+ "content": "A : I am a knave\n\nThis implies a contradiction, `False`",
+ "category": "DSL"}

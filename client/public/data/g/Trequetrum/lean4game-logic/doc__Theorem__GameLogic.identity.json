@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P} (p : P) : P",
+ "name": "GameLogic.identity",
+ "displayName": "identity",
+ "content":
+ "# Propositional Identity\nThis is the \\\"I think therefore I am\\\" of propositional logic. Like `True` it is a simple tautology whose truth requires no premises or assumptions — only reason alone.\n```\nidentity : P → P\n```",
+ "category": "→"}

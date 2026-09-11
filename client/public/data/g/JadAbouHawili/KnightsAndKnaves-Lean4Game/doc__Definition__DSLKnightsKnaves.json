@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "DSLKnightsKnaves",
+ "displayName": "DSL Knights and Knaves",
+ "content":
+ "The setting is an island.\nEvery islander will make a statement. There are two types of islanders, 'knights' that always tell the truth, and 'knaves' that always lie.\n\nWe give english statements and their corresponding translation to lean.\n\nGiven an islander `A`\n\n`A` is a knight\n```\nA.isKnight\n```\n\n`A` is a knave\n```\nA.isKnave\n```\n\n`A` is either a knight or a knave\n```\nisKnight_or_isKnave (A : Islander)\n: A.isKnight or A.isKnave\n```\n\nKnights always tell the truth.\n```\nknight_said\n: (A said P) → A.isKnight → P\nsaid_knight\n: (A said P) →  P → A.isKnight\n```\n\nKnaves always lie.\n```\nknave_said\n: (A said P) →  A.isKnave → ¬P\nsaid_knave\n: (A said P) →  ¬P → A.isKnave\n```\n\nSince knights always tell the truth and knaves always lie, no islander can be both a knight and a knave. `A` is not a knight and a knave at the same time. This is represented as:\n```\nnot_isKnight_and_isKnave (A : Islander)\n: ¬ (A.isKnight ∧ A.isKnave)\n```\n\nThe objective is to conclude who is a knight and who is a knave, based on the statements of several inhabitants. This will be done using logical reasoning.",
+ "category": "DSL"}

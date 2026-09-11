@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {β} (f : α → β) (s : Set β) : f '' f ⁻¹' s ⊆ s",
+ "name": "Set.image_preimage_subset",
+ "displayName": "image_preimage_subset",
+ "content": "(missing)",
+ "category": "Set"}

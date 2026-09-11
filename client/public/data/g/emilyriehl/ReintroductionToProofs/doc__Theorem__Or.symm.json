@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {a b} (a✝ : a ∨ b) : b ∨ a",
+ "name": "Or.symm",
+ "displayName": "symm",
+ "content":
+ "For propositions `P` and `Q`, `Or.symm` is a proof that `P ∨ Q → Q ∨ P`.",
+ "category": "Or"}

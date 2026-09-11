@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} {β} [LinearOrder α] [Preorder β] {f} (hf : StrictMono f) : Function.Injective f",
+ "name": "StrictMono.injective",
+ "displayName": "StrictMono.injective",
+ "content": "[Doc.Theorem] StrictMono.injective",
+ "category": "Function"}

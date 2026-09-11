@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "ext",
+ "displayName": "ext",
+ "content":
+ "Two subsets of a given set are equal if they have the same elements.\nIf the proof goal is\n```\nA = B\n```\nfor two subsets of `T` (i.e., for `A B : Set T`),\nthen `ext x` converts the proof goal into the equivalence\n```\nx ∈ A ↔ x ∈ B\n```",
+ "category": "📖︎"}

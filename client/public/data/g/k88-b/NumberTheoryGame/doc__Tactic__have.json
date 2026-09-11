@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "have",
+ "displayName": "have",
+ "content":
+ "The `have` tactic allows you to prove intermediate steps. Once proven, a new hypothesis `h` is added to your context for the rest of the proof.\n\nYou are not limited to basic equalities (`X = Y`). You can use `have` for any proposition, such as modular equivalences (`a ≡ b (mod m)`), divisibility (`x ∣ y`), or predicates like `IsGCD(a, b) 1`.\n\n\n**Important:** In this game, the assignment syntax (`:=`) is disabled. You must state the assumption and provide the proof on the following line.\n\n**Using a proof block:**\nYou can state the assumption and provide the proof on the following lines. This sets your intermediate assumption as the current goal:\n`have h : a ≡ b (mod m)`\n`<proof steps>`",
+ "category": "📖︎"}

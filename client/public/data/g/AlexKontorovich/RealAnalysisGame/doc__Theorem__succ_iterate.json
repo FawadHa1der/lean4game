@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (σ : ℕ → ℕ) (k n : ℕ) : σ (σ^[k] n) = σ^[k + 1] n",
+ "name": "succ_iterate",
+ "displayName": "succ_iterate",
+ "content": "For a function `σ : ℕ → ℕ`, we have that: `σ (σ^[k]) = σ^[k+1]`.",
+ "category": "aₙ"}

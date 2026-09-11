@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {p m n} (pp : Nat.Prime p) : p ∣ m * n ↔ p ∣ m ∨ p ∣ n",
+ "name": "Nat.Prime.dvd_mul",
+ "displayName": "Prime.dvd_mul",
+ "content": "(missing)",
+ "category": "ℕ"}

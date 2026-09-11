@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {a} : ¬(¬a ↔ a)",
+ "name": "not_iff_self",
+ "displayName": "not_iff_self",
+ "content": "(missing)",
+ "category": "Logic"}

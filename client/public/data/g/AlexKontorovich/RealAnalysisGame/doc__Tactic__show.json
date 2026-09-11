@@ -1,0 +1,6 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "show",
+ "displayName": "show",
+ "content": "The `show` tactic has syntax `show fact by proof`.",
+ "category": "📖︎"}

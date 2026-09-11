@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b c : ℕ → ℝ) (h : ∀ n, c n = a n + b n) (n : ℕ) : Series c n = Series a n + Series b n",
+ "name": "SeriesAdd",
+ "displayName": "SeriesAdd",
+ "content":
+ "The partial sums of the series `∑ k, a k + b k` is equal to that of `∑ k, a k + ∑ k, b k`.",
+ "category": "∑aₙ"}

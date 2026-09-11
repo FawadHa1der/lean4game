@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "null_space_v",
+ "displayName": "null_space_v",
+ "content": "`null_space_v T` is the set of vectors that T maps to zero.",
+ "category": "📖︎"}

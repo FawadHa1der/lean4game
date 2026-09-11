@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a : ℕ → ℝ) (L : ℝ) (aToL : SeqLim a L) : ∃ N, ∀ n ≥ N, |L| / 2 ≤ |a n|",
+ "name": "EventuallyGeHalfLim",
+ "displayName": "EventuallyGeHalfLim",
+ "content":
+ "If `a : ℕ → ℝ` converges to `L` (with *no* assumption that `L ≠ 0`), then there is an `N` so that\nfor all `n ≥ N`, `|a (n)| ≥ |L| / 2`.",
+ "category": "aₙ"}

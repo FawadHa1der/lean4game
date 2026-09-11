@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [Monoid α] [HasDistribNeg α] {n} (a✝ : Even n) (a : α) : (-a) ^ n = a ^ n",
+ "name": "Even.neg_pow",
+ "displayName": "Even.neg_pow",
+ "content": "(missing)",
+ "category": "ℕ"}

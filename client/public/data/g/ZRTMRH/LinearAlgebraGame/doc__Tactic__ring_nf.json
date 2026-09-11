@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "ring_nf",
+ "displayName": "ring_nf",
+ "content":
+ "## Summary\n\n`ring_nf` normalizes expressions in rings (structures with +, -, *, 0, 1). It expands and simplifies polynomial expressions.\n\n## Example\n\n`ring_nf` will simplify:\n- `(x + y)^2` to `x^2 + 2*x*y + y^2`\n- `x * (y + z) - x * y` to `x * z`\n\n## Common usage\n\nUse when you need to expand products, simplify polynomial expressions, or normalize ring calculations.",
+ "category": "📖︎"}

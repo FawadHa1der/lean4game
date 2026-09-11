@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} [Preorder α] {a b c} (a✝ : a ≤ b) (a✝ : b ≤ c) : a ≤ c",
+ "name": "le_trans",
+ "displayName": "le_trans",
+ "content": "Transitivity of the less-than-or-equal relation.",
+ "category": "Inequalities"}

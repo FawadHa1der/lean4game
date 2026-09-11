@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (K V W : Type) [Field K] [AddCommGroup V] [AddCommGroup W] [LinearAlgebraGame.VectorSpace K V]\n  [LinearAlgebraGame.VectorSpace K W] (T : V → W) (v : V) (w : W) (h : T v = w) : w ∈ LinearAlgebraGame.range_v K V W T",
+ "name": "LinearAlgebraGame.mem_range_of_map",
+ "displayName": "mem_range_of_map",
+ "content": "Images are in the range.",
+ "category": "Linear Maps"}

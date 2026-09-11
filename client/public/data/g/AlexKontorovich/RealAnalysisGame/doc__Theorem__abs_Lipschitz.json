@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {x y} : ||x| - |y|| ≤ |x - y|",
+ "name": "abs_Lipschitz",
+ "displayName": "abs_Lipschitz",
+ "content": "The absolute value function is Lipschitz with constant 1.",
+ "category": "|x|"}

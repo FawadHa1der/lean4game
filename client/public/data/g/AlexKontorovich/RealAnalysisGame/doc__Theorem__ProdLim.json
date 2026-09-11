@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b c : ℕ → ℝ) (L M : ℝ) (ha : SeqLim a L) (hb : SeqLim b M) (hc : ∀ n, c n = a n * b n) : SeqLim c (L * M)",
+ "name": "ProdLim",
+ "displayName": "ProdLim",
+ "content":
+ "If sequences `a b : ℕ → ℝ` converge with `a` going to `L` and `b` going to `M`, then `a n * b n` converges to `L * M`.",
+ "category": "aₙ"}

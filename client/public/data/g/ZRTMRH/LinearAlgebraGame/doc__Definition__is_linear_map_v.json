@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "is_linear_map_v",
+ "displayName": "is_linear_map_v",
+ "content":
+ "`is_linear_map_v K V W T` means T preserves addition and scalar multiplication.",
+ "category": "📖︎"}

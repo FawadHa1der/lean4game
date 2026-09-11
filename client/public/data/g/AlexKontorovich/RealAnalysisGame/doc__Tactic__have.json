@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "have",
+ "displayName": "have",
+ "content":
+ "The `have` tactic has the following\nsyntax: `have NewHypothesisName (Assumptions) : Claim := by GiveTheProof`.\nThis creates a new hypothesis called\n`NewHypothesisName : ∀ (Assumptions), ClaimHolds`.",
+ "category": "📖︎"}

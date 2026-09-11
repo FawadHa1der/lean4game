@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {G} [AddCommGroup G] [LinearOrder G] [IsOrderedAddMonoid G] {a b} : |a| ≤ b ↔ -b ≤ a ∧ a ≤ b",
+ "name": "abs_le",
+ "displayName": "abs_le",
+ "content": "`|x| ≤ y ↔ -y ≤ x ≤ y`",
+ "category": "|x|"}

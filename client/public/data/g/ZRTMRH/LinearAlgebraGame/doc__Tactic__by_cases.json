@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "by_cases",
+ "displayName": "by_cases",
+ "content":
+ "## Summary\nThe `by_cases` tactic is able to create a new hypothesis, and split the goal into two cases: one where\nthe hypothesis is true, and one where the hypothesis is false.\n\nIn general, if you write `by_cases h : P`, you will create one goal with a hypothesis `h : P`, and another\nwith a hypothesis `h : ¬P`.\n\n## Example\nIf you have some vector `v : V`, and some set `s : Set V`, you can solve the proof by cases of whether\nv is in s by writing `by_cases h : v ∈ s`, which will give you two goals, one with the hypothesis `h : v ∈ s`,\nand one with the hypothesis `h : v ∉ s`.",
+ "category": "📖︎"}

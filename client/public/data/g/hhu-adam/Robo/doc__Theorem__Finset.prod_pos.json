@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {R} [CommMonoidWithZero R] [PartialOrder R] [ZeroLEOneClass R] [PosMulStrictMono R] [Nontrivial R] {f} {s}\n  (h0 : ∀ i, i ∈ s → 0 < f i) : 0 < ∏ i ∈ s, f i",
+ "name": "Finset.prod_pos",
+ "displayName": "prod_pos",
+ "content": "(missing)",
+ "category": "∑ Π"}

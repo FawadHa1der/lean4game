@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "isomorphism_v",
+ "displayName": "isomorphism_v",
+ "content": "`isomorphism_v K V W T` means T is a bijective linear map.",
+ "category": "📖︎"}

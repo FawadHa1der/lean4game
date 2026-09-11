@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {β} {δ} {α} {f} {g} {x} : (f ∘ g) x = f (g x)",
+ "name": "Function.comp_apply",
+ "displayName": "comp_apply",
+ "content": "(missing)",
+ "category": "Function"}

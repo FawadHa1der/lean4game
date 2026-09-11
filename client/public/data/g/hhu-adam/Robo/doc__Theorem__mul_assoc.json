@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {G} [Semigroup G] (a b c : G) : a * b * c = a * (b * c)",
+ "name": "mul_assoc",
+ "displayName": "mul_assoc",
+ "content": "(missing)",
+ "category": "+ *"}

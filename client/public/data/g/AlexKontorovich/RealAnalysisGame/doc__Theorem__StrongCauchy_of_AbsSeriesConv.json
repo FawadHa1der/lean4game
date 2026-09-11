@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {a} (ha : AbsSeriesConv a) {ε} (hε : ε > 0) : ∃ N, ∀ (S : Finset ℕ), (∀ k ∈ S, k ≥ N) → ∑ k ∈ S, |a k| < ε",
+ "name": "StrongCauchy_of_AbsSeriesConv",
+ "displayName": "StrongCauchy_of_AbsSeriesConv",
+ "content":
+ "If `Series a` converges absolutely, then for any `ε > 0`, there is an `N`, so that,\n  for any finite set `S` whose elements are all at least `N`, `∑ k ∈ S, |a k| < ε`.",
+ "category": "∑aₙ"}

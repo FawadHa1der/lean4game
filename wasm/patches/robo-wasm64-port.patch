@@ -1,0 +1,31 @@
+From 4d62ff25660513c928563e8e1ed004bc6e4f98e2 Mon Sep 17 00:00:00 2001
+From: wasm64 port <wasm64@localhost>
+Date: Fri, 11 Sep 2026 11:28:18 -0400
+Subject: [PATCH] wasm64 port: drop the Batteries umbrella import
+
+The wasm64 build's essential Mathlib pack has no `Batteries.olean` umbrella
+(75 Batteries modules are present and arrive through `Mathlib.Tactic.Common`,
+which Game/Metadata/FromMathlib.lean imports). Everything else Robo needs from
+outside the pack (Mathlib.Tactic.{Have,Cases,Generalize},
+Mathlib.Algebra.Order.Ring.Star, Mathlib.Data.{Int,Rat}.Star) is provided by
+wasm/compat under its real module name, so no other source change is needed.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+---
+ Game/Metadata.lean | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/Game/Metadata.lean b/Game/Metadata.lean
+index 22fd996..28a7568 100644
+--- a/Game/Metadata.lean
++++ b/Game/Metadata.lean
+@@ -1,4 +1,5 @@
+-import Batteries
++-- wasm64 port: the `Batteries` umbrella module is not in the essential pack
++-- (its contents arrive through `Mathlib.Tactic.Common` below).
+ import GameServer
+ import Game.Doc
+ 
+-- 
+2.50.1 (Apple Git-155)
+

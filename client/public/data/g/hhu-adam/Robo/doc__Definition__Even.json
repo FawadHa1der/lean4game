@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Even",
+ "displayName": "Even",
+ "content":
+ "`Even n` is the statement that `n : ℕ` is even:\n```\n∃ r : ℕ, n = r + r\n```\nYou can easily check this with `unfold Even`.",
+ "category": "📖︎"}

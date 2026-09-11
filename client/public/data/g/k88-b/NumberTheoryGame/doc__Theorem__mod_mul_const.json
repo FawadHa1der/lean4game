@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a b c m : ℤ) (h : a ≡ b (mod m)) : (a * c) ≡ b * c (mod m)",
+ "name": "mod_mul_const",
+ "displayName": "mod_mul_const",
+ "content":
+ "**Multiplying by a Constant**\n\nIf $a \\equiv b \\pmod m$, then $a \\cdot c \\equiv b \\cdot c \\pmod m$.",
+ "category": "Congruence"}

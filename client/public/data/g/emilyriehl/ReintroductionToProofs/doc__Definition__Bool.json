@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Bool",
+ "displayName": "Bool",
+ "content":
+ "The type `Bool` is the type of booleans. It contains two elements, denoted `false` and `true`.",
+ "category": "Type"}

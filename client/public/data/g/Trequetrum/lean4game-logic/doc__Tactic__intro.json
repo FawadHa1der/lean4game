@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "intro",
+ "displayName": "intro",
+ "content":
+ "# Sub-Proof\nIf your Goal is an implication, this tactic introduces one or more hypotheses, optionally naming and/or pattern-matching them.\n\nThe effect on a goal like `P → Q` is to add `P` as an assumption and change the Goal to `Q`. If the implication is already a part of a sub-proof, then once you show evidence for `Q`, the assumption `P` is discharged and can not be used for the rest of the proof.\n\nThis is is the interactive way of defining a function using tactics. You can think of discharging an assumption as the same as parameters being limited in scope to the function's body/definition.",
+ "category": "📖︎"}

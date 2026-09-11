@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {M} {A} [Zero A] [SMulZeroClass M A] (a : M) : a • 0 = 0",
+ "name": "smul_zero",
+ "displayName": "smul_zero",
+ "content":
+ "`smul_zero` says that scalar multiplication of zero gives zero: `a • 0 = 0`.",
+ "category": "Linear Maps"}

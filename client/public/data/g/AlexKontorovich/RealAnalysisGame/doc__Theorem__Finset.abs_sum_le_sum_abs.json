@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {G} [AddCommGroup G] [LinearOrder G] [IsOrderedAddMonoid G] (f : ι → G) (s : Finset ι) :\n  |∑ i ∈ s, f i| ≤ ∑ i ∈ s, |f i|",
+ "name": "Finset.abs_sum_le_sum_abs",
+ "displayName": "abs_sum_le_sum_abs",
+ "content":
+ "`|∑ x ∈ s, f x ≤ ∑ x ∈ s, |f x|`. (More general version of `Series_abs_add`)",
+ "category": "∑aₙ"}

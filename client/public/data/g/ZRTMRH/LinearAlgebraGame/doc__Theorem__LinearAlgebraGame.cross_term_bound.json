@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (u v : V) :\n  ⟪u,v⟫.re ≤ ‖u‖ * ‖v‖",
+ "name": "LinearAlgebraGame.cross_term_bound",
+ "displayName": "cross_term_bound",
+ "content":
+ "The cross term bound: `⟪u,v⟫.re ≤ ‖u‖ * ‖v‖`.\nThe real part of the inner product is bounded by the product of the norms,\nwhich follows from the Cauchy–Schwarz inequality.",
+ "category": "Inner Product"}

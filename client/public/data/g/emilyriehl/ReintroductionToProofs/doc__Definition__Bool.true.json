@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Bool.true",
+ "displayName": "true",
+ "content": "There is an element of type `Bool` called `Bool.true`.",
+ "category": "Bool"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (c0 c1 c2 : ℤ) : (c2 * 10 ^ 2 + c1 * 10 + c0) ≡ c2 * 1 ^ 2 + c1 * 1 + c0 (mod 9)",
+ "name": "div9_rule_3",
+ "displayName": "div9_rule_3",
+ "content":
+ "**Divisibility by 9**\n\nA number is congruent to the sum of its digits modulo 9.\nThis works beautifully because any number can be written as a polynomial evaluated at 10, and $10 \\equiv 1 \\pmod 9$.",
+ "category": "DivRules"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "ReintroductionToProofs.Sum.components",
+ "displayName": "components",
+ "content":
+ "For types `A`, `B`, and `C`, `Sum.components : (A ⊕ B → C) → (A → C) × (B → C)` decomposes a function out of a coproduct type into its component functions.",
+ "category": "Sum"}

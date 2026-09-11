@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [Mul α] [Zero α] [Preorder α] {a b c} [MulPosMono α] (hbc : b ≤ c) (ha : 0 ≤ a) : b * a ≤ c * a",
+ "name": "mul_le_mul_of_nonneg_right",
+ "displayName": "mul_le_mul_of_nonneg_right",
+ "content":
+ "`mul_le_mul_of_nonneg_right` allows multiplying inequalities by nonnegative values on the right.",
+ "category": "Inner Product"}

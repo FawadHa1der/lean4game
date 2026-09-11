@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (z w : ℂ) : (z + w).re = z.re + w.re",
+ "name": "Complex.add_re",
+ "displayName": "Complex.add_re",
+ "content":
+ "The real part of a sum of complex numbers equals the sum of their real parts.",
+ "category": "ℂ"}

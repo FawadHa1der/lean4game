@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Finset.Icc",
+ "displayName": "Icc",
+ "content": "`Icc a b` is the closed interval $[a,b]$.",
+ "category": "📖︎"}

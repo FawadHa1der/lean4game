@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Monotone",
+ "displayName": "Monotone",
+ "content":
+ "`(a : X → Y) {i j} (hij : i ≤ j) : a i ≤ a j`\n\nA sequence `a : X → Y` is said to be `Monotone` if `a n ≤ a m` whenever `n ≤ m`.",
+ "category": "📖︎"}

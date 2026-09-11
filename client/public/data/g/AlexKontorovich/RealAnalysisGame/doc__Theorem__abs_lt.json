@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [AddGroup α] [LinearOrder α] [AddLeftMono α] {a b} [AddRightMono α] : |a| < b ↔ -b < a ∧ a < b",
+ "name": "abs_lt",
+ "displayName": "abs_lt",
+ "content": "This says that `|x| < y` if and only if `-y < x ∧ x < y`.",
+ "category": "|x|"}

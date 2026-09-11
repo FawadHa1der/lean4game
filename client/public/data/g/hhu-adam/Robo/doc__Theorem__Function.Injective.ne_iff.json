@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {α} {β} {f} (hf : Function.Injective f) {x y} : f x ≠ f y ↔ x ≠ y",
+ "name": "Function.Injective.ne_iff",
+ "displayName": "Injective.ne_iff",
+ "content": "(missing)",
+ "category": "Function"}

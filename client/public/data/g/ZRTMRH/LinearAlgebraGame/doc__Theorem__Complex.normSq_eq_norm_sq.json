@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (z : ℂ) : Complex.normSq z = ‖z‖ ^ 2",
+ "name": "Complex.normSq_eq_norm_sq",
+ "displayName": "normSq_eq_norm_sq",
+ "content":
+ "`normSq_eq_norm_sq` is a proof that `normSq z = ‖z‖ ^ 2`. It essentially unfolds the `normSq` definition.",
+ "category": "ℂ"}

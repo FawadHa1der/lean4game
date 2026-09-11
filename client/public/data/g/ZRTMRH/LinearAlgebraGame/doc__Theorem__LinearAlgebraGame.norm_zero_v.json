@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (v : V) :\n  ‖v‖ = 0 ↔ v = 0",
+ "name": "LinearAlgebraGame.norm_zero_v",
+ "displayName": "norm_zero_v",
+ "content":
+ "`norm_zero_v` is a proof that `‖v‖ = 0 ↔ v = 0`, or that the only vector with norm zero is the zero vector.",
+ "category": "Inner Product"}

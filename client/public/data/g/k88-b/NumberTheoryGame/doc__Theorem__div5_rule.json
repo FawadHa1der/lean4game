@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (k d : ℤ) : (10 * k + d) ≡ d (mod 5)",
+ "name": "div5_rule",
+ "displayName": "div5_rule",
+ "content":
+ "**Divisibility by 5**\n\nSince 5 divides 10, the remainder of any number modulo 5 depends entirely on its last digit — same idea as the rule for 2.",
+ "category": "DivRules"}

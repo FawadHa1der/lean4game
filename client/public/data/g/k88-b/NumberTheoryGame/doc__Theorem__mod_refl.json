@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " (a m : ℤ) : a ≡ a (mod m)",
+ "name": "mod_refl",
+ "displayName": "mod_refl",
+ "content":
+ "**Reflexivity of Congruences**\n\nEvery integer is congruent to itself: $a \\equiv a \\pmod m$.",
+ "category": "Congruence"}

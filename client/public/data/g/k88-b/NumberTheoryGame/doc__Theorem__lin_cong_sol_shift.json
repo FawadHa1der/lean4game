@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b m d m1 x0 t : ℤ) (hd : IsGCD(a, m) d) (hm : m = m1 * d) (h0 : (a * x0) ≡ b (mod m)) :\n  (a * (x0 + t * m1)) ≡ b (mod m)",
+ "name": "lin_cong_sol_shift",
+ "displayName": "lin_cong_sol_shift",
+ "content":
+ "**Shifting the Solution**\n\nAny shift of a solution by a multiple of $m/d$ yields another valid solution.",
+ "category": "LinCong"}

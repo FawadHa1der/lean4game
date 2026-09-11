@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " : not ∘ not = id",
+ "name": "ReintroductionToProofs.Bool.not_involutive",
+ "displayName": "not_involutive",
+ "content":
+ "The composite of the function `not : Bool → Bool` with itself equals the identity function",
+ "category": "Bool"}

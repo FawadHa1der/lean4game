@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P Q R} (h : P ∨ Q) (left : P → R) (right : Q → R) : R",
+ "name": "GameLogic.or_elim",
+ "displayName": "or_elim",
+ "content":
+ "# Or Elimination\nIf you can conclude something from `A` and you can conclude the same thing from `B`, then if you know `A ∨ B` it won't matter which of the two happens as you can still guarantee something.\n\nor_elim is also evidence:\n```\nor_elim : (P ∨ Q) → (P → R) → (Q → R) → R`\n```\n# Parameters\n`or_elim` has three parameters:\n1. takes evidence for a disjunction,\n2. evidence an implication on the left,\n3. evidence for an implication on the right.\n# Example\n`or_elim` is your first 3-parameter function.\n```\npvq: P ∨ Q\npr : P → R\nqr : Q → R\nhave r : R := or_elim pvq pr qr\n```",
+ "category": "∨"}

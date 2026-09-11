@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "And",
+ "displayName": "∧",
+ "content":
+ "`A ∧ B` (“and”) is the statement that both `A` and `B` are true.\n\n## `A ∧ B` as a proof goal\n\nThe tactic `constructor` allows you to prove the two sub-statements `A` and `B` individually.\n\n## `A ∧ B` as an assumption\n\nWith `obtain ⟨h₁, h₂⟩ := h`, you break down an assumption of the form `h : A ∧ B`\ninto its components `h₁ : A` and `h₂ : B`.",
+ "category": "Logic"}

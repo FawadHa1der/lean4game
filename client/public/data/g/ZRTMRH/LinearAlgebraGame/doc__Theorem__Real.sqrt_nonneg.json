@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (x : ℝ) : 0 ≤ √x",
+ "name": "Real.sqrt_nonneg",
+ "displayName": "sqrt_nonneg",
+ "content": "The square root of any real number is nonnegative",
+ "category": "ℝ"}

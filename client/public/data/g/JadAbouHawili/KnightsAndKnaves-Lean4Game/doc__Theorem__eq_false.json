@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {p} (h : ¬p) : p = False",
+ "name": "eq_false",
+ "displayName": "eq_false",
+ "content": "Knowing `¬P` means `P` is false",
+ "category": "Logic"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (K V W : Type) [Field K] [AddCommGroup V] [AddCommGroup W] [LinearAlgebraGame.VectorSpace K V]\n  [LinearAlgebraGame.VectorSpace K W] (T : V → W) (hT : LinearAlgebraGame.is_linear_map_v K V W T)\n  (h_inj : LinearAlgebraGame.injective_v K V W T) (v : V) (w : W) (h_map : T v = w) : v ≠ 0 ↔ w ≠ 0",
+ "name": "LinearAlgebraGame.injective_preserves_independence",
+ "displayName": "injective_preserves_independence",
+ "content": "Injective linear maps preserve independence.",
+ "category": "Linear Maps"}

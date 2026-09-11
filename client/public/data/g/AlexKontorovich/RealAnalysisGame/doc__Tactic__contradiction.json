@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "contradiction",
+ "displayName": "contradiction",
+ "content":
+ "If your hypotheses lead to a contradiction, (for example: if one of your hypotheses is that `h : n < 0` where `n : ℕ` is a natural number) then the `contradiction` tactic closes the goal.",
+ "category": "📖︎"}

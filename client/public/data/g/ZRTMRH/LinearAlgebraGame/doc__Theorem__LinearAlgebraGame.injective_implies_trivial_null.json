@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (K V W : Type) [Field K] [AddCommGroup V] [AddCommGroup W] [LinearAlgebraGame.VectorSpace K V]\n  [LinearAlgebraGame.VectorSpace K W] (T : V → W) (hT : LinearAlgebraGame.is_linear_map_v K V W T)\n  (h_inj : LinearAlgebraGame.injective_v K V W T) : LinearAlgebraGame.null_space_v K V W T = {0}",
+ "name": "LinearAlgebraGame.injective_implies_trivial_null",
+ "displayName": "injective_implies_trivial_null",
+ "content":
+ "If T is injective, then null T = {0} (Axler 3.16, first direction).",
+ "category": "Linear Maps"}

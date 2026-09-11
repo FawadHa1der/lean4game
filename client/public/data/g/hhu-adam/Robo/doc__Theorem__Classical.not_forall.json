@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {α} {p} : (¬∀ (x : α), p x) ↔ ∃ (x : α), ¬p x",
+ "name": "Classical.not_forall",
+ "displayName": "not_forall",
+ "content": "(missing)",
+ "category": "Logic"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "SDiff",
+ "displayName": "·\\·",
+ "content":
+ "For two subsets `(A B : Set T)`, `A\\B` is the difference between `A` and `B`,\nconsisting of all elements of `A` that are not in `B`.",
+ "category": "Set"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "GameLogic.or_def",
+ "displayName": "∨",
+ "content":
+ "# Disjunction\n## Introduction\nAn “Or” like `h : P ∨ Q` can be introduced in two ways:\n1. If you have `p : P`, you can use `or_inl p`\n2. If you have `q : Q`, you can use `or_inr q`\n\nIn either case, remember that the other type in your disjunction must be inferable in context or supplied as part of the expression. For example: `(or_inl p : P ∨ Q)`\n## Elimination\nAn “Or” like `h : P ∨ Q` can be be eliminated if both P and Q imply the same proposition. In this example, P or Q implies R:\n```\n-- Assumptions\npvq: P ∨ Q\npr : P → R\nqr : Q → R\n-- Goal: R\nexact or_elim pvq pr qr\n```",
+ "category": "📖︎"}

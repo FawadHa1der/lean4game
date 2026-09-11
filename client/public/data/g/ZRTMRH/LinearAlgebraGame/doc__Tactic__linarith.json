@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "linarith",
+ "displayName": "linarith",
+ "content":
+ "## Summary\nThe `linarith` tactic simplifies the goal by using the hypotheses. It works well on linear inequalities\nand equalities. It works by looking for contradictions, although the actual algorithmic implementation\nis very complicated.\n\n## Example\n\nIf you have a bunch of hypotheses like h1 : a < b, h2 : b <= c, h3 : c = d and a goal of a < d,\nthen linarith will solve it. Linarith knows how to combine linear relations: it knows a ton of\nresults about how to put inequalities together and will close such goals.",
+ "category": "📖︎"}

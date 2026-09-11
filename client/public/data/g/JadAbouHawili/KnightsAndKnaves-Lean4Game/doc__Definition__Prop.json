@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Prop",
+ "displayName": "Prop",
+ "content":
+ "You can think of a proposition as a statement that is either true or false (obviously, it can't be both at the same time).\n\nMoreover, these statements are denoted by a symbol like `P`,`Q`,`R`.\n\nFor an object of type `P` where `P` is of type Prop, i.e. `h : P` where `P : Prop`, `h` would be a proof or a witness that `P` is true.\n\n# Constructing new propositions from old ones\nThe atomic propositions in the compound proposition `p ∧ q` are : `p`, `q`. Of course, `p ∧ q` can be used to construct more complicated propositions.\n\n## Connecting Propositions With A Logical Connective\nThis truth value depends on the truth value of the propositions it was built out of and the rules of the logical connective. This is clearly illustrated in a truth table.\n\n# Truth table\nThe truth table of a logical connective illustrates the rule for that logical connective, i.e. the truth value of the compound statement depending on the truth value of the propositions it connects.",
+ "category": "Prop"}

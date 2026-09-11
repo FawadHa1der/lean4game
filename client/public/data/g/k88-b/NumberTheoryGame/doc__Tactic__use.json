@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "use",
+ "displayName": "use",
+ "content":
+ "The `use` tactic is used to provide a \\\"witness\\\" to prove that something exists.\nIf your goal is `∃ k, 12 = 3 * k`, typing `use 4` changes the goal to `12 = 3 * 4`.\n\n**Multiple arguments:**\nIf your goal has multiple existentials, for example `∃ x y : ℤ, 2 * x + 3 * y = 1`, you can provide multiple witnesses separated by commas: `use -1, 1`.",
+ "category": "📖︎"}

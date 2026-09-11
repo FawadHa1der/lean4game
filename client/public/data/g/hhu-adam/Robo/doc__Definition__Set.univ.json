@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Set.univ",
+ "displayName": "univ",
+ "content":
+ "`univ : Set T` is the “subset” consisting of *all* elements of type `T`.\n\nWith `rw [eq_univ_iff_forall]`, you convert an equation of the form `S = univ` into the\nstatement `∀ (x : T), x ∈ S`.",
+ "category": "Set"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {a b} (self : a and b) : a",
+ "name": "And.left",
+ "displayName": "And.left",
+ "content":
+ "*(lean docstring)*\\\nExtract the left conjunct from a conjunction. `h : a ∧ b` then\n`h.left`, also notated as `h.1`, is a proof of `a`. ",
+ "category": "And"}

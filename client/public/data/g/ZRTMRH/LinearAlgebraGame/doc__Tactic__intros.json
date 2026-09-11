@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "intros",
+ "displayName": "intros",
+ "content":
+ "## Summary\n\n`intros` acts very similar to the `intro` tactic, except it allows you to introduce many new\nhypotheses/variables at once. `intros h1 h2 h3` essentially acts as `intro h1; intro h2; intro h3;`.\n\n## Example\n\nIf your goal is `P → Q → (∀ x : Nat, R → (x = 5))`, `intros p q x r` will create hypotheses `p: P`,\n`q: Q`, `r: R`, and a variable `x: Nat`, and change the goal to `x = 5`.",
+ "category": "📖︎"}

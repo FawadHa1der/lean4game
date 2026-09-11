@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b m d a1 m1 x1 x2 : ℤ) (hd_not_zero : d ≠ 0) (hd : IsGCD(a, m) d) (ha : a = a1 * d) (hm : m = m1 * d)\n  (h1 : (a * x1) ≡ b (mod m)) (h2 : (a * x2) ≡ b (mod m)) : x1 ≡ x2 (mod m1)",
+ "name": "lin_cong_sol_equiv",
+ "displayName": "lin_cong_sol_equiv",
+ "content":
+ "**Congruent Solutions modulo $m/d$**\n\nAll solutions to $a \\cdot x \\equiv b \\pmod m$ are congruent modulo $m/d$.",
+ "category": "LinCong"}

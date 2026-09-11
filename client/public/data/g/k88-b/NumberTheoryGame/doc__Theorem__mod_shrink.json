@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b m d : ℤ) (h1 : a ≡ b (mod m)) (h2 : d ∣ m) : a ≡ b (mod d)",
+ "name": "mod_shrink",
+ "displayName": "mod_shrink",
+ "content":
+ "**Shrinking the Modulus**\n\nIf $a \\equiv b \\pmod m$ and $d \\mid m$, then $a \\equiv b \\pmod d$.",
+ "category": "Congruence"}

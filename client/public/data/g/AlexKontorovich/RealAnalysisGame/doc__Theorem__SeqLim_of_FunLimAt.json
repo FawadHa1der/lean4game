@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {f} {L c} (hf : FunLimAt f L c) (x : ℕ → ℝ) (a✝ : ∀ n, x n ≠ c) (a✝ : SeqLim x c) : SeqLim (fun n => f (x n)) L",
+ "name": "SeqLim_of_FunLimAt",
+ "displayName": "SeqLim_of_FunLimAt",
+ "content":
+ "If a function `f` has limit `L` at point `c`, then for every sequence `(xₙ)` converging to `c` with `xₙ ≠ c`, the sequence `f(xₙ)` converges to `L`.",
+ "category": "f(x)"}

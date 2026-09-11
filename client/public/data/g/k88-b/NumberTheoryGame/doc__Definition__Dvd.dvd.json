@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Dvd.dvd",
+ "displayName": "a ∣ b",
+ "content":
+ "**Divisibility ($a \\mid b$)**\n\nWe say that an integer $a$ **divides** an integer $b$ (written as $a \\mid b$) if $b$ is a multiple of $a$.\nFormally, this means there exists some integer $k$ such that:\n$$b = a \\cdot k$$\n\n**Intuition:**\nThinking of $a \\mid b$ as \"$b$ can be built entirely out of copies of $a$\" often makes it easier to reason about than the formal existential statement.\n\n**Examples:**\n* $3 \\mid 12$ is true because $12 = 3 \\cdot 4$ (here our witness is $k = 4$).\n* $5 \\mid -15$ is true because $-15 = 5 \\cdot (-3)$ (here $k = -3$).\n* $7 \\mid 0$ is true because $0 = 7 \\cdot 0$ (here $k = 0$).\n* $4 \\mid 14$ is **false**, because there is no integer $k$ that makes $14 = 4 \\cdot k$.\n\n**How it works in Lean:**\nWhen you see $a \\mid b$ in your goal, Lean translates this under the hood to an \\\"exists\\\" statement: `∃ k, b = a * k`.\nTo prove it, you must provide the exact value of $k$ using the `use` tactic (for example, `use 4`).\n\n*(To type the divides symbol `∣`, type `\\mid` or `\\|` and press Space!)*",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {a b} (a✝ : a ∧ b) : b ∧ a",
+ "name": "And.symm",
+ "displayName": "symm",
+ "content":
+ "Given a hypothesis `h : P ∧ Q` for some propositions `P` and `Q`, `And.symm h` is a proof of `Q ∧ P`.",
+ "category": "And"}

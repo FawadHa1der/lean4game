@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (a : ℕ → ℝ) (M : ℝ) (hM : ∀ n, a n ≤ M) (ha : Monotone a) : SeqConv a",
+ "name": "SeqConv_of_MonotoneBdd",
+ "displayName": "SeqConv_of_MonotoneBdd",
+ "content": "If `a : ℕ → ℝ` is Monotone and bounded, then `SeqConv a`.",
+ "category": "aₙ"}

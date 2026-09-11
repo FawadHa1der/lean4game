@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {f} (hf : FunCont f) {a b} (hab : a < b) (hfa : f a < 0) (hfb : 0 < f b) : ∃ c ∈ Set.Ioo a b, f c = 0",
+ "name": "RealAnalysisGame.IVT",
+ "displayName": "IVT",
+ "content":
+ "The Intermediate Value Theorem (IVT) states that if a function is continuous on a closed interval `[a, b]` and takes values `f(a) < 0` and `0 < f(b)`, then there exists `c ∈ (a, b)` so that `f(c)=0`.",
+ "category": "f(x)"}

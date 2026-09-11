@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "knight_interp",
+ "displayName": "knight_interp",
+ "content":
+ "Rewrites all expression asserting being a knight into the equivalent expression of not being knave\n\nChanges all instances of `A.isKnave` to `¬A.isKnight`\n\n# Change the Goal\n`knight_interp`\n\n# Change the Hypothesis\n`knight_interp` at `hypothesis`\n\n# Change the goal and all hypothesis\n`knight_interp` at *\n\nThe `*` is called the 'wildcard', and it matches anything.\n\n# Under the hood\nThe tactic is simply a macro abbreviating:\n```\nsimp [isKnave_notisKnightIff]\n```\nwhere\n```\nisKnight_notisKnaveIff {A : Islander} : A.isKnave ↔ ¬A.isKnight\n```\n\n`A.isKnave` and `¬A.isKnight` always have the same truth value regardless of what `A` is, so they can be interchanged",
+ "category": "KnightsAndKnaves"}

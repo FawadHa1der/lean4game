@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "ring_nf",
+ "displayName": "ring_nf",
+ "content":
+ "The `ring_nf` tactic puts both sides of an equation into a standard algebraic form and checks if they're equal.",
+ "category": "📖︎"}

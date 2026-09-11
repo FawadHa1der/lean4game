@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {a b} : (a ↔ ¬b) ↔ (b ↔ ¬a)",
+ "name": "iff_not_comm",
+ "displayName": "iff_not_comm",
+ "content": "(missing)",
+ "category": "Logic"}

@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {a} : ¬¬a ↔ a",
+ "name": "Classical.not_not",
+ "displayName": "not_not",
+ "content":
+ "*(lean docstring)*\\\nThe Double Negation Theorem: `¬¬P` is equivalent to `P`.\nThe left-to-right direction, double negation elimination (DNE),\nis classically true but not constructively. ",
+ "category": "Logic"}

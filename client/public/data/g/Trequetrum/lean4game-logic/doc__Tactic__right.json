@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "right",
+ "displayName": "right",
+ "content":
+ "# Show a Disjunction\nEvidence for `P ∨ Q` can be created in two ways. `left` changes the goal to `P` while `right` changes the goal to `Q`.",
+ "category": "📖︎"}

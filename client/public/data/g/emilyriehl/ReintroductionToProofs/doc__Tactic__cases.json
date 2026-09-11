@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "cases",
+ "displayName": "cases",
+ "content":
+ "Assuming `x` is a variable in the local context with an inductive type, `cases x` splits the main goal, producing one goal for each constructor of the inductive type, in which the target is replaced by a general instance of that constructor. If the type of an element in the local context depends on `x`, that element is reverted and reintroduced afterward, so that the case split affects that hypothesis as well. `cases` detects unreachable cases and closes them automatically.\n\nFor example, given an assumption `h : P ∨ Q`, `cases h` splits the main goal into two goals, one assuming `P` holds and the other assuming `Q` holds.",
+ "category": "📖︎"}

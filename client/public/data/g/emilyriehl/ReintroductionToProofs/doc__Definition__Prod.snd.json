@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Prod.snd",
+ "displayName": "snd",
+ "content":
+ "For any types `A` and `B`, `Prod.snd : A × B → B` is the function that sends `p : A × B` to its second coordinate `p.2 : B`.",
+ "category": "Prod"}

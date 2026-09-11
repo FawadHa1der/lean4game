@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "rw",
+ "displayName": "rw",
+ "content":
+ "The `rw` (rewrite) tactic replaces a term with an equivalent term based on an equality you have.\nIf you have `h : A = B`, typing `rw [h]` will replace `A` with `B` in your goal.\n\n**Multiple arguments:**\nYou can chain rewrites by putting multiple hypotheses in the brackets, separated by commas: `rw [h1, h2]`. Lean will apply them sequentially.\n\n**Rewriting backwards:**\nBy default, `rw` replaces the left side of an equality with the right side. To rewrite from right to left, use the `←` symbol (type `\\l` and Space): `rw [← h]`.\n\n**Targeting hypotheses:**\nBy default, `rw` changes the goal. You can rewrite inside a hypothesis `h1` by using `at`: `rw [h_eq] at h1`.\nYou can also rewrite everywhere (in all hypotheses and the goal at once) using `at *`: `rw [h_eq] at *`.",
+ "category": "📖︎"}

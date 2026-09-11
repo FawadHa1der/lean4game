@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Function.invertible",
+ "displayName": "invertible",
+ "content":
+ "A function `f : A → B` is *invertible* if `∃ g : B → A, (∀ a : A, g (f a) = a) ∧ (∀ b : B, f (g b) = b)`.",
+ "category": "Function"}

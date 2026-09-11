@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a : ℕ → ℝ) (L : ℝ) (ha : SeqLim a L) (hL : L ≠ 0) : ∃ N, ∀ n ≥ N, |a n| ≤ 2 * |L|",
+ "name": "EventuallyBdd_of_SeqConv",
+ "displayName": "EventuallyBdd_of_SeqConv",
+ "content":
+ "If `a : ℕ → ℝ` converges to `L` and `L ≠ 0`, then `|a n|` is eventually bounded by `2 * |L|`.",
+ "category": "aₙ"}

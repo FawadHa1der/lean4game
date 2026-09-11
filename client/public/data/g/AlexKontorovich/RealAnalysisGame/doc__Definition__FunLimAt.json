@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "FunLimAt",
+ "displayName": "FunLimAt",
+ "content":
+ "`∀ ε > 0, ∃ δ > 0, ∀ x ≠ c, |x - c| < δ → |f x - L| < ε`\n\n  A function `f` has limit `L` at `x = c`.",
+ "category": "📖︎"}

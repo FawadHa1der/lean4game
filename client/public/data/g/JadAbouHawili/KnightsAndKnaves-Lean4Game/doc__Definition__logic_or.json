@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "logic_or",
+ "displayName": "or",
+ "content":
+ "`∨`\n\n# Truth Table\n$\n\\begin{array}{|c|c|c|}\n\\hline\nP & Q & \\text{P or Q} \\\\\\\\\n\\hline\nT & T & T \\\\\\\\\n\\hline\nT & F & T \\\\\\\\\n\\hline\nF & T & T \\\\\\\\\n\\hline\nF & F & F \\\\\\\\\n\\hline\n\\end{array}\n$\n\nFrom the truth table, we can see that if one of `P`,`Q` is true then `P ∨ Q` is true.\n\nTherefore, if we have `P or Q` as our goal, it is enough to prove `P` or to prove `Q`.\n\nHaving `P or Q` as the goal, you can tell Lean that you want to prove the left side by simply typing `left` or the right side by simply typing `right`.\n\n`left` and `right` tactics are used instead of the `Or.inl` and `Or.inr` introduction rules stated here [#Or](https://leanprover-community.github.io/mathlib4_docs/Init/Prelude.html#Or)",
+ "category": "Prop"}

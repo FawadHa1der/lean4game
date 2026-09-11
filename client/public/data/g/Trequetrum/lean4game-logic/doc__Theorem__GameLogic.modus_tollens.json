@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {P Q} (h : P → Q) (nq : ¬Q) : ¬P",
+ "name": "GameLogic.modus_tollens",
+ "displayName": "modus_tollens",
+ "content":
+ "# Modus Tollens\nDenying the consequent.\n\nIf P, then Q.\\\nNot Q.\\\nTherefore, not P.\n```\nmt : (P → Q) → ¬Q → ¬P\n```\n\n### Infix Operator:\n`modus_tollens` is a specialized version of `imp_trans`, which makes it possible to use `≫` (which is written as “`\\gg`”) as an infix operator for `modus_tollens`.",
+ "category": "→"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (M₀ : Type u_2) {A} [Zero M₀] [Zero A] [SMulWithZero M₀ A] (m : A) : 0 • m = 0",
+ "name": "zero_smul",
+ "displayName": "zero_smul",
+ "content":
+ "`zero_smul` says that the zero scalar times any vector is zero: `0 • v = 0`.",
+ "category": "Linear Maps"}

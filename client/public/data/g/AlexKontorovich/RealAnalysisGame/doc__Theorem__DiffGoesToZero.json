@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {a} (aLim : SeqLim a 0) :\n  SeqLim (fun n => ∑ k ∈ Finset.range (2 * n + 1), (-1) ^ k * a k - ∑ k ∈ Finset.range (2 * n), (-1) ^ k * a k) 0",
+ "name": "DiffGoesToZero",
+ "displayName": "DiffGoesToZero",
+ "content":
+ "If `a → 0`, then the difference of odd and even alternating series, `n ↦ ∑ k ∈ range (2n+1), (-1)^k * a k - ∑ k ∈ range (2n), (-1)^k * a k` goes to `0`.",
+ "category": "∑aₙ"}

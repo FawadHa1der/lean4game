@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b c : ℕ → ℝ) (L M : ℝ) (hL : L ≠ 0) (hM : M ≠ 0) (ha : SeqLim a L) (hb : SeqLim b M) (hc : ∀ n, c n = a n * b n) :\n  SeqLim c (L * M)",
+ "name": "ProdLimNeNe",
+ "displayName": "ProdLimNeNe",
+ "content":
+ "If sequences `a b : ℕ → ℝ` converge with `a` going to `L ≠ 0` and `b` going to `M ≠ 0`, then `a n * b n` converges to `L * M`.",
+ "category": "aₙ"}

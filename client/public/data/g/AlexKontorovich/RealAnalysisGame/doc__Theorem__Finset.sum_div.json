@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {K} [DivisionSemiring K] (s : Finset ι) (f : ι → K) (a : K) : (∑ i ∈ s, f i) / a = ∑ i ∈ s, f i / a",
+ "name": "Finset.sum_div",
+ "displayName": "sum_div",
+ "content": "Summation division: `∑ i ∈ s, (f i / c) = (∑ i ∈ s, f i) / c`.",
+ "category": "∑aₙ"}

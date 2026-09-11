@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} [Semigroup α] {a b c} (a✝ : a ∣ b) (a✝ : b ∣ c) : a ∣ c",
+ "name": "dvd_trans",
+ "displayName": "dvd_trans",
+ "content":
+ "**Transitivity of Divisibility**\n\nIf $a$ divides $b$, and $b$ divides $c$, then $a$ divides $c$.\n\n**Intuition:**\nThink of it as building blocks. If a stick $b$ is made of exactly 3 blocks of $a$,\nand a stick $c$ is made of exactly 4 sticks of $b$, then $c$ is made of $3 \\cdot 4 = 12$ blocks of $a$.\nDivisibility chains perfectly! In Lean, if you have `h1 : a ∣ b` and `h2 : b ∣ c`, applying this theorem proves `a ∣ c`.",
+ "category": "Divisibility"}

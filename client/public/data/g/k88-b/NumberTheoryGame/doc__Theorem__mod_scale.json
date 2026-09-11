@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b c m : ℤ) (h : a ≡ b (mod m)) : (a * c) ≡ b * c (mod m * c)",
+ "name": "mod_scale",
+ "displayName": "mod_scale",
+ "content":
+ "**Scaling the Modulus**\n\nIf $a \\equiv b \\pmod m$, then $a \\cdot c \\equiv b \\cdot c \\pmod{m \\cdot c}$.",
+ "category": "Congruence"}

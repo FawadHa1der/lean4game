@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Set.preimage",
+ "displayName": "preimage",
+ "content":
+ "For a mapping `f : A → B`, `preimage f : Set B → Set A`\nis one of the induced mappings on the power sets –\nit maps a subset of `B` to the preimage `f ⁻¹' A` of this subset under `f`.",
+ "category": "Set"}

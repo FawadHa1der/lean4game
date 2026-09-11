@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "ring",
+ "displayName": "ring",
+ "content":
+ "The `ring` tactic automatically proves algebraic equalities by expanding and rearranging expressions.\nIt is a powerful tool so you don't have to manually apply basic axioms like commutativity or distributivity (e.g., `x + y = y + x` or `x * 1 = x`).\n\n**What it works with:**\n`ring` works on equations involving addition (`+`), subtraction (`-`), multiplication (`*`), and natural number exponents (`^`) within commutative rings (such as integers `ℤ`, rationals `ℚ`, or reals `ℝ`).\n\n**What it does NOT work with:**\nIt cannot handle division (`/`), modulo arithmetic (`%`) or non-commutative structures (like matrices).",
+ "category": "📖︎"}

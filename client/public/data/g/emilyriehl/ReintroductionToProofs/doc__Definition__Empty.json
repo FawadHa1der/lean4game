@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Empty",
+ "displayName": "Empty",
+ "content":
+ "The empty type `Empty` has no introduction rules. It is an inductive type, meaning that it is in some sense *freely generated* by the elements provided by its introduction rules. In this case, this means that the elimination rule provides a canonical function `Empty.elim : Empty → A` valued in any type `A`.",
+ "category": "Type"}

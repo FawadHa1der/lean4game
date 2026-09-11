@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {α} [Lattice α] [AddCommGroup α] [AddLeftMono α] (a b : α) : |a + b| ≤ |a| + |b|",
+ "name": "abs_add_le",
+ "displayName": "abs_add_le",
+ "content":
+ "Usage: `have factName : |x + y| ≤ |x| + |y| := by apply abs_add_le`",
+ "category": "|x|"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "GameLogic.FunIntro",
+ "displayName": "→ intro",
+ "content":
+ "# `fun _ => _`\nYou can create evidence for an implication by defining the appropriate function.\n- `have h₁ : P → P := fun p : P => p`\n- `have h₂ : P ∧ Q → P := fun h : P ∧ Q => h.left`\n\nGenerally, you don't need to repeat the types when they're obvious from the context.\n- `have h₁ : P → P := fun p => p`\n- `have h₂ : P ∧ Q → P := fun h => h.left`\n\n# Unicode:\n- `fun` can be written as `λ`\n- `=>` can be written as `↦`\n----\n- `have h₁ : P → P := λp ↦ p`\n- `have h₂ : P ∧ Q → P := λh ↦ h.left`",
+ "category": "📖︎"}

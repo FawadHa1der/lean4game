@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "linarith",
+ "displayName": "linarith",
+ "content":
+ "The tactic `linarith` can show that a linear equation or inequality follows from given equations or inequalities.\nIt is quite flexible and works just as well in ℕ as in ℝ.\nHowever, the (in)equations must be given individually, not logically linked.\nAn assumption of the form\n```\nh : m ≤ x → n < x\n```\nmust first be rewritten with\n```\nrw [imp_iff_or_not] at h\n```\nto\n```\nh : n < x ∨ ¬m ≤ x\n```\nso that `linarith` can do something with it.",
+ "category": "📖︎"}

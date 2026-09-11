@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {ι} {M} {s₁ s₂} [AddCommMonoid M] {f g} (h : s₁ = s₂) (a✝ : ∀ x, x ∈ s₂ → f x = g x) : s₁.sum f = s₂.sum g",
+ "name": "Finset.sum_congr",
+ "displayName": "sum_congr",
+ "content": "(missing)",
+ "category": "∑ Π"}

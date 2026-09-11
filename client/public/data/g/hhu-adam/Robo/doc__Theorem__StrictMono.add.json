@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {α} {β} [Add α] [Preorder α] [Preorder β] {f g} [AddLeftStrictMono α] [AddRightStrictMono α] (hf : StrictMono f)\n  (hg : StrictMono g) : StrictMono fun (x : β) ↦ f x + g x",
+ "name": "StrictMono.add",
+ "displayName": "StrictMono.add",
+ "content":
+ "[Doc.Theorem] StrictMono.add\nif `f` and `g` strictly monotonous, then also `f + g` strictly monotonous",
+ "category": "Function"}

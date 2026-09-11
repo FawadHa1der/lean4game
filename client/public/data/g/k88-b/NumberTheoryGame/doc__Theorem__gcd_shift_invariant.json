@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a k m d1 d2 : ℤ) (hd1 : 0 ≤ d1) (hd2 : 0 ≤ d2) (h1 : IsGCD(a + m * k, m) d1) (h2 : IsGCD(a, m) d2) : d1 = d2",
+ "name": "gcd_shift_invariant",
+ "displayName": "gcd_shift_invariant",
+ "content":
+ "**Shift Invariance of the GCD**\n\nFor any integers $a, k, m$, and non-negative gcd-witnesses $d_1, d_2$:\nif `IsGCD(a + m * k, m) d1` and `IsGCD(a, m) d2`, then $d_1 = d_2$.\n\n**Why this matters:**\nThis is the *engine* of the Euclidean Algorithm for computing GCDs: $\\gcd(a + mk, m) = \\gcd(a, m)$ for any integer $k$. In particular, replacing $a$ by its remainder after dividing by $m$ never changes the GCD with $m$ — which is exactly what lets the Euclidean Algorithm shrink its numbers step by step until it reaches the answer.",
+ "category": "GCD"}

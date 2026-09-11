@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b m n : ℤ) (h : a ≡ b (mod m * n)) : a ≡ b (mod m) ∧ a ≡ b (mod n)",
+ "name": "mod_split",
+ "displayName": "mod_split",
+ "content":
+ "**Splitting the Modulus**\n\nIf $a \\equiv b \\pmod{m \\cdot n}$, then $a \\equiv b \\pmod m$ and $a \\equiv b \\pmod n$.\n\n**Intuition:**\nIf a difference $(a - b)$ is a multiple of $15$ ($3 \\cdot 5$), it must logically be a multiple of $3$ and a multiple of $5$.\nSo if two numbers are congruent modulo 15, they are automatically congruent modulo 3 and modulo 5.\nThis is a crucial stepping stone towards the Chinese Remainder Theorem!",
+ "category": "Congruence"}

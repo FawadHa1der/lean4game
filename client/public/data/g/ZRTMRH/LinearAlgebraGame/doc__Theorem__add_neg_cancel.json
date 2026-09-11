@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {G} [AddGroup G] (a : G) : a + -a = 0",
+ "name": "add_neg_cancel",
+ "displayName": "add_neg_cancel",
+ "content":
+ "`add_neg_cancel` is a proof that \"x + -x = 0. This holds whether x is in K or V.",
+ "category": "Groups"}

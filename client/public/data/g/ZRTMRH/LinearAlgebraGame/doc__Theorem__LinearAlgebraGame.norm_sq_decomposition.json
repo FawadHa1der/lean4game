@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (u v w : V) (c : ℂ)\n  (h_decomp : u = c • v + w) (h_ortho : LinearAlgebraGame.orthogonal (c • v) w) : ‖u‖ ^ 2 = ‖c • v‖ ^ 2 + ‖w‖ ^ 2",
+ "name": "LinearAlgebraGame.norm_sq_decomposition",
+ "displayName": "norm_sq_decomposition",
+ "content":
+ "`norm_sq_decomposition` is a helper proof that if `u = c • v + w` and `c • v` is orthogonal\nto `w`, then `‖u‖^2 = ‖c • v‖^2 + ‖w‖^2`. The syntax is\n`norm_sq_decomposition u v w c h_decomp h_ortho`.",
+ "category": "Inner Product"}

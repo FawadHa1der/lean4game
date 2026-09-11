@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "SeqBddBy",
+ "displayName": "SeqBddBy",
+ "content":
+ "`(a : ℕ → ℝ) (M : ℝ) := ∀ n, a n ≤ M`\n\nA sequence `a : ℕ → ℝ` is *bounded by* (`SeqBddBy` holds) `M : ℝ` if, for all `n`, `a n ≤ M`, for all `n`.",
+ "category": "📖︎"}

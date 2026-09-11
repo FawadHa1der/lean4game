@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b m d : ℤ) (hd : IsGCD(a, m) d) (hb : d ∣ b) : ∃ x, (a * x) ≡ b (mod m)",
+ "name": "lin_cong_suff",
+ "displayName": "lin_cong_suff",
+ "content":
+ "**Solvability (Sufficient Condition)**\n\nIf $d = \\gcd(a, m)$ and $d \\mid b$, then $\\exists x, a \\cdot x \\equiv b \\pmod m$.",
+ "category": "LinCong"}

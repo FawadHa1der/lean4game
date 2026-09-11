@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {E} [SeminormedAddGroup E] (a : E) : 0 ≤ ‖a‖",
+ "name": "norm_nonneg",
+ "displayName": "norm_nonneg",
+ "content":
+ "`norm_nonneg` is very similar to the vector space theorem `norm_nonneg_v`. The theorem shows that any\ncomplex number has nonnegative norm.",
+ "category": "ℂ"}

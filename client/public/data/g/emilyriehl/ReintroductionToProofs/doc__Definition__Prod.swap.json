@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Prod.swap",
+ "displayName": "swap",
+ "content":
+ "For types `A` and `B`, the function `Prod.swap : A × B → B × A` can be thought of as the function that sends a pair `⟨a, b⟩` to the pair `⟨b, a⟩`.",
+ "category": "Prod"}

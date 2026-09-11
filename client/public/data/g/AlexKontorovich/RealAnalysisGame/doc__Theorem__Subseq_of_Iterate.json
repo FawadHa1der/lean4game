@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (σ : ℕ → ℕ) (hσ : ∀ n, n < σ n) (n₀ : ℕ) : Subseq fun n => σ^[n] n₀",
+ "name": "Subseq_of_Iterate",
+ "displayName": "Subseq_of_Iterate",
+ "content":
+ "If a sequence `σ : ℕ → ℕ` grows faster than the identity, `n < σ n`,\nthen the orbit of any base point `n₀ : ℕ` under `σ` -- this means the sequence `n₀, σ n₀, σ^[2] n₀, ...` -- is a `Subseq`, that is, is strictly increasing.",
+ "category": "aₙ"}

@@ -1,6 +1,5 @@
 import { atom } from "jotai";
 import { LeanMonaco, LeanMonacoOptions } from 'lean4monaco'
-import { gameIdAtom } from "./location-atoms";
 import { levelProgressAtom, progressAtom } from "./progress-atoms";
 import { gameLspPort } from "../wasm/game-boot";
 import { Selection } from "./progress-types";
@@ -13,8 +12,12 @@ export const leanMonacoOptionsAtom = atom<LeanMonacoOptions>(get => {
   // CAUTION: this atom must stay stable across gameplay — app.tsx restarts
   // the whole LeanMonaco instance whenever it changes identity. difficulty
   // and inventory are therefore NOT read here; the wasm translation layer
-  // reads them live at didOpen time (see game-boot's providers).
-  const gameId = get(gameIdAtom)
+  // reads them live at didOpen time (see game-boot's providers). Nor is the
+  // game id: reading it (unused) made the atom change identity on landing →
+  // game, and the LeanMonaco restart that followed unregistered the lean4
+  // extension files for a moment in which the first lean4 models were
+  // created — the language configuration (bracket auto-close etc.) then
+  // loaded empty for the rest of the session.
   return {
   // wasm64 build: the Lean server runs in-tab (QED64 worker); the LSP client
   // attaches to a MessagePort instead of the relay websocket. The port exists

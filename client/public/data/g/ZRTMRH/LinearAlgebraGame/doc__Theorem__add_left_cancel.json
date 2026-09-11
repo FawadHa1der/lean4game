@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {G} [Add G] [IsLeftCancelAdd G] {a b c} (a✝ : a + b = a + c) : b = c",
+ "name": "add_left_cancel",
+ "displayName": "add_left_cancel",
+ "content":
+ "`add_left_cancel` is a proof that `a + b = a + c → b = c`. You can tell Lean what to add to the\nequation by `apply add_left_cancel (a := ????)`.",
+ "category": "Groups"}

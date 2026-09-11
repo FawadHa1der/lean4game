@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {A B} {f} (hf : Function.Injective f) {b} (hb : b ∈ Set.range f) : ∃! a : A, f a = b",
+ "name": "Function.Injective.exists_unique_of_mem_range",
+ "displayName": "Injective.exists_unique_of_mem_range",
+ "content": "(missing)",
+ "category": "Function"}

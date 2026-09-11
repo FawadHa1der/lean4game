@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "linarith",
+ "displayName": "linarith",
+ "content":
+ "The `linarith` tactic, with syntax `linarith [h₁, h₂]`, can solve goals that are linear arithmetic combinations of hypotheses `h₁, h₂` involving `≤`, `<`, `=` with addition and multiplication by constants.\n- ✅ **Linear:** `2*x + y - 3`, `z / 5`\n- ❌ **Not Linear:** `x*y`, `x^2`, `|x|`, `1/x`\n\nExample Usage:\nh1 : x < y\nh2 : y ≤ z\nGoal: x < z + 1\nlinarith [h1, h2]",
+ "category": "📖︎"}

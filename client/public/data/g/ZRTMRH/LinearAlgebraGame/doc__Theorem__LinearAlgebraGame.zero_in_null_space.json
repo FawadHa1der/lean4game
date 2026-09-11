@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " (K V W : Type) [Field K] [AddCommGroup V] [AddCommGroup W] [LinearAlgebraGame.VectorSpace K V]\n  [LinearAlgebraGame.VectorSpace K W] (T : V → W) (hT : LinearAlgebraGame.is_linear_map_v K V W T) :\n  0 ∈ LinearAlgebraGame.null_space_v K V W T",
+ "name": "LinearAlgebraGame.zero_in_null_space",
+ "displayName": "zero_in_null_space",
+ "content": "Zero is always in the null space.",
+ "category": "Linear Maps"}

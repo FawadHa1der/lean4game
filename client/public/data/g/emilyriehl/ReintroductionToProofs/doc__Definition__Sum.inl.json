@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Sum.inl",
+ "displayName": "inl",
+ "content":
+ "For types `A` and `B`, the function `Sum.inl : A → A ⊕ B` can be used to include elements of type `A` as elements of the coproduct type `A ⊕ B`.",
+ "category": "Sum"}

@@ -1,0 +1,6 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Bool.false",
+ "displayName": "false",
+ "content": "There is an element of type `Bool` called `Bool.false`.",
+ "category": "Bool"}

@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Fin",
+ "displayName": "Fin",
+ "content":
+ "For `n : ℕ`, `Fin n` is the set $\\{0, \\dots, n-1\\}$.\n\n(`Fin n` is to be distinguished from `Icc 0 (n-1)`:\n`Fin n` is a set, or more precisely a type, i.e. `Fin n : Type`,\nwhereas `Icc 0 (n-1) : Finset ℕ` is a finite subset of `ℕ`.)",
+ "category": "📖︎"}

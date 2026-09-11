@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {c} {h} (hc : c) {α} {t e} : (if c then t else e) = t",
+ "name": "if_pos",
+ "displayName": "if_pos",
+ "content": "(missing)",
+ "category": "Logic"}

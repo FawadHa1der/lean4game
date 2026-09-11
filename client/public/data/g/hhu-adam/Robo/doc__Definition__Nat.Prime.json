@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Nat.Prime",
+ "displayName": "Prime",
+ "content":
+ "For `n : ℕ`, `Prime n` means that `n` is a prime number.\nTo work with this definition, it is often helpful to rewrite it using the lemma\n`prime_def`.",
+ "category": "📖︎"}

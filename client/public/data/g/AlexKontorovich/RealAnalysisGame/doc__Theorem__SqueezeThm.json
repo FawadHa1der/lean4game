@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " (a b c : ℕ → ℝ) (L : ℝ) (aToL : SeqLim a L) (cToL : SeqLim c L) (aLeb : ∀ n, a n ≤ b n) (bLec : ∀ n, b n ≤ c n) :\n  SeqLim b L",
+ "name": "SqueezeThm",
+ "displayName": "SqueezeThm",
+ "content":
+ "If `a c : ℕ → ℝ`, with `a` and `c` both converging to `L`,\nand `b` is another sequence, squeezed between `a` and `c`, then `b` also converges to `L`.",
+ "category": "aₙ"}

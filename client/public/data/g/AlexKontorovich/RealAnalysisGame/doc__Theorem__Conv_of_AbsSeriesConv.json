@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " {a} (ha : AbsSeriesConv a) : SeriesConv a",
+ "name": "Conv_of_AbsSeriesConv",
+ "displayName": "Conv_of_AbsSeriesConv",
+ "content": "If `Series (fun n ↦ |a n|)` converges, then `Series a` converges.",
+ "category": "∑aₙ"}

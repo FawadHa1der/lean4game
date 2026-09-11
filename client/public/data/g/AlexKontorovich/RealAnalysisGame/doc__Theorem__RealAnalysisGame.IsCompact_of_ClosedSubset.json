@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement":
+ " {S T} (hST : S ⊆ T) (hT : RealAnalysisGame.IsCompact T) (hS : RealAnalysisGame.IsClosed S) :\n  RealAnalysisGame.IsCompact S",
+ "name": "RealAnalysisGame.IsCompact_of_ClosedSubset",
+ "displayName": "IsCompact_of_ClosedSubset",
+ "content": "Any closed subset of a compact set is compact.",
+ "category": "x∈U"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "use",
+ "displayName": "use",
+ "content":
+ "## Summary\n\nThe `use` tactic makes progress with goals which claim something *exists*.\nIf the goal claims that some `x` exists with some property, and you know\nthat `x = 37` will work, then `use 37` will make progress.\n\nBecause `a ≤ b` is notation for \\\"there exists `c` such that `b = a + c`\\\",\nyou can make progress on goals of the form `a ≤ b` by `use`ing the\nnumber which is morally `b - a` (i.e. `use b - a`)\n\nAny of the following examples is possible assuming the type of the argument passed to the `use` function is accurate:\n\n- `use 37`\n- `use a`\n- `use a * a + 1`",
+ "category": "📖︎"}

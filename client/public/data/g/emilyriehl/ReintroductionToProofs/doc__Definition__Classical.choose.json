@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Classical.choose",
+ "displayName": "choose",
+ "content":
+ "Given a proof `h : ∃ a : A, P a` for some `P : A → Prop`, the axiom of choice selects an element\n`h.choose : A`. The theorem `h.choose_spec` then proves the proposition `P (h.choose)`.",
+ "category": "Classical"}

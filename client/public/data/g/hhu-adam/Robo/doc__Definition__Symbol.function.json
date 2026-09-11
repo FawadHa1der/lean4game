@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "Symbol.function",
+ "displayName": "fun x ↦ _",
+ "content":
+ "The notation `fun x ↦ _` is used to define “anonymous functions.”\nFor example, `fun (x : ℤ) ↦  -x` defines the negation `ℤ → ℤ` without giving it a name.\nYou write the arrow `↦` as `\\maps` or `\\mapsto`.\nAlternatively, instead of `↦` you can use `=>`.",
+ "category": "Function"}

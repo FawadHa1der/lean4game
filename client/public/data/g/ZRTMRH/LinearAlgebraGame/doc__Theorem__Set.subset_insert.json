@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {α} (x : α) (s : Set α) : s ⊆ insert x s",
+ "name": "Set.subset_insert",
+ "displayName": "subset_insert",
+ "content":
+ "`subset_insert` is a proof that any set is a subset of itself with an element inserted. In Lean, the\nsyntax is as follows: if `s : Set T` is a set, and you have `x : T`, then `s ⊆ Set.insert x s`",
+ "category": "Sets"}

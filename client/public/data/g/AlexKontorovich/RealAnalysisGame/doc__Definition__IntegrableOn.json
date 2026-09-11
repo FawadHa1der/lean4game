@@ -1,0 +1,7 @@
+{"type": "Definition",
+ "statement": "",
+ "name": "IntegrableOn",
+ "displayName": "IntegrableOn",
+ "content":
+ "`(f : ℝ → ℝ) (a b : ℝ) := ∃ I, HasIntegral f a b I`\n\nA function `f : ℝ → ℝ` is `IntegrableOn` the interval `a` to `b` if there exists some `I` so that the integral $\\\\int_a^b f(x)dx$ converges and equals `I`.",
+ "category": "📖︎"}

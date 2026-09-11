@@ -1,0 +1,7 @@
+{"type": "Theorem",
+ "statement": " {σ} (hσ : ∀ i j, i < j → σ i < σ j) (n : ℕ) : n ≤ σ n",
+ "name": "SubseqGe",
+ "displayName": "SubseqGe",
+ "content":
+ "If a sequence `σ : ℕ → ℕ` is strictly increasing, then it grows at least linearly.",
+ "category": "aₙ"}

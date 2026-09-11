@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "have",
+ "displayName": "have",
+ "content":
+ "## Summary\n`have` is used to add new assumptions to your proof state.\n\n`have h : P := e` adds the assumption `h : P` to the current proof state if `e` is an expression that evaluates to evidence for `P`.\n\nIf `P` is omitted, the game will attempt to infer the proposition. Most tutorial worlds will introduce alternative expressions as a shorthand where you can omit parts of the expression if the proposition being introduced can be inferred.\n\n`and_intro e₁ e₂`, and `iff_intro e₁ e₂` can both be written as `⟨e₁, e₂⟩` as long as the context makes the proposition being constructed clear. This will often mean using the long hand or including the `P` when using the `have` tactic.\n```\n-- Should h be inferred as P ∧ Q or P ↔ Q?\n-- To be unambiguous\nexact h := ⟨e₁, e₂⟩\n-- must become\nexact h : P ∧ Q := ⟨e₁, e₂⟩\n-- or perhaps\nexact h := (⟨e₁, e₂⟩ : P ∧ Q)\n```\n\n### Example\n```\nObjects:\nP Q: Prop\nAssumptions:\nh : (P → Q) ∧ ¬Q\nGoal:\n¬P\n```\n---\n```\nhave hpq := h.left\n```\ncreates the new proof state where hpq is an assumption\n```\nObjects:\nP Q: Prop\nAssumptions:\nh : (P → Q) ∧ ¬Q\nhpq : P → Q\nGoal:\n¬P\n```",
+ "category": "📖︎"}

@@ -1,0 +1,8 @@
+{"type": "Theorem",
+ "statement":
+ " {V} [AddCommGroup V] [LinearAlgebraGame.VectorSpace ℂ V] [LinearAlgebraGame.InnerProductSpace_v V] (v : V) :\n  LinearAlgebraGame.orthogonal v v ↔ v = 0",
+ "name": "LinearAlgebraGame.ortho_self_zero",
+ "displayName": "ortho_self_zero",
+ "content":
+ "`ortho_self_zero` is a proof that the only vector orthogonal to itself is the zero vector. If `v` is\na vector, `ortho_self_zero v` is a proof that `ortho v v ↔ v = 0`.",
+ "category": "Inner Product"}

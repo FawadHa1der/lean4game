@@ -1,0 +1,6 @@
+{"type": "Theorem",
+ "statement": " (a : ℕ → ℝ) (ha : SeriesConv a) : SeqLim a 0",
+ "name": "LimZero_of_SeriesConv",
+ "displayName": "LimZero_of_SeriesConv",
+ "content": "If a series converges, then the terms go to zero",
+ "category": "∑aₙ"}

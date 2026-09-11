@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "let",
+ "displayName": "let",
+ "content":
+ "## Summary\n`let` acts very similarly to `have`. Instead of allowing you to create new hypotheses, `let` allows you\nto create new objects.\n\n## Using `rw` after `let` statements\nYou may want to use `rw` with the equalities you choose in a `let` statement. To do this, you must create\na new lemma stating this equality with `have`. The proof will simply be `rfl`.\n\n## Example\nIf you have objects `x y : V`, then you can say `let z := x + y`, and you will have a new object `z`,\nwhere `z = x + y` can be solvedd by `rfl`\n\n## Example\nIf you have a function `f : V → K`, and `v : V`, you can say `let f := fun x => f x • v`.",
+ "category": "📖︎"}

@@ -1,0 +1,7 @@
+{"type": "Tactic",
+ "statement": "",
+ "name": "induction",
+ "displayName": "induction",
+ "content":
+ "The tactic `induction n` performs an inductive proof over `n`.\nWith `induction n with d dh`, you can specify names for the induction variable (here: `d`)\nand the induction assumption (here: `hd`).\nThe tactic thus replaces the original proof goal with two new proof goals:\n* an induction start, in which `n = 0` is set, and\n* an induction step, in which the induction assumption `hd` is available to you.\n\n## Modifications in this game\n\nOutside of this game, `induction` is called `induction'`,\n`0` is initially written as `Nat.zero` and `d + 1` as `Nat.succ d`.\nThese terms are identical in definition, but occasionally need to be explicitly rewritten with\n`zero_eq` and `Nat.succ_eq_add_one`.",
+ "category": "📖︎"}
