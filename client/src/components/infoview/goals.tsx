@@ -397,6 +397,13 @@ export const currentLevel = { key: "" }
  * before the freshly started client reports itself running. */
 export const lastLoadError = { message: "" }
 
+/** Sequence of proof-state requests: a reply is applied only if no newer
+ * request was sent meanwhile. In editor mode every keystroke asks for the
+ * state and the server answers out of order under load — observed: the
+ * finished proof's `completed:true` replies followed by a stale
+ * `completed:false` one, which hid the completion until the pane reloaded. */
+let proofRequestSeq = 0
+
 export function loadGoals(
   rpcSess: RpcSessionAtPos,
   uri: string,
@@ -406,6 +413,7 @@ export function loadGoals(
   setCrashed: React.Dispatch<React.SetStateAction<boolean>>,
   attempt = 0) {
 console.info('sending rpc request to load the proof state')
+const mySeq = ++proofRequestSeq
 
 rpcSess.call('Game.getProofState',
     {
@@ -416,6 +424,10 @@ rpcSess.call('Game.getProofState',
   (proof) => {
     if (currentLevel.key && currentLevel.key !== `${worldId}/${levelId}`) {
       console.info(`proof state for ${worldId}/${levelId} arrived after leaving it — ignored`)
+      return
+    }
+    if (mySeq !== proofRequestSeq) {
+      console.info(`proof state reply ${mySeq} superseded by request ${proofRequestSeq} — ignored`)
       return
     }
     if (typeof proof !== 'undefined') {

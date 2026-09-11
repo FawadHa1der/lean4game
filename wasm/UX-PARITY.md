@@ -676,8 +676,38 @@ D13 (Robo's tile lists an untranslated `[Game] Prerequisites` key — the
 tile now drops untranslated keys), D14 (no dark theme — inherited from
 upstream, a theming pass is a separate item).
 
-**Deep play of every game (tester "play")** is recorded in the next
-subsection.
+**Deep play of every game (tester "play", same build, one persistent
+profile, loopback).** Catalog smoke over all ten games from a fresh profile:
+every game boots to serving in 5.4–7.2 s and completes its level-1 proof
+(wire 305–564 MB per game including the shared runtime on the first one).
+Deep play on a mid-game level per game — statement, intro hints, the taught
+tactic in the inventory, the proof one tactic at a time with a fresh goal
+pane after each step, "Level completed! 🎉", Next loads the following level,
+Previous shows the completed state:
+
+| game | level | boot s | first goal s | steps | completed at |
+| --- | --- | --- | --- | --- | --- |
+| NNG4 | Addition 1 (`induction`) | 5.5 | 5.7 | 6 | 14.0 s |
+| STG4 | Complement 1 (`by_contra`) | 5.5 | 6.2 | 2 | 10.5 s |
+| ReintroductionToProofs | ConjunctionWorld 1 (`constructor`) | 5.5 | 5.5 | 3 | 10.8 s |
+| KnightsAndKnaves | Logic 7 (`cases`) | 5.5 | 5.8 | 3 | 11.6 s |
+| NumberTheoryGame | Congruence 8 (`induction'`) | 5.5 | 5.8 | 6 | 15.0 s |
+| RealAnalysisGame | Lecture6 5 (`cases'`) | 5.5 | 5.9 | 5 | 14.0 s |
+| Robo | Implis 1 (`intro`) | 5.5 | 6.2 | 4 | 12.3 s |
+| lean4game-logic | ImpTactic 1 (`apply`) | 5.5 | 5.8 | 2 | 9.9 s |
+| LinearAlgebraGame | LinearMapsWorld 1 (`unfold`) | 6.5 | 6.5 | 2 | 10.9 s |
+
+Editor mode (Monaco) completes the same proofs on the logic game and
+RealAnalysisGame; the reload storm on NNG4 (reload, six 250 ms switches,
+reload, six at 250 ms, six at 100 ms) ends serving with the goal rendered
+and no renderer crash. Console noise per boot: the empty `console.error`
+from lean4monaco's message strategy (D9) and a few "No connection to Lean"
+warnings before the client reports running; nothing else. One intermittent
+defect surfaced (1 of 3 typed editor-mode runs): a stale `Game.getProofState`
+reply applied after the finished proof's replies hid the completion until
+the pane reloaded — fixed by dropping replies superseded by a newer request
+(`goals.tsx`, `proofRequestSeq`).
+
 
 
 ## Open

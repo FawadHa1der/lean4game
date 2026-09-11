@@ -45,6 +45,12 @@
       "expectedRaw": {
         "runtime": "wasm64-d77d34b97592d014+slim",
         "bytes": 569269949
+      },
+      "probe2": {
+        "world": "Addition",
+        "level": 1,
+        "proof": "induction n with d hd\nrw [add_zero]\nrfl\nrw [add_succ]\nrw [hd]\nrfl",
+        "teaches": "induction (introduced by this level; the game's induction wrapper with the `with d hd` names)"
       }
     },
     {
@@ -70,6 +76,12 @@
       "expectedRaw": {
         "runtime": "wasm64-d77d34b97592d014+slim",
         "bytes": 665285845
+      },
+      "probe2": {
+        "world": "Complement",
+        "level": 1,
+        "proof": "by_contra h3\nhave h4 : x ∈ B := h3 h1\nexact h2 h4",
+        "teaches": "by_contra (introduced by this level) and the goal-creating have from the compat Mathlib.Tactic.Have"
       }
     },
     {
