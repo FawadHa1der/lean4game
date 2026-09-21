@@ -55,6 +55,9 @@ export interface GameTranslationConfig {
 }
 
 export const PROOF_START_LINE = 2;
+/** L6: the error a request about an unknown level's document is answered
+ * with (goals.tsx reads it: not a crash, not retried). */
+export const UNKNOWN_LEVEL_ERROR = "this level does not exist in the loaded game";
 const DEFAULT_WORKER_URI = "file:///game/Metadata.lean";
 
 function shift(line: number, offset: number): number {
@@ -140,7 +143,16 @@ export class GameTranslation {
       // be rewritten with the real level data, which only exists once the
       // boot has progressed. Translation is stateful and order-dependent, so
       // it runs exactly once per message, in order, at flush.
-      if (this.serverPort) this.serverPort.postMessage(this.toServer(e.data as JsonRpc));
+      // L14: a game switch is about to reload the page — nothing reaches the
+      // checker. Kept RAW, not dropped: the switch is cancellable (resume()).
+      // Requests beyond a bound are not kept (the pane retries every few
+      // seconds through a wait that can last minutes); notifications always.
+      if (this.suspended) {
+        const m = e.data as JsonRpc;
+        if (m.id === undefined || this.pendingToServer.length < 256) this.pendingToServer.push(m);
+        return;
+      }
+      if (this.serverPort) this.forward(e.data as JsonRpc);
       else this.pendingToServer.push(e.data as JsonRpc);
     };
     this.innerSide.start?.();
@@ -157,14 +169,72 @@ export class GameTranslation {
    * in order. */
   attachServer(serverPort: MessagePort): void {
     this.serverPort = serverPort;
-    serverPort.onmessage = (e) => this.innerSide.postMessage(this.toClient(e.data as JsonRpc));
+    serverPort.onmessage = (e) => { if (!this.suspended) this.innerSide.postMessage(this.toClient(e.data as JsonRpc)); };
     serverPort.start?.();
-    for (const m of this.pendingToServer) serverPort.postMessage(this.toServer(m));
+    for (const m of this.pendingToServer) this.forward(m);
     this.pendingToServer = [];
   }
 
-  /** relay: client → server rewrites. */
-  private toServer(message: JsonRpc): JsonRpc {
+  /** L14: the page is about to reload into ANOTHER game (game-boot's switch
+   * branch). From this instant the outgoing game's session must see nothing:
+   * React already mounts the new game's level, and its didOpen — wrapped
+   * with this game's (missing) level data — reached the old checker, which
+   * answered "No RPC method 'Game.getProofState'" until the reload. Client
+   * traffic is held back untranslated, server traffic is no longer relayed. */
+  suspend(): void {
+    this.suspended = true;
+    // Before the server attached the buffer already holds the boot's early
+    // traffic (initialize, …) — that must survive a resume.
+    if (this.serverPort) this.pendingToServer = [];
+  }
+
+  /** L14: the switch was cancelled (the player went back to the bound game
+   * while the reload waited for running prepares). The held traffic flushes
+   * in order: the other game's didOpen is caught by the L6 unknown-level
+   * defence (warned, never forwarded, its requests answered locally) and the
+   * bound game's didOpen that follows clears it. */
+  resume(): void {
+    if (!this.suspended) return;
+    this.suspended = false;
+    if (!this.serverPort) return; // attachServer flushes
+    const queued = this.pendingToServer;
+    this.pendingToServer = [];
+    // Requests held from BEFORE the last didOpen belong to a document that
+    // has been superseded (the other game's level, or this game's previous
+    // one). Their issuers are unmounted; they are dropped UNANSWERED, as they
+    // were before the switch became cancellable — the language client logs
+    // every error answer (-32602 and -32800 alike) as a console error.
+    let lastOpen = -1;
+    queued.forEach((m, i) => { if (m.method === "textDocument/didOpen") lastOpen = i; });
+    queued.forEach((m, i) => {
+      const aboutDoc = m.params?.textDocument?.uri !== undefined || m.params?.uri !== undefined;
+      if (i < lastOpen && m.id !== undefined && m.method !== undefined && aboutDoc) {
+        return;
+      }
+      this.resuming = true;
+      try { this.forward(m); } finally { this.resuming = false; }
+    });
+  }
+  /** Set while resume() flushes: the other game's document requests that
+   * follow its (unforwarded) didOpen are dropped unanswered too. */
+  private resuming = false;
+  private suspended = false;
+
+  /** L6: set by a didOpen for a level the loaded game has no data for; the
+   * next didOpen of a known level clears it. While set, nothing about that
+   * document reaches the checker (see toServer). */
+  private unknownLevel = false;
+
+  /** Translate and send — unless the translation swallowed the message (L6:
+   * a document of a level this game does not contain is never forwarded). */
+  private forward(message: JsonRpc): void {
+    const out = this.toServer(message);
+    if (out && !this.suspended) this.serverPort!.postMessage(out);
+  }
+
+  /** relay: client → server rewrites. Returns null for a message that must
+   * not reach the checker (L6: the document of an unknown level). */
+  private toServer(message: JsonRpc): JsonRpc | null {
     if (message.method === "initialize") {
       this.difficulty = message.params?.initializationOptions?.difficulty;
       this.inventory = message.params?.initializationOptions?.inventory;
@@ -207,8 +277,18 @@ export class GameTranslation {
 
       const levelData = this.config.levelData(this.worldId, this.levelId);
       if (!levelData) {
-        console.error(`[game-translation] missing level data for ${this.worldId}/${this.levelId}`);
+        // L6: wrapping with module "" produced `import  import GameServer.Runner`
+        // — a parser error at 0:6 the pane blamed on the player's proof, and a
+        // headerRefused session without `Game.getProofState`. The level does
+        // not exist in this game (a hand-edited or stale URL; the route guard
+        // in level.tsx normally never mounts an editor for it): forward
+        // nothing. A warning, not an error — a game switch (L14) is suspended
+        // before it gets here, so this line now only means a bad route.
+        console.warn(`[game-translation] no level data for ${this.worldId}/${this.levelId} — the document is not forwarded`);
+        this.unknownLevel = true;
+        return null;
       }
+      this.unknownLevel = false;
       // Freshest wins: live provider > initialize-time capture > default.
       this.difficulty = this.config.difficulty?.() ?? this.difficulty ?? 1;
       this.inventory = this.config.inventory?.() ?? this.inventory ?? [];
@@ -216,6 +296,14 @@ export class GameTranslation {
       this.module = levelData?.module ?? "";
       message.params.textDocument.text = this.wrapDocument(message.params.textDocument.text);
       this.onDidOpen?.(message);
+    } else if (this.unknownLevel && (message.params?.textDocument?.uri !== undefined || message.params?.uri !== undefined)) {
+      // L6: document traffic for the unknown level — notifications are
+      // dropped, requests answered here (the checker holds no such document;
+      // an rpc call would log "No RPC method" once per pane retry).
+      if (message.id !== undefined && message.method !== undefined) {
+        if (!this.resuming) this.innerSide.postMessage({ jsonrpc: "2.0", id: message.id, error: { code: -32602, message: `${UNKNOWN_LEVEL_ERROR}: ${this.worldId}/${this.levelId}` } });
+      }
+      return null;
     } else if (message.method === "textDocument/didChange") {
       // The resident front door declares FULL-text sync (change = 1), so the
       // editor sends the whole player text on every edit; forwarding it as-is

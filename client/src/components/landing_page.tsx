@@ -21,7 +21,7 @@ import { preferencesAtom } from '../store/preferences-atoms';
 import { completedLevelCountsAtom } from '../store/progress-atoms';
 import { gameTilesAtom } from '../store/tiles-atoms';
 import { fallbackSnapshotName, gameIdOf, tileSnapshotStates, type ApiGame, type TileSnapshotState } from '../wasm/games-api';
-import { prepareGame, prepareStatusesAtom, removeRawSnapshot, storageSummary } from '../wasm/game-cache';
+import { onRemoteCacheChange, prepareGame, prepareStatusesAtom, removeRawSnapshot, storageSummary } from '../wasm/game-cache';
 import { boundEnvironmentAtom } from '../wasm/game-boot';
 import { bootStatusAtom } from '../store/boot-atoms';
 
@@ -97,7 +97,7 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
       <progress aria-label={progressText} value={prep.bytes} max={prep.total} />
       <div>{progressText}</div>
       <div className="note">
-        {t("Prepare note", { defaultValue: "Keeps downloading while you browse this site; reloading the page cancels it." })}
+        {t("Prepare note", { defaultValue: "Keeps downloading while you browse this site; reloading the page cancels it; Prepare then starts over (bytes your browser already fetched are reused)." })}
         {prep.memoryNote ? ` ${t("Prepare memory note", { defaultValue: "Preparing a game while another one is loaded needs extra memory on this device." })}` : ''}
       </div>
     </>
@@ -218,6 +218,16 @@ function LandingPage() {
   // download was removed): the tile states and the storage meter re-probe.
   const [cacheGeneration, setCacheGeneration] = React.useState(0)
   const onCacheChanged = React.useCallback(() => setCacheGeneration((n) => n + 1), [])
+  // L12: a region another tab prepared, removed or booted — re-probe when it
+  // says so (BroadcastChannel 'l4g-cache'), and, for browsers without the
+  // channel, whenever this tab is looked at again.
+  React.useEffect(() => {
+    const off = onRemoteCacheChange(onCacheChanged)
+    const onVisible = () => { if (document.visibilityState === 'visible') onCacheChanged() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onCacheChanged)
+    return () => { off(); document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('focus', onCacheChanged) }
+  }, [onCacheChanged])
   // The game loaded in this tab caches its region through its own boot (no
   // prepare status flips for it): re-probe the tiles once that boot is ready.
   const [bootStatus] = useAtom(bootStatusAtom)

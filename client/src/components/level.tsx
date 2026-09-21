@@ -23,13 +23,14 @@ import '@fontsource/roboto/400.css'
 import '@fontsource/roboto/500.css'
 import '@fontsource/roboto/700.css'
 import '../css/level.css'
+import '../css/error_page.css'
 import { LevelAppBar } from './app_bar'
 import { isLastStepWithErrors, lastStepHasErrors } from './infoview/goals'
 import { useTranslation } from 'react-i18next'
 import { useGameTranslation } from '../utils/translation'
 import { InventoryPanel } from './inventory/inventory_panel'
 import { useAtom } from 'jotai'
-import { codeAtom, leanMonacoAtom, lockEditorModeAtom, proofAtom, selectionsAtom, typewriterModeAtom } from '../store/editor-atoms'
+import { codeAtom, crashedAtom, interimDiagsAtom, leanMonacoAtom, lockEditorModeAtom, proofAtom, selectionsAtom, typewriterModeAtom } from '../store/editor-atoms'
 import { gameIdAtom, levelIdAtom, worldIdAtom } from '../store/location-atoms'
 import { gameInfoAtom, levelInfoAtom } from '../store/query-atoms'
 import { deletedChatAtom, helpAtom, selectedStepAtom } from '../store/chat-atoms'
@@ -68,7 +69,7 @@ function Level() {
   const [gameId] = useAtom(gameIdAtom)
   const [worldId] = useAtom(worldIdAtom)
   const [levelId] = useAtom(levelIdAtom)
-  const [{ data: gameInfo }] = useAtom(gameInfoAtom)
+  const [{ data: gameInfo, isLoading: gameInfoIsLoading }] = useAtom(gameInfoAtom)
 
   // Load the namespace of the game
   i18n.loadNamespaces(gameId ?? "").catch(err => {
@@ -83,8 +84,49 @@ function Level() {
   }, [gameInfo?.title, i18n.language])
 
 
+  // L6 route guard: a world or level the loaded game.json does not contain
+  // (a hand-edited or stale URL) must not mount an editor — its document
+  // would be wrapped with no level module and the pane blamed the player's
+  // proof for the parser error. Wait for game.json (no editor, no didOpen
+  // meanwhile); if it cannot be read at all, fall through as before.
+  if (gameInfoIsLoading && !gameInfo) {
+    return <div className="app-content loading"><CircularProgress /></div>
+  }
+  if (gameInfo?.worldSize && worldId && levelId != null) {
+    const size = gameInfo.worldSize[worldId]
+    if (size === undefined || !Number.isInteger(levelId) || levelId < 0 || levelId > size) {
+      return <LevelNotFound />
+    }
+  }
   if (levelId == 0) return <Introduction />
   return <PlayableLevel key={`${worldId}/${levelId}`} />
+}
+
+/** L6: the route names a world or level this game does not have. */
+function LevelNotFound() {
+  const { t } = useTranslation()
+  const { t: gT } = useGameTranslation()
+  const [gameId, navigateToGame] = useAtom(gameIdAtom)
+  const [worldId] = useAtom(worldIdAtom)
+  const [levelId] = useAtom(levelIdAtom)
+  const [{ data: gameInfo }] = useAtom(gameInfoAtom)
+  const game = gameInfo?.title ? gT(gameInfo.title) : (gameId ?? '')
+  const knownWorld = !!(worldId && gameInfo?.worldSize?.[worldId] !== undefined)
+  return <div id="error-page" className="level-not-found">
+    <div className="error-message">
+      <h1>{t("Level not found")}</h1>
+      <p>
+        {knownWorld
+          ? <>Level {String(levelId)} of the world &quot;{worldId}&quot; does not exist in {game} (the world has {gameInfo?.worldSize?.[worldId!]} levels).</>
+          : <>The world &quot;{worldId}&quot; does not exist in {game}.</>}
+      </p>
+      <p style={{ marginBottom: '1rem' }}>
+        <Button onClick={() => { if (gameId) navigateToGame(gameId) }}>
+          <FontAwesomeIcon icon={faHome} />&nbsp;{t("Back to the world map")}
+        </Button>
+      </p>
+    </div>
+  </div>
 }
 
 function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visible: boolean}) {
@@ -364,10 +406,35 @@ function PlayableLevel() {
       })()
 
       return () => {
+        // L1: a model the player typed into is DIRTY, and the text-model
+        // service never disposes a dirty model — it outlived the level, and
+        // the next visit's createModelReference(uri, code) resolved the stale
+        // model instead of the stored progress (an erased proof came back,
+        // replayed, and re-saved completed:true). A soft revert clears the
+        // dirty flag synchronously without touching the text, so the model is
+        // disposed with its last reference and every visit starts from
+        // `codeAtom` with a normal didOpen — the path unedited levels took.
+        try {
+          void (leanMonacoEditor.modelRef?.object as { revert?: (o: { soft: boolean }) => Promise<void> } | undefined)
+            ?.revert?.({ soft: true })?.catch?.(() => {})
+        } catch { /* a model that never resolved */ }
         leanMonacoEditor.dispose()
       }
     }
   }, [leanMonaco, worldId, levelId])
+
+  // L1 (part 3): the proof atoms are global and outlive the level — the
+  // previous level's `completed` proof was still in proofAtom when the next
+  // level's DualEditorMain mounted, and marked the NEW level completed.
+  // Layout effect: it must run before the children's passive effects read it.
+  const [, setProofForLevel] = useAtom(proofAtom)
+  const [, setCrashedForLevel] = useAtom(crashedAtom)
+  const [, setInterimDiagsForLevel] = useAtom(interimDiagsAtom)
+  React.useLayoutEffect(() => {
+    const reset = () => { setProofForLevel(undefined); setCrashedForLevel(false); setInterimDiagsForLevel([]) }
+    reset()
+    return reset
+  }, [])
 
   // Persist editor text into progress whenever the model changes.
   useEffect(() => {
@@ -525,7 +592,8 @@ function PlayableLevel() {
                   pageNumber={pageNumber} setPageNumber={setPageNumber}
                   isLoading={levelInfoIsLoading}
                   levelTitle={(mobile ? "" : t("Level")) + ` ${levelId} / ${worldId ? gameInfo?.worldSize?.[worldId] ?? "" : ""}` +
-                    (levelInfo?.title && ` : ${gT(levelInfo?.title ?? "")}`)}
+                    // L6: `undefined &&` concatenated the literal "undefined"
+                    (levelInfo?.title ? ` : ${gT(levelInfo.title)}` : '')}
                   />
                 {mobile?
                   // TODO: This is copied from the `Split` component below...

@@ -11,6 +11,7 @@ import { InteractiveMessage } from '../../../../node_modules/vscode-lean4/lean4-
 import { RpcContext, useRpcSessionAtPos } from '../../../../node_modules/vscode-lean4/lean4-infoview/src/infoview/rpcSessions'
 
 import { useTranslation } from 'react-i18next'
+import { stripWidgetEmbeds } from './msg-embed'
 import { useAtom } from 'jotai'
 import { typewriterModeAtom } from '../../store/editor-atoms'
 
@@ -45,7 +46,7 @@ function Error({error, typewriterMode} : {error : InteractiveDiagnostic, typewri
   return <div className={severityClass + ' ml1 message'}>
     {!typewriterMode && <p className="mv2">{title}</p>}
     <pre className="font-code pre-wrap">
-      <InteractiveMessage fmt={message} />
+      <InteractiveMessage fmt={stripWidgetEmbeds(message)} /* L3: widget embeds → their alt text */ />
     </pre>
   </div>
 }
@@ -101,7 +102,7 @@ const MessageView = React.memo(({uri, diag}: MessageViewProps) => {
         <div className={severityClass + ' ml1 message'}>
             {!(typewriterMode) && <p className="mv2">{title}</p>}
             <pre className="font-code pre-wrap">
-                <InteractiveMessage fmt={message} />
+                <InteractiveMessage fmt={stripWidgetEmbeds(message)} /* L3: widget embeds → their alt text */ />
             </pre>
         </div>
     // </details>

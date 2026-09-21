@@ -28,6 +28,14 @@ export const levelInfoAtom = atomWithQuery<LevelInfo>((get) => {
   const gameId = get(gameIdAtom)
   const worldId = get(worldIdAtom)
   const levelId = get(levelIdAtom)
+  // L6: the same guard as Level() (level.tsx). On an in-app navigation from a
+  // mounted level to a bad one the still-mounted subscribers re-key this query
+  // before React swaps in the not-found page — one level__<W>__<n>.json 404
+  // per such navigation on the deployed site. Level 0 (the world intro) has
+  // no level file either. Until game.json is known nothing can be ruled out.
+  const worldSize = get(gameInfoAtom).data?.worldSize
+  const size = worldId ? worldSize?.[worldId] : undefined
+  const exists = !worldSize || (size !== undefined && Number.isInteger(levelId) && levelId! >= 1 && levelId! <= size)
   return {
     queryKey: ['levelInfo', gameId, worldId, levelId],
     queryFn: async () => {
@@ -37,6 +45,6 @@ export const levelInfoAtom = atomWithQuery<LevelInfo>((get) => {
     // the level's subscribers are still mounted; without the guard the query
     // fetched /data/undefined/level__undefined__undefined.json on every exit
     // (a console error offline). Same guard as gameInfoAtomFamily.
-    enabled: !!gameId && !!worldId && levelId != null,
+    enabled: !!gameId && !!worldId && levelId != null && exists,
   }
 })

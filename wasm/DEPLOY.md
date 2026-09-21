@@ -153,3 +153,28 @@ every `index.json` revalidate. The chunks are `application/octet-stream`,
 so the edge never recompresses them and the client's SHA-256 verification
 sees the bytes as uploaded (the local `scripts/serve-dist.mjs` exists for
 the same reason: vite's preview gzip broke the digests).
+
+## Range requests
+
+`infra/worker.js` honours single-range GETs on the R2-served paths
+(`/runtime/`, `/profiles/`, `/snapshots/`): every artifact response carries
+`Accept-Ranges: bytes`; a `Range: bytes=…` request (`a-b`, `a-`, `-n`) is
+handed to R2 as `get(key, { range: request.headers })` and answered `206`
+with `Content-Range` and the partial `Content-Length`; `If-Range` is
+compared with the object's etag and a mismatch (or a date / weak validator)
+gets the full `200`; a range past the end gets `416` with
+`Content-Range: bytes */<size>` (`no-store`); multi-range and malformed
+headers are ignored (full `200`), and HEAD is answered as before. What this
+enables today is the browser's own resume: a snapshot download cut by a
+reload, a closed tab or an outage leaves a truncated entry in Chrome's HTTP
+cache (`.snapz` requests bypass the service worker), and the next fetch
+sends `Range` + `If-Range` for the missing tail only — before this the
+origin answered `200` and the whole 150–280 MB crossed the network again.
+The client does **not** resume yet: `snapshot-prefetch.worker.js` still
+discards its `.raw.partial` and re-inflates from byte 0 (the partial is the
+inflated stream, so a byte-range resume of it would need saved inflater
+state); only the compressed bytes already fetched now come from disk. It
+ships with the shell (`scripts/deploy-app.sh`), nothing is re-uploaded to
+R2. Tests: `node --test infra/worker.test.mjs`; after a deploy,
+`curl -s -o /dev/null -D - -H 'Range: bytes=1000000-1000099' <a .snapz URL>`
+→ `206`, `content-range: bytes 1000000-1000099/<size>`, `content-length: 100`.

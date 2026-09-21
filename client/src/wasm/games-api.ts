@@ -61,6 +61,43 @@ export async function findApiGame(gameId: string): Promise<ApiGame | null> {
   return rows.find((row) => gameIdOf(row) === gameId) ?? null;
 }
 
+/** L11: is `g/<owner>/<game>` a game this site serves? UNKNOWN only on
+ * positive evidence — the catalog was read and has no row, AND game.json
+ * was answered with a refusal (404, or a single-page fallback's HTML). A
+ * network failure of either is no evidence (offline play of a cached game
+ * must keep working), so it counts as known — and so is any other status
+ * (403/429/5xx: a transient edge refusal is not "this game does not exist";
+ * the same rule as checkSnapshotPairing). The wait is bounded: after
+ * GAME_KNOWN_WAIT_MS without an answer (a stalled link: fetch hangs instead
+ * of failing) the caller gets "known" WITHOUT memoising it, so the page
+ * renders and the settled check still decides later calls. Memoised per id; the router
+ * renders the not-found page and the boot does not start for an unknown id
+ * (it used to render an empty game shell and log a boot failure twice). */
+const knownGames = new Map<string, Promise<boolean>>();
+const GAME_KNOWN_WAIT_MS = 4000;
+export function gameKnown(gameId: string): Promise<boolean> {
+  return Promise.race([gameKnownCheck(gameId), new Promise<boolean>((r) => setTimeout(() => r(true), GAME_KNOWN_WAIT_MS))]);
+}
+/** The unbounded check (the router follows it after a timed-out gameKnown,
+ * so a late "unknown" still reaches the not-found page). */
+export function gameKnownCheck(gameId: string): Promise<boolean> {
+  let p = knownGames.get(gameId);
+  if (!p) {
+    p = (async () => {
+      try {
+        if (await findApiGame(gameId)) return true;
+      } catch { return true; }
+      try {
+        const r = await fetch(`/data/${gameId}/game.json`, { method: "HEAD" });
+        const html = /text\/html/i.test(r.headers.get("content-type") ?? "");
+        return !(html || r.status === 404 || r.status === 410);
+      } catch { return true; }
+    })();
+    knownGames.set(gameId, p);
+  }
+  return p;
+}
+
 declare const __QED64_BUILD_ID__: string;
 
 let manifestPromise: Promise<RuntimeManifest> | null = null;

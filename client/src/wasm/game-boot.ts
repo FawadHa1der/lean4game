@@ -41,10 +41,10 @@ import type { SnapshotEntry, SnapshotIndex } from "qed64/src/runtime/snapshots";
 import { atom, getDefaultStore } from "jotai";
 import { difficultyAtom, progressAtom } from "../store/progress-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
-import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing } from "../store/boot-atoms";
+import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing, publishNetworkHold } from "../store/boot-atoms";
 import { rememberGamedata } from "./gamedata-cache";
-import { MiB, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
-import { claimSnapshotForBoot, inFlightPrepare, inFlightRegions, prepareStatusesAtom, sweepStaleSnapshots, warmRuntimeCache, type PrepareStatus } from "./game-cache";
+import { MiB, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnown, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
+import { claimSnapshotForBoot, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareStatusesAtom, sweepStaleSnapshots, warmRuntimeCache, type PrepareStatus } from "./game-cache";
 
 export interface GameDataBundle {
   gameName: string;
@@ -170,15 +170,19 @@ let boundGameId: string | null = null;
 let sweptOnce = false;
 /** A game switch is waiting for running prepares before it reloads. */
 let switchPending = false;
+/** Each switch attempt's token: a cancelled attempt's waiter must neither
+ * reload nor paint the banner, also when a LATER switch is pending again. */
+let switchGen = 0;
 
 /** Mirror a prepare's status onto the boot banner while `until` runs: the
  * running region's bytes as progress (the worker's inflated offsets — the
  * level pane says what they unpack to), a plain busy label otherwise.
  * Renders once immediately: jotai's sub fires only on the NEXT change, and
  * a wait that started between two 64 MiB ticks showed no bytes at all. */
-async function mirrorPrepare<T>(ui: StatusSink, snapshot: string | null, label: string, until: Promise<T>): Promise<T> {
+async function mirrorPrepare<T>(ui: StatusSink, snapshot: string | null, label: string, until: Promise<T>, live: () => boolean = () => true): Promise<T> {
   const store = getDefaultStore();
   const render = () => {
+    if (!live()) return; // a cancelled game switch: the banner belongs to the bound game again
     const st: PrepareStatus | undefined = snapshot ? store.get(prepareStatusesAtom)[snapshot] : undefined;
     if (st?.phase === "running") ui.progress(label, { phase: "snapshot", loaded: st.bytes, total: st.total, unit: "bytes" });
     else ui.busy(label);
@@ -330,8 +334,32 @@ let relayRef: LspRelay | null = null;
  * SWITCHING_RE would not recognise. */
 let relayRebooting = false;
 
+/** L4/L5 latch: the relay is halted. A session the breaker left behind can
+ * still run its start() after the settle and publish "starting Lean" over
+ * the failure card — for good, since nothing follows it (seen live: an
+ * endless spinner with the relay halted and no Reload). Busy/progress labels
+ * are dropped while it is set; any non-halted relay status clears it. */
+let relayHalted = false;
+
+/** The underlying reason of the last snapshot failure. The vendored session
+ * dies with the same "snapshot '<name>' failed to load" for a cut download,
+ * a corrupt region, an unpaired snapshot and an allocation failure alike; the
+ * real error only reaches this side as qed64-boot's progress label
+ * "<name> snapshot failed: <error>". Recorded BEFORE the halted gate, reset
+ * at each session's "starting Lean". Read by looksLikeNetworkDeath. */
+let lastSnapshotFailure = "";
+function noteSnapshotFailure(rawLabel: string): void {
+  const m = /snapshot failed: (.*)$/.exec(rawLabel);
+  if (m) lastSnapshotFailure = m[1];
+  // (not while halted: a session the breaker left behind may still publish
+  // "starting Lean", and the halted classification must keep its evidence)
+  else if (!relayHalted && /^starting Lean$/i.test(rawLabel.trim())) lastSnapshotFailure = "";
+}
+
 const consoleSink: StatusSink = {
   busy: (rawLabel) => {
+    noteSnapshotFailure(rawLabel);
+    if (relayHalted) { console.info(`[game-boot] (halted, not shown) ⏳ ${rawLabel}`); return; }
     const label = humanizeLabel(rawLabel);
     console.info(`[game-boot] ⏳ ${rawLabel}`);
     publishCheckerActivity("busy", label, !bootFinishedOnce, relayRebooting || !bootFinishedOnce);
@@ -340,6 +368,8 @@ const consoleSink: StatusSink = {
     }
   },
   progress: (rawLabel, info) => {
+    noteSnapshotFailure(rawLabel);
+    if (relayHalted) return;
     const label = humanizeLabel(rawLabel);
     console.debug(`[game-boot] … ${rawLabel}`, info ?? "");
     publishCheckerActivity("busy", label, !bootFinishedOnce, relayRebooting || !bootFinishedOnce);
@@ -371,11 +401,19 @@ const consoleSink: StatusSink = {
  * permanent idle until the document changes or the page re-arms it. */
 let everServed = false;
 function markServed(ui: StatusSink): void {
+  // A served boot restores the full automatic-recovery budget: a long-lived
+  // tab that survived three flaps gets a fourth recovery, and the one guarded
+  // reload of the no-document re-arm is available again.
+  autoRearms = 0;
+  try { sessionStorage.removeItem("l4g-network-reload"); } catch { /* storage blocked */ }
   if (everServed) return;
   everServed = true;
   bootFinishedOnce = true;
   (globalThis as { qed64GameReady?: boolean }).qed64GameReady = true;
   ui.idle("Lean ready");
+  // L12: the bound game's region landed in OPFS through this boot — other
+  // tabs' landing tiles re-probe.
+  notifyCacheChanged();
   void warmOfflineCache();
 }
 
@@ -399,6 +437,110 @@ async function warmOfflineCache(): Promise<void> {
   }
 }
 
+/* ---- L4: network-aware recovery -------------------------------------------
+ * The vendored relay counts every failed boot as a death and reboots after
+ * the injected settle; three deaths in two minutes halt it for good. A
+ * download cut by an outage is such a death ("snapshot 'nng4' failed to
+ * load", RUNTIME_FETCH_FAILED, "Failed to fetch"), so a 20 s outage burned
+ * all three attempts in its first 10 s and the page stayed dead after the
+ * network came back. Two game-side measures, no vendored change:
+ *  1. the settle holds the reboot until a cheap same-origin probe succeeds
+ *     (2, 4, 8, 15, 15 … s backoff, and at once on the `online` event);
+ *  2. a relay that halted anyway for a network-shaped death is re-armed
+ *     automatically once the probe succeeds (at most MAX_AUTO_REARMS times
+ *     per page — a snapshot that "fails to load" with the network up is not
+ *     retried for ever). */
+/* Classified by the UNDERLYING error text, never by the generic death: the
+ * session throws "snapshot '<name>' failed to load" for every snapshot
+ * failure (cut download, corrupt region, SNAPSHOT_UNPAIRED, allocation) and
+ * RUNTIME_FETCH_FAILED is also the worker's code for "chunk N: HTTP 404" and
+ * a failed SHA-256 check. A corrupt snapshot with the network up was held
+ * under the "download was interrupted" card and re-armed three times (12
+ * boots, 24 .snapz GETs) before the right card showed. */
+const NETWORK_DETAIL = /Failed to fetch|NetworkError|Load failed|network (error|changed)|ERR_(INTERNET|NETWORK|CONNECTION|TUNNEL|NAME)/i;
+const SNAPSHOT_DEATH = /^snapshot '.*' failed to load$/;
+const looksLikeNetworkDeath = (d: { reason: string; message: string } | null | undefined): boolean =>
+  !!d && NETWORK_DETAIL.test(SNAPSHOT_DEATH.test(d.message) ? lastSnapshotFailure : d.message);
+const NETWORK_WAIT_LABEL = "waiting for the connection — the download restarts on its own";
+
+/** Any HTTP answer means the origin is reachable. `no-store` makes the
+ * service worker go to the network and NOT fall back to its cache (sw
+ * bypass()), so an offline page cannot fool the probe. */
+async function probeNetwork(): Promise<boolean> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return false;
+  const ctl = new AbortController();
+  const timer = window.setTimeout(() => ctl.abort(), 8000);
+  try {
+    await fetch(`/snapshots/index.json?probe=${Date.now()}`, { method: "HEAD", cache: "no-store", signal: ctl.signal });
+    return true;
+  } catch { return false; } finally { window.clearTimeout(timer); }
+}
+
+/** Resolves once the probe succeeds; returns whether it ever failed. */
+async function waitForNetwork(onWaiting: () => void): Promise<boolean> {
+  let delay = 2000, everDown = false;
+  for (;;) {
+    if (await probeNetwork()) return everDown;
+    if (!everDown) { everDown = true; onWaiting(); }
+    await new Promise<void>((resolve) => {
+      const done = () => { window.clearTimeout(id); window.removeEventListener("online", done); resolve(); };
+      const id = window.setTimeout(done, delay);
+      window.addEventListener("online", done);
+    });
+    delay = Math.min(delay * 2, 15000); // capped: a 20 s outage is noticed within 15 s of its end
+  }
+}
+
+/** The relay's settle: the 1.5 s heap-release wait, then — after a
+ * network-shaped death ONLY — the hold. Not "while the browser reports
+ * offline": a cached game reboots offline in seconds (runtime in the service
+ * worker cache, region in OPFS), and holding every reboot locked an offline
+ * player out after any checker death. A reboot that really needs the network
+ * while offline dies once with a fetch-shaped death; the NEXT settle holds. */
+async function networkAwareSettle(): Promise<void> {
+  await new Promise((r) => window.setTimeout(r, 1500));
+  const death = relayRef?.lastDeath;
+  if (!looksLikeNetworkDeath(death)) return;
+  const t0 = Date.now();
+  const waited = await waitForNetwork(() => {
+    console.warn(`[game-boot] the network is unreachable after "${death?.message ?? "offline"}" — holding the restart until it returns`);
+    publishNetworkHold({ since: t0, halted: false });
+    publishCheckerActivity("busy", NETWORK_WAIT_LABEL, !bootFinishedOnce, true);
+    publishBootStatus({ state: "busy", label: NETWORK_WAIT_LABEL });
+  });
+  if (waited) console.info(`[game-boot] the network is back after ${Math.round((Date.now() - t0) / 1000)} s — restarting the checker`);
+  if (!relayHalted) publishNetworkHold(null);
+}
+
+const MAX_AUTO_REARMS = 3;
+let autoRearms = 0, autoRearmScheduled = false;
+/** Safety net (2): re-arm a relay that halted for a network reason. */
+function scheduleNetworkRearm(): void {
+  if (autoRearmScheduled || autoRearms >= MAX_AUTO_REARMS) return;
+  autoRearmScheduled = true;
+  const since = Date.now();
+  publishNetworkHold({ since, halted: true });
+  void (async () => {
+    // Not at once: a flapping link would burn the fresh breaker budget too.
+    await new Promise((r) => window.setTimeout(r, [3000, 15000, 30000][autoRearms] ?? 30000));
+    await waitForNetwork(() => {});
+    autoRearmScheduled = false;
+    if (relayRef?.state.kind !== "halted") return;
+    autoRearms += 1;
+    console.warn(`[game-boot] the network is reachable again — re-arming the halted checker (automatic attempt ${autoRearms}/${MAX_AUTO_REARMS})`);
+    if (rearmCheckerIfHalted()) return;
+    // No document to replay (the world map): one guarded reload. When the
+    // guard refuses, nothing else is scheduled — drop the hold so the normal
+    // failure card (Reload + "Restart the checker") shows, not a card that
+    // says recovery is automatic.
+    try {
+      if (sessionStorage.getItem("l4g-network-reload") === "1") { publishNetworkHold(null); return; }
+      sessionStorage.setItem("l4g-network-reload", "1");
+    } catch { publishNetworkHold(null); return; }
+    window.location.reload();
+  })();
+}
+
 function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   // A game switch is waiting for running prepares before it reloads: the
   // banner shows THAT wait, and the outgoing game's relay (still serving,
@@ -407,14 +549,25 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   const death = st.lastDeath ? `${st.lastDeath.message || st.lastDeath.reason}` : "";
   if (st.relay === "halted") {
     relayRebooting = false;
-    if (!everServed) ui.idle(`Lean failed to start: ${death || "the checker crashed repeatedly while starting"}`);
-    else {
+    relayHalted = true;
+    const network = looksLikeNetworkDeath(st.lastDeath) && autoRearms < MAX_AUTO_REARMS;
+    if (network) scheduleNetworkRearm(); else publishNetworkHold(null);
+    if (!everServed) {
+      ui.idle(`Lean failed to start: ${death || "the checker crashed repeatedly while starting"}`);
+      // L5: publish the halted FACT for the not-yet-served case too — the
+      // pane's 4 s retry tick is guarded by it; without it each tick asked a
+      // halted relay, was refused, and flipped the pane between the failure
+      // card and the editor-mode "Crashed!" wrapper every few seconds.
+      publishCheckerActivity("ready", humanizeLabel(death || "the checker crashed repeatedly while starting"), false, false, true);
+    } else {
       const label = `the checker halted after repeated crashes${death ? ` (${death.slice(0, 80)})` : ""}`;
       publishCheckerActivity("ready", label, false, false, true);
       publishBootStatus({ state: "ready", label });
     }
     return;
   }
+  relayHalted = false;
+  if (st.relay === "serving") publishNetworkHold(null);
   if (st.relay === "rebooting" || st.phase === "booting" || st.phase === "dead") {
     relayRebooting = true;
     const label = death && st.relay === "rebooting" ? `restarting the checker after a crash (${death.slice(0, 80)})` : "starting the Lean checker";
@@ -475,6 +628,17 @@ export function rearmCheckerIfHalted(): boolean {
 
 export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRuntime> {
   const here = currentGameId();
+  if (switchPending && here && here === boundGameId) {
+    // L14: the player went back to the BOUND game while the switch was still
+    // waiting for running prepares (minutes, possibly): the switch is
+    // cancelled, not one-way — the suspended translation resumes (its
+    // buffered messages flush; the other game's didOpen is caught by the
+    // unknown-level defence) and the pending reload is called off below.
+    switchPending = false;
+    console.warn(`[game-boot] back on ${boundGameId} before the switch reload — switch cancelled, checker resumed`);
+    translationSingleton?.resume();
+    if (relayRef) publishRelayStatus(relayRef.status(), ui);
+  }
   if (here && boundGameId && boundGameId !== here) {
     // The wasm session is bound to another game's environment; a clean
     // reload rebinds everything (snapshots reload from OPFS in seconds).
@@ -487,14 +651,22 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     // downloading it again from zero.
     if (!switchPending) {
       switchPending = true;
+      const gen = ++switchGen;
+      const live = () => switchPending && gen === switchGen;
+      // L14: from this instant the outgoing game's session sees nothing —
+      // React is already mounting the new game's level, whose didOpen used
+      // to be wrapped with THIS game's (missing) level data and sent to its
+      // checker ("missing level data" + 2x "No RPC method" per switch).
+      translationSingleton?.suspend();
       const regions = inFlightRegions();
       console.warn(`[game-boot] switching game ${boundGameId} → ${here}: reloading${regions.length ? ` after ${regions.length} running prepare(s) commit (${regions.map((r) => r.name).join(", ")})` : ""}`);
       void (async () => {
         if (regions.length) {
           const target = await resolveSnapshotName(here);
           const label = regions.some((r) => r.name === target) ? `preparing the ${target} environment` : "finishing the download you started before switching games";
-          await mirrorPrepare(ui, target, label, Promise.allSettled(regions.map((r) => r.region)));
+          await mirrorPrepare(ui, target, label, Promise.allSettled(regions.map((r) => r.region)), live);
         }
+        if (!live()) return; // cancelled: the player returned to the bound game
         window.location.reload();
       })();
     }
@@ -507,6 +679,16 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
   boundGameId ??= here;
   bootPromise ??= (async () => {
    try {
+    // L11: an id this site does not serve (no /api/games row AND game.json
+    // refused) boots nothing and publishes no failure — the router shows the
+    // not-found page. Unbound again, so a real game entered later binds
+    // without a reload. The promise stays pending like the landing page's.
+    if (!(await gameKnown(boundGameId!))) {
+      console.warn(`[game-boot] ${boundGameId} is not a game on this site — nothing to boot`);
+      boundGameId = null;
+      bootPromise = null;
+      return await new Promise<GameRuntime>(() => {});
+    }
     const translation = ensureTranslation();
     // Bind the snapshot from the catalog and check its pairing before the
     // gamedata (80 small files for NNG4) and long before any artifact byte.
@@ -573,7 +755,7 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     relay = new LspRelay(
       (opts) => new GameSession({ artifacts, ui, policy, headerText: relay?.lastText ?? "" }, files, opts ?? {}),
       { status: (st) => publishRelayStatus(st, ui) },
-      () => new Promise((r) => window.setTimeout(r, 1500)),
+      networkAwareSettle, // L4: 1.5 s, then held while the network is away
     );
     relayRef = relay;
     // A level switch while the relay is halted: the new level is a new

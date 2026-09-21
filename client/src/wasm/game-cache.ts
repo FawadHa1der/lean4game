@@ -30,6 +30,46 @@ async function snapshotsDir(create = false): Promise<FileSystemDirectoryHandle |
   }
 }
 
+/* ---- L12: cross-tab cache state --------------------------------------------
+ * The tiles and the storage meter are derived per tab and re-probed only on
+ * this tab's own events; a region another tab prepared, removed or booted
+ * stayed invisible until a reload ("Already being downloaded… Retry" next to
+ * a finished download; "Remove download" for a region already removed).
+ * Every tab posts on one BroadcastChannel when it changed the region cache
+ * and re-probes when another did. Browsers without BroadcastChannel (or a
+ * context that refuses it) simply post nothing — the landing page also
+ * re-probes on focus / visibilitychange. */
+const CACHE_CHANNEL = "l4g-cache";
+let cacheChannel: BroadcastChannel | null | undefined;
+const remoteListeners = new Set<() => void>();
+function channel(): BroadcastChannel | null {
+  if (cacheChannel !== undefined) return cacheChannel;
+  try {
+    cacheChannel = typeof BroadcastChannel === "function" ? new BroadcastChannel(CACHE_CHANNEL) : null;
+  } catch { cacheChannel = null; }
+  if (cacheChannel) cacheChannel.onmessage = (e) => {
+    if ((e.data as { type?: string } | null)?.type !== "cache-changed") return;
+    clearFailedPrepares();
+    for (const cb of remoteListeners) { try { cb(); } catch (err) { console.warn("[game-cache] cache-change listener failed:", err); } }
+  };
+  return cacheChannel;
+}
+
+/** This tab changed the region cache (a prepare committed, a download was
+ * removed, stale regions were swept, the bound game's boot landed its
+ * region): tell the other tabs. A BroadcastChannel never delivers to its
+ * own tab — the local callers re-probe themselves, as before. */
+export function notifyCacheChanged(): void {
+  try { channel()?.postMessage({ type: "cache-changed" }); } catch { /* closed or unsupported */ }
+}
+
+/** Subscribe to cache changes made by OTHER tabs; returns the unsubscribe. */
+export function onRemoteCacheChange(cb: () => void): () => void {
+  channel();
+  remoteListeners.add(cb);
+  return () => { remoteListeners.delete(cb); };
+}
+
 /** The raw-region file name of an index entry (`<cacheKey>.raw`). */
 export const rawFileName = (entry: SnapshotEntry): string => `${snapshotCacheKey(entry)}.raw`;
 
@@ -41,6 +81,7 @@ export async function removeRawSnapshot(entry: SnapshotEntry): Promise<boolean> 
   if (!dir) return false;
   try {
     await dir.removeEntry(rawFileName(entry));
+    notifyCacheChanged(); // L12
     return true;
   } catch {
     return false; // absent, or OPFS refused — the tile re-probes either way
@@ -82,6 +123,7 @@ export async function sweepStaleSnapshots(index: SnapshotIndex): Promise<string[
       console.warn(`[game-cache] could not remove stale region ${name}:`, e);
     }
   }
+  if (removed.length) notifyCacheChanged(); // L12
   return removed;
 }
 
@@ -200,6 +242,18 @@ const publish = (name: string, status: PrepareStatus): void => {
   store.set(prepareStatusesAtom, { ...store.get(prepareStatusesAtom), [name]: status });
 };
 
+/** L12: another tab changed the cache — this tab's BUSY refusals (the
+ * "Already being downloaded…" of a file the other tab held) describe a state
+ * that is over; dropped, the tile shows what the re-probe finds. Only those:
+ * a genuine local failure ("Preparation failed: …" + Retry, or `unavailable`
+ * whose tile deliberately hides the button) is this tab's own fact and stays. */
+function clearFailedPrepares(): void {
+  const store = getDefaultStore();
+  const cur = store.get(prepareStatusesAtom);
+  const kept = Object.fromEntries(Object.entries(cur).filter(([, st]) => !(st.phase === "failed" && st.result === "busy")));
+  if (Object.keys(kept).length !== Object.keys(cur).length) store.set(prepareStatusesAtom, kept);
+}
+
 /** A prepare in flight: `region` settles when the raw region is committed
  * to OPFS (or failed) — what a boot must wait for; `all` when the runtime
  * warm-up has settled too — what the tile shows as done. */
@@ -261,6 +315,7 @@ export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean
     const ok = result === "done" || result === "already-cached";
     status = ok ? { ...status, phase: "warming", bytes: entry.bytes, result } : { ...status, phase: "failed", result, error };
     publish(entry.name, status);
+    if (ok) notifyCacheChanged(); // L12: the region is committed — other tabs re-probe
     return status;
   })();
   const all = (async (): Promise<PrepareStatus> => {

@@ -10,6 +10,10 @@ import { popupAtom } from '../../store/popup-atoms'
 import { gameIdAtom, levelIdAtom, worldIdAtom } from '../../store/location-atoms'
 import { levelProgressAtom, progressAtom, worldProgressAtom } from '../../store/progress-atoms'
 import { GameProgress } from '../../store/progress-types'
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js'
+import { levelUri } from '../../wasm/level-uri'
+import { crashedAtom, proofAtom } from '../../store/editor-atoms'
+import { proofLevel } from '../infoview/goals'
 
 /** download the current progress (i.e. what's saved in the browser store) */
 export function downloadProgress(gameId: string, gameProgress: GameProgress) {
@@ -73,18 +77,41 @@ export function ErasePopup () {
   const [, setPopup] = useAtom(popupAtom)
 
   const eraseProgress = () => {
+    resetMountedLevel() // L1 (the caller then navigates to the map)
     setGameProgress(null)
     setPopup(null)
     // setPage(0) // TODO: fix me
     // ev.preventDefault() // TODO: this is a hack to prevent the buttons below from opening a link
   }
 
+  const [, setProof] = useAtom(proofAtom)
+  const [, setCrashed] = useAtom(crashedAtom)
+
+  /** L1: the level under the popup is MOUNTED — its editor still holds the
+   * proof, the pane still shows it as completed, and the editor's persist
+   * effect would write the text straight back. Empty the live model first
+   * (its didChange re-elaborates the empty proof), drop the in-memory proof
+   * state (and its level stamp, so nothing re-saves completed:true), then
+   * erase. "Delete Everything" leaves the level (the map), where the model
+   * is disposed with it (level.tsx cleanup). */
+  function resetMountedLevel () {
+    if (!worldId || !levelId) return
+    try {
+      monaco.editor.getModel(monaco.Uri.parse(levelUri(worldId, levelId)))?.setValue('')
+    } catch (e) { console.warn('[erase] could not reset the open editor:', e) }
+    proofLevel.key = ''
+    setProof(undefined)
+    setCrashed(false)
+  }
+
   function eraseLevel () {
+    resetMountedLevel()
     setLevelProgress(null)
     setPopup(null)
   }
 
   function eraseWorld () {
+    resetMountedLevel()
     setWorldProgress(null)
     setPopup(null)
   }

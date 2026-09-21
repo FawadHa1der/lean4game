@@ -710,6 +710,87 @@ the pane reloaded — fixed by dropping replies superseded by a newer request
 
 
 
+## Live campaign 2026-09-14/21
+
+Three adversarial testers (play, landing, resilience) ran against the deployed build of `88fe4fb`
+(`https://lean4game.fawadworkaddress.workers.dev`, runtime `wasm64-d77d34b97592d014`, ten catalog games,
+slim snapshots, core-pack skip, Prepare, storage meter) on a shared ≈6.8 MB/s link; every defect was then
+re-reproduced by an independent verifier, diagnosed from the source, and the client-side ones fixed here
+(working tree on top of `88fe4fb`, not yet deployed). Harness: Playwright scripts `lv-*.mjs` in
+`qed64/work` of the peer repo; network chaos through a local proxy (Playwright's `setOffline` does not
+reach the snapshot prefetch worker).
+
+### Live PASS matrix (in brief)
+
+| Area | Result | Numbers |
+|---|---|---|
+| Catalog smoke, fresh profile, all ten games | 10/10 PASS | first visit 33.5 s (reintro, 153 MB) … 88.5 s (lag, 280 MB); testgame 63.2 s incl. the 154 MB runtime; 2298 MB on the wire in total, each game = its index transfer size ±1 MB; console: only the known empty lean4monaco error |
+| Deep play, cached (statement, hints, inventory, steps, completion, Next, Previous) | 9/9 PASS | boot 6.6–14.2 s, step 0.8–1.6 s, level completed in 13.2–20.2 s |
+| Wrong tactics / sorry / admit / undo / leave-and-return (nng4, rag, robo) | PASS | errors in 0.7–1.3 s; forbidden tactics in 0.6–1.0 s (but `exact?` 13.7–45.8 s → L8); undo ≈0.7 s; return replays in 3.3–4.1 s |
+| Editor mode (rag, logic) and reload storm (nng4) | PASS | completion 1.5–3.8 s after typing; 18 switches, settle ≤ 394 ms, no crash |
+| Progress download / upload | PASS (erase FAIL → L1) | 1009-byte JSON round-trips |
+| Landing: tiles vs index, covers, keyboard, overflow (desktop + mobile, light + dark) | PASS | 9/9 sizes exact, 9/9 Tab-reachable, no horizontal overflow; cold tiles 10.9 s, warm 5.7 s |
+| Prepare (small, large while loaded, double click, two at once, reload mid-way, busy from a second tab) | PASS | STG4 89.7 s / 181 MB, RAG 72.2 s / 282 MB, one prefetch worker and one `.snapz` request each, runtime warmed once; cached boot 8.5–10.1 s |
+| Storage: meter, Remove download, stale sweep, returning-visitor upgrade | PASS | meter 1.9 GB vs 1.67 GB of regions (+ runtime); 2 planted stale regions swept, live ones kept |
+| Offline after caching (reload, game switch, landing) | PASS | nng4 7.0 s, stg4 7.8 s, proofs complete; landing 9 tiles, covers from the SW |
+| i18n: STG4 es, NNG4 fr, Robo de/zh, NTG ru, English fallback, switch mid-proof | PASS | 0 console errors (typo → L18, `<html lang>` → L15) |
+| Two tabs (same game; two games) | PASS | both boot and prove; largest process 6.3 / 7.8 GB, sum 6.7 / 9.1 GB (tile state not shared → L12) |
+| Mobile 390×844, `deviceMemory=4`, reduced motion | PASS | single-column layout, no overflow, proof by touch; the memory notice shows on landing and in the level pane |
+| Memory | measured | Robo first visit peak 7.6 GB renderer; five games in one tab 8.0–8.9 GB at ready, peak 9.0 GB, follows region size, no growth with switches |
+| Service-worker lifecycle (first visit, `cache: reload`, previous-deploy worker) | PASS | 235 precache entries; live worker takes over an old one in 23.8 s, 0 HTML bodies under non-HTML names |
+| Switch matrix A→B→A→B→C→A→C, Back/Forward, Back during boot | PASS 7/7 | cached switch 7.2–9.4 s, 0 MB (console errors per hash switch → L14) |
+| Resilience: reload / close tab mid-download, 1 MiB/s throttle | PASS | restart from zero (→ L10), serving 28–28.7 s after reopening; throttled first visit 293 s with a moving ETA |
+| Resilience: 20 s outage mid-snapshot-download | FAIL → L4, L5 | halted 10 s into the outage, never retried; pane flipped to "Crashed!" 12× in 80 s |
+
+### Defects
+
+| Id | Severity | Defect | Fate |
+|---|---|---|---|
+| L1 | major | Erased progress resurrects in the same tab | **fixed** — `level.tsx` soft-reverts the level's (dirty, hence undisposable) Monaco model on unmount and resets the proof atoms per level; `erase.tsx` empties the mounted editor and the in-memory proof; `main.tsx`/`goals.tsx` stamp the proof with its level so the previous level's `completed` cannot complete the next one |
+| L2 | major | NNG4: `rw [unknown]` accepted silently | inherited from upstream (only "declaration uses sorry" reaches the diagnostics), left; the input soft-lock it causes upstream stays fixed here (`lastStepHasErrors` in `goals.tsx`) |
+| L3 | major | "malformed MsgEmbed: {widget…}" in error boxes | **fixed** — `msg-embed.ts` pre-pass replaces widget embeds by their `alt` text before `InteractiveMessage` The Try-this insertion link (alt = the dead text `[apply]`) is dropped with its separator space. **Limitation:** lazily loaded trace children are fetched inside the bundled `traceExplorer` and never pass the pre-pass — a widget inside an expanded lazy trace node (editor mode, `set_option trace.… true in`) still renders the blob |
+| L4 | major | Outage during the first download → dead card, no retry | **fixed** — `game-boot.ts`: the relay's settle holds a restart after a network-shaped death until a same-origin `no-store` HEAD succeeds (2, 4, 8, 15 s …, at once on `online`); a relay that halted anyway is re-armed automatically (≤ 3 per page); the pane says "The download was interrupted — waiting for the connection" with Reload Review round: a death is network-shaped only by its UNDERLYING error (`<name> snapshot failed: <error>` progress label / the runtime death message), never by the generic `snapshot '…' failed to load` or `RUNTIME_FETCH_FAILED` — a corrupt snapshot with the network up halts after three deaths with the normal card; the settle no longer holds while `navigator.onLine` is false (a cached game reboots offline); a served boot resets the re-arm budget and the reload guard, and a refused no-document reload drops the hold card |
+| L5 | major | Failure card replaced by editor-mode "Crashed!" | **fixed** — a halted relay's refusal is not a crash (`goals.tsx`), `halted` is published before the first serve too, the wrapper never outranks a boot failure / halt (`main.tsx`), and a halted relay's leftover session cannot repaint "starting Lean" |
+| L6 | major → minor | Unknown world / level → parser "Crashed!" | **fixed** — route guard + `LevelNotFound` view in `level.tsx`; the translation layer never forwards a document without level data and answers its requests itself; "Level 1 / undefined" header fixed Review round: `levelInfoAtom` obeys the same guard (no `level__<W>__<n>.json` request for a level outside `worldSize`, nor for level 0) |
+| L7 | major | Intermittent renderer crash on NNG4 | not reproduced (0 crashes in the verifier's repeats and in every run of this round) |
+| L8 | minor | Forbidden `exact?` runs the library search first (13.7–45.8 s) | **deferred** — needs a GameServer `Runner.lean` patch (stop elaborating at the first forbidden tactic) and a rebake of all ten snapshots: next full lane run |
+| L9 | minor | Multi-line paste concatenated into one line | inherited from upstream, left |
+| L10 | minor | Interrupted game downloads restart from byte 0 | **copy fixed, resume deferred** — the level pane and the Prepare note no longer promise that a download survives (only the checker stays cached); real resume = Range support in `infra/worker.js` (Chrome already sends `Range` + `If-Range`), not done here Review round: `infra/worker.js` now answers `Range`, so the copy is neutral — "what finished downloading stays cached; an interrupted download is fetched again" (pane) / "Prepare then starts over (bytes your browser already fetched are reused)" (tile) |
+| L11 | minor | Unknown game id renders an empty game shell + 404 burst | **fixed** — `gameKnown()` (no `/api/games` row AND `game.json` refused; a network failure is no evidence) → the app's not-found page, no boot, no failure label Review round: only 404/410/HTML count as a refusal (403/429/5xx = no evidence); the wait is bounded (4 s, not memoised) and the router shows a spinner instead of an empty page while it runs |
+| L12 | minor | Tile state not shared across tabs | **fixed** — `BroadcastChannel('l4g-cache')`: prepare committed, remove, stale sweep, bound boot served → other tabs re-probe and drop their stale `failed` status; focus / visibilitychange fallback Review round: only `busy` refusals are dropped — a genuine local failure / `unavailable` status stays |
+| L13 | minor | Prepare bar pauses near the end | not reproduced |
+| L14 | minor | Console errors at every hash game switch | **fixed** — `GameTranslation.suspend()` at the instant of the switch Review round: the switch is cancellable — client traffic is held (not dropped) while suspended, `resume()` flushes it when the player returns to the bound game before the reload, and the pending reload is called off |
+| L15 | minor | `<html lang>` never set | inherited from upstream, left |
+| L16 | cosmetic | First command's errors rendered twice | inherited from upstream, left |
+| L17 | cosmetic | No dark theme | inherited from upstream, left |
+| L18 | cosmetic | "voheriges Level" | **fixed** (`locales/de/translation.json`; worth a one-line upstream PR) |
+
+L19–L23 were notes (by-design behaviour and harness caveats), not defects.
+
+### Measurements of the fixes (local build of the working tree, `scripts/serve-dist.mjs` on :3006, headless Chromium, 2026-09-21)
+
+Network chaos ran through `lv-impl-chaosproxy.mjs` (a plain-HTTP reverse proxy in front of :3006 with the
+resilience tester's control surface: `.snapz` bodies paced to 4 MiB/s, `/__cut?ms=` destroys every
+connection and refuses new ones) — the tester's proxy is CONNECT-only and cannot front a localhost origin.
+
+| Probe | Result |
+|---|---|
+| L1 `lv-verifyL1-erase.mjs` | after "Delete Everything": L1 and L2 open fresh in the same tab (0 commands, `completed:false`, code `""`), still false after the map; after "Delete this Level": pane fresh at once, L2 → L1 stays uncompleted; a never-solved L2 is no longer marked completed on opening; a completed level still replays on return. 65 s, 0 exceptions |
+| L1 `lv-play-eraseprobe.mjs` | all steps `flag1=false flag2=false completedMsg=false` after each erase; re-completion works |
+| L5 copy of `lv-verify-L5-proxyonly.mjs` (20 s cut 6 s into the 154 MB body, `navigator.onLine` stays true) | pane: booting → "The download was interrupted — waiting for the connection" (Reload visible) 2 s after the cut → booting 10.6 s after the network returned → goal at +89 s with no user action; `secondsInCrashed: 0`, `secondsInCard: 0`, relay never halted; proof OK |
+| L4 copy of `lv-verifyL4-chaos.mjs` (proxy cut + `setOffline`, so `online` fires) | 60 s after the network returned: `relayAtEnd: serving/ready`, `cardAtEnd: false`, 1 new `.snapz` GET; proof OK |
+| L4 flapping link (`lv-impl-L4-flap.mjs`: three 2.5 s cuts, each 3 s into a fresh download) | breaker tripped at +26.1 s (third death) showing the interrupted-download card, re-armed automatically at +28.7 s, goal at +78 s; "Crashed!" never shown |
+| L6 `lv-verifyL6-badroutes.mjs` | unknown world, level 999 and a cold bad URL: "Level not found" view, relay stays `serving/ready`, console 0 × "missing level data", 0 × "No RPC method", 0 × 404; level 0 still the introduction; recovery to Tutorial/2 immediate |
+| L11 copy of `lv-verify-L11.mjs` | `#/g/nobody/NoGame` and its level URL: not-found page, relay null, 0 snapz / chunk / worker requests, 0 console errors, 1 warning, +0 requests in the next 20 s |
+| L14 copy of `lv-verify-L14.mjs` | hash switches nng4 → reintro → nng4: 0 errors before the reload (were 3 each); after it only the accepted empty lean4monaco error; boots 5.7–7.0 s |
+| L12 copy of `lv-verify-L12.mjs` | tab 2's "Already being downloaded… Retry" became "Ready — plays offline / Remove download" in the sample taken as tab 1 reached Ready; after Remove in tab 2, tab 1 showed "Prepare offline" and meter 0 in the next sample |
+| L3 `lv-verify-L3.mjs` | `exact hZZ` / `simp [hZZ]`: "Unknown identifier `hZZ`", `blob=false`, while the raw diagnostics still carry `Lean.errorDescriptionWidget` |
+| Unit tests | `game-translation.test.ts`, `game-translation-guard.test.ts` (L6/L14), `msg-embed.test.ts` (L3): pass |
+
+Not verified here: the fixes on the deployed site (a shell redeploy is enough — no artifact changes); L11 on
+a host that answers 404 for a missing `game.json` (the local server answers its SPA fallback; there the
+HEAD probe logs one 404 line); the no-document re-arm path (a halt on the world map → one guarded reload).
+
 ## Open
 
 - **Renderer crash: reloads then a 100 ms navigation storm (mitigated,

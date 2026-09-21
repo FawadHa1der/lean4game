@@ -106,3 +106,16 @@ export function publishDocumentProcessing(processing: boolean): void {
 export function isDocumentProcessing(): boolean {
   return getDefaultStore().get(documentProcessingAtom);
 }
+
+/** L4/L5: the boot is held (or halted) because the network went away in the
+ * middle of a download — not a crash. `halted` = the relay's breaker tripped
+ * anyway and a re-arm is scheduled for when a connectivity probe succeeds.
+ * The level pane says so instead of "Lean could not start". Null otherwise. */
+export interface NetworkHold { since: number; halted: boolean }
+export const networkHoldAtom = atom<NetworkHold | null>(null);
+export function publishNetworkHold(hold: NetworkHold | null): void {
+  const store = getDefaultStore();
+  const cur = store.get(networkHoldAtom);
+  if (cur === hold || (cur && hold && cur.halted === hold.halted)) return;
+  store.set(networkHoldAtom, hold);
+}

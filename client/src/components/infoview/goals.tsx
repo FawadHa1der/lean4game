@@ -391,6 +391,13 @@ export function settleProof<T extends { completed?: boolean; completedWithWarnin
  * Tutorial/1, and a tactic judged against it. */
 export const currentLevel = { key: "" }
 
+/** L1: the level the proof state in `proofAtom` was computed FOR. The atom is
+ * global and outlives a level: the next level's completion effect saw the
+ * previous level's `completed` proof and marked the new level completed
+ * (and unlocked its inventory) before anything was typed. The effect in
+ * main.tsx requires this stamp to match the level it runs for. */
+export const proofLevel = { key: "" }
+
 /** What the last proof-state request failed with, for the loading pane
  * ("" once one succeeded). "No connection to Lean" = the language client is
  * not running yet — on a first visit the level's first session is created
@@ -434,6 +441,7 @@ rpcSess.call('Game.getProofState',
       console.info(`received a proof state!`)
       console.log(proof)
       lastLoadError.message = ''
+      proofLevel.key = `${worldId}/${levelId}` // L1
       setProof(settleProof(proof as ProofState))
       setCrashed(false)
     } else {
@@ -460,6 +468,17 @@ rpcSess.call('Game.getProofState',
   // a fresh render once the checker settles. Not a crash.
   if (error?.code === -32900) {
     console.warn(`${error?.message ?? error} — the checker is restarting; the pane retries with a fresh session`)
+    return
+  }
+  // L5: a HALTED relay refuses every request ("QED64: checker halted after
+  // repeated crashes…"). That is not a crash of the player's proof and no
+  // retry can succeed until the relay is re-armed: four retries and then
+  // setCrashed(true) replaced the boot-failure card (with its Reload) by the
+  // editor-mode "Crashed! Go to editor mode and fix your proof!" wrapper.
+  // Leave `proof` undefined — the pane keeps the card. L6: same for a level
+  // the loaded game does not contain (answered by the translation layer).
+  if (/checker halted|this level does not exist in the loaded game/i.test(String(error?.message ?? error))) {
+    console.warn(`${error?.message ?? error} — not a crash; the pane keeps its status card`)
     return
   }
   // "QED64: …" (-32603) is answered on a session that stays valid (a request

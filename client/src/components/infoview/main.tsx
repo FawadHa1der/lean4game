@@ -23,13 +23,13 @@ import { Markdown } from '../markdown';
 
 import { Infos } from './infos';
 import { Errors, WithLspDiagnosticsContext } from './messages';
-import { Goal, isLastStepWithErrors, lastStepHasErrors, loadGoals, currentLevel, lastLoadError } from './goals';
+import { Goal, isLastStepWithErrors, lastStepHasErrors, loadGoals, currentLevel, lastLoadError, proofLevel } from './goals';
 import { MonacoEditorContext } from './context';
 import { levelUri } from '../../wasm/level-uri';
 import { Typewriter, getInteractiveDiagsAt, hasInteractiveErrors } from './typewriter';
 import { Button } from '../button';
 import { CircularProgress } from '@mui/material';
-import { bootStatusAtom, checkerActivityAtom, documentProcessingAtom, formatProgress } from '../../store/boot-atoms';
+import { bootStatusAtom, checkerActivityAtom, documentProcessingAtom, formatProgress, networkHoldAtom } from '../../store/boot-atoms';
 import { leanMonacoAtom } from '../../store/editor-atoms';
 import { boundEnvironmentAtom, rearmCheckerIfHalted } from '../../wasm/game-boot';
 import { useEta } from '../boot_banner';
@@ -87,7 +87,10 @@ function DualEditorMain() {
   const [proof] = useAtom(proofAtom)
 
   React.useEffect(() => {
-    if (proof?.completed) {
+    // L1: only a proof state computed for THIS level completes it (see
+    // proofLevel in goals.tsx) — the previous level's completed proof is
+    // still in the global atom when this effect first runs for a new level.
+    if (proof?.completed && proofLevel.key === `${worldId}/${levelId}`) {
       setCompleted(true)
 
       // On completion, add the names of all new items to the local storage
@@ -680,6 +683,7 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
   const [activity] = useAtom(checkerActivityAtom)
   const [leanMonaco] = useAtom(leanMonacoAtom)
   const [boundEnv] = useAtom(boundEnvironmentAtom)
+  const [networkHold] = useAtom(networkHoldAtom)
   const progress = formatProgress(status)
   const eta = useEta(status)
   // `since` is owned by the level (the pane re-renders its branch several
@@ -722,9 +726,19 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
     void clients[0].restart?.()
   }, [idle, noConnection, waited >= 20, clients.length])
   let headline: React.ReactNode, detail: React.ReactNode
-  if (bootFailure !== undefined) {
+  if (networkHold) {
+    // L4: the network went away in the middle of a download. The boot is
+    // held (or the halted relay is re-armed) until a connectivity probe
+    // succeeds — no user action needed; Reload stays on offer.
+    headline = <>The download was interrupted — waiting for the connection</>
+    detail = <>Lean starts on its own when the connection returns (checked every few seconds). What finished downloading stays cached in your browser; an interrupted download is picked up again automatically. Reloading the page is safe, too.</>
+  } else if (bootFailure !== undefined) {
     headline = <>Lean could not start in your browser</>
-    detail = <>{bootFailure}. Reloading the page retries from the beginning; the downloaded environment stays cached.</>
+    // L10: neutral wording — the failure may be in the middle of the checker
+    // download (then only its finished chunks are cached), and an interrupted
+    // game download is fetched again (bytes the browser already holds in its
+    // HTTP cache are reused: infra/worker.js answers Range).
+    detail = <>{bootFailure}. Reloading the page retries: what finished downloading stays cached, an interrupted download is fetched again.</>
   } else if (activity.halted) {
     // The relay's crash-loop breaker: three deaths in two minutes. It only
     // re-arms on a document change, which the typewriter cannot produce
@@ -772,20 +786,20 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
           : <>The level is loaded and the checker is idle; its answer usually arrives within a second.</>)
       : waited < 90
         ? <>This is taking longer than usual{attempt}. The request is retried automatically{noConnection && waited >= 20 ? ', and the language client is restarted' : ''}; you can also retry now.</>
-        : <>Still no answer after {secs(waited)}{attempt}. Reloading the page is safe: your progress is saved in this browser, and the downloaded environment stays cached.</>
+        : <>Still no answer after {secs(waited)}{attempt}. Reloading the page is safe: your progress is saved in this browser, and what finished downloading stays cached (an interrupted download is fetched again).</>
   }
   return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
     {/* explicit size + static position: the pane's spinner rule shifts it
         off-centre and it collapsed to a dot in the level-switch state */}
-    {bootFailure === undefined && <CircularProgress size={40} style={{ position: 'static', margin: 0 }} />}
+    {(bootFailure === undefined || networkHold) && <CircularProgress size={40} style={{ position: 'static', margin: 0 }} />}
     <div style={{ color: '#333', fontSize: '0.95rem', textAlign: 'center', maxWidth: '30rem' }}>{headline}</div>
     <div style={{ color: '#666', fontSize: '0.85rem', textAlign: 'center', maxWidth: '30rem' }}>{detail}</div>
     {bootFailure === undefined && <div style={{ color: '#888', fontSize: '0.8rem' }}>{secs(elapsed)} elapsed</div>}
     {idle && waited >= 15 && onRetry &&
       <Button className="btn" onClick={onRetry}>Retry now</Button>}
-    {bootFailure !== undefined &&
+    {(bootFailure !== undefined || networkHold) &&
       <Button className="btn" onClick={() => window.location.reload()}>Reload</Button>}
-    {activity.halted &&
+    {activity.halted && !networkHold &&
       <Button className="btn" onClick={() => { if (!rearmCheckerIfHalted()) window.location.reload(); else onRetry?.() }}>Restart the checker</Button>}
   </div>
 }
@@ -821,7 +835,10 @@ let lastStepErrors = proof?.steps.length ? hasInteractiveErrors(getInteractiveDi
       </div>
       <div className='proof' ref={proofPanelRef}>
         <ExerciseStatement showLeanStatement={true} />
-        {((crashed && (interimDiags.length > 0 || proof?.steps.length > 0))) ? <div>
+        {/* L5: the editor-mode wrapper never outranks a boot failure or a
+            halted relay — those are not the player's proof crashing, and the
+            card below is what offers Reload / Restart. */}
+        {((crashed && !bootFailed && !activity.halted && (interimDiags.length > 0 || proof?.steps.length > 0))) ? <div>
           <p className="crashed_message">{t("Crashed! Go to editor mode and fix your proof! Last server response:")}</p>
           {interimDiags.map((diag, index) => {
             const severityClass = diag.severity ? {

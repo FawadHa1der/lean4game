@@ -92,7 +92,7 @@
   "Prepare offline": "Prepare offline",
   "Remove download": "Remove download",
   "Preparing… {{done}} / {{total}} MB": "Preparing… {{done}} / {{total}} MB",
-  "Prepare note": "Keeps downloading while you browse this site; reloading the page cancels it.",
+  "Prepare note": "Keeps downloading while you browse this site; reloading the page cancels it; Prepare then starts over (bytes your browser already fetched are reused).",
   "Prepare memory note": "Preparing a game while another one is loaded needs extra memory on this device.",
   "Preparation failed: {{error}}": "Preparation failed: {{error}}",
   "Prepare busy": "Already being downloaded — by the game loaded in this tab or by another tab.",
