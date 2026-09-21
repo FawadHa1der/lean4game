@@ -47,6 +47,13 @@
 #
 # Inputs (environment, all optional):
 #   KERNEL_DIR   kernel source at the pin      (default wasm/kernel submodule)
+#   BUILD_DIR    kernel build dir (default wasm/out/kernel-build): stage0 at
+#                $BUILD_DIR/build/stage0/bin, stage1 at $BUILD_DIR/build/stage1;
+#                point it at a prebuilt runtime and skip the runtime lane
+#   LEAN_BIN     compiler for GameServer/i18n/compat/games (default the
+#                build's stage0 lean; a release import passes the native
+#                stage1 lean of the same source)
+#   LEAN_VERSION version string for the manifests (default: asked of LEAN_BIN)
 #   QED64_DIR    pipeline scripts. Unset (default): the vendored
 #                wasm/vendor/qed64-pipeline (scripts/sync-qed64.sh) is rsynced
 #                to wasm/out/pipeline on every run and run from THERE, so the
@@ -133,7 +140,24 @@ MATHLIB_PACK_DIR="${MATHLIB_PACK_DIR:-$OUT/mathlib-pack}"
 MATHLIB_MANIFEST="${MATHLIB_MANIFEST:-$MATHLIB_PACK_DIR/mathlib-essential.manifest.json}"
 SLIM_TREES="${SLIM_TREES:-1}"
 case "$SLIM_TREES" in 0|1) ;; *) echo "SLIM_TREES must be 0 or 1 (got '$SLIM_TREES')" >&2; exit 2 ;; esac
-IMAGE="qed64-toolchain:emsdk-6.0.5"; LEAN_VERSION="4.33.0-pre"
+IMAGE="qed64-toolchain:emsdk-6.0.5"
+# The compiler that writes the GameServer / lean-i18n / compat / game oleans.
+# Default: the kernel build's stage0 (upstream's bootstrap compiler — close
+# enough while the fork tracked master, not for a release import). For a
+# release import pass the NATIVE stage1 of the same source (a linux binary,
+# run inside the toolchain image; it must live under $G or $BUILD_DIR, the
+# two trees docker_run mounts).
+LEAN_BIN="${LEAN_BIN:-$S0/lean}"
+# Version string recorded in the runtime manifest and the core pack: from
+# the environment, else asked of the compiler inside the image at first use
+# (no Docker under --plan), else the last known release line.
+LEAN_VERSION="${LEAN_VERSION:-}"
+lean_version() {
+  if [ -z "$LEAN_VERSION" ] && [ "$PLAN" != 1 ]; then
+    LEAN_VERSION="$(docker run --rm -v "$G:$G" -v "$BUILD_DIR:$BUILD_DIR" "$IMAGE" "$LEAN_BIN" --version 2>/dev/null | sed -nE 's/^Lean \(version ([^,]+),.*/\1/p' | head -1)"
+  fi
+  echo "${LEAN_VERSION:-4.33.0-pre}"
+}
 PIN="$(grep -Eo '^[0-9a-f]{40}' "$G/wasm/KERNEL-PIN" 2>/dev/null | head -1 || true)"   # the game's own kernel pin (= wasm/kernel submodule commit)
 QPIN="$(grep -Eo '[0-9a-f]{40}' "$G/client/src/wasm/vendor/QED64-PIN" 2>/dev/null | head -1 || true)"
 PUB="$G/client/public"
@@ -178,7 +202,7 @@ compile_pkg() { # compile_pkg <log> <src-dir> <out-dir> <root(s), space-separate
   local log="$1" src="$2" out="$3" roots="$4" lp="$5" opts="${6:-}"
   [ "$PLAN" = 1 ] || mkdir -p "$out"
   # shellcheck disable=SC2086  # roots is a word list on purpose
-  docker_run "$log" "$src" "LEAN=$S0/lean" "LEAN_PATH=$lp" ${opts:+"LEAN_OPTS=$opts"} -- python3 "$G/wasm/scripts/compile-pkg.py" "$src" "$out" $roots
+  docker_run "$log" "$src" "LEAN=$LEAN_BIN" "LEAN_PATH=$lp" ${opts:+"LEAN_OPTS=$opts"} -- python3 "$G/wasm/scripts/compile-pkg.py" "$src" "$out" $roots
 }
 overlay() { # overlay <base-tree> <new-tree> <extra dirs...>   (hard-linked copy of base + extras on top; fat)
   local base="$1" new="$2"; shift 2
@@ -312,7 +336,7 @@ lane_runtime() {
   local rid="wasm64-unknown"; [ "$PLAN" = 1 ] || rid="wasm64-$(sha16 "$S1/bin/lean.wasm")"
   note "runtime build id: $rid"
   [ "$PLAN" = 1 ] || { rm -rf "$STG/runtime"; mkdir -p "$STG"; }
-  run runtime "$QED64_DIR" -- node "$QED64_DIR/pipeline/toolchain/chunk-runtime.mjs" --bin "$S1/bin" --lean-version "$LEAN_VERSION" --revision "qed64-wasm64@${PIN:0:9}" --out "$STG/runtime"
+  run runtime "$QED64_DIR" -- node "$QED64_DIR/pipeline/toolchain/chunk-runtime.mjs" --bin "$S1/bin" --lean-version "$(lean_version)" --revision "qed64-wasm64@${PIN:0:9}" --out "$STG/runtime"
   check "chunk manifest carries build id $rid" bash -c "python3 -c \"import json,sys; sys.exit(0 if json.load(open('$STG/runtime/runtime-manifest.json'))['buildId']=='$rid' else 1)\""
   [ "$PLAN" = 1 ] || echo "$rid" > "$STG/RUNTIME_ID"
 }
@@ -356,10 +380,10 @@ PY
   run core "$G" -- bash -c "cp -R '$S1/lib/lean/Init' '$corelib/' && cp '$S1'/lib/lean/Init.olean* '$S1'/lib/lean/Init.ir* '$corelib/'"
   check "Init tree has > 600 oleans" bash -c "[ \$(find '$corelib' -name '*.olean' | wc -l) -gt 600 ]"
   [ "$PLAN" = 1 ] || { rm -rf "$STG/profiles"; mkdir -p "$STG/profiles"; }
-  run core "$QED64_DIR" -- node "$QED64_DIR/pipeline/artifacts/pack.mjs" --lib "$corelib" --id lean-core --out "$STG/profiles" --mount /lib/lean/library --lean-version "$LEAN_VERSION" --revision "$PIN" --roots Init
+  run core "$QED64_DIR" -- node "$QED64_DIR/pipeline/artifacts/pack.mjs" --lib "$corelib" --id lean-core --out "$STG/profiles" --mount /lib/lean/library --lean-version "$(lean_version)" --revision "$PIN" --roots Init
   run core "$G" -- rm -f "$STG/profiles/lean-core.pack"   # the raw 388 MB pack is only an intermediate; the parts are what ships
   # the packer writes bare part names; the installer fetches part.url, and the game serves /profiles/...
-  run core "$G" -- python3 - "$STG/profiles" "$(runtime_id)" "$LEAN_VERSION" <<'PY'
+  run core "$G" -- python3 - "$STG/profiles" "$(runtime_id)" "$(lean_version)" <<'PY'
 import json, os, sys
 d, rid, lv = sys.argv[1:]
 mf = os.path.join(d, "lean-core.manifest.json"); m = json.load(open(mf))
