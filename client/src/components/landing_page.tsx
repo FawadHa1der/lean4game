@@ -118,7 +118,14 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
       {(prep?.phase !== 'failed' || retryable) && <button onClick={prepare}>{retryable ? t("Retry") : t("Prepare offline")}</button>}
     </>
   } else if (entry && snapshot?.state === 'ready') {
-    cacheActions = <button onClick={remove}>{t("Remove download")}</button>
+    // The region is in OPFS, but this Prepare's runtime warm-up stopped
+    // short (a slow link: its rounds stopped making progress) — the checker
+    // is not fully cached, so the game does not yet play offline.
+    const runtimeShort = prep?.phase === 'done' && prep.runtime?.partial
+    cacheActions = <>
+      {runtimeShort && <div className="note">{t("Checker partly cached", { defaultValue: "The checker is only partly cached ({{done}}/{{total}} files) — open the game once while online to finish caching it.", done: prep.runtime!.cached, total: prep.runtime!.total })}</div>}
+      <button onClick={remove}>{t("Remove download")}</button>
+    </>
   }
 
   const gameTile = tileWithName.tile

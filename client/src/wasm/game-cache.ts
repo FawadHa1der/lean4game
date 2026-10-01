@@ -15,6 +15,7 @@ import { atom, getDefaultStore } from "jotai";
 import { snapshotCacheKey, type SnapshotEntry, type SnapshotIndex } from "./vendor/qed64/src/runtime/snapshots";
 import type { RuntimeManifest } from "./vendor/qed64/src/runtime/client";
 import { resolveRuntimeManifest } from "./games-api";
+import { pendingServiceWorkerRegistration } from "./sw-client";
 
 const SNAPSHOT_DIR = "qed64-snapshots";
 const PREFETCH_WORKER = "/workers/snapshot-prefetch.worker.js";
@@ -157,7 +158,11 @@ export function prefetchRawSnapshot(entry: SnapshotEntry, onProgress?: (bytes: n
   });
 }
 
-export interface WarmReply { cached: number; pruned: number; total: number }
+/** `partial`: the worker stopped at its per-message budget (a message event
+ * must end inside Chromium's 5-minute limit) — warmRuntimeCacheOutcome sends
+ * the warm-up again while rounds make progress; a `partial` it returns means
+ * the rounds ran out (or stopped progressing) with the list incomplete. */
+export interface WarmReply { cached: number; pruned: number; total: number; partial?: boolean }
 
 /** The active service worker a `warm` can be posted to, or null: none in
  * this browser, none registered, or none active within 30 s. The page
@@ -171,6 +176,10 @@ async function warmTarget(): Promise<ServiceWorker | null> {
   if (!("serviceWorker" in navigator)) return null;
   const sw = navigator.serviceWorker;
   const wait = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
+  // N2: a registration this page started (possibly deferred until the game
+  // was served) is awaited rather than polled for.
+  const pending = pendingServiceWorkerRegistration();
+  if (pending) await Promise.race([pending, wait(30000)]);
   if (!sw.controller && !(await sw.getRegistration())) {
     const loaded = document.readyState === "complete" ? Promise.resolve() : new Promise<void>((r) => window.addEventListener("load", () => r(), { once: true }));
     await Promise.race([loaded, wait(30000)]);
@@ -190,6 +199,9 @@ async function warmTarget(): Promise<ServiceWorker | null> {
  * gives its message the Prepare's 10-minute window: chunks a Prepare is
  * still fetching are awaited, not fetched twice. */
 let warmInFlight: { buildId: string; p: Promise<WarmOutcome> } | null = null;
+/** At most this many `warm` messages per warm-up (each bounded by the
+ * worker to ~4 min; 8 rounds cover the runtime down to ~80 kB/s). */
+const WARM_ROUNDS = 8;
 
 /** Why a warm-up produced no reply: `no-worker` — no active service worker
  * to post to (none registered, or none active within warmTarget's wait);
@@ -220,21 +232,60 @@ export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: rea
   const buildId = `${runtime.buildId}|${[...extraUrls].sort().join(" ")}`;
   if (warmInFlight?.buildId === buildId) return warmInFlight.p;
   const p = (async (): Promise<WarmOutcome> => {
-    const urls: string[] = ["/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json"];
-    for (const f of Object.values(runtime.files)) for (const c of f.chunks) urls.push(c.url);
-    for (const u of extraUrls) if (!urls.includes(u)) urls.push(u);
-    const target = await warmTarget();
-    if (!target) return "no-worker";
-    return new Promise<WarmOutcome>((resolve) => {
-      const ch = new MessageChannel();
-      const t = window.setTimeout(() => resolve("timeout"), timeoutMs);
-      ch.port1.onmessage = (e) => { window.clearTimeout(t); resolve(e.data as WarmReply); };
-      target.postMessage({ type: "warm", urls }, [ch.port2]);
-    });
+    // N5: the game data first — the worker works through the list in order
+    // (bounded concurrency): the small files an offline inventory opens are
+    // cached in seconds, not after 147 MB of runtime chunks.
+    const urls: string[] = [...new Set(extraUrls)];
+    for (const u of ["/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json"]) if (!urls.includes(u)) urls.push(u);
+    for (const f of Object.values(runtime.files)) for (const c of f.chunks) if (!urls.includes(c.url)) urls.push(c.url);
+    // On a slow link one message cannot cover the 154 MB runtime (the
+    // worker answers `partial`): send it again while a round adds files —
+    // every caller (the boot's warm-up, a landing-page Prepare) gets the
+    // continuation; each round has `timeoutMs`.
+    let last: WarmReply | null = null;
+    for (let round = 0; round < WARM_ROUNDS; round++) {
+      const target = await warmTarget();
+      if (!target) return last ?? "no-worker";
+      const reply = await new Promise<WarmReply | "timeout">((resolve) => {
+        const ch = new MessageChannel();
+        const t = window.setTimeout(() => resolve("timeout"), timeoutMs);
+        ch.port1.onmessage = (e) => { window.clearTimeout(t); resolve(e.data as WarmReply); };
+        // pageFillsShell: this page asks for the shell itself (sw-client
+        // requestShellFill) when no download runs — the worker must not
+        // start its own fill behind a warm-up a Prepare's region competes with.
+        target.postMessage({ type: "warm", urls, pageFillsShell: true }, [ch.port2]);
+      });
+      if (reply === "timeout") return last ?? "timeout";
+      const progressed = !last || reply.cached > last.cached;
+      last = reply;
+      if (!reply.partial || !progressed) return reply;
+      console.info(`[game-cache] runtime warm-up: ${reply.cached}/${reply.total} files so far — continuing (round ${round + 2})`);
+    }
+    return last ?? "timeout";
   })();
   warmInFlight = { buildId, p };
   p.finally(() => { if (warmInFlight?.p === p) warmInFlight = null; }).catch(() => {});
   return p;
+}
+
+/** N5: cache the bound game's data (inventory docs first) as soon as its
+ * URLs are known — when a service worker is ALREADY active (a returning
+ * visit); null otherwise (a first visit's worker registers at markServed,
+ * whose warm-up names the data first). Its own message type (`warm-data`):
+ * a previous deploy's worker ignores it, where a data-only `warm` would
+ * have pruned its whole runtime cache. Data only — never a chunk, never a
+ * prune. */
+export async function warmDataEarly(urls: readonly string[], timeoutMs = 60000): Promise<WarmReply | null> {
+  if (!urls.length || !("serviceWorker" in navigator)) return null;
+  const reg = await navigator.serviceWorker.getRegistration().catch(() => undefined);
+  const target = reg?.active;
+  if (!target) return null;
+  return new Promise<WarmReply | null>((resolve) => {
+    const ch = new MessageChannel();
+    const t = window.setTimeout(() => resolve(null), timeoutMs);
+    ch.port1.onmessage = (e) => { window.clearTimeout(t); resolve(e.data as WarmReply); };
+    target.postMessage({ type: "warm-data", urls: [...urls] }, [ch.port2]);
+  });
 }
 
 /** One game's Prepare, as the tile and the boot banner show it. `running`:
@@ -350,10 +401,13 @@ export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean
       console.info(`[game-cache] prepare ${entry.name}: region ${afterRegion.result}${afterRegion.error ? ` (${afterRegion.error})` : ""}`);
       return afterRegion;
     }
+    // The phase stays 'warming' (the tile: "caching the checker…") through
+    // every round of the runtime warm-up; a reply still `partial` after them
+    // is surfaced on the tile (runtime.partial), not shown as plain done.
     const runtime = await warm;
     status = { ...status, phase: "done", runtime };
     publish(entry.name, status);
-    console.info(`[game-cache] prepare ${entry.name}: region ${status.result}; runtime ${runtime ? `${runtime.cached}/${runtime.total} files cached` : "not warmed"}`);
+    console.info(`[game-cache] prepare ${entry.name}: region ${status.result}; runtime ${runtime ? `${runtime.cached}/${runtime.total} files cached${runtime.partial ? " — INCOMPLETE (the warm-up stopped making progress)" : ""}` : "not warmed"}`);
     return status;
   })();
   inFlight.set(entry.name, { region, all });

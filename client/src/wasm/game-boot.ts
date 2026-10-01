@@ -45,7 +45,8 @@ import { GameTranslation, type GameLevelData } from "./game-translation";
 import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing, publishNetworkHold } from "../store/boot-atoms";
 import { rememberGamedata } from "./gamedata-cache";
 import { MiB, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
-import { claimSnapshotForBoot, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareStatusesAtom, sweepStaleSnapshots, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
+import { claimSnapshotForBoot, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareStatusesAtom, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
+import { ensureServiceWorkerRegistration, releaseServiceWorkerRegistration, requestShellFill, whenServiceWorkerReady } from "./sw-client";
 
 export interface GameDataBundle {
   gameName: string;
@@ -421,7 +422,22 @@ function markServed(ui: StatusSink): void {
   // L12: the bound game's region landed in OPFS through this boot — other
   // tabs' landing tiles re-probe.
   notifyCacheChanged();
-  void warmOfflineCache();
+  // N2: the Lean download is over — the deferred service-worker registration
+  // may go ahead (its install is small: the critical shell only), then the
+  // offline warm-up (game data first, N5), then the rest of the shell, which
+  // waits while a Prepare downloads in this page.
+  releaseServiceWorkerRegistration();
+  void warmOfflineCache().finally(() => { void requestShellFill(leanDownloadInFlight); });
+}
+
+/** A Lean download runs in this page: a boot not yet served (runtime and
+ * snapshot streaming), or a landing-page Prepare. The shell fill waits. */
+export function leanDownloadInFlight(): boolean {
+  // A boot whose relay halted before it ever served (the crash-loop breaker,
+  // a deploy problem) downloads nothing until it is re-armed: not busy — the
+  // shell fill would otherwise wait for the life of the page.
+  const bootDownloading = bootPromise !== null && !everServed && relayRef?.state.kind !== "halted" && !deployProblem;
+  return bootDownloading || inFlightRegions().length > 0;
 }
 
 /** Offline reloads: the service worker (client/src/sw) caches the runtime
@@ -452,7 +468,9 @@ async function offlineDataUrls(): Promise<string[]> {
   if (!id) return [];
   const langs = new Set(["en"]);
   try { langs.add(getDefaultStore().get(preferencesAtom).language || "en"); } catch { /* the atom is fine; belt and braces */ }
-  const urls = [`/data/${id}/game.json`, ...fetchedDataUrls, `/data/${id}/inventory.json`, ...(await inventoryDocUrls(id)), ...[...langs].map((l) => `/i18n/${id}/${l}`)];
+  // N5: the inventory and its docs first — the worker fetches in this order
+  // (bounded concurrency), and they are what an offline inventory opens.
+  const urls = [`/data/${id}/inventory.json`, ...(await inventoryDocUrls(id)), `/data/${id}/game.json`, ...fetchedDataUrls, ...[...langs].map((l) => `/i18n/${id}/${l}`)];
   return [...new Set(urls.map((u) => { try { return new URL(u, window.location.origin).pathname; } catch { return u; } }))];
 }
 
@@ -482,8 +500,15 @@ async function warmOfflineCache(): Promise<void> {
   try {
     // The Prepare's 10-minute window: a Prepare's warm-up may still be
     // fetching the runtime chunks this message names (the worker dedupes).
+    // A slow link's `partial` replies are continued inside
+    // warmRuntimeCacheOutcome (bounded rounds while they make progress).
     outcome = await warmRuntimeCacheOutcome(a.runtime, await offlineDataUrls(), 10 * 60 * 1000);
-    if (typeof outcome !== "string") { warmedArtifacts = null; console.info(`[game-boot] offline cache: ${outcome.cached}/${outcome.total} runtime + game-data files cached, ${outcome.pruned} superseded pruned`); return; }
+    if (typeof outcome !== "string") {
+      warmedArtifacts = null;
+      if (outcome.partial) console.warn(`[game-boot] offline cache INCOMPLETE: ${outcome.cached}/${outcome.total} runtime + game-data files cached — the warm-up stopped making progress; the next visit continues it`);
+      else console.info(`[game-boot] offline cache: ${outcome.cached}/${outcome.total} runtime + game-data files cached, ${outcome.pruned} superseded pruned`);
+      return;
+    }
   } catch (e) {
     console.warn("[game-boot] offline cache warm-up skipped:", e);
     return;
@@ -497,13 +522,17 @@ async function warmOfflineCache(): Promise<void> {
     return;
   }
   console.warn("[game-boot] offline cache warm-up: no active service worker — retried when a worker is ready");
-  // D2: no worker to post to (a first visit whose 37 MB precache install
-  // outlasts warmTarget's 30 s wait on a slow link, or the registration
-  // was still to come): warm again once one is active. `ready` never
-  // settles while nothing registers (the dev server) — then nothing runs.
+  // D2: no worker to post to (an install still running on a slow link, or
+  // the registration was still to come): warm again once one is active.
+  // `ready` never settles while nothing registers (the dev server) — then
+  // nothing runs. N2: a registration that is GONE (its install timed out,
+  // the version went redundant and the registration was deleted) would
+  // leave `ready` pending for good — register again, once per page.
   if (rewarmArmed || !("serviceWorker" in navigator)) return;
   rewarmArmed = true;
-  void navigator.serviceWorker.ready.then(() => { rewarmArmed = false; void warmOfflineCache(); }, () => { rewarmArmed = false; });
+  void ensureServiceWorkerRegistration().catch(() => false)
+    .then(() => whenServiceWorkerReady())
+    .then((ok) => { rewarmArmed = false; if (ok) void warmOfflineCache(); }, () => { rewarmArmed = false; });
 }
 
 /* ---- L4: network-aware recovery -------------------------------------------
@@ -943,6 +972,14 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
       } catch (e) { console.warn("[game-boot] stale region sweep skipped:", e); }
     }
     const bundle = await ensureBundle();
+    // N5: the game data's URLs are known now. A service worker already
+    // active (a returning visit) caches them at once — inventory docs first,
+    // bounded concurrency — instead of after markServed's serial warm-up,
+    // which left the docs uncached for 9–20 s after the first goal. A first
+    // visit has no worker yet (its registration waits for markServed).
+    void offlineDataUrls().then((urls) => warmDataEarly(urls)).then((r) => {
+      if (r) console.info(`[game-boot] game data cached early: ${r.cached}/${r.total} files`);
+    }).catch(() => {});
     translation.configure({
       gameName: bundle.gameName,
       levelData: (w, l) => bundle.levels.get(`${w}/${l}`),

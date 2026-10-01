@@ -119,15 +119,24 @@ test("mutable index: 200, must-revalidate, Accept-Ranges", async () => {
   assert.equal(await response.text(), '{"snapshots":[]}');
 });
 
-test("HEAD: same path as before (one un-ranged get), 200 with Accept-Ranges", async () => {
+test("HEAD: metadata from head() only (no body is opened), 200 with size, etag, Accept-Ranges", async () => {
   const env = makeEnv();
   const response = await call(env, SNAPZ, { method: "HEAD" });
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("accept-ranges"), "bytes");
   assert.equal(response.headers.get("etag"), ETAG);
+  assert.equal(response.headers.get("content-length"), "1000");
   assert.equal(response.headers.get("cache-control"), IMMUTABLE);
   assertIsolated(response);
-  assert.deepEqual(env.ARTIFACTS.calls, [{ op: "get", key: "lean4game" + SNAPZ, range: null }]);
+  assert.equal(response.body, null);
+  assert.deepEqual(env.ARTIFACTS.calls, [{ op: "head", key: "lean4game" + SNAPZ }]);
+});
+
+test("HEAD of a missing artifact: 404 without a get()", async () => {
+  const env = makeEnv();
+  const response = await call(env, "/snapshots/nope.0000000000000000.snapz", { method: "HEAD" });
+  assert.equal(response.status, 404);
+  assert.deepEqual(env.ARTIFACTS.calls.map((c) => c.op), ["head"]);
 });
 
 test("HEAD ignores Range (range handling is defined for GET only)", async () => {
@@ -135,7 +144,8 @@ test("HEAD ignores Range (range handling is defined for GET only)", async () => 
   const response = await call(env, SNAPZ, { method: "HEAD", headers: { range: "bytes=0-99" } });
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("content-range"), null);
-  assert.deepEqual(env.ARTIFACTS.calls, [{ op: "get", key: "lean4game" + SNAPZ, range: null }]);
+  assert.equal(response.headers.get("content-length"), "1000");
+  assert.deepEqual(env.ARTIFACTS.calls, [{ op: "head", key: "lean4game" + SNAPZ }]);
 });
 
 test("bytes=0-99: 206, Content-Range, partial Content-Length, the first 100 bytes", async () => {

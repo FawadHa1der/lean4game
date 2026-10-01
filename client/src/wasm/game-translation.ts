@@ -55,6 +55,22 @@ export interface GameTranslationConfig {
 }
 
 export const PROOF_START_LINE = 2;
+/** N1: vscode-jsonrpc's ErrorCodes.PendingResponseRejected — what upstream's
+ * client answers its own orphaned requests with when the websocket drops.
+ * vscode-languageclient's handleFailedRequest swallows it (and -32096,
+ * -32800..-32802); every other code is rethrown and surfaces through Monaco's
+ * unexpected-error handler as an uncaught page error. */
+export const PENDING_RESPONSE_REJECTED = -32097;
+/** N1: methods whose orphaned request still gets an ERROR answer (-32097):
+ * the lifecycle requests, whose callers must see the failure. Every other
+ * orphaned request is answered `result: null` — see toClient. */
+export const ORPHAN_ERROR_METHODS: ReadonlySet<string> = new Set(["initialize", "shutdown"]);
+/** N1: an error answer the relay invents for a request orphaned by a checker
+ * death or a halt (vendored lsp-relay.ts failInFlight / halted refusal). */
+export function isOrphanedRequestError(error: any): boolean {
+  const msg = typeof error?.message === "string" ? error.message : "";
+  return msg.startsWith("QED64: the Lean checker died") || msg.includes("checker halted");
+}
 /** L6: the error a request about an unknown level's document is answered
  * with (goals.tsx reads it: not a crash, not retried). */
 export const UNKNOWN_LEVEL_ERROR = "this level does not exist in the loaded game";
@@ -124,6 +140,10 @@ export class GameTranslation {
   /** The level's Lean module (from level data), captured at didOpen. */
   private module = "";
   private readonly semanticTokenRequestIds = new Set<number | string>();
+  /** N1: method of every client request forwarded to the checker and not yet
+   * answered (insertion-ordered; bounded — requests the relay never answers,
+   * e.g. ones superseded by a game switch, must not accumulate). */
+  private readonly inFlightMethods = new Map<number | string, string>();
   private readonly workerUri: string;
 
   private config: GameTranslationConfig;
@@ -229,7 +249,13 @@ export class GameTranslation {
    * a document of a level this game does not contain is never forwarded). */
   private forward(message: JsonRpc): void {
     const out = this.toServer(message);
-    if (out && !this.suspended) this.serverPort!.postMessage(out);
+    if (out && !this.suspended) {
+      if (out.id !== undefined && out.method !== undefined) {
+        this.inFlightMethods.set(out.id, out.method);
+        if (this.inFlightMethods.size > 1024) this.inFlightMethods.delete(this.inFlightMethods.keys().next().value!);
+      }
+      this.serverPort!.postMessage(out);
+    }
   }
 
   /** relay: client → server rewrites. Returns null for a message that must
@@ -344,6 +370,30 @@ export class GameTranslation {
 
   /** relay: server → client rewrites. */
   private toClient(message: JsonRpc): JsonRpc {
+    if (message.id !== undefined && message.method === undefined) {
+      const method = this.inFlightMethods.get(message.id);
+      this.inFlightMethods.delete(message.id);
+      // N1: a network cut kills the checker; the relay answers every orphaned
+      // request (codeAction, inlayHint, semanticTokens/full, …) with -32603,
+      // which the language client rethrows → 3–4 uncaught page errors per cut
+      // ("the Lean checker died (bootFailed)", "checker halted …"). Upstream's
+      // websocket drop rejects them inside vscode-jsonrpc (-32097), so no
+      // error RESPONSE ever reaches the client connection there. Here one
+      // would: lean4monaco's messageStrategy (monacoleanclient.js
+      // handleMessage) shows EVERY error response as an error notification
+      // — a console.error per orphaned request, whatever its code. So an
+      // orphaned feature request is answered `result: null` (what
+      // handleFailedRequest returns for -32097 anyway: "no code actions / no
+      // hints / no tokens"); only the lifecycle requests (ORPHAN_ERROR_METHODS)
+      // keep an error, as -32097. $/lean/rpc/* answers stay untouched — the
+      // infoview's session recovery keys on their -32900. An unknown method
+      // (never seen going out) is left alone too.
+      if (method !== undefined && !method.startsWith("$/lean/rpc/") && message.error && isOrphanedRequestError(message.error)) {
+        message = ORPHAN_ERROR_METHODS.has(method)
+          ? { ...message, error: { ...message.error, code: PENDING_RESPONSE_REJECTED } }
+          : { jsonrpc: message.jsonrpc ?? "2.0", id: message.id, result: null };
+      }
+    }
     if (message.method === "$/lean/fileProgress" && this.onProcessing) {
       // A kind-2 entry (LeanFileProgressKind.fatalError — a refused or
       // unresolvable header) is a verdict, not work in flight: it never

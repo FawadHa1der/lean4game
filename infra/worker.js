@@ -88,8 +88,7 @@ function notFound(pathname) {
 
 async function serveArtifact(request, env, pathname) {
   const key = R2_PREFIX + pathname.slice(1);
-  // Range is defined for GET only; every other method (HEAD included) is
-  // answered exactly as before.
+  // Range is defined for GET only (HEAD ignores it and answers from head()).
   let spec = request.method === "GET" ? parseRange(request.headers.get("range")) : null;
   if (spec !== null) {
     // Validators and size first: whether the range applies (If-Range) and
@@ -110,6 +109,20 @@ async function serveArtifact(request, env, pathname) {
       response.headers.set("Cache-Control", "no-store");
       return response;
     }
+  }
+  if (request.method === "HEAD") {
+    // Metadata only: R2's head() answers in tens of milliseconds, while a
+    // get() opens the object's body (hundreds of MB for a snapshot) only for
+    // the runtime to discard it — HEAD took 3–8 s and sat on the first-visit
+    // "checking this game's environment" path (live campaign 2026-10-01).
+    const meta = await env.ARTIFACTS.head(key);
+    if (meta === null) return notFound(pathname);
+    const headers = new Headers();
+    meta.writeHttpMetadata(headers);
+    headers.set("etag", meta.httpEtag);
+    headers.set("accept-ranges", "bytes");
+    headers.set("content-length", String(meta.size));
+    return withHeaders(new Response(null, { headers }), pathname);
   }
   const object = await env.ARTIFACTS.get(key, spec !== null ? { range: request.headers } : undefined);
   if (object === null) return notFound(pathname);

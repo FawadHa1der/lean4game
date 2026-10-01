@@ -12,6 +12,8 @@ import { ErrorBoundary } from './error/ErrorBoundary'
 import { NotFound } from './error/NotFound'
 import { gameKnown, gameKnownCheck } from './wasm/games-api'
 import { CircularProgress } from '@mui/material'
+import { scheduleServiceWorkerRegistration } from './wasm/sw-client'
+import { leanDownloadInFlight } from './wasm/game-boot'
 
 /** L11: `undefined` while the check runs, then whether the routed game id is
  * one this site serves (see gameKnown — unknown only on positive evidence). */
@@ -38,9 +40,16 @@ function useGameKnown(gameId: string | null | undefined): boolean | undefined {
 // sw.template.js, generated into dist/sw.js by scripts/build-sw.mjs). The
 // snapshots and library pack already live in OPFS. Production only: the dev
 // server serves no sw.js, and a stale worker would mask live edits.
+// N2: a page that boots a game (a game route) registers once the game is
+// served or 60 s after load, whichever comes first — the install must never
+// compete with the runtime/snapshot download; the landing page registers on
+// load and fills the rest of the shell while no Prepare downloads
+// (wasm/sw-client.ts).
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((e) => console.warn('[sw] registration failed:', e))
+    // The same two route shapes game-boot's currentGameId reads.
+    const gameRoute = /#\/g\/[^/]+\/[^/]+/.test(window.location.hash) || window.location.pathname.split('/').filter(Boolean).length >= 2
+    scheduleServiceWorkerRegistration({ deferForBoot: gameRoute, busy: leanDownloadInFlight })
   })
 }
 

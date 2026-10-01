@@ -24,6 +24,13 @@ export const inventoryOverviewAtom = atomWithQuery<InventoryOverview>((get) => {
   }
 })
 
+/** Families keyed by `[tab, name]`: compare the elements, not the array.
+ * The component passes a fresh array on every render; with the default
+ * reference equality each render made a new query atom whose mount fetched
+ * the doc again — an open doc refetched its file ~4–10×/s online and ~40×/s
+ * offline (live campaign 2026-10-01, F1). */
+const sameDocKey = (a: [InventoryTab, string], b: [InventoryTab, string]) => a[0] === b[0] && a[1] === b[1]
+
 export const docAtomFamily = atomFamily((key: [InventoryTab, string]) => atomWithQuery<Doc>((get) => {
   const gameId = get(gameIdAtom)
   const type = key[0]
@@ -34,15 +41,26 @@ export const docAtomFamily = atomFamily((key: [InventoryTab, string]) => atomWit
       const res = await fetch(`${window.location.origin}/data/${gameId}/doc__${capitalizeFirstLetter(type)}__${name}.json`)
       return res.json()
     },
+    // No doc selected (the panel passes ""): nothing to fetch.
+    enabled: name !== "",
   }
-}))
+}), sameDocKey)
 
 export const docAtomLegacyFamily = atomFamily((key: [InventoryTab, string]) => atomWithQuery<Doc>((get) => {
   const gameId = get(gameIdAtom)
   const type = key[0]
   const name = key[1]
   return {
-    queryKey: ['doc', gameId, type, name],
+    // Its own cache entry: sharing ['doc', …] with docAtomFamily put two
+    // different query functions (new and legacy file names) on one query.
+    queryKey: ['docLegacy', gameId, type, name],
+    // Only a fallback: games built before the Lemma → Theorem rename name a
+    // theorem's doc file doc__Lemma__<name>.json. Fetched only for a theorem
+    // whose new-name file failed, and once (no game served today has a
+    // legacy file: each retry was a 404 in the console). For tactics and
+    // definitions the legacy name IS the new name — never fetched twice.
+    enabled: type === InventoryTab.theorem && name !== "" && get(docAtomFamily(key)).isError,
+    retry: false,
     queryFn: async () => {
       const caps = capitalizeFirstLetter(type)
       const legacy = caps == "Theorem" ? "Lemma" : caps
@@ -50,7 +68,7 @@ export const docAtomLegacyFamily = atomFamily((key: [InventoryTab, string]) => a
       return res.json()
     },
   }
-}))
+}), sameDocKey)
 
 function capitalizeFirstLetter(val: InventoryTab) {
   return String(val).charAt(0).toUpperCase() + String(val).slice(1);
