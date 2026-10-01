@@ -20,10 +20,13 @@ function useGameKnown(gameId: string | null | undefined): boolean | undefined {
   React.useEffect(() => {
     if (!gameId) return
     let live = true
-    void gameKnown(gameId).then((k) => { if (live) setKnown({ id: gameId, known: k }) })
-    // gameKnown is bounded (a stalled catalog fetch answers "known" after a
-    // few seconds); a late negative from the real check still lands here.
-    void gameKnownCheck(gameId).then((k) => { if (live && !k) setKnown({ id: gameId, known: false }) })
+    // The real check decides (D4: the placeholder stays up until it answers
+    // — on a slow link the catalog took longer than the old 4 s bound, the
+    // level mounted and the boot banner showed for an unknown game); the
+    // bounded gameKnown (20 s) is the stalled-link escape hatch only, and a
+    // late negative from the real check still lands here.
+    void gameKnownCheck(gameId).then((k) => { if (live) setKnown({ id: gameId, known: k }) })
+    void gameKnown(gameId).then((k) => { if (live) setKnown((cur) => cur?.id === gameId ? cur : { id: gameId, known: k }) })
     return () => { live = false }
   }, [gameId])
   if (!gameId) return true

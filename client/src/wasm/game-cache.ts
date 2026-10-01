@@ -181,12 +181,20 @@ async function warmTarget(): Promise<ServiceWorker | null> {
   return reg?.active ?? null;
 }
 
-/** One warm-up in flight per runtime build: two Prepares clicked together
- * (and the boot's own warm-up after them) share one `warm` message. The
- * service worker's handler fetches every URL its cache lacks, and a second
- * loop started while the first's fetches were in flight missed each
- * cache.match and downloaded the 154 MB runtime a second time. */
-let warmInFlight: { buildId: string; p: Promise<WarmReply | null> } | null = null;
+/** One warm-up in flight per (runtime build, extra URLs) set: two Prepares
+ * clicked together share one `warm` message. The boot's own warm-up names
+ * the bound game's data too, so it is a SEPARATE message even while a
+ * Prepare's warm-up runs — the worker dedupes the fetches per URL (a second
+ * loop started while the first's fetches were in flight used to miss each
+ * cache.match and download the 154 MB runtime a second time), and the boot
+ * gives its message the Prepare's 10-minute window: chunks a Prepare is
+ * still fetching are awaited, not fetched twice. */
+let warmInFlight: { buildId: string; p: Promise<WarmOutcome> } | null = null;
+
+/** Why a warm-up produced no reply: `no-worker` — no active service worker
+ * to post to (none registered, or none active within warmTarget's wait);
+ * `timeout` — an active worker got the message but did not answer in time. */
+export type WarmOutcome = WarmReply | "no-worker" | "timeout";
 
 /** Ask the service worker to cache the runtime's chunks and the manifests
  * (its `warm` message: through the HTTP cache, so bytes a boot just
@@ -194,21 +202,37 @@ let warmInFlight: { buildId: string; p: Promise<WarmReply | null> } | null = nul
  * runtimes). Needs no page control, so it works on the very first visit —
  * but a worker must have registered and activated (warmTarget). Null when
  * there is no service worker, or no reply in time. */
-export function warmRuntimeCache(runtime: RuntimeManifest, timeoutMs = 120000): Promise<WarmReply | null> {
-  if (warmInFlight?.buildId === runtime.buildId) return warmInFlight.p;
-  const p = (async (): Promise<WarmReply | null> => {
+export function warmRuntimeCache(runtime: RuntimeManifest, extraUrls: readonly string[] = [], timeoutMs = 120000): Promise<WarmReply | null> {
+  return warmRuntimeCacheOutcome(runtime, extraUrls, timeoutMs).then((o) => (typeof o === "string" ? null : o));
+}
+
+/** warmRuntimeCache, telling a missing worker from a silent one (game-boot
+ * re-warms on `serviceWorker.ready` only for the former: `ready` has
+ * already resolved for an active worker, so a re-warm armed on a timeout
+ * fired at once and repeated every timeout without limit). */
+export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: readonly string[] = [], timeoutMs = 120000): Promise<WarmOutcome> {
+  // D2: `extraUrls` — the bound game's data and i18n files (game-boot
+  // offlineDataUrls) — ride in the SAME message as the runtime list: the
+  // worker's prune keeps exactly the chunks the message names, so a
+  // data-only message would prune the runtime. One warm-up in flight per
+  // (build, extras) set; a Prepare's plain warm-up and the boot's warm-up
+  // with extras may overlap — the worker dedupes the fetches per URL.
+  const buildId = `${runtime.buildId}|${[...extraUrls].sort().join(" ")}`;
+  if (warmInFlight?.buildId === buildId) return warmInFlight.p;
+  const p = (async (): Promise<WarmOutcome> => {
     const urls: string[] = ["/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json"];
     for (const f of Object.values(runtime.files)) for (const c of f.chunks) urls.push(c.url);
+    for (const u of extraUrls) if (!urls.includes(u)) urls.push(u);
     const target = await warmTarget();
-    if (!target) return null;
-    return new Promise<WarmReply | null>((resolve) => {
+    if (!target) return "no-worker";
+    return new Promise<WarmOutcome>((resolve) => {
       const ch = new MessageChannel();
-      const t = window.setTimeout(() => resolve(null), timeoutMs);
+      const t = window.setTimeout(() => resolve("timeout"), timeoutMs);
       ch.port1.onmessage = (e) => { window.clearTimeout(t); resolve(e.data as WarmReply); };
       target.postMessage({ type: "warm", urls }, [ch.port2]);
     });
   })();
-  warmInFlight = { buildId: runtime.buildId, p };
+  warmInFlight = { buildId, p };
   p.finally(() => { if (warmInFlight?.p === p) warmInFlight = null; }).catch(() => {});
   return p;
 }
@@ -303,7 +327,7 @@ export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean
   if (memoryNote) memoryNoteShown = true;
   let status: PrepareStatus = { phase: "running", bytes: 0, total: entry.bytes, memoryNote };
   publish(entry.name, status);
-  const warm = resolveRuntimeManifest().then((m) => warmRuntimeCache(m, 10 * 60 * 1000)).catch((e) => {
+  const warm = resolveRuntimeManifest().then((m) => warmRuntimeCache(m, [], 10 * 60 * 1000)).catch((e) => {
     console.warn("[game-cache] runtime warm-up skipped:", e);
     return null;
   });

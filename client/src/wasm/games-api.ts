@@ -67,19 +67,26 @@ export async function findApiGame(gameId: string): Promise<ApiGame | null> {
  * network failure of either is no evidence (offline play of a cached game
  * must keep working), so it counts as known — and so is any other status
  * (403/429/5xx: a transient edge refusal is not "this game does not exist";
- * the same rule as checkSnapshotPairing). The wait is bounded: after
+ * the same rule as checkSnapshotPairing). The ROUTE's wait is bounded: after
  * GAME_KNOWN_WAIT_MS without an answer (a stalled link: fetch hangs instead
- * of failing) the caller gets "known" WITHOUT memoising it, so the page
- * renders and the settled check still decides later calls. Memoised per id; the router
- * renders the not-found page and the boot does not start for an unknown id
- * (it used to render an empty game shell and log a boot failure twice). */
+ * of failing) the router gets "known" WITHOUT memoising it, so the page
+ * renders and the settled check still decides later calls. The BOOT never
+ * takes the bounded answer (gameKnownCheck): on a slow link the catalog
+ * answered after the old 4 s bound, the boot had started on "known", and an
+ * unknown game's level URL showed the boot banner and a "Lean failed to
+ * start" card before the not-found page (D4, live 2026-09-22). Memoised per
+ * id; the router renders the not-found page and the boot does not start for
+ * an unknown id (it used to render an empty game shell and log a boot
+ * failure twice). */
 const knownGames = new Map<string, Promise<boolean>>();
-const GAME_KNOWN_WAIT_MS = 4000;
+const GAME_KNOWN_WAIT_MS = 20000;
 export function gameKnown(gameId: string): Promise<boolean> {
   return Promise.race([gameKnownCheck(gameId), new Promise<boolean>((r) => setTimeout(() => r(true), GAME_KNOWN_WAIT_MS))]);
 }
-/** The unbounded check (the router follows it after a timed-out gameKnown,
- * so a late "unknown" still reaches the not-found page). */
+/** The unbounded check: what the boot binds on (no boot, no failure card
+ * for an unknown game — the placeholder shows until it answers), and what
+ * the router follows after a timed-out gameKnown, so a late "unknown" still
+ * reaches the not-found page. */
 export function gameKnownCheck(gameId: string): Promise<boolean> {
   let p = knownGames.get(gameId);
   if (!p) {

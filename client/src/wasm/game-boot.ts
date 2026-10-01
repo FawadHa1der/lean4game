@@ -40,11 +40,12 @@ import { ResidentSession, type ResidentHost, type ResidentPolicy } from "qed64/f
 import type { SnapshotEntry, SnapshotIndex } from "qed64/src/runtime/snapshots";
 import { atom, getDefaultStore } from "jotai";
 import { difficultyAtom, progressAtom } from "../store/progress-atoms";
+import { preferencesAtom } from "../store/preferences-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
 import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing, publishNetworkHold } from "../store/boot-atoms";
 import { rememberGamedata } from "./gamedata-cache";
-import { MiB, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnown, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
-import { claimSnapshotForBoot, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareStatusesAtom, sweepStaleSnapshots, warmRuntimeCache, type PrepareStatus } from "./game-cache";
+import { MiB, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
+import { claimSnapshotForBoot, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareStatusesAtom, sweepStaleSnapshots, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
 
 export interface GameDataBundle {
   gameName: string;
@@ -191,11 +192,16 @@ async function mirrorPrepare<T>(ui: StatusSink, snapshot: string | null, label: 
   try { render(); return await until; } finally { unsub(); }
 }
 
+/** D2: every game-data URL this boot fetched (game.json and the level files),
+ * for the service worker's offline warm-up — a first visit fetches them
+ * before the worker controls the page, so nothing else records them. */
+const fetchedDataUrls: string[] = [];
 async function fetchJson(url: string): Promise<any> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`fetch ${url}: ${r.status}`);
   const json = await r.json();
   rememberGamedata(url, json); // the UI's offline fallback for level texts
+  if (!fetchedDataUrls.includes(url)) fetchedDataUrls.push(url);
   return json;
 }
 
@@ -405,6 +411,7 @@ function markServed(ui: StatusSink): void {
   // tab that survived three flaps gets a fourth recovery, and the one guarded
   // reload of the no-document re-arm is available again.
   autoRearms = 0;
+  deployProblem = "";
   try { sessionStorage.removeItem("l4g-network-reload"); } catch { /* storage blocked */ }
   if (everServed) return;
   everServed = true;
@@ -425,16 +432,78 @@ function markServed(ui: StatusSink): void {
  * second download — and to prune chunks of superseded runtimes. Snapshots
  * are not needed here (OPFS). */
 let warmedArtifacts: Qed64Artifacts | null = null;
-async function warmOfflineCache(): Promise<void> {
-  const a = warmedArtifacts; warmedArtifacts = null;
-  if (!a) return;
+/** D2: the bound game's data the level UI fetches on its own (not through
+ * the boot): game.json and every level file the boot fetched, the
+ * inventory and every documentation file it lists (the inventory panel's
+ * doc__<Tactic|Theorem|Definition>__<name>.json — 97 files / 40 KB for
+ * NNG4, at most 188 / 85 KB per game), the UI language's i18n namespace
+ * (and English, the fallback). A first visit fetched them before the
+ * service worker controlled the page, so an offline reload of that game
+ * 404'd on game.json / level__*.json / inventory.json / i18n although the
+ * checker and the region were cached. NOT `/api/games`: it is in the
+ * shell precache, and network-first refreshes only the shell's copy — a
+ * runtime-cache copy would never be replaced. Images stay cached-on-use.
+ * Always sent WITH the runtime list (one `warm` message): the worker's
+ * prune keeps exactly the chunks the message names, and a data-only
+ * message to a previous deploy's worker would have pruned the whole
+ * runtime. */
+async function offlineDataUrls(): Promise<string[]> {
+  const id = boundGameId;
+  if (!id) return [];
+  const langs = new Set(["en"]);
+  try { langs.add(getDefaultStore().get(preferencesAtom).language || "en"); } catch { /* the atom is fine; belt and braces */ }
+  const urls = [`/data/${id}/game.json`, ...fetchedDataUrls, `/data/${id}/inventory.json`, ...(await inventoryDocUrls(id)), ...[...langs].map((l) => `/i18n/${id}/${l}`)];
+  return [...new Set(urls.map((u) => { try { return new URL(u, window.location.origin).pathname; } catch { return u; } }))];
+}
+
+/** The documentation files the inventory panel opens (store/inventory-atoms
+ * docAtomFamily: `doc__${Type}__${name}.json`, Type = the capitalised tab),
+ * from the game's inventory.json — through the HTTP cache, the UI has just
+ * read it. Nothing on a failure: the docs are a bonus, not the warm-up. */
+async function inventoryDocUrls(id: string): Promise<string[]> {
   try {
-    const reply = await warmRuntimeCache(a.runtime);
-    if (reply) console.info(`[game-boot] offline cache: ${reply.cached}/${reply.total} runtime files cached, ${reply.pruned} superseded pruned`);
-    else console.warn("[game-boot] offline cache warm-up: no service worker reply");
+    const r = await fetch(`/data/${id}/inventory.json`);
+    if (!r.ok) return [];
+    const inv = (await r.json()) as Record<string, unknown>;
+    const out: string[] = [];
+    for (const [key, type] of [["tactics", "Tactic"], ["lemmas", "Theorem"], ["definitions", "Definition"]] as const) {
+      const items = Array.isArray(inv?.[key]) ? (inv[key] as { name?: unknown }[]) : [];
+      for (const it of items) if (typeof it?.name === "string" && it.name) out.push(`/data/${id}/doc__${type}__${it.name}.json`);
+    }
+    return out.slice(0, 400); // the largest game lists 188
+  } catch { return []; }
+}
+
+let rewarmArmed = false;
+async function warmOfflineCache(): Promise<void> {
+  const a = warmedArtifacts;
+  if (!a) return;
+  let outcome: Awaited<ReturnType<typeof warmRuntimeCacheOutcome>> | null = null;
+  try {
+    // The Prepare's 10-minute window: a Prepare's warm-up may still be
+    // fetching the runtime chunks this message names (the worker dedupes).
+    outcome = await warmRuntimeCacheOutcome(a.runtime, await offlineDataUrls(), 10 * 60 * 1000);
+    if (typeof outcome !== "string") { warmedArtifacts = null; console.info(`[game-boot] offline cache: ${outcome.cached}/${outcome.total} runtime + game-data files cached, ${outcome.pruned} superseded pruned`); return; }
   } catch (e) {
     console.warn("[game-boot] offline cache warm-up skipped:", e);
+    return;
   }
+  if (outcome === "timeout") {
+    // An ACTIVE worker got the message and did not answer: `ready` has
+    // already resolved, so a re-warm armed on it would fire at once and
+    // repeat every timeout. Nothing more this page.
+    warmedArtifacts = null;
+    console.warn("[game-boot] offline cache warm-up: the service worker did not answer in time — not retried this page");
+    return;
+  }
+  console.warn("[game-boot] offline cache warm-up: no active service worker — retried when a worker is ready");
+  // D2: no worker to post to (a first visit whose 37 MB precache install
+  // outlasts warmTarget's 30 s wait on a slow link, or the registration
+  // was still to come): warm again once one is active. `ready` never
+  // settles while nothing registers (the dev server) — then nothing runs.
+  if (rewarmArmed || !("serviceWorker" in navigator)) return;
+  rewarmArmed = true;
+  void navigator.serviceWorker.ready.then(() => { rewarmArmed = false; void warmOfflineCache(); }, () => { rewarmArmed = false; });
 }
 
 /* ---- L4: network-aware recovery -------------------------------------------
@@ -462,6 +531,116 @@ const SNAPSHOT_DEATH = /^snapshot '.*' failed to load$/;
 const looksLikeNetworkDeath = (d: { reason: string; message: string } | null | undefined): boolean =>
   !!d && NETWORK_DETAIL.test(SNAPSHOT_DEATH.test(d.message) ? lastSnapshotFailure : d.message);
 const NETWORK_WAIT_LABEL = "waiting for the connection — the download restarts on its own";
+
+/* D1 (live 2026-09-22): on a FIRST visit the service worker's 37 MB precache
+ * install takes minutes on a slow link (the registration even disappears
+ * when the install times out), so nothing serves /workers/lean.worker.js,
+ * lsp-frames.js and lsp-front-door.js during a cut — and the vendored
+ * session constructs its Worker in the relay's synchronous reboot, BEFORE
+ * the injected settle runs (lsp-relay.ts reboot → makeSession → new
+ * LeanSession → `new Worker(url)`). A worker whose script fails to load
+ * fires a bare `error` event: reason "crash", NO message. Three of those
+ * arrive within milliseconds, the breaker trips before any settle can hold,
+ * and the halted death carries nothing looksLikeNetworkDeath can read. So:
+ *  - networkSuspected: a death that is not network-shaped by its text is
+ *    still checked against the link when the bound game's raw region is not
+ *    in OPFS yet (a cached game is never held — its reboot needs no network
+ *    and a real crash must reach the card); the same cheap same-origin
+ *    probe decides;
+ *  - the halted case is classified the same way (classifyHalt) and re-armed
+ *    by the existing scheduleNetworkRearm — whose wait resolves on the
+ *    `online` event and on the next successful probe;
+ *  - after every hold the worker scripts are preflighted before the relay
+ *    is let to reboot (awaitLink): a failed fetch is the link (hold again),
+ *    a 404/HTML answer is a deploy problem (no re-arm: the card names it).
+ * None of it relies on the service worker. The corrupt / unpaired snapshot
+ * deaths carry their messages and the region is in OPFS by then: card. */
+const WORKER_SCRIPTS = ["/workers/lean.worker.js", "/workers/lsp-frames.js", "/workers/lsp-front-door.js", "/workers/snapshot-prefetch.worker.js"];
+/** The bound game's index entry (rawSnapshotCached needs the cache key). */
+let boundEntry: SnapshotEntry | null = null;
+/** A worker script the deployment does not serve (404 / HTML page), found
+ * by a preflight: the halted card's text when the death itself has none,
+ * and the reason no hold/re-arm applies. Reset by a served boot. */
+let deployProblem = "";
+
+type Preflight = { ok: true } | { ok: false; kind: "link" | "deploy"; detail: string };
+/** HEAD every worker script: generated into public/workers from the vendored
+ * closure (gitignored), a shell deployed without them (the first CI-built
+ * deploy, 2026-09-07) hangs at "starting Lean" with no error — `new
+ * Worker(404)` never answers. A static host answers 404; a single-page
+ * fallback answers 200 with the app's HTML — neither is a worker script; a
+ * fetch that fails outright is the link, not the deploy. */
+async function preflightWorkerScripts(): Promise<Preflight> {
+  for (const script of WORKER_SCRIPTS) {
+    const r = await fetch(script, { method: "HEAD", cache: "no-cache" }).catch(() => null);
+    if (!r) return { ok: false, kind: "link", detail: `${script} is unreachable` };
+    // Missing ONLY on 404/410 or a 2xx single-page-fallback HTML answer (the
+    // rule checkSnapshotPairing / gameKnownCheck follow): a 5xx/429/403 from
+    // the edge or a proxy while the link recovers is transient — the link.
+    const html = r.ok && /text\/html/i.test(r.headers.get("content-type") ?? "");
+    if (r.status === 404 || r.status === 410 || html) return { ok: false, kind: "deploy", detail: `this deployment is missing ${script} (HTTP ${r.status}${html ? ", HTML page" : ""}) — the site needs a rebuild that stages the worker scripts` };
+    if (!r.ok) return { ok: false, kind: "link", detail: `${script}: HTTP ${r.status}` };
+  }
+  return { ok: true };
+}
+
+/** Is this death the link's doing? By its text when it has one; otherwise
+ * (or when the text says nothing about the network) by the probe while the
+ * bound game's region is not in OPFS. A cached region still needs the
+ * worker scripts: a service worker that controls the page answers their
+ * HEADs from its shell cache offline (so a cached game under a worker is
+ * never held — a real crash reaches the card), but a page with no
+ * controller (first visit before the install finished, Shift+Reload, a
+ * registration lost to an install timeout) fetches them from the network on
+ * every reboot — such a reboot during a cut is three bare deaths, the link's
+ * doing. A deploy problem is not the link. */
+async function networkSuspected(death: { reason: string; message: string } | null | undefined): Promise<boolean> {
+  if (looksLikeNetworkDeath(death)) return true;
+  if (deployProblem || !boundEntry) return false;
+  if (await rawSnapshotCached(boundEntry)) {
+    const pf = await preflightWorkerScripts();
+    return !pf.ok && pf.kind === "link";
+  }
+  return !(await probeNetwork());
+}
+
+/** Resolve once the origin answers AND the worker scripts are served: the
+ * probe alone let a reboot spawn its worker into a link that had just
+ * dropped again (three bare deaths, breaker). `onWaiting` fires the first
+ * time the link is found down. "deploy": the origin answers but a worker
+ * script is missing — recorded in deployProblem, nothing to wait for. */
+async function awaitLink(onWaiting: () => void): Promise<"ok" | "deploy"> {
+  let everDown = false;
+  const waiting = () => { if (!everDown) { everDown = true; onWaiting(); } };
+  for (;;) {
+    await waitForNetwork(waiting);
+    const pf = await preflightWorkerScripts();
+    if (pf.ok) { deployProblem = ""; return "ok"; }
+    if (pf.kind === "deploy") { deployProblem = pf.detail; console.error(`[game-boot] ${pf.detail}`); return "deploy"; }
+    console.warn(`[game-boot] the origin answered but ${pf.detail} — still waiting for the connection`);
+    waiting();
+    await new Promise((r) => window.setTimeout(r, 2000));
+  }
+}
+
+/** Hold (a boot stage or the relay's settle) until the link is back. */
+async function holdForNetwork(why: string): Promise<"ok" | "deploy"> {
+  const t0 = Date.now();
+  let held = false;
+  const verdict = await awaitLink(() => {
+    held = true;
+    console.warn(`[game-boot] the network is unreachable after "${why}" — holding the restart until it returns`);
+    // A halted relay's card and recovery belong to classifyHalt /
+    // scheduleNetworkRearm: a hold found while halted publishes nothing.
+    if (relayHalted) return;
+    publishNetworkHold({ since: t0, halted: false });
+    publishCheckerActivity("busy", NETWORK_WAIT_LABEL, !bootFinishedOnce, true);
+    publishBootStatus({ state: "busy", label: NETWORK_WAIT_LABEL });
+  });
+  if (held && verdict === "ok") console.info(`[game-boot] the network is back after ${Math.round((Date.now() - t0) / 1000)} s — restarting the checker`);
+  if (!relayHalted || verdict === "deploy") publishNetworkHold(null);
+  return verdict;
+}
 
 /** Any HTTP answer means the origin is reachable. `no-store` makes the
  * service worker go to the network and NOT fall back to its cache (sw
@@ -499,22 +678,28 @@ async function waitForNetwork(onWaiting: () => void): Promise<boolean> {
  * while offline dies once with a fetch-shaped death; the NEXT settle holds. */
 async function networkAwareSettle(): Promise<void> {
   await new Promise((r) => window.setTimeout(r, 1500));
+  // The relay halted meanwhile (the D1 shape: three bare deaths within
+  // milliseconds, each starting a settle): this settle belongs to a session
+  // the breaker already killed — the relay only goes on to start() it. Its
+  // hold would put the network card back over classifyHalt's verdict (a
+  // permanent "starts on its own" after the re-arm budget was spent) and
+  // pile up probe loops. The halt's recovery is classifyHalt's.
+  if (relayHalted) return;
   const death = relayRef?.lastDeath;
-  if (!looksLikeNetworkDeath(death)) return;
-  const t0 = Date.now();
-  const waited = await waitForNetwork(() => {
-    console.warn(`[game-boot] the network is unreachable after "${death?.message ?? "offline"}" — holding the restart until it returns`);
-    publishNetworkHold({ since: t0, halted: false });
-    publishCheckerActivity("busy", NETWORK_WAIT_LABEL, !bootFinishedOnce, true);
-    publishBootStatus({ state: "busy", label: NETWORK_WAIT_LABEL });
-  });
-  if (waited) console.info(`[game-boot] the network is back after ${Math.round((Date.now() - t0) / 1000)} s — restarting the checker`);
-  if (!relayHalted) publishNetworkHold(null);
+  if (!(await networkSuspected(death))) return;
+  // D1(c): the settle cannot fail the relay's boot (it runs outside the
+  // relay's try), so a deploy problem found here is left to the reboot,
+  // whose worker dies with it; classifyHalt then names it on the card.
+  await holdForNetwork(death?.message || death?.reason || "offline");
 }
 
 const MAX_AUTO_REARMS = 3;
 let autoRearms = 0, autoRearmScheduled = false;
-/** Safety net (2): re-arm a relay that halted for a network reason. */
+/** Safety net (2): re-arm a relay that halted for a network reason — also
+ * the D1 case, where the breaker tripped on three bare worker-script deaths
+ * before any settle ran. The wait resolves on the `online` event and on the
+ * next successful probe, then the worker scripts are preflighted before the
+ * re-arm spawns a worker. */
 function scheduleNetworkRearm(): void {
   if (autoRearmScheduled || autoRearms >= MAX_AUTO_REARMS) return;
   autoRearmScheduled = true;
@@ -523,9 +708,21 @@ function scheduleNetworkRearm(): void {
   void (async () => {
     // Not at once: a flapping link would burn the fresh breaker budget too.
     await new Promise((r) => window.setTimeout(r, [3000, 15000, 30000][autoRearms] ?? 30000));
-    await waitForNetwork(() => {});
+    const verdict = await awaitLink(() => {});
     autoRearmScheduled = false;
     if (relayRef?.state.kind !== "halted") return;
+    if (verdict === "deploy") {
+      // The link is back but the deployment cannot serve a worker: a re-arm
+      // would only die three more times. The normal card, naming the script.
+      publishNetworkHold(null);
+      publishHaltedFailure(`Lean failed to start: ${deployProblem}`);
+      return;
+    }
+    // awaitLink just confirmed the origin and the worker scripts answer: the
+    // re-armed boot downloads, it does not wait (a re-armed session that dies
+    // to the network again publishes a new hold from its settle, or halts
+    // and is classified again).
+    publishNetworkHold(null);
     autoRearms += 1;
     console.warn(`[game-boot] the network is reachable again — re-arming the halted checker (automatic attempt ${autoRearms}/${MAX_AUTO_REARMS})`);
     if (rearmCheckerIfHalted()) return;
@@ -541,6 +738,47 @@ function scheduleNetworkRearm(): void {
   })();
 }
 
+/** The failure card while the relay is halted: the idle label the pane
+ * renders as "Lean could not start" plus the halted FACT (L5: the pane's 4 s
+ * retry tick is guarded by it; without it each tick asked a halted relay,
+ * was refused, and flipped the pane between the failure card and the
+ * editor-mode "Crashed!" wrapper every few seconds). */
+function publishHaltedFailure(label: string, ui: StatusSink = consoleSink): void {
+  ui.idle(label);
+  publishCheckerActivity("ready", humanizeLabel(label.replace(/^Lean failed to start: /, "")), false, false, true);
+}
+
+let haltGen = 0;
+/** The halted relay's verdict (D1): hold-and-re-arm for a network-shaped
+ * death; for a bare or unspecific death the same-origin probe decides while
+ * the region is not in OPFS (networkSuspected) — the pane says "checking the
+ * connection" meanwhile, the halted fact already published so nothing polls
+ * the halted relay. A verdict for a halt that ended (a re-arm, a document
+ * change) while the probe ran is dropped. */
+async function classifyHalt(st: RelayStatus, ui: StatusSink): Promise<void> {
+  const gen = ++haltGen;
+  const death = st.lastDeath ? `${st.lastDeath.message || st.lastDeath.reason}` : "";
+  const reason = st.lastDeath?.message || deployProblem || death || "the checker crashed repeatedly while starting";
+  let network = looksLikeNetworkDeath(st.lastDeath);
+  if (!network && autoRearms < MAX_AUTO_REARMS) {
+    publishCheckerActivity("ready", "checking the connection", false, false, true);
+    publishBootStatus({ state: "busy", label: "checking the connection" });
+    network = await networkSuspected(st.lastDeath);
+    if (gen !== haltGen || !relayHalted) return;
+  }
+  if (network && autoRearms < MAX_AUTO_REARMS) {
+    console.warn(`[game-boot] the checker halted after "${death || "a bare worker death"}" with the network unreachable — recovery is automatic`);
+    scheduleNetworkRearm();
+  } else publishNetworkHold(null);
+  if (!everServed) {
+    publishHaltedFailure(`Lean failed to start: ${reason}`, ui);
+  } else {
+    const label = `the checker halted after repeated crashes${death ? ` (${death.slice(0, 80)})` : ""}`;
+    publishCheckerActivity("ready", label, false, false, true);
+    publishBootStatus({ state: "ready", label });
+  }
+}
+
 function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   // A game switch is waiting for running prepares before it reloads: the
   // banner shows THAT wait, and the outgoing game's relay (still serving,
@@ -550,23 +788,11 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   if (st.relay === "halted") {
     relayRebooting = false;
     relayHalted = true;
-    const network = looksLikeNetworkDeath(st.lastDeath) && autoRearms < MAX_AUTO_REARMS;
-    if (network) scheduleNetworkRearm(); else publishNetworkHold(null);
-    if (!everServed) {
-      ui.idle(`Lean failed to start: ${death || "the checker crashed repeatedly while starting"}`);
-      // L5: publish the halted FACT for the not-yet-served case too — the
-      // pane's 4 s retry tick is guarded by it; without it each tick asked a
-      // halted relay, was refused, and flipped the pane between the failure
-      // card and the editor-mode "Crashed!" wrapper every few seconds.
-      publishCheckerActivity("ready", humanizeLabel(death || "the checker crashed repeatedly while starting"), false, false, true);
-    } else {
-      const label = `the checker halted after repeated crashes${death ? ` (${death.slice(0, 80)})` : ""}`;
-      publishCheckerActivity("ready", label, false, false, true);
-      publishBootStatus({ state: "ready", label });
-    }
+    void classifyHalt(st, ui);
     return;
   }
   relayHalted = false;
+  haltGen += 1; // a classification still running belongs to a halt that is over
   if (st.relay === "serving") publishNetworkHold(null);
   if (st.relay === "rebooting" || st.phase === "booting" || st.phase === "dead") {
     relayRebooting = true;
@@ -683,7 +909,11 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     // refused) boots nothing and publishes no failure — the router shows the
     // not-found page. Unbound again, so a real game entered later binds
     // without a reload. The promise stays pending like the landing page's.
-    if (!(await gameKnown(boundGameId!))) {
+    // D4: the UNBOUNDED check — the bounded one answered "known" after 4 s
+    // on a slow link and an unknown game's level URL booted (banner, then a
+    // failure card) before the not-found page; nothing is published before
+    // the answer, so the route's placeholder is all the player sees.
+    if (!(await gameKnownCheck(boundGameId!))) {
       console.warn(`[game-boot] ${boundGameId} is not a game on this site — nothing to boot`);
       boundGameId = null;
       bootPromise = null;
@@ -695,6 +925,7 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     ui.busy("checking this game's environment");
     const snapshot = await resolveSnapshotName(boundGameId!);
     const { entry, index } = await checkSnapshotPairing(snapshot);
+    boundEntry = entry;
     const store = getDefaultStore();
     store.set(boundEnvironmentAtom, { gameId: boundGameId!, snapshot, bytes: entry.bytes, transfer: entry.transfer ?? entry.bytes });
     // One sweep per page of raw regions a rebake superseded (the served
@@ -719,18 +950,15 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
       inventory: () => store.get(progressAtom)?.inventory ?? [],
     });
 
-    // Preflight the worker scripts: they are generated into public/workers
-    // from the vendored closure (gitignored), and a shell deployed without
-    // them (the first CI-built deploy, 2026-09-07) hangs at "starting Lean"
-    // with no error — `new Worker(404)` never answers. Fail loud instead.
-    for (const script of ["/workers/lean.worker.js", "/workers/lsp-frames.js", "/workers/lsp-front-door.js", "/workers/snapshot-prefetch.worker.js"]) {
-      const r = await fetch(script, { method: "HEAD", cache: "no-cache" }).catch(() => null);
-      // A static host answers 404; a single-page fallback answers 200 with
-      // the app's HTML — neither is a worker script.
-      const html = /text\/html/i.test(r?.headers.get("content-type") ?? "");
-      if (!r || !r.ok || html) {
-        throw new Error(`this deployment is missing ${script} (${r ? `HTTP ${r.status}${html ? ", HTML page" : ""}` : "unreachable"}) — the site needs a rebuild that stages the worker scripts`);
-      }
+    // Preflight the worker scripts (preflightWorkerScripts): a deployment
+    // without them fails loud here instead of hanging at "starting Lean";
+    // a link that cannot reach them holds the boot until it can (D1: the
+    // fetch failure of a cut is not "this deployment is missing …").
+    const pf = await preflightWorkerScripts();
+    if (!pf.ok) {
+      if (pf.kind === "deploy") throw new Error(pf.detail);
+      console.warn(`[game-boot] ${pf.detail} before the boot — holding for the connection`);
+      if ((await holdForNetwork(pf.detail)) === "deploy") throw new Error(deployProblem);
     }
     // A landing-page Prepare of THIS environment still running: wait for it
     // (its bytes show on the banner) rather than spawn a second prefetch

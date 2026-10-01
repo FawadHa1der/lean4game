@@ -151,6 +151,21 @@ self.addEventListener("fetch", (event) => {
 // fetch per URL at a time across concurrent warms (two tabs preparing at
 // once): a second loop would miss every cache.match the first has not put
 // yet and download the runtime again.
+// The page also names the bound game's data (/data/<id>/*.json — game,
+// levels, inventory, docs — and /i18n/<id>/<lang>) in the same message: a
+// first visit fetched them before this worker controlled the page, and an
+// offline reload of that game then 404'd on them. They land in the runtime
+// cache too, where the network-first path's offline fallback (lookup) finds
+// them. Only content-addressed chunks are skipped when already cached; every
+// other URL is fetched (through the HTTP cache — the page just loaded them)
+// and REPLACES the stored copy on a storable answer, so a load this worker
+// did not control (a Shift+Reload after a redeploy) still refreshes the
+// previous deploy's level files; offline or a refused fetch keeps the old
+// copy. A network-first hit through this worker also replaces the runtime
+// copy of a path outside the precache list (a precached path's network-first
+// write goes to the shell cache, which lookup reads first — so the page never
+// names a precached path such as /api/games here). `prune: false` skips the
+// chunk prune for a message that names no chunks.
 const warmFetches = new Map();
 self.addEventListener("message", (event) => {
   const data = event.data;
@@ -160,9 +175,12 @@ self.addEventListener("message", (event) => {
     const cache = await caches.open(RUNTIME);
     let cached = 0, pruned = 0;
     for (const u of data.urls) {
+      let req = null;
       try {
-        const req = new Request(u);
-        if (await cache.match(req)) { cached += 1; continue; }
+        req = new Request(u);
+        const p = new URL(req.url).pathname;
+        if (isNetworkOnly(p)) continue;
+        if (isRuntimeChunk(p) && await cache.match(req)) { cached += 1; continue; }
         let job = warmFetches.get(req.url);
         if (!job) {
           job = (async () => {
@@ -173,13 +191,21 @@ self.addEventListener("message", (event) => {
           })().finally(() => warmFetches.delete(req.url));
           warmFetches.set(req.url, job);
         }
-        if (await job) cached += 1;
-      } catch { /* offline or quota: the next warm-up retries */ }
+        if (await job) { cached += 1; continue; }
+        // Refused (404 / an HTML fallback): a copy already held still counts.
+        if (await cache.match(req)) cached += 1;
+      } catch {
+        // Offline or quota: the next warm-up retries; a copy already held
+        // stays (and counts — the reply reports what an offline reload finds).
+        try { if (req && await cache.match(req)) cached += 1; } catch { /* storage gone */ }
+      }
     }
     const keep = new Set(data.urls.map((u) => new URL(u, self.location.origin).pathname));
-    for (const req of await cache.keys()) {
-      const p = new URL(req.url).pathname;
-      if (isRuntimeChunk(p) && !keep.has(p)) { await cache.delete(req); pruned += 1; }
+    if (data.prune !== false && [...keep].some(isRuntimeChunk)) {
+      for (const req of await cache.keys()) {
+        const p = new URL(req.url).pathname;
+        if (isRuntimeChunk(p) && !keep.has(p)) { await cache.delete(req); pruned += 1; }
+      }
     }
     reply({ type: "warmed", cached, pruned, total: data.urls.length });
   })());

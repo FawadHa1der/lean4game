@@ -30,7 +30,7 @@ import { useTranslation } from 'react-i18next'
 import { useGameTranslation } from '../utils/translation'
 import { InventoryPanel } from './inventory/inventory_panel'
 import { useAtom } from 'jotai'
-import { codeAtom, crashedAtom, interimDiagsAtom, leanMonacoAtom, lockEditorModeAtom, proofAtom, selectionsAtom, typewriterModeAtom } from '../store/editor-atoms'
+import { codeAtom, crashedAtom, interimDiagsAtom, leanMonacoAtom, lockEditorModeAtom, proofAtom, selectionsAtom, typewriterContentAtom, typewriterModeAtom } from '../store/editor-atoms'
 import { gameIdAtom, levelIdAtom, worldIdAtom } from '../store/location-atoms'
 import { gameInfoAtom, levelInfoAtom } from '../store/query-atoms'
 import { deletedChatAtom, helpAtom, selectedStepAtom } from '../store/chat-atoms'
@@ -269,7 +269,7 @@ function PlayableLevel() {
   const [pageNumber, setPageNumber] = useState(0)
   // set to true to prevent switching between typewriter and editor
   const [lockEditorMode] = useAtom(lockEditorModeAtom)
-  const [, setTypewriterInput] = useState("")
+  const [, setTypewriterContent] = useAtom(typewriterContentAtom)
   const lastLevel = worldId && (levelId !== undefined) && levelId >= (gameInfo?.worldSize?.[worldId] ?? 0)
 
   // When clicking on an inventory item, the inventory is overlayed by the item's doc.
@@ -520,11 +520,14 @@ function PlayableLevel() {
 
 
   useEffect(() => {
-    // TODO: That's a problem if the saved proof contains an error
-    // Reset command line input when loading a new level
-    setTypewriterInput("")
-
-  }, [gameId, worldId, levelId])
+    // Reset the command line input when loading a new level (D3: the
+    // typewriter's content is the global typewriterContentAtom — the
+    // previous level's failed command, pre-filled after "Failed command",
+    // stayed in the box on the next level; upstream opens an empty box).
+    // A saved proof whose last step failed is re-filled by the typewriter's
+    // own proof-state effect once THIS level's proof state arrives.
+    setTypewriterContent("")
+  }, [gameId, worldId, levelId, setTypewriterContent])
 
   useEffect(() => {
     const editor = leanMonacoEditor?.editor;

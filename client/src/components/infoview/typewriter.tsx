@@ -10,7 +10,7 @@ import { InteractiveDiagnostic } from '@leanprover/infoview-api';
 import { Diagnostic } from 'vscode-languageserver-types';
 import { RpcContext } from '../../../../node_modules/vscode-lean4/lean4-infoview/src/infoview/rpcSessions';
 import { MonacoEditorContext } from './context'
-import { lastStepHasErrors, loadGoals } from './goals'
+import { lastStepHasErrors, loadGoals, proofLevel } from './goals'
 import { ProofState } from './rpc_api'
 import { useTranslation } from 'react-i18next'
 import { useAtom } from 'jotai'
@@ -125,6 +125,11 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
    * complete). Native Lean happened to publish the errored set first. */
   useEffect(() => {
     if (!proof || !hasEditor) return
+    // D3: a proof state computed for ANOTHER level (the previous level's
+    // failed step, still in the global atom while this level mounts — see
+    // proofLevel in goals.tsx) is no verdict here and must not pre-fill its
+    // failed command into this level's box (upstream shows an empty box).
+    if (proofLevel.key && proofLevel.key !== `${worldId}/${levelId}`) return
     // The proof state is the verdict on the submitted command: only now is
     // it safe to accept the next one (see the publishDiagnostics note) —
     // unless it answers a request that predates the edit (traced on NNG4:
