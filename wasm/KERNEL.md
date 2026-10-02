@@ -31,14 +31,74 @@ scripts (`lean.worker.js` plus the `lsp-frames.js` decoder and the
 `client/src/wasm/vendor/QED64-PIN`. The pipeline scripts the from-source
 lane runs (chunk-runtime, artifact-paths, gen-exports, gate,
 bake-snapshot, node-runner, snapshot-probe, persistent-probe,
-pack/unpack/inspect, verify-release; no third-party imports) are vendored
-by the same script into `wasm/vendor/qed64-pipeline/`. The `qed64/...`
+pack/unpack/inspect with pack's `olean-imports.mjs`, verify-release; no
+third-party imports — plus, from `3b42714`, the four HARDENING #51
+module-semantics probes `tests/adversarial/kernel-probes/*.lean` the gate
+reads) are vendored by the same script into `wasm/vendor/qed64-pipeline/`;
+the sync refuses a pipeline whose relative imports do not resolve. The `qed64/...`
 import specifiers resolve to the closure (vite alias + tsconfig paths);
 `scripts/stage-workers.sh` copies the worker scripts from the same
 directory, so relay and worker are paired by construction. **No build,
 bake or test reads a qed64 checkout.**
 
-Current pin: qed64 `32e5e62` (2026-09-07), the **resident transport**.
+Current pin: qed64 `3b42714` (2026-10-02), the resident transport plus the
+**HARDENING #52 worker layers** (bumped from `32e5e62`, below). The runtime
+and the snapshots did NOT change with this bump: the game still serves
+`wasm64-d77d34b97592d014` (kernel `992dc94`, series through 0032) and the
+snapshots baked for it. qed64's own commit `3b42714` also promotes a new
+runtime for qed64's site (kernel 0035b, `wasm64-3ab1c6a9da03bc29`); none of
+that is vendored — the closure takes no runtime, manifest or snapshot.
+
+What #52 adds (all inside the vendored `lean.worker.js`; `lsp-relay.ts`,
+`client.ts` carry the new fields):
+- **message-mode runtime mailbox** — at preRun the worker sets the glue's
+  `waitAsyncPolyfilled` and wraps `checkMailbox`, so pthreads notify the
+  runtime thread by `postMessage`, never `Atomics.waitAsync` (a lost
+  waitAsync resolution also left no waiter armed: every later wakeup was
+  lost too); proxied calls are counted through the glue's
+  `proxiedFunctionTable`;
+- **1 s mailbox kick** — every tick while the loop is open the worker
+  serves the runtime thread's mailbox (`_emscripten_check_mailbox`), which
+  heals a lost wakeup; a mailbox word still PENDING 250 ms later with no
+  delivery is counted as a rescue (`status().liveness.rescues`);
+- **Lean-side liveness** — while work is owed (elaborating, the document
+  open and not yet answered, a forwarded request unanswered) and no server
+  frame has arrived for 6 s, the worker writes a `$/qed64/liveness` request
+  the FileWorker answers whatever it elaborates; no frame for 12 s after it
+  is a stall, still nothing 4 s later the session dies with reason
+  **"wedged"** and the relay reboots and replays (its reboot reason is
+  `"wedged"`, `RelayStatus.rebootReason`); an idle session is never probed;
+- **proxied-exit hook** — a FileWorker exit (proxied `_proc_exit` /
+  `exitOnMainThread`, which the glue would swallow under the keepalive) is
+  reported as reason **"exit"**, message `lean --worker exited with code N`;
+- `WorkerStatus` gains `liveness {probes, answered, stalls, resumed,
+  rescues}` and `pool.parked` (-1 on our runtime: it has no
+  `lean_wasm_task_manager_parked_threads` export).
+
+The glue facts the layers rely on were checked on our runtime's `lean.js`
+(sha256 `451d063d…`, emsdk 6.0.5): `proxiedFunctionTable=[_proc_exit,
+exitOnMainThread, …]`, `waitAsyncPolyfilled`, `checkMailbox`, the
+`__emscripten_check_mailbox` export and `waitingAsync=pthread_ptr+204` are
+all present; the browser drills confirm the worker boots in message mode
+with the exit hook and the mailbox word located (wasm/UX-PARITY.md,
+"Freeze fix (HARDENING #52) 2026-10-02"). The game side
+(`client/src/wasm/death-kind.ts`, `game-boot.ts`): "wedged" and "exit" are
+runtime verdicts — never held for the network and never probed as a link
+problem; a "wedged" reboot shows "the checker stalled and is restarting —
+your proof is kept" for the whole reboot; an "exit" is a crash: the replay
+dies again, the breaker halts, and the card names the exit code.
+
+**Runtime rule for a future pairing bump.** The qed64 0035 kernel family
+adds dedicated-thread parking; 0035 itself broke qed64's page reloads
+(HARDENING #53: a reload kept the old page's parked pthreads alive beside
+the new runtime → renderer OOM), and 0035b ships parking OFF by default. A
+0035-family runtime served by the game must NOT set
+`LEAN_WASM_PARKED_DEDICATED` unless our own reload storm
+(`qed64/work/lv-ff-reload-storm.mjs`: a ready NNG4 page reloaded 5× while
+its runtime is live, plus relay restarts, 5 fresh-browser runs) shows 0
+renderer crashes on that runtime.
+
+Previous pin: qed64 `32e5e62` (2026-09-07), the **resident transport**.
 qed64 removed its pump transport that day (the `WatchdogShim` the game had
 built on; their `docs/PUMP-REMOVAL-ASSESSMENT-2026-09-04.md`): the worker
 now owns the document, the queue and every header verdict, a level switch
@@ -86,7 +146,11 @@ release, never the closure alone.
 
 Bump only to a qed64 commit its owners have announced as having passed
 their test pyramid (`32e5e62` was: e2e 23/23, 323 ms switch, gauntlets
-clean). Keep `relay.unload()` on `pagehide` working across bumps (qed64's
+clean; `3b42714` was: e2e 23/23, liveness drills 6/6, battery 54/54, reload
+storm 0/5 on its new runtime; the #52 worker layers verified by qed64 on
+0034 (`wasm64-4b025db7729c5f89`) and 0035b; on our 0032 runtime
+(`wasm64-d77d34b97592d014`) the glue facts were checked statically and the
+game drills (UX-PARITY "Freeze fix") passed). Keep `relay.unload()` on `pagehide` working across bumps (qed64's
 own page relies on the same hook).
 
 ## Snapshot rebake 2026-09-02 (GameServer `Runner` hoist, runtime unchanged)

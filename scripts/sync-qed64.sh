@@ -39,7 +39,16 @@ PIPELINE=(pipeline/toolchain/chunk-runtime.mjs pipeline/toolchain/artifact-paths
           pipeline/snapshot/bake-snapshot.mjs pipeline/snapshot/node-runner.mjs pipeline/snapshot/snapshot-probe.mjs
           pipeline/artifacts/pack.mjs pipeline/artifacts/unpack.mjs pipeline/artifacts/inspect.mjs
           pipeline/release/verify-release.mjs)
-PIPELINE_OPTIONAL=(pipeline/toolchain/artifact-paths.d.mts)
+# Optional = vendored when the commit has it. From qed64 1fd4247 on, pack.mjs
+# imports ./olean-imports.mjs (real olean imports), and from 3981c15 on
+# gate.mjs reads the HARDENING #51 module-semantics probes from
+# tests/adversarial/kernel-probes (relative to the pipeline root, i.e.
+# wasm/out/pipeline/tests/... after the lane's rsync). Without them the core
+# lane's pack step dies at module load and a gate run dies on ENOENT; the
+# sanity check below refuses a pipeline whose relative imports do not resolve.
+PIPELINE_OPTIONAL=(pipeline/toolchain/artifact-paths.d.mts pipeline/artifacts/olean-imports.mjs
+                   tests/adversarial/kernel-probes/is-module.lean tests/adversarial/kernel-probes/private-default.lean
+                   tests/adversarial/kernel-probes/rpc-attr.lean tests/adversarial/kernel-probes/module-file.lean)
 PIPE_DEST="$ROOT/wasm/vendor/qed64-pipeline"
 FULL="$(git -C "$QED64" rev-parse --verify "$SHA^{commit}")"
 # Validate everything BEFORE touching the tree: a commit lacking a file must
@@ -59,22 +68,24 @@ done
 rm -rf "$PIPE_DEST"; mkdir -p "$PIPE_DEST"
 git -C "$QED64" archive "$FULL" "${PIPELINE[@]}" | tar -x -C "$PIPE_DEST"
 for opt in "${PIPELINE_OPTIONAL[@]}"; do
-  if git -C "$QED64" cat-file -e "$FULL:$opt" 2>/dev/null; then git -C "$QED64" archive "$FULL" "$opt" | tar -x -C "$PIPE_DEST"; fi
+  if git -C "$QED64" cat-file -e "$FULL:$opt" 2>/dev/null; then git -C "$QED64" archive "$FULL" "$opt" | tar -x -C "$PIPE_DEST"; PIPELINE+=("$opt"); fi
 done
-# Sanity: the closure must be self-contained (every relative import resolves inside DEST).
-python3 - "$DEST" <<'PY'
+# Sanity: the closure and the pipeline must each be self-contained (every
+# relative import of a .ts / .mjs resolves inside its own root).
+python3 - "$DEST" "$PIPE_DEST" <<'PY'
 import os, re, sys
-dest = sys.argv[1]; bad = []
-for dp, _, fs in os.walk(dest):
-    for f in fs:
-        if not f.endswith('.ts'): continue
-        p = os.path.join(dp, f)
-        for m in re.finditer(r'from\s+["\'](\.[^"\']+)["\']', open(p).read()):
-            t = os.path.normpath(os.path.join(dp, m.group(1)))
-            if not any(os.path.isfile(c) for c in (t, t + '.ts', t + '.js', os.path.join(t, 'index.ts'))):
-                bad.append((os.path.relpath(p, dest), m.group(1)))
+bad = []
+for dest in sys.argv[1:]:
+    for dp, _, fs in os.walk(dest):
+        for f in fs:
+            if not f.endswith(('.ts', '.mjs')): continue
+            p = os.path.join(dp, f)
+            for m in re.finditer(r'(?:from\s+|import\s*\(\s*)["\'](\.[^"\']+)["\']', open(p).read()):
+                t = os.path.normpath(os.path.join(dp, m.group(1)))
+                if not any(os.path.isfile(c) for c in (t, t + '.ts', t + '.js', t + '.mjs', os.path.join(t, 'index.ts'))):
+                    bad.append((os.path.relpath(p, dest), m.group(1)))
 if bad:
-    print('unresolved imports inside the vendored closure:', bad); sys.exit(1)
+    print('unresolved relative imports inside the vendored closure/pipeline:', bad); sys.exit(1)
 PY
 {
   echo "qed64 commit: $FULL"

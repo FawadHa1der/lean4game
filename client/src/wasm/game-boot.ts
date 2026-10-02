@@ -44,7 +44,8 @@ import { preferencesAtom } from "../store/preferences-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
 import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing, publishNetworkHold } from "../store/boot-atoms";
 import { rememberGamedata } from "./gamedata-cache";
-import { MiB, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
+import { isRuntimeVerdict, haltedNote, rebootNote } from "./death-kind";
+import { MiB, devProfilesDir, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
 import { claimSnapshotForBoot, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareStatusesAtom, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
 import { ensureServiceWorkerRegistration, releaseServiceWorkerRegistration, requestShellFill, whenServiceWorkerReady } from "./sw-client";
 
@@ -157,8 +158,16 @@ async function checkSnapshotPairing(snapshot: string): Promise<{ entry: Snapshot
 async function installGameArtifacts(ui: StatusSink): Promise<Qed64Artifacts> {
   ui.busy("fetching manifests");
   const [runtime, snapshots] = await Promise.all([resolveRuntimeManifest(), fetchSnapshotIndexOnce()]);
-  const index: ProfileIndex = await fetchProfileIndex().catch((e) => {
-    console.warn(`[game-boot] profile index unavailable (${(e as Error).message}); a game needs no library pack`);
+  // Mirrors qed64-boot.ts installArtifacts (3b42714): the dev-only
+  // `?profiles=<dir>` override re-roots the profile index to public/<dir>
+  // (an unpromoted profile set). A game installs no pack, so only the index
+  // read is re-rooted; the vendored ensureProfile keeps its own (identity)
+  // re-root because installArtifacts never runs on the game path — no game
+  // path asks for a pack (GameSession never passes `packs`).
+  const devProfiles = devProfilesDir();
+  const indexUrl = devProfiles ? `/${devProfiles}/index.json` : "/profiles/index.json";
+  const index: ProfileIndex = await fetchProfileIndex(indexUrl).catch((e) => {
+    console.warn(`[game-boot] profile index unavailable at ${indexUrl} (${(e as Error).message}); a game needs no library pack`);
     return { schema: "qed64.profile-index/v1", runtime: { buildId: runtime.buildId, leanVersion: runtime.leanVersion }, profiles: [] };
   });
   return { runtime, index, installed: new Map(), snapshots };
@@ -340,6 +349,14 @@ let relayRef: LspRelay | null = null;
  * stay closed even while the replacement's boot stages publish labels the
  * SWITCHING_RE would not recognise. */
 let relayRebooting = false;
+/** HARDENING #52: the label of the reboot in progress after a "wedged" or
+ * "exit" death (death-kind.ts rebootNote). The replacement session's boot
+ * stages arrive through the StatusSink and used to overwrite the reboot's
+ * own label within milliseconds ("starting Lean", "loading the game
+ * environment"); while this is set they show it instead (byte progress
+ * kept), so the player reads WHY the checker restarts for the whole reboot.
+ * Set and cleared by publishRelayStatus only. */
+let relayRebootNote: string | null = null;
 
 /** L4/L5 latch: the relay is halted. A session the breaker left behind can
  * still run its start() after the settle and publish "starting Lean" over
@@ -367,7 +384,7 @@ const consoleSink: StatusSink = {
   busy: (rawLabel) => {
     noteSnapshotFailure(rawLabel);
     if (relayHalted) { console.info(`[game-boot] (halted, not shown) ⏳ ${rawLabel}`); return; }
-    const label = humanizeLabel(rawLabel);
+    const label = (relayRebooting && relayRebootNote) || humanizeLabel(rawLabel);
     console.info(`[game-boot] ⏳ ${rawLabel}`);
     publishCheckerActivity("busy", label, !bootFinishedOnce, relayRebooting || !bootFinishedOnce);
     if (!bootFinishedOnce || !ROUTINE_BUSY.test(label)) {
@@ -377,7 +394,7 @@ const consoleSink: StatusSink = {
   progress: (rawLabel, info) => {
     noteSnapshotFailure(rawLabel);
     if (relayHalted) return;
-    const label = humanizeLabel(rawLabel);
+    const label = (relayRebooting && relayRebootNote) || humanizeLabel(rawLabel);
     console.debug(`[game-boot] … ${rawLabel}`, info ?? "");
     publishCheckerActivity("busy", label, !bootFinishedOnce, relayRebooting || !bootFinishedOnce);
     if (!bootFinishedOnce || !ROUTINE_BUSY.test(label)) {
@@ -624,6 +641,10 @@ async function preflightWorkerScripts(): Promise<Preflight> {
  * every reboot — such a reboot during a cut is three bare deaths, the link's
  * doing. A deploy problem is not the link. */
 async function networkSuspected(death: { reason: string; message: string } | null | undefined): Promise<boolean> {
+  // HARDENING #52: a liveness verdict ("wedged") or a FileWorker exit
+  // ("exit") is decided inside a worker that loaded and ran — never the
+  // link's doing, never held, never probed (death-kind.ts).
+  if (isRuntimeVerdict(death)) return false;
   if (looksLikeNetworkDeath(death)) return true;
   if (deployProblem || !boundEntry) return false;
   if (await rawSnapshotCached(boundEntry)) {
@@ -787,9 +808,13 @@ let haltGen = 0;
 async function classifyHalt(st: RelayStatus, ui: StatusSink): Promise<void> {
   const gen = ++haltGen;
   const death = st.lastDeath ? `${st.lastDeath.message || st.lastDeath.reason}` : "";
-  const reason = st.lastDeath?.message || deployProblem || death || "the checker crashed repeatedly while starting";
+  // HARDENING #52: an "exit" (the content makes Lean exit on every replay)
+  // or a repeated "wedged" is a crash — straight to the card, no
+  // "checking the connection" detour and no network re-arm.
+  const runtimeNote = haltedNote(st.lastDeath);
+  const reason = runtimeNote || st.lastDeath?.message || deployProblem || death || "the checker crashed repeatedly while starting";
   let network = looksLikeNetworkDeath(st.lastDeath);
-  if (!network && autoRearms < MAX_AUTO_REARMS) {
+  if (!network && !runtimeNote && autoRearms < MAX_AUTO_REARMS) {
     publishCheckerActivity("ready", "checking the connection", false, false, true);
     publishBootStatus({ state: "busy", label: "checking the connection" });
     network = await networkSuspected(st.lastDeath);
@@ -799,10 +824,17 @@ async function classifyHalt(st: RelayStatus, ui: StatusSink): Promise<void> {
     console.warn(`[game-boot] the checker halted after "${death || "a bare worker death"}" with the network unreachable — recovery is automatic`);
     scheduleNetworkRearm();
   } else publishNetworkHold(null);
-  if (!everServed) {
+  // A runtime verdict (HARDENING #52 "exit" / "wedged") comes from a worker
+  // that loaded and ran: the runtime DID start, even on a page that never
+  // reached "ready" (a reload whose saved text makes Lean exit on every
+  // replay). Not the boot-failure card ("Lean could not start … Reloading the
+  // page retries" — it would replay the same text and die again, with the
+  // input disabled by bootFailed): the level pane's exit / stall card, which
+  // offers removing the offending line.
+  if (!everServed && !runtimeNote) {
     publishHaltedFailure(`Lean failed to start: ${reason}`, ui);
   } else {
-    const label = `the checker halted after repeated crashes${death ? ` (${death.slice(0, 80)})` : ""}`;
+    const label = runtimeNote ?? `the checker halted after repeated crashes${death ? ` (${death.slice(0, 80)})` : ""}`;
     publishCheckerActivity("ready", label, false, false, true);
     publishBootStatus({ state: "ready", label });
   }
@@ -816,6 +848,7 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   const death = st.lastDeath ? `${st.lastDeath.message || st.lastDeath.reason}` : "";
   if (st.relay === "halted") {
     relayRebooting = false;
+    relayRebootNote = null;
     relayHalted = true;
     void classifyHalt(st, ui);
     return;
@@ -825,13 +858,18 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   if (st.relay === "serving") publishNetworkHold(null);
   if (st.relay === "rebooting" || st.phase === "booting" || st.phase === "dead") {
     relayRebooting = true;
-    const label = death && st.relay === "rebooting" ? `restarting the checker after a crash (${death.slice(0, 80)})` : "starting the Lean checker";
+    // The relay's reboot reason (lsp-relay.ts 3b42714: "wedged" | "crash" |
+    // "heartbeat" | "bootFailed") and the death: a #52 death keeps its own
+    // label for the whole reboot (relayRebootNote, read by the StatusSink).
+    if (st.relay === "rebooting") relayRebootNote = rebootNote(st.rebootReason, st.lastDeath);
+    const label = relayRebootNote ?? (death && st.relay === "rebooting" ? `restarting the checker after a crash (${death.slice(0, 80)})` : "starting the Lean checker");
     publishCheckerActivity("busy", label, !bootFinishedOnce, true);
     publishBootStatus({ state: "busy", label });
     return;
   }
   // serving
   relayRebooting = false;
+  relayRebootNote = null;
   switch (st.phase) {
     case "ready":
       markServed(ui);

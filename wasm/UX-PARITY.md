@@ -931,6 +931,54 @@ not measured at that rate. One of four TestGame runs of `lv-r3x-nofill-offline.m
 online visit (`Target crashed`, after the game was served; the offline relaunch still passed); two re-runs with crash
 logging (`lv-r3x-fix-nofill.mjs`) did not reproduce it — cause not determined.
 
+## Freeze fix (HARDENING #52) 2026-10-02
+
+The vendored qed64 closure moved `32e5e62` → `3b42714` (wasm/KERNEL.md,
+substrate pin): the worker now runs its runtime mailbox in message mode,
+kicks it every second (healing a lost wakeup — the freeze where the page
+said "elaborating" for ever with the heartbeat ticking), probes the Lean
+side while work is owed and turns a frozen worker into a death "wedged",
+and reports a FileWorker exit as a death "exit" with its code. Runtime
+(`wasm64-d77d34b97592d014`) and snapshots unchanged. Game side
+(`death-kind.ts`, `game-boot.ts`, `infoview/main.tsx`): both reasons are
+runtime verdicts, never held for the network and never probed as a link
+problem; a "wedged" reboot shows "the checker stalled and is restarting —
+your proof is kept" for the whole reboot (input gate and boot strip); an
+"exit" is a crash — the replay dies again, the breaker halts, and the card
+reads "The checker stopped: Lean exited with code N" with Restart (also on a
+page that never reached "ready": a runtime verdict means the runtime started,
+so never the "Lean could not start" boot-failure card); the way out is an
+edit — a step pending when the checker halted is put back into the input
+(released at once, cursor on its line, so Execute replaces it), and without
+a proof state the card offers "Remove the last line (…)"; a halted
+checker now shows its card under the proof steps too (it was only shown
+while the level had no proof state, so a mid-proof halt left stale steps
+and no word). Drills (`qed64/work/lv-ff-liveness.mjs`, faults injected into
+the live worker with Playwright, NNG4 Addition/1, local build on :3006,
+headless Chromium, through the browser lock):
+
+| Drill | Result |
+|---|---|
+| mailbox mode at boot | `waitAsyncPolyfilled` true, `checkMailboxCounted` installed, `waiting_async` (pthread_ptr+204) 0, proxied calls counted, FileWorker exit hooked, mailbox word located; worker log `[boot] runtime mailbox: message notifications (no Atomics.waitAsync); proxied calls counted; FileWorker exit hooked`; `status.liveness` all 0, `pool.parked` -1 |
+| (d) idle, 25 s | 0 probes, 0 stalls, 0 rescues, 0 link probes |
+| (a) 10% of mailbox notifications dropped, 12 edits (5 steps, Retry, 5 steps, Retry) | 12/12 settled (4.9–15.7 s each; normally ~1 s), 1,215 notifications, 130 dropped, **130 rescues**, 0 probes, 0 deaths; fault removed → next edit 0.5 s |
+| (b) mailbox disabled + one edit | died "wedged" at 22.7 s / 19.5 s (two runs), the stalled label on the input gate and the boot strip at the same moment, replay on a new session settled at 29.5 s / 26.9 s with the command kept; 1 death, 1 reboot, 0 breaker trips; no network card, no "checking the connection", no "Crashed!", 0 link probes |
+| (c) raw `exit` into every new worker's ring (death classification, breaker, card — NOT a content-caused exit: the injection ignores the text and lands after a settled step) | died "exit" (`lean --worker exited with code 0`) 2.2 s after the injection, ×3 → breaker at 9.8 s; card "The checker stopped: Lean exited with code 0 / Lean exited with code 0 while replaying this level, so the checker stopped retrying" under the proof step with Retry + "Remove the last line (induction n with d hd)" + "Restart the checker"; no network card/probe/hold, no "Crashed!"; Restart (no more injection) → serving/ready in 6.6 s, the step kept |
+| (g) content-caused exit (`lv-ff-exit-content.mjs`): after one step, type `#eval (IO.Process.exit 3 : IO Unit)` | deaths exit@1.0/7.1/13.3 s (code 3) → halted; card "The step you just entered (#eval …) made Lean exit with code 3 …"; input released 24 ms after the halt was seen with the step back in it (before: "Checking…" locked ≥ 30 s); typing `rw [add_zero]` instead re-arms → serving/ready in 8.1 s, steps [induction, rw [add_zero]], exit line gone from the saved text |
+| (g) reload with that text saved (page never reaches "ready") | halted after exits at 5.1/11.4/17.7 s, `qed64GameReady` false; the exit card (code 3), not "Lean could not start"; typewriter not disabled; buttons "Remove the last line (#eval (IO.Process.exit 3 : IO Unit))" + "Restart the checker"; Restart replays and halts again (+3 exits, 20.4 s — the faithful verdict); "Remove the last line" → serving/ready in 8.7 s with both good steps, saved text without the exit line |
+| (e) reload storm (`lv-ff-reload-storm.mjs`, port of qed64 `reload-storm.mjs`): 5 fresh-browser runs, NNG4 Addition/2 ready → relay restart (raw exit) → 5 reloads 3 s apart while live → ready → relay restart → ready | **0/5 renderer crashes**, every run ready after the storm (5.7–5.9 s) and after the second restart (5.5–5.9 s); peak live workers 26–31; 0 page errors |
+| (f) network cuts still a network hold | `lv-ff-n1-cut.mjs` (20 s cut 6.3 s into the paced `.snapz`): "download was interrupted" card, goal 65.8 s after the link returned, 0 page errors, 0 unhandled rejections, no "Crashed!"; `lv-ff-D1-nosw.mjs` (no service worker, bare deaths): halted → "checking the connection" → interrupted card, automatic re-arm, goal 65.7 s after the link returned, 0 page errors |
+
+0 uncaught page errors across all drills. The halted exit label claims only
+the last death ("… while replaying this level"): the breaker's 120 s window
+can mix kinds (the first liveness run showed "exited with code 0 each time"
+after one wedge and two exits). Not drilled: a content-caused exit in editor
+mode (the editor is editable there; no card), the long silent
+command (qed64's negative control — a ~40 s `#eval` answering probes; the
+game's levels have no such command) and a stall that resumes inside the
+grace window (unit-tested on the vendored worker,
+`client/src/wasm/vendor-liveness.test.ts`).
+
 ## Open
 
 - **Renderer crash: reloads then a 100 ms navigation storm (mitigated,

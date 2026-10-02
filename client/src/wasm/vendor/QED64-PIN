@@ -1,27 +1,33 @@
-qed64 commit: 32e5e62566826a1042a916af67681754d1ff12d0
-date: 2026-09-07 11:06:53 -0400
-subject: plan: post-removal pyramid numbers (e2e 23/23, 323 ms switch, gauntlets clean)
+qed64 commit: 3b42714df6ece5fefbb3adc7421df0af0c7d8d20
+date: 2026-10-02 03:13:31 -0400
+subject: promote kernel 0035b (HARDENING #52 + #53): runtime wasm64-3ab1c6a9da03bc29 (kernel a8817d01f9, dedicated-thread parking off by default) + rebaked slim snapshots; packs unchanged
 files:
-  bf2957fcf337541b  frontend/src/qed64-boot.ts
+  aa43834b9c461435  frontend/src/qed64-boot.ts
   3bc18b4725e4ca50  frontend/src/resident-session.ts
-  ffc2ef23f1c3a1ca  frontend/src/lsp-relay.ts
-  444d52fab79ed8ce  src/install/profiles.ts
-  8e14b983459f1d9b  src/runtime/client.ts
+  f9666f7fe3d23678  frontend/src/lsp-relay.ts
+  3ba9ed47979a8e0d  src/install/profiles.ts
+  ace92db17bb21498  src/runtime/client.ts
   d6eed5f27eb2d199  src/runtime/snapshots.ts
-  52958f9acd215507  public/workers/lean.worker.js
+  d12de571ee72edc0  public/workers/lean.worker.js
   efdf325b1ed0f4b4  public/workers/lsp-frames.js
   6a919afe7466be9c  public/workers/lsp-front-door.js
   66bc998493f5e3cd  public/workers/snapshot-prefetch.worker.js
 pipeline (wasm/vendor/qed64-pipeline):
-  d70d4faae333fade  pipeline/toolchain/chunk-runtime.mjs
+  8ddb1487e103756d  pipeline/toolchain/chunk-runtime.mjs
   e487cf1eb9b978af  pipeline/toolchain/artifact-paths.mjs
-  a1bfd52ef9b2d7b4  pipeline/toolchain/gen-exports.py
-  6c8a70a416d5e4b6  pipeline/toolchain/gate.mjs
+  cb79e601f0c4302a  pipeline/toolchain/gen-exports.py
+  31ca4a148cc0e85b  pipeline/toolchain/gate.mjs
   316d3275e60ea3da  pipeline/snapshot/persistent-probe.mjs
-  2f11564ba3721f02  pipeline/snapshot/bake-snapshot.mjs
+  d84685aa1c651f7e  pipeline/snapshot/bake-snapshot.mjs
   60f1f08ab57fe678  pipeline/snapshot/node-runner.mjs
-  e8a82f5ccdbe7b7e  pipeline/snapshot/snapshot-probe.mjs
-  7e54d785405bbf9d  pipeline/artifacts/pack.mjs
+  07054d61954508be  pipeline/snapshot/snapshot-probe.mjs
+  bda4e5ed0e98b80f  pipeline/artifacts/pack.mjs
   57a118f4789242cb  pipeline/artifacts/unpack.mjs
   e471f875f94aa193  pipeline/artifacts/inspect.mjs
-  b228be39a38ec5d6  pipeline/release/verify-release.mjs
+  4d152e44b8877b9e  pipeline/release/verify-release.mjs
+  c8e10dcb8cf22926  pipeline/toolchain/artifact-paths.d.mts
+  9636c88e124a0309  pipeline/artifacts/olean-imports.mjs
+  a6bf9e066d849f79  tests/adversarial/kernel-probes/is-module.lean
+  b8dc1f712e99f236  tests/adversarial/kernel-probes/private-default.lean
+  f43ae28be888b272  tests/adversarial/kernel-probes/rpc-attr.lean
+  84ef588c47a64d76  tests/adversarial/kernel-probes/module-file.lean

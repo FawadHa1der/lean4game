@@ -144,6 +144,10 @@ export const resolveRuntimeBuildId = (): Promise<string> => resolveRuntimeManife
  * addressed), so anything that treats the index's keys as "the live ones"
  * (the stale-region sweep) must stand down while it is active. */
 export const devSnapshotsDir = (): string | null => new URLSearchParams(location.search).get("snapshots") || null;
+/** The dev-only `?profiles=<dir>` override (qed64-boot.ts installArtifacts,
+ * 3b42714): an unpromoted profile set served from public/<dir>; null in
+ * production. Read by installGameArtifacts for the profile index. */
+export const devProfilesDir = (): string | null => new URLSearchParams(location.search).get("profiles") || null;
 
 let indexPromise: Promise<SnapshotIndex | null> | null = null;
 /** The served snapshot index, fetched once per page, honouring the

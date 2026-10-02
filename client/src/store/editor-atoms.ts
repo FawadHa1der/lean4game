@@ -109,3 +109,12 @@ export const interimDiagsAtom = atom<Array<Diagnostic>>([])
 
 /** TODO: Workaround to capture a crash of the gameserver. */
 export const crashedAtom = atom<boolean>(false)
+
+/** HARDENING #52: the step the player had just submitted when the checker's
+ * crash-loop breaker halted it before any verdict on that step came back
+ * (typically a step that makes Lean exit, e.g. `#eval (IO.Process.exit 3 :
+ * IO Unit)`). Set by the Typewriter, which puts the step back into the input
+ * with the cursor at the start of its line (the failed-command contract);
+ * read by the level pane's halted card to name it. Cleared on the next
+ * submit and when the halt ends. */
+export const haltedStepAtom = atom<string | null>(null)

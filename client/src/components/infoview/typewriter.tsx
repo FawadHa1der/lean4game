@@ -16,8 +16,15 @@ import { useTranslation } from 'react-i18next'
 import { useAtom } from 'jotai'
 import { levelIdAtom, worldIdAtom } from '../../store/location-atoms'
 import { preferencesAtom } from '../../store/preferences-atoms'
-import { crashedAtom, interimDiagsAtom, proofAtom, typewriterContentAtom } from '../../store/editor-atoms'
+import { crashedAtom, haltedStepAtom, interimDiagsAtom, proofAtom, typewriterContentAtom } from '../../store/editor-atoms'
+import { checkerActivityAtom } from '../../store/boot-atoms'
+import { selectAtom } from 'jotai/utils'
 import { deletedChatAtom } from '../../store/chat-atoms'
+
+/** Halted-only view of the checker activity: flips once per halt, never per
+ * progress tick (the input must not re-render on every label change — see
+ * checkerSwitchingAtom in main.tsx). */
+const checkerHaltedAtom = selectAtom(checkerActivityAtom, (a) => a.halted)
 
 export interface GameDiagnosticsParams {
   uri: DocumentUri;
@@ -51,6 +58,10 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
    * acknowledged the new document version (its first publishDiagnostics),
    * so the request cannot be answered from the pre-edit document. */
   const awaitingVerdict = useRef(false)
+  /** Where the pending command was inserted (the start of its line): a halt
+   * before its verdict parks the cursor here so the next Execute replaces it. */
+  const submittedAt = useRef<monaco.IPosition | null>(null)
+  const [, setHaltedStep] = useAtom(haltedStepAtom)
 
   const [typewriter, setTypewriter] = useAtom(typewriterContentAtom)
 
@@ -76,6 +87,8 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
     if (typewriter) {
       lastSubmitted.current = typewriter.trim()
       awaitedCommand.current = typewriter.trim()
+      submittedAt.current = pos
+      setHaltedStep(null)
       setProcessing(true)
       editor.executeEdits("typewriter", [{
         range: monaco.Selection.fromPositions(
@@ -335,6 +348,28 @@ export function Typewriter({disabled}: {disabled?: boolean}) {
   useEffect(() => {
     if (crashed) setProcessing(false)
   }, [crashed])
+  // HARDENING #52: the checker halted (crash-loop breaker) while a submitted
+  // step awaited its verdict — typically the step itself makes Lean exit on
+  // every replay. No proof state will come, and the step is not shown (the
+  // pane shows the last state the checker gave), so release the input at
+  // once instead of after the 60 s valve, put the step back into it, and
+  // park the editor cursor at the start of its line: the next Execute
+  // REPLACES it (the failed-command contract), and that edit re-arms the
+  // checker with the corrected text.
+  const [halted] = useAtom(checkerHaltedAtom)
+  useEffect(() => {
+    if (!halted) { setHaltedStep(null); return }
+    const cmd = awaitedCommand.current
+    if (cmd === null) return
+    awaitedCommand.current = null
+    awaitingVerdict.current = false
+    setProcessing(false)
+    setHaltedStep(cmd)
+    setTypewriter(cmd)
+    if (hasEditor && submittedAt.current) editor.setPosition(submittedAt.current)
+  }, [halted])
+  // The atom is global: another level's halted card must not name this step.
+  useEffect(() => { setHaltedStep(null) }, [worldId, levelId])
 
   /** Process the entered command */
   const handleSubmit : React.FormEventHandler<HTMLFormElement> = (ev) => {

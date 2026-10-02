@@ -100,6 +100,15 @@ function installStdoutTap() {
         event(null, "log", { stream: "stderr", text: `lsp: unparseable ${body.length}-char frame` });
         return;
       }
+      // Liveness first (HARDENING #52): any frame proves the Lean side
+      // alive, and a probe's answer is the host's own — never the machine's
+      // or the page's.
+      if (liveness !== null) {
+        const seen = livenessServerFrame(liveness, msg, performance.now());
+        if (seen.resumedAfterMs !== null) livenessLog(`output resumed ${Math.round(seen.resumedAfterMs)} ms into the stall's grace window`);
+        if (seen.probe || seen.resumedAfterMs !== null) publishLiveness();
+        if (seen.probe) return;
+      }
       // Every server frame goes through the machine (inbound version
       // rebasing, status from fileProgress/headerStatus — §2.2(e)): the loop
       // only ever opens from the front door, so one exists whenever the tap
@@ -286,15 +295,343 @@ let hostStatus = { phase: "booting", version: null, header: null, dropped: 0 };
 let lastStatusJson = "";
 let ringRefused = 0; // frames over cap/2 the ring refused (a > 32 MiB document)
 
+// ---------------------------------------------------------------------------
+// Lean-side liveness (docs/HARDENING.md #52). The heartbeat above proves only
+// that THIS JS thread runs; every Lean pthread can be frozen behind it — the
+// observed failure: a proxied call from a Lean pthread to this (Emscripten
+// main) thread whose mailbox wakeup is never delivered leaves the caller
+// blocked forever, and the mailbox's notification flag stays PENDING, so no
+// later sender notifies again: every Lean thread stops at its next proxied
+// call (thread creation, an output frame). The page then shows "elaborating"
+// forever with the heartbeat ticking.
+//
+// Four mechanisms:
+//  * MESSAGE MAILBOX (from boot, `instrumentRuntimeMailbox`): pthreads notify
+//    this thread's mailbox by postMessage, never Atomics.waitAsync. In EITHER
+//    mode a lost notification leaves the flag PENDING until something serves
+//    the mailbox. The difference is what remains after that: the glue arms ONE
+//    waitAsync waiter here and re-arms it only from that waiter's own
+//    resolution, so a lost resolution also leaves no waiter armed and every
+//    later wakeup is lost too (storm E1: one dropped wakeup, a raw mailbox
+//    check served the queue and the session froze again at once). In message
+//    mode — the glue's own mode where waitAsync is missing (pre-91 Chromium,
+//    older Firefox) — each NONE→PENDING edge posts its own message, so once
+//    the mailbox has been served the next send notifies normally again.
+//  * MAILBOX KICK (every tick while the loop is open): serve this thread's
+//    mailbox directly (`_emscripten_check_mailbox`: one store and an
+//    empty-queue check when nothing is pending). It is the mechanism that
+//    heals a lost notification; a delivered one is unaffected (whoever runs
+//    first finds the queue, the other finds nothing). When the mailbox's own
+//    notification word reads PENDING at a tick, the kick waits `confirmMs`:
+//    still PENDING with no notification-driven check in between (and the
+//    timer itself on time, so this thread was free to run a queued message)
+//    means the wakeup was lost — the kick serves it and counts a RESCUE
+//    (status `liveness.rescues`, logged). A notification merely in flight is
+//    delivered within that window and is never counted.
+//  * PROBE: while work is owed (phase `elaborating`; `starting` with the
+//    document open, i.e. the loop open and no first fileProgress yet; a
+//    forwarded client request unanswered) and no server frame has arrived for
+//    `probeAfterMs`, write a request the FileWorker answers at once whatever
+//    it is elaborating (an unknown method, with params: the main loop's
+//    error reply through the normal output path). A frame — any frame —
+//    proves the Lean side alive. No frame for `wedgeAfterMs` after the probe
+//    is a STALL (logged); still nothing `graceMs` later, the session is dead
+//    (`died` reason "wedged") and the relay reboots and replays the text as
+//    for any crash. A long or even non-terminating elaboration answers the
+//    probe, so it is never mistaken for a wedge. The probe's id is a private
+//    string the machine and the page never see, and it is only ever written
+//    after the didOpen (the FileWorker reads initialize and didOpen before its
+//    main loop; anything else in their place kills it).
+//  * EXIT: a FileWorker exit reaches this thread as a proxied `_proc_exit` /
+//    `exitOnMainThread`; with the runtime keepalive held (load-bearing, see
+//    onRuntimeInitialized) the glue never calls `onExit` and swallows the
+//    ExitStatus, leaving the exiting thread blocked. The instrumented
+//    proxied-function table reports it as `died` reason "exit".
+// ---------------------------------------------------------------------------
+const LIVENESS = {
+  tickMs: 1000,
+  probeAfterMs: 6000,
+  wedgeAfterMs: 12000,
+  graceMs: 4000,
+  confirmMs: 250, // a PENDING mailbox word this long with no delivery = a lost wakeup
+  lateTimerMs: 150, // the confirmation timer fired this late: this thread was busy, watch again
+  requestTtlMs: 10 * 60 * 1000, // forget a forwarded request never answered (not a liveness signal)
+};
+const MAILBOX_PENDING = 2; // em_task_queue notification_state: NONE 0, RECEIVED 1, PENDING 2
+const LIVENESS_PROBE_PREFIX = "qed64:liveness:";
+const LIVENESS_PROBE_METHOD = "$/qed64/liveness";
+
+/** Pure liveness bookkeeping (tests drive it with a fake clock). */
+function createLiveness(now, cfg = LIVENESS) {
+  return {
+    cfg, lastFrameAt: now, outstanding: new Map(), probe: null, stalledAt: 0, seq: 0,
+    watch: null, watchRetries: 0,
+    counters: { probes: 0, answered: 0, stalls: 0, resumed: 0, rescues: 0 },
+  };
+}
+/** A request the host wrote to the ring on the client's behalf. `initialize`
+ * is consumed by the FileWorker without an answer, so it is not tracked. */
+function livenessClientRequest(L, msg, now) {
+  if (msg && msg.id !== undefined && typeof msg.method === "string" && msg.method !== "initialize") L.outstanding.set(msg.id, now);
+}
+/** A frame decoded from the FileWorker's stdout. `probe`: the frame is a
+ * liveness probe's answer (the host swallows it); `resumedAfterMs`: the
+ * frame ended a stall, this long after it began (else null). */
+function livenessServerFrame(L, msg, now) {
+  L.lastFrameAt = now;
+  let resumedAfterMs = null;
+  if (L.stalledAt) { resumedAfterMs = now - L.stalledAt; L.stalledAt = 0; L.counters.resumed += 1; }
+  let probe = false;
+  if (msg && msg.id !== undefined && msg.method === undefined) {
+    L.outstanding.delete(msg.id);
+    if (typeof msg.id === "string" && msg.id.startsWith(LIVENESS_PROBE_PREFIX)) {
+      if (L.probe && L.probe.id === msg.id) L.probe = null;
+      L.counters.answered += 1;
+      probe = true;
+    }
+  }
+  return { probe, resumedAfterMs };
+}
+/** One watchdog tick → null | {kind:"probe", msg} | {kind:"stall", silentMs} | {kind:"dead", silentMs}.
+ * `docOpen`: the didOpen is in the ring (the front door has a document). */
+function livenessTick(L, now, phase, docOpen) {
+  for (const [id, at] of L.outstanding) if (now - at > L.cfg.requestTtlMs) L.outstanding.delete(id);
+  const owed = phase === "elaborating" || (phase === "starting" && docOpen === true) || L.outstanding.size > 0 || L.probe !== null;
+  if (!owed) return null;
+  const silentMs = now - L.lastFrameAt;
+  if (L.stalledAt) return now - L.stalledAt >= L.cfg.graceMs ? { kind: "dead", silentMs } : null;
+  if (L.probe === null) {
+    if (silentMs < L.cfg.probeAfterMs) return null;
+    L.seq += 1;
+    L.probe = { id: `${LIVENESS_PROBE_PREFIX}${L.seq}`, sentAt: now };
+    L.counters.probes += 1;
+    return { kind: "probe", msg: { jsonrpc: "2.0", id: L.probe.id, method: LIVENESS_PROBE_METHOD, params: {} } };
+  }
+  if (now - Math.max(L.probe.sentAt, L.lastFrameAt) >= L.cfg.wedgeAfterMs) {
+    L.stalledAt = now;
+    L.counters.stalls += 1;
+    return { kind: "stall", silentMs };
+  }
+  return null;
+}
+/** Tick-time decision for the runtime mailbox. `word`: its notification
+ * state, or null when it cannot be read. → "kick" (serve it now), "watch"
+ * (PENDING: schedule `mailboxConfirm` after confirmMs instead), or null (a
+ * confirmation is already scheduled). */
+function mailboxTick(L, word, notified, now) {
+  if (L.watch !== null) return null;
+  if (word === MAILBOX_PENDING) { L.watch = { at: now, notified }; return "watch"; }
+  return "kick";
+}
+/** `confirmMs` after a "watch" → "rescue" (still PENDING, no notification-
+ * driven check ran, the timer on time: the wakeup was lost — kick, counted),
+ * "delivered" (a check ran or the word moved on: nothing to do), "retry"
+ * (the timer fired late: this thread was busy, so a queued message could not
+ * have run yet — watch again), or "kick" (late three times in a row: serve
+ * the mailbox anyway, uncounted). */
+function mailboxConfirm(L, word, notified, now) {
+  const w = L.watch;
+  L.watch = null;
+  if (w === null) return null;
+  if (notified !== w.notified || word !== MAILBOX_PENDING) { L.watchRetries = 0; return "delivered"; }
+  if (now - w.at > L.cfg.confirmMs + L.cfg.lateTimerMs) {
+    if (L.watchRetries >= 3) { L.watchRetries = 0; return "kick"; }
+    L.watchRetries += 1;
+    L.watch = { at: now, notified };
+    return "retry";
+  }
+  L.watchRetries = 0;
+  L.counters.rescues += 1;
+  return "rescue";
+}
+
+let liveness = null; // createLiveness(...) while the resident loop is open
+let livenessTimer = null;
+let livenessPublished = "";
+
+// The runtime thread's mailbox, as instrumented at boot: notification-driven
+// checks (`notified`), every proxied JS call this thread served (`served`,
+// counted in the glue's proxied-function table, which its dispatcher indexes
+// at call time), and where its notification word lives (`mailboxPtr`, found
+// once the runtime is up; null when the layout could not be verified).
+const runtimeMailbox = { mode: "as built", notified: 0, served: 0, counting: false, exitHooked: false, mailboxPtr: null };
+
+/** Boot (preRun, i.e. before initRuntime: the main thread's mailbox init, a
+ * static constructor, arms the first waiter and reads the mode then). The
+ * glue is a classic script, so its top-level vars are properties of this
+ * global; a MODULARIZE glue keeps them factory-local, and then everything
+ * is left as built (logged; the probe still applies). */
+function instrumentRuntimeMailbox() {
+  const T = self.proxiedFunctionTable;
+  if (Array.isArray(T)) {
+    for (let i = 0; i < T.length; i++) {
+      const fn = T[i];
+      if (typeof fn !== "function") continue;
+      // [0] `_proc_exit` and [1] `exitOnMainThread`: a FileWorker exit. Both
+      // throw ExitStatus (swallowed by the glue); report the death first.
+      const exits = (i === 0 && fn === self._proc_exit) || (i === 1 && fn === self.exitOnMainThread);
+      if (exits) runtimeMailbox.exitHooked = true;
+      T[i] = function proxiedCounted(code) {
+        runtimeMailbox.served += 1;
+        if (exits && residentMode && !died) die(Number(code), "exit", `lean --worker exited with code ${Number(code)}`);
+        return fn.apply(this, arguments);
+      };
+    }
+    runtimeMailbox.counting = true;
+  }
+  if (typeof self.waitAsyncPolyfilled === "boolean" && typeof self.checkMailbox === "function") {
+    self.waitAsyncPolyfilled = true;
+    const deliver = self.checkMailbox;
+    self.checkMailbox = function checkMailboxCounted() {
+      runtimeMailbox.notified += 1;
+      return deliver.apply(this, arguments);
+    };
+    runtimeMailbox.mode = "message";
+  }
+  return runtimeMailbox;
+}
+
+/** The runtime heap (shared memory) the mailbox word lives in. */
+function runtimeHeap() {
+  const mem = M && M.wasmMemory ? M.wasmMemory : typeof wasmMemory !== "undefined" ? wasmMemory : null;
+  return mem ? mem.buffer : null;
+}
+/** Find this thread's mailbox notification word: `pthread.mailbox` sits 12
+ * bytes before `pthread.waiting_async` (an int after it, a pointer before),
+ * whose offset the glue itself encodes in `_emscripten_thread_mailbox_await`
+ * (C_STRUCTS); the queue's `notification` is its first field. Verified, not
+ * assumed: the queue's owning thread (after the notification word and the
+ * 40-byte musl mutex) must be this thread, and the word a notification state.
+ * Returns the word's address, or null (then no rescue is ever counted; the
+ * kick still runs every tick). */
+function locateRuntimeMailbox() {
+  try {
+    const src = typeof self.__emscripten_thread_mailbox_await === "function" ? String(self.__emscripten_thread_mailbox_await) : "";
+    const m = /pthread_ptr\s*\+\s*(\d+)/.exec(src);
+    const pself = typeof self._pthread_self === "function" ? self._pthread_self : M && typeof M._pthread_self === "function" ? M._pthread_self : null;
+    const buf = runtimeHeap();
+    if (!m || !pself || !buf) return null;
+    const selfPtr = Number(pself());
+    const slot = selfPtr + Number(m[1]) - 12;
+    if (slot % 8 !== 0) return null;
+    const mailboxPtr = Number(new BigInt64Array(buf, slot, 1)[0]);
+    if (!mailboxPtr || mailboxPtr % 8 !== 0 || mailboxPtr + 56 > buf.byteLength) return null;
+    const owner = Number(new BigInt64Array(buf, mailboxPtr + 48, 1)[0]);
+    const word = Atomics.load(new Int32Array(buf, mailboxPtr, 1), 0);
+    return owner === selfPtr && word >= 0 && word <= 2 ? mailboxPtr : null;
+  } catch {
+    return null;
+  }
+}
+/** The runtime mailbox's notification word now (null when not located). */
+function readMailboxWord() {
+  const buf = runtimeMailbox.mailboxPtr !== null ? runtimeHeap() : null;
+  return buf ? Atomics.load(new Int32Array(buf, runtimeMailbox.mailboxPtr, 1), 0) : null;
+}
+
+/** Serve this (Emscripten main) thread's mailbox now: the work a lost
+ * wakeup would strand. The glue's `checkMailbox` minus its re-arm of a
+ * waitAsync waiter (a re-arm per call would multiply waiters) and minus its
+ * `callUserCallback`/`maybeExit` wrapper (this worker holds the runtime
+ * keepalive; nothing here may exit the runtime), with the glue's exception
+ * policy otherwise: an unwind is benign, an ExitStatus is the FileWorker's
+ * exit, anything else thrown by a proxied function means the runtime is
+ * broken. `served`: whether it served a proxied JS call (null when the
+ * proxied-function table is not instrumented). */
+function kickMailbox() {
+  const check = typeof __emscripten_check_mailbox === "function" ? __emscripten_check_mailbox
+    : M && typeof M.__emscripten_check_mailbox === "function" ? M.__emscripten_check_mailbox : null;
+  if (check === null) return { kicked: false, served: null };
+  if (typeof ABORT !== "undefined" && ABORT) return { kicked: false, served: null };
+  const before = runtimeMailbox.served;
+  try {
+    check();
+  } catch (error) {
+    if (error && error.name === "ExitStatus") {
+      if (residentMode && !died) die(Number(error.status), "exit", `lean --worker exited with code ${Number(error.status)}`);
+    } else if (error !== "unwind") {
+      die(null, "crash", `a proxied call failed on the runtime thread: ${error && error.message ? error.message : String(error)}`);
+    }
+  }
+  return { kicked: true, served: runtimeMailbox.counting ? runtimeMailbox.served !== before : null };
+}
+
+/** Publish the counters when they changed (never a per-tick status: the
+ * status carries the pool sample, whose drift would defeat the dedup). */
+function publishLiveness() {
+  if (liveness === null) return;
+  const json = JSON.stringify(liveness.counters);
+  if (json === livenessPublished) return;
+  livenessPublished = json;
+  emitStatus({ liveness: { ...liveness.counters } });
+}
+
+function startLiveness() {
+  stopLiveness(); // idempotent: one timer per open loop
+  liveness = createLiveness(performance.now());
+  if (runtimeMailbox.mailboxPtr === null) {
+    runtimeMailbox.mailboxPtr = locateRuntimeMailbox();
+    if (runtimeMailbox.mailboxPtr === null) livenessLog("runtime mailbox word not located (layout not verified): lost wakeups are still served every tick but never counted");
+  }
+  livenessPublished = "";
+  livenessTimer = setInterval(livenessStep, LIVENESS.tickMs);
+}
+function stopLiveness() {
+  if (livenessTimer !== null) { clearInterval(livenessTimer); livenessTimer = null; }
+}
+function livenessLog(text) {
+  event(null, "log", { stream: "stderr", text: `[liveness] ${text}` });
+}
+function mailboxWatchFired() {
+  if (died || liveness === null) return;
+  const r = mailboxConfirm(liveness, readMailboxWord(), runtimeMailbox.notified, performance.now());
+  if (r === "retry") { setTimeout(mailboxWatchFired, LIVENESS.confirmMs); return; }
+  if (r !== "rescue" && r !== "kick") return;
+  const kick = kickMailbox();
+  if (r === "rescue") {
+    const n = liveness.counters.rescues;
+    if (n <= 5 || n % 100 === 0) livenessLog(`a runtime-mailbox wakeup was lost (PENDING ${LIVENESS.confirmMs} ms, nothing delivered); the kick served it${kick.served ? "" : " (no proxied JS call: a C-level task)"} — rescue #${n}`);
+    publishLiveness();
+  }
+}
+function livenessStep() {
+  if (died || liveness === null) return;
+  const decision = mailboxTick(liveness, readMailboxWord(), runtimeMailbox.notified, performance.now());
+  if (decision === "kick") kickMailbox();
+  else if (decision === "watch") setTimeout(mailboxWatchFired, LIVENESS.confirmMs);
+  if (died) return;
+  const st = frontDoor && typeof Qed64LspFrontDoor !== "undefined" ? Qed64LspFrontDoor.statusOf(frontDoor) : null;
+  const action = livenessTick(liveness, performance.now(), st ? st.phase : "unknown", !!st && st.version !== null);
+  if (action !== null && action.kind === "probe") {
+    try {
+      residentRingWrite(residentFrame(JSON.stringify(action.msg)));
+    } catch (error) {
+      livenessLog(`probe not written: ${error && error.message}`);
+    }
+  } else if (action !== null && action.kind === "stall") {
+    livenessLog(`probe unanswered and no server frame for ${Math.round(action.silentMs / 1000)} s; ${LIVENESS.graceMs / 1000} s grace before the session counts as wedged (the mailbox is served every tick)`);
+  } else if (action !== null && action.kind === "dead") {
+    livenessLog(`the Lean side stopped: no server frame for ${Math.round(action.silentMs)} ms, liveness probe unanswered (rescues so far: ${liveness.counters.rescues})`);
+    die(null, "wedged", `the Lean runtime stopped answering (no output for ${Math.round(action.silentMs / 1000)} s while work was owed; liveness probe unanswered)`);
+    return;
+  }
+  publishLiveness();
+}
+
 function poolSample() {
   // In a MODULARIZE glue `PThread` is factory-local; only an
   // EXPORTED_RUNTIME_METHODS build publishes it as `Module.PThread`. Prefer
   // that, fall back to a global, and report -1 (not measured) otherwise so
   // the §6 attack-3 gauntlet can tell "≤ 20 running" from "never sampled".
   const PT = M && M.PThread ? M.PThread : typeof PThread !== "undefined" ? PThread : null;
+  // `parked`: dedicated threads the task manager keeps parked for reuse
+  // (kernel 0035) — live pthreads in `running` that carry no work; -1 on a
+  // runtime without the export (a lock-free atomic read, safe from here).
+  const parkedFn = M && typeof M._lean_wasm_task_manager_parked_threads === "function" ? M._lean_wasm_task_manager_parked_threads : null;
   return {
     unused: PT && PT.unusedWorkers ? PT.unusedWorkers.length : -1,
     running: PT ? Object.keys(PT.pthreads || {}).length : -1,
+    parked: parkedFn ? Number(parkedFn()) : -1,
   };
 }
 
@@ -336,6 +673,7 @@ function frontDoorApply(frame) {
       heartbeat = setInterval(() => {
         event(null, "heartbeat", { t: Math.round(performance.now()) });
       }, 2000);
+      startLiveness();
     } catch (error) {
       // The loop never opened: that is a session death, not a request error.
       event(null, "log", { stream: "stderr", text: `[front-door] loop start failed: ${error && error.message}` });
@@ -345,6 +683,7 @@ function frontDoorApply(frame) {
   }
   for (const msg of r.replies) event(null, "lsp", { msg });
   for (const msg of r.ringWrites) {
+    if (liveness !== null) livenessClientRequest(liveness, msg, performance.now());
     try {
       residentRingWrite(residentFrame(JSON.stringify(msg)));
     } catch (error) {
@@ -445,6 +784,7 @@ function die(code, reason, message) {
   const mode = residentMode ? "resident" : "batch";
   residentMode = false;
   if (heartbeat !== null) { clearInterval(heartbeat); heartbeat = null; }
+  stopLiveness();
   if (frontDoor) frontDoorApply({ kind: "died" });
   // The consumer is gone: nothing queued for the ring will ever drain. Fail
   // every pending ack now (the port's FailPending-on-Died covers requests it
@@ -979,6 +1319,17 @@ async function boot(msg) {
       },
       ENV: { LEAN_PATH: bootConfig.leanPath },
       preRun: [
+        function runtimeMailboxMode() {
+          // HARDENING #52: before initRuntime arms this thread's first
+          // mailbox waiter (see instrumentRuntimeMailbox).
+          const m = instrumentRuntimeMailbox();
+          event(null, "log", {
+            stream: "stderr",
+            text: m.mode === "message" && m.counting && m.exitHooked
+              ? "[boot] runtime mailbox: message notifications (no Atomics.waitAsync); proxied calls counted; FileWorker exit hooked"
+              : `[boot] WARNING: runtime mailbox partly instrumented (mode ${m.mode}, counting ${m.counting}, exit hook ${m.exitHooked})`,
+          });
+        },
         function mountEverything() {
           progress(requestId, "filesystem", "Mounting verified library packs");
           const FS = self.Module.FS;
@@ -1468,6 +1819,9 @@ self.__qed64TestExports = {
     die,
     snapshot: () => ({ died, residentMode, lspMode, queued: residentQueue.length, pumping: residentPumping }),
   },
+  // Lean-side liveness under test (tests/unit/liveness.test.ts): the pure
+  // bookkeeping with a fake clock, the mailbox kick, and the live state.
+  liveness: { LIVENESS, LIVENESS_PROBE_PREFIX, createLiveness, livenessClientRequest, livenessServerFrame, livenessTick, mailboxTick, mailboxConfirm, locateRuntimeMailbox, readMailboxWord, kickMailbox, instrumentRuntimeMailbox, runtimeMailbox, state: () => liveness, step: () => livenessStep() },
   // Front-door host wiring under test (tests/unit/front-door.test.ts): the
   // machine's state and the merged status, read-only.
   frontDoor: {

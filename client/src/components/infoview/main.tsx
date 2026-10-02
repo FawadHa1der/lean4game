@@ -45,10 +45,11 @@ import { useAtom } from 'jotai';
 import { gameIdAtom, levelIdAtom, worldIdAtom } from '../../store/location-atoms';
 import { completedAtom } from '../../store/progress-atoms';
 import { gameInfoAtom, levelInfoAtom } from '../../store/query-atoms';
-import { crashedAtom, interimDiagsAtom, lockEditorModeAtom, proofAtom, typewriterContentAtom, typewriterModeAtom } from '../../store/editor-atoms';
+import { crashedAtom, haltedStepAtom, interimDiagsAtom, lockEditorModeAtom, proofAtom, typewriterContentAtom, typewriterModeAtom } from '../../store/editor-atoms';
 import { inventoryAtom } from '../../store/inventory-atoms';
 import { mobileAtom } from '../../store/preferences-atoms';
 import { deletedChatAtom, helpAtom, selectedStepAtom } from '../../store/chat-atoms';
+import { EXIT_CARD_RE } from '../../wasm/death-kind';
 
 /** Wrapper for the two editors. It is important that the `div` with `codeViewRef` is
  * always present, or the monaco editor cannot start.
@@ -606,6 +607,40 @@ export function TypewriterInterface() {
     }
   }
 
+  /** HARDENING #52 exit card: remove the last non-empty line of the level's
+   * text (and any blank lines after it). The edit is a full-text didChange,
+   * which re-arms the halted relay with the shortened text; the pane's
+   * activity effect then reloads the proof state. Offered while the checker
+   * is halted on an exit: the input is read-only without a proof state (a
+   * reload with the exiting text saved), so this is the typewriter-mode way
+   * out — "Restart" and "Reload" replay the same text and die again. */
+  function lastLineAction(): RemoveLastLine | null {
+    const m = editor?.getModel()
+    if (!m) return null
+    const n = m.getLineCount()
+    let end = n
+    while (end >= 1 && m.getLineContent(end).trim() === '') end--
+    if (end < 1) return null
+    return {
+      text: m.getLineContent(end).trim(),
+      remove: () => {
+        const mm = editor.getModel()
+        if (!mm) return
+        const last = mm.getLineCount()
+        let e = last
+        while (e >= 1 && mm.getLineContent(e).trim() === '') e--
+        if (e < 1) return
+        editor.executeEdits("typewriter", [{
+          range: new monaco.Range(e, 1, last, mm.getLineMaxColumn(last)),
+          text: '',
+          forceMoveMarkers: false
+        }])
+        editor.setPosition(mm.getFullModelRange().getEndPosition())
+        setSelectedStep(undefined)
+      },
+    }
+  }
+
   function toggleSelectStep(line: number) {
     return (ev: any) => {
       if (mobile) {return}
@@ -678,8 +713,13 @@ function LeanGateOverlay() {
  * phase, "checker idle but no answer yet", is retried automatically and
  * offers a manual retry, because a first request lost to a session switch
  * used to leave the pane waiting forever. */
-function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since: number }) {
+/** The offending text's way out on an exit card (HARDENING #52): the last
+ * non-empty line of the level's text, and the action that removes it. */
+type RemoveLastLine = { text: string; remove: () => void }
+
+function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: () => void; since: number; removeLastLine?: RemoveLastLine | null }) {
   const [status] = useAtom(bootStatusAtom)
+  const [haltedStep] = useAtom(haltedStepAtom)
   const [activity] = useAtom(checkerActivityAtom)
   const [leanMonaco] = useAtom(leanMonacoAtom)
   const [boundEnv] = useAtom(boundEnvironmentAtom)
@@ -692,11 +732,18 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
   // A boot failure is terminal: the clock stops and the spinner goes (a live
   // timer and a spinning arc on "Lean could not start" read as still trying).
   const bootFailure = status.state !== 'busy' ? /^Lean failed to start: (.*)$/s.exec(status.label)?.[1] : undefined
+  // HARDENING #52: a relay halted by FileWorker exits (the card names the
+  // exit code) or by repeated liveness stalls is terminal like a boot
+  // failure until the player restarts it — no spinner, no running clock.
+  const haltedLabel = activity.halted && !networkHold ? activity.label : ''
+  const exitCode = EXIT_CARD_RE.exec(haltedLabel)?.[1]
+  const stalledRepeatedly = /stalled repeatedly/.test(haltedLabel)
+  const runtimeHalt = exitCode !== undefined || stalledRepeatedly
   React.useEffect(() => {
-    if (bootFailure !== undefined) return
+    if (bootFailure !== undefined || runtimeHalt) return
     const id = setInterval(() => setElapsed(Math.max(0, Math.round((Date.now() - since) / 1000))), 1000)
     return () => clearInterval(id)
-  }, [since, bootFailure !== undefined])
+  }, [since, bootFailure !== undefined, runtimeHalt])
   const secs = (n: number) => n < 60 ? `${n} s` : `${Math.floor(n / 60)} min ${n % 60} s`
   const downloading = status.unit === 'bytes' || /download|unpack|install|preparing the .* environment/i.test(status.label)
   // The "no answer yet" thresholds count from the moment the checker went
@@ -739,6 +786,26 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
     // game download is fetched again (bytes the browser already holds in its
     // HTTP cache are reused: infra/worker.js answers Range).
     detail = <>{bootFailure}. Reloading the page retries: what finished downloading stays cached, an interrupted download is fetched again.</>
+  } else if (activity.halted && exitCode !== undefined) {
+    // HARDENING #52 "exit": the FileWorker exited on every replay of this
+    // level's text — a crash the content causes (the breaker's faithful
+    // verdict), never a connection problem. Named by its exit code.
+    // The way out is an EDIT (a halted relay re-arms on a document change):
+    // a restart or a reload replays the same text and dies again. With a
+    // step pending (finding: the step is not shown — the pane keeps the
+    // last state the checker gave), the Typewriter has put that step back
+    // into the input, cursor on its line: the next Execute replaces it.
+    // Without one (a reload with the text saved: no proof state, the input
+    // is read-only), the card removes the last line itself.
+    headline = <>The checker stopped: Lean exited with code {exitCode}</>
+    detail = haltedStep !== null
+      ? <>The step you just entered (<code>{haltedStep}</code>) made Lean exit with code {exitCode}, so the checker stopped retrying. This is a crash caused by the proof text, not a connection problem: change the step in the input below and press Execute (that restarts the checker), or restart it here.</>
+      : <>{activity.label}. This is a crash caused by the proof text, not a connection problem; restarting or reloading replays the same text. {removeLastLine
+          ? <>Remove the last line of your proof below (the checker restarts on the change), or switch to editor mode (<code>&lt;/&gt;</code>) and change the text there.</>
+          : <>Switch to editor mode (<code>&lt;/&gt;</code>) and delete or change the line that exits (the checker restarts on the change).</>}</>
+  } else if (activity.halted && stalledRepeatedly) {
+    headline = <>The checker stopped: Lean stopped answering</>
+    detail = <>{activity.label}. Your proof is kept. Restarting replays this level into a fresh checker; if it stalls again, reloading the page is safe.</>
   } else if (activity.halted) {
     // The relay's crash-loop breaker: three deaths in two minutes. It only
     // re-arms on a document change, which the typewriter cannot produce
@@ -791,14 +858,16 @@ function LevelLoadingIndicator({ onRetry, since }: { onRetry?: () => void; since
   return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
     {/* explicit size + static position: the pane's spinner rule shifts it
         off-centre and it collapsed to a dot in the level-switch state */}
-    {(bootFailure === undefined || networkHold) && <CircularProgress size={40} style={{ position: 'static', margin: 0 }} />}
+    {((bootFailure === undefined && !runtimeHalt) || networkHold) && <CircularProgress size={40} style={{ position: 'static', margin: 0 }} />}
     <div style={{ color: '#333', fontSize: '0.95rem', textAlign: 'center', maxWidth: '30rem' }}>{headline}</div>
     <div style={{ color: '#666', fontSize: '0.85rem', textAlign: 'center', maxWidth: '30rem' }}>{detail}</div>
-    {bootFailure === undefined && <div style={{ color: '#888', fontSize: '0.8rem' }}>{secs(elapsed)} elapsed</div>}
+    {bootFailure === undefined && !runtimeHalt && <div style={{ color: '#888', fontSize: '0.8rem' }}>{secs(elapsed)} elapsed</div>}
     {idle && waited >= 15 && onRetry &&
       <Button className="btn" onClick={onRetry}>Retry now</Button>}
     {(bootFailure !== undefined || networkHold) &&
       <Button className="btn" onClick={() => window.location.reload()}>Reload</Button>}
+    {activity.halted && !networkHold && exitCode !== undefined && haltedStep === null && removeLastLine &&
+      <Button className="btn" onClick={removeLastLine.remove}>Remove the last line (<code>{removeLastLine.text.length > 40 ? `${removeLastLine.text.slice(0, 40)}…` : removeLastLine.text}</code>)</Button>}
     {activity.halted && !networkHold &&
       <Button className="btn" onClick={() => { if (!rearmCheckerIfHalted()) window.location.reload(); else onRetry?.() }}>Restart the checker</Button>}
   </div>
@@ -910,6 +979,14 @@ let lastStepErrors = proof?.steps.length ? hasInteractiveErrors(getInteractiveDi
               }
             //}
             )}
+            {/* A relay halted while the level already has a proof state
+                (HARDENING #52: an "exit" on every replay of the player's
+                text; any breaker trip mid-proof alike): the steps above
+                are the last state the checker gave, and without this card
+                nothing said the checker had stopped. Same card, same
+                Restart, as the pane shows without a state. */}
+            {activity.halted && !bootFailed &&
+              <LevelLoadingIndicator since={loadingSince.current} onRetry={retry} removeLastLine={activity.halted ? lastLineAction() : null} />}
             {proof?.diagnostics.length > 0 &&
               <div key={`proof-step-remaining`} className="step step-remaining">
                 <Errors errors={proof?.diagnostics} typewriterMode={true} />
@@ -929,7 +1006,7 @@ let lastStepErrors = proof?.steps.length ? hasInteractiveErrors(getInteractiveDi
               </div>
             }
           </> :
-          <LevelLoadingIndicator since={loadingSince.current} onRetry={retry} />
+          <LevelLoadingIndicator since={loadingSince.current} onRetry={retry} removeLastLine={activity.halted ? lastLineAction() : null} />
           // <CircularProgress variant="determinate" value={100*(1 - 1.024 ** (- Math.max(loadingProgress, 1)))} />
         // note: since we don't know the total number of files,
         // we use a function which strictly monotonely increases towards `100` as `x → ∞`
