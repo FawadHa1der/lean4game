@@ -453,7 +453,10 @@ export function leanDownloadInFlight(): boolean {
   // A boot whose relay halted before it ever served (the crash-loop breaker,
   // a deploy problem) downloads nothing until it is re-armed: not busy — the
   // shell fill would otherwise wait for the life of the page.
-  const bootDownloading = bootPromise !== null && !everServed && relayRef?.state.kind !== "halted" && !deployProblem;
+  // A halt whose automatic network re-arm is already scheduled will resume
+  // the download within seconds: still busy (bounded by MAX_AUTO_REARMS).
+  const halted = relayRef?.state.kind === "halted" && !autoRearmScheduled;
+  const bootDownloading = bootPromise !== null && !everServed && !halted && !deployProblem;
   return bootDownloading || inFlightRegions().length > 0;
 }
 

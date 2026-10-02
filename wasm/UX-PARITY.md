@@ -979,6 +979,30 @@ game's levels have no such command) and a stall that resumes inside the
 grace window (unit-tested on the vendored worker,
 `client/src/wasm/vendor-liveness.test.ts`).
 
+### Live verification 2026-10-02 (round 3 + freeze fix, commit 955225e)
+
+All 24 checks passed on the live site: network cuts with zero uncaught page
+errors (service worker controlling and blocked), slow first visits at 300 and
+240 kB/s (activation, warm-up, shell fill, offline reload), an open inventory
+doc fetching once with a flat heap, snapshot HEAD in 0.13–0.45 s (the
+"checking this game's environment" label is on screen for ~0.8 s), all 97
+NNG4 docs cached by the first goal, the flapping link; the freeze-fix drills
+(message-mode mailbox, idle sessions never probed, 140/140 lost wakeups
+rescued, a total stall dying as "wedged" at ~24 s with the stalled label and
+the proof kept, exit cards for codes 0 and 3 with "Remove the last line" and
+"Restart the checker", reload storm 0/5); and the regression (ten-game smoke
+10/10, deep play 3/3, landing, the round-1/2 re-checks, offline with two
+games, Robo first visit ~7.3 GB renderer peak).
+
+One confirmed minor finding: on a 300 kB/s first visit the service-worker
+install event took 273–280 s against Chromium's 300 s limit, because the
+deferred registration's 60 s fallback started the install while the runtime
+was still downloading on the same HTTP/2 connection. Fix: the fallback now
+also waits until no Lean download is in flight (capped at 30 min); a served
+game registers at once as before. Locally at 300 kB/s the install now takes
+20.4 s after the game is served; an unknown game and a halted boot still
+register at 60 s; the landing page registers on load.
+
 ## Open
 
 - **Renderer crash: reloads then a 100 ms navigation storm (mitigated,

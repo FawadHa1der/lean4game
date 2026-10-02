@@ -17,7 +17,8 @@
  *     Lean download runs in this page, to THIS build's worker;
  *  2. a page that boots a game defers the registration until the game is
  *     served (releaseServiceWorkerRegistration, from game-boot's markServed)
- *     or 60 s pass, so even the small install never competes with the
+ *     or — after 60 s — until no Lean download runs (at most BUSY_CAP_MS from
+ *     load), so even the small install never competes with the
  *     runtime/snapshot download; the landing page registers on load;
  *  3. a registration that vanished (an install that timed out anyway) is
  *     re-registered once when the offline warm-up needs a worker
@@ -45,7 +46,8 @@ function register(why: string): Promise<ServiceWorkerRegistration | null> {
 }
 
 /** index.tsx, on the window's `load`: register now (the landing page), or —
- * when this page boots a game — once it is served or after DEFER_MS. */
+ * when this page boots a game — once it is served, or after DEFER_MS once no
+ * Lean download is in flight. */
 export function scheduleServiceWorkerRegistration(opts: { deferForBoot: boolean; busy: () => boolean }): void {
   if (!supported() || registration) return;
   if (!opts.deferForBoot || served) {
@@ -55,15 +57,25 @@ export function scheduleServiceWorkerRegistration(opts: { deferForBoot: boolean;
     if (!opts.deferForBoot) void requestShellFill(opts.busy);
     return;
   }
-  console.info(`[sw] registration deferred until the game is served (at most ${DEFER_MS / 1000} s)`);
-  window.setTimeout(() => {
+  console.info(`[sw] registration deferred until the game is served (or, after ${DEFER_MS / 1000} s, until no Lean download is in flight)`);
+  // The fallback is for a game page that is never served (an unknown game, a
+  // failed or halted boot). It must not start the install while the runtime
+  // or the game snapshot is still downloading: on one shared HTTP/2
+  // connection the install's critical set (≈17 MB) then crawls at a fraction
+  // of the link and came within 20 s of Chromium's 300 s install-event limit
+  // at 300 kB/s (live, 2026-10-02: 279.8 s). Waiting for the download makes
+  // the install run on an idle link (≈1 min at 300 kB/s). Capped at
+  // BUSY_CAP_MS like the shell fill, so a stuck download cannot block it.
+  const fallbackFrom = Date.now();
+  const fallback = () => {
     if (registration) return;
-    void register(`${DEFER_MS / 1000} s after load`);
-    // A game page that is never served (an unknown game, a failed or
-    // halted boot) still gets its shell filled; a running download is
-    // waited for (game-boot leanDownloadInFlight; at most BUSY_CAP_MS).
+    const busyNow = opts.busy();
+    if (busyNow && Date.now() - fallbackFrom < BUSY_CAP_MS) { window.setTimeout(fallback, 5000); return; }
+    const after = `${Math.round((Date.now() - fallbackFrom) / 1000)} s after load`;
+    void register(busyNow ? `${after}, a Lean download still in flight after the ${BUSY_CAP_MS / 60_000} min cap` : `${after}, no Lean download in flight`);
     void requestShellFill(opts.busy);
-  }, DEFER_MS);
+  };
+  window.setTimeout(fallback, DEFER_MS);
 }
 
 /** game-boot's markServed: the Lean download is over — register now. */
@@ -197,7 +209,8 @@ function askShellFill(target: ServiceWorker, ms: number): Promise<ShellFillReply
 }
 
 let shellFill: Promise<ShellFillReply | null> | null = null;
-/** The longest the fill waits for this page's Lean download to end. */
+/** The longest the shell fill, and the deferred registration's fallback,
+ * wait for this page's Lean download to end. */
 const BUSY_CAP_MS = 30 * 60_000;
 /** Rounds that made progress, and worker switches, are each bounded. */
 const MAX_ROUNDS = 20;

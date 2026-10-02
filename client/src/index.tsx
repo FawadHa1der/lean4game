@@ -41,8 +41,8 @@ function useGameKnown(gameId: string | null | undefined): boolean | undefined {
 // snapshots and library pack already live in OPFS. Production only: the dev
 // server serves no sw.js, and a stale worker would mask live edits.
 // N2: a page that boots a game (a game route) registers once the game is
-// served or 60 s after load, whichever comes first — the install must never
-// compete with the runtime/snapshot download; the landing page registers on
+// served or, after 60 s, once no Lean download runs (at most 30 min) — the
+// install must never compete with the runtime/snapshot download; the landing page registers on
 // load and fills the rest of the shell while no Prepare downloads
 // (wasm/sw-client.ts).
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
