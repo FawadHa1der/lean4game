@@ -131,6 +131,15 @@ export async function sweepStaleSnapshots(index: SnapshotIndex): Promise<string[
 /** What the prefetch worker reports on exit. */
 export type PrefetchResult = "done" | "already-cached" | "error" | "unavailable" | "busy";
 
+/** A prefetch worker that has reported nothing for this long is abandoned.
+ * Silence, not a deadline from the start: a fixed 15 minutes cut the largest
+ * regions (~280 MB gzip) short below ~2.5 Mbit/s and threw the partial away
+ * (QED64 HARDENING #54, where the vendored boot gets the same timeout). The
+ * vendored worker reports every 64 MiB of inflated output (~18 MiB on the
+ * wire), so until a closure sync brings its 500 ms cadence this serves links
+ * down to ~100 kB/s — every link the old deadline served, and slower ones. */
+export const PREFETCH_SILENCE_MS = 3 * 60 * 1000;
+
 /** Fill the raw region cache for one snapshot in the disposable prefetch
  * worker (download + gunzip on a heap that dies on completion — a Lean
  * worker doing this itself stays ~4.6 GB heavier for its whole life),
@@ -140,17 +149,32 @@ export type PrefetchResult = "done" | "already-cached" | "error" | "unavailable"
 export function prefetchRawSnapshot(entry: SnapshotEntry, onProgress?: (bytes: number, total: number) => void): Promise<{ result: PrefetchResult; error?: string }> {
   return new Promise((resolve) => {
     const w = new Worker(PREFETCH_WORKER);
-    const finish = (result: PrefetchResult, error?: string) => { window.clearTimeout(bail); w.terminate(); resolve({ result, error }); };
-    const bail = window.setTimeout(() => {
-      finish("error", "timed out after 15 minutes");
-      // terminate() skips the worker's own cleanup: the partial (up to the
-      // region's full size) would sit in OPFS until a retry of this key.
-      void snapshotsDir().then((d) => d?.removeEntry(`${rawFileName(entry)}.partial`)).catch(() => {});
-    }, 15 * 60 * 1000);
+    let settled = false;
+    let bail = 0;
+    const finish = (result: PrefetchResult, error?: string) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(bail);
+      w.terminate();
+      resolve({ result, error });
+    };
+    // Re-armed by every message; a late one after finish() must not re-arm
+    // (its timer would delete a partial another writer may own by then).
+    const arm = () => {
+      if (settled) return;
+      window.clearTimeout(bail);
+      bail = window.setTimeout(() => {
+        finish("error", `the download stalled (no data for ${PREFETCH_SILENCE_MS / 60_000} minutes)`);
+        // terminate() skips the worker's own cleanup: the partial (up to the
+        // region's full size) would sit in OPFS until a retry of this key.
+        void snapshotsDir().then((d) => d?.removeEntry(`${rawFileName(entry)}.partial`)).catch(() => {});
+      }, PREFETCH_SILENCE_MS);
+    };
+    arm();
     w.postMessage({ url: entry.url, cacheKey: snapshotCacheKey(entry), rawBytes: entry.bytes });
     w.onmessage = (e) => {
       const m = e.data as { status?: string; bytes?: number; total?: number; error?: string };
-      if (m.status === "progress") { onProgress?.(m.bytes ?? 0, m.total ?? entry.bytes); return; }
+      if (m.status === "progress") { arm(); onProgress?.(m.bytes ?? 0, m.total ?? entry.bytes); return; }
       const status = m.status as PrefetchResult | undefined;
       finish(status === "done" || status === "already-cached" || status === "busy" || status === "unavailable" ? status : "error", m.error);
     };
