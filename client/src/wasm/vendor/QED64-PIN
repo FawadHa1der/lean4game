@@ -1,8 +1,8 @@
-qed64 commit: 3b42714df6ece5fefbb3adc7421df0af0c7d8d20
-date: 2026-10-02 03:13:31 -0400
-subject: promote kernel 0035b (HARDENING #52 + #53): runtime wasm64-3ab1c6a9da03bc29 (kernel a8817d01f9, dedicated-thread parking off by default) + rebaked slim snapshots; packs unchanged
+qed64 commit: 3e182ffb74709a2a495b29502610bf264a230ce1
+date: 2026-10-03 06:17:52 -0400
+subject: boot card stays for the whole boot on slow links; memory figure measured (HARDENING #54, widgets S1)
 files:
-  aa43834b9c461435  frontend/src/qed64-boot.ts
+  75ed90dd0bc38784  frontend/src/qed64-boot.ts
   3bc18b4725e4ca50  frontend/src/resident-session.ts
   f9666f7fe3d23678  frontend/src/lsp-relay.ts
   3ba9ed47979a8e0d  src/install/profiles.ts
@@ -11,7 +11,7 @@ files:
   d12de571ee72edc0  public/workers/lean.worker.js
   efdf325b1ed0f4b4  public/workers/lsp-frames.js
   6a919afe7466be9c  public/workers/lsp-front-door.js
-  66bc998493f5e3cd  public/workers/snapshot-prefetch.worker.js
+  e709dd962bbafaa8  public/workers/snapshot-prefetch.worker.js
 pipeline (wasm/vendor/qed64-pipeline):
   8ddb1487e103756d  pipeline/toolchain/chunk-runtime.mjs
   e487cf1eb9b978af  pipeline/toolchain/artifact-paths.mjs

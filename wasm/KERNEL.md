@@ -41,7 +41,19 @@ import specifiers resolve to the closure (vite alias + tsconfig paths);
 directory, so relay and worker are paired by construction. **No build,
 bake or test reads a qed64 checkout.**
 
-Current pin: qed64 `3b42714` (2026-10-02), the resident transport plus the
+Current pin: qed64 `3e182ff` (2026-10-03): `3b42714` (below) plus
+**HARDENING #54**, which touches two vendored files and no runtime. The
+prefetch worker (`snapshot-prefetch.worker.js`) reports raw-region progress
+every 500 ms while bytes arrive, where it used to report once per 64 MiB of
+inflated output. The boot (`qed64-boot.ts` `ensureRawSnapshotCached`) gives
+up on the worker after `PREFETCH_SILENCE_MS` (3 min) without a message,
+re-armed by each message, where it used to give up a fixed 15 min after the
+start. That deadline cut the largest game regions (~280 MB gzip) short below
+~2.5 Mbit/s, and the Lean worker then downloaded them again from zero. The
+game's own Prepare (`client/src/wasm/game-cache.ts` `prefetchRawSnapshot`)
+uses the same 3-minute silence rule.
+
+Pin `3b42714` (2026-10-02): the resident transport plus the
 **HARDENING #52 worker layers** (bumped from `32e5e62`, below). The runtime
 and the snapshots did NOT change with this bump: the game still serves
 `wasm64-d77d34b97592d014` (kernel `992dc94`, series through 0032) and the

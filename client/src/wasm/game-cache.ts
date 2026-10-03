@@ -134,10 +134,9 @@ export type PrefetchResult = "done" | "already-cached" | "error" | "unavailable"
 /** A prefetch worker that has reported nothing for this long is abandoned.
  * Silence, not a deadline from the start: a fixed 15 minutes cut the largest
  * regions (~280 MB gzip) short below ~2.5 Mbit/s and threw the partial away
- * (QED64 HARDENING #54, where the vendored boot gets the same timeout). The
- * vendored worker reports every 64 MiB of inflated output (~18 MiB on the
- * wire), so until a closure sync brings its 500 ms cadence this serves links
- * down to ~100 kB/s — every link the old deadline served, and slower ones. */
+ * (QED64 HARDENING #54; the vendored boot, qed64-boot.ts, uses the same
+ * timeout). The worker reports every 500 ms while bytes arrive, so only a
+ * dead connection or a wedged worker is ever this quiet. */
 export const PREFETCH_SILENCE_MS = 3 * 60 * 1000;
 
 /** Fill the raw region cache for one snapshot in the disposable prefetch

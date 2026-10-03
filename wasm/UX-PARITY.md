@@ -574,7 +574,8 @@ Review fixes (same day, local `serve-dist` on :3006, headless Chromium):
   keys are not the served ones — it deleted the promoted 1.47 GB region);
   matches the exact key shape after a listed name (`nng4.dev.*` next to
   `nng4` is left alone); reclaims stale-key `.partial` files (the
-  15-minute prefetch bail also removes its own). Verified with the real
+  prefetch's silence bail, 3 min without progress, also removes its own;
+  until 2026-10-03 it was a fixed 15 min). Verified with the real
   function in Node and the dev-index browser probe (`stale region sweep
   skipped: unpromoted index ?snapshots=staging`, promoted key kept).
 

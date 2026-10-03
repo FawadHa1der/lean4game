@@ -189,7 +189,8 @@ let switchGen = 0;
  * running region's bytes as progress (the worker's inflated offsets — the
  * level pane says what they unpack to), a plain busy label otherwise.
  * Renders once immediately: jotai's sub fires only on the NEXT change, and
- * a wait that started between two 64 MiB ticks showed no bytes at all. */
+ * a wait that started between two progress ticks showed no bytes at all
+ * (one per 64 MiB before QED64 HARDENING #54; every 500 ms since). */
 async function mirrorPrepare<T>(ui: StatusSink, snapshot: string | null, label: string, until: Promise<T>, live: () => boolean = () => true): Promise<T> {
   const store = getDefaultStore();
   const render = () => {
