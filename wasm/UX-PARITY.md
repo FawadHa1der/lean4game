@@ -1004,6 +1004,43 @@ game registers at once as before. Locally at 300 kB/s the install now takes
 20.4 s after the game is served; an unknown game and a halted boot still
 register at 60 s; the landing page registers on load.
 
+### Live check of 476e8b6 and slow-link prefetch fix (HARDENING #54), 2026-10-03
+
+**Live, commit 476e8b6.** Fresh profile, TestGame level 1, every byte
+through one 300 kB/s bucket (`qed64/work/lv-live3-verify-D1-firstvisit.mjs`):
+
+- The service worker registered when the game was served (+1004 s). Its
+  install event took 5.9 s; it was 273–280 s on 955225e.
+- The goal appeared at +1007 s with 309 MB on the wire (nothing downloaded
+  twice), and the proof completed.
+- The offline cache held all 28 runtime and game-data files and all 234
+  shell files.
+- Offline, the same level showed its goal 5.7 s after navigation and the
+  proof completed; the landing page showed 9 tiles. No page errors.
+
+**Slow-link prefetch (commits 7dab308 and 18cc7da).** Both the game's
+Prepare (`game-cache.ts` `prefetchRawSnapshot`) and the vendored boot
+(`qed64-boot.ts` `ensureRawSnapshotCached`, qed64 3e182ff) used to abandon
+the raw-region prefetch worker a fixed 15 min after it started. On links
+below ~2.5 Mbit/s that cut the largest regions (~280 MB gzip) short. Prepare
+then failed with its partial deleted; the boot let the Lean worker download
+the region again from zero. Both now give up only after 3 min without a
+message, re-armed by every message. The prefetch worker reports every
+500 ms while bytes arrive; it used to report once per 64 MiB inflated.
+
+Local build, the NNG4 region (154 MB) paced by an in-probe proxy, everything
+else unpaced (`qed64/work/lv-r4-prepare-silence.mjs`,
+`lv-r4-boot-silence.mjs`):
+
+| Path | Steady 160 kB/s (past the old 900 s) | Region request stalls (connection held open) |
+|---|---|---|
+| Prepare | Done at 965 s with one region request. The 569 MB region was committed, the runtime was cached (13/13 files), and the tile reads "Ready — plays offline". The tile's count rose about 1 MB every 5 s. | Stalled at 60 MB (+375 s). At +555 s (180 s later) the tile read "Preparation failed: the download stalled (no data for 3 minutes)" with Retry. No `.partial` was left in OPFS. |
+| First boot | Ready at 970 s with one region request and no "raw prefetch silent" line; `rfl` proved the level. The banner text changed 193 times, never more than ~5 s apart. | Stalled at 40 MB (+253 s). At +433 s (180 s later): `[qed64] raw prefetch silent for 180 s`. The Lean worker's own region request then took the full 154 MB; ready at +474 s, level proved. |
+
+Unit test `client/src/wasm/game-cache-prefetch.test.ts` (fake clock, Worker
+and OPFS): 5/5. It fails both regressions it guards against: no re-arm on
+progress, and a re-arm after the outcome.
+
 ## Open
 
 - **Renderer crash: reloads then a 100 ms navigation storm (mitigated,
