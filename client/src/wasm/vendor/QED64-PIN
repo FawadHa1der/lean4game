@@ -1,14 +1,14 @@
-qed64 commit: 3e182ffb74709a2a495b29502610bf264a230ce1
-date: 2026-10-03 06:17:52 -0400
-subject: boot card stays for the whole boot on slow links; memory figure measured (HARDENING #54, widgets S1)
+qed64 commit: 76be2995a35517ebe05b2877ad4086a901485224
+date: 2026-10-03 18:41:55 -0400
+subject: core pack parts report download progress inside the part (HARDENING #54 follow-up)
 files:
   75ed90dd0bc38784  frontend/src/qed64-boot.ts
   3bc18b4725e4ca50  frontend/src/resident-session.ts
   f9666f7fe3d23678  frontend/src/lsp-relay.ts
-  3ba9ed47979a8e0d  src/install/profiles.ts
+  2d1de0fe319473f1  src/install/profiles.ts
   ace92db17bb21498  src/runtime/client.ts
   d6eed5f27eb2d199  src/runtime/snapshots.ts
-  d12de571ee72edc0  public/workers/lean.worker.js
+  33fccd6a672cfbb8  public/workers/lean.worker.js
   efdf325b1ed0f4b4  public/workers/lsp-frames.js
   6a919afe7466be9c  public/workers/lsp-front-door.js
   e709dd962bbafaa8  public/workers/snapshot-prefetch.worker.js

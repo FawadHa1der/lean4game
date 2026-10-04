@@ -41,7 +41,16 @@ import specifiers resolve to the closure (vite alias + tsconfig paths);
 directory, so relay and worker are paired by construction. **No build,
 bake or test reads a qed64 checkout.**
 
-Current pin: qed64 `3e182ff` (2026-10-03): `3b42714` (below) plus
+Current pin: qed64 `76be299` (2026-10-03): `3e182ff` (below) plus the two
+**HARDENING #54 follow-ups**, again with no runtime change. `lean.worker.js`
+(`fetchChunk`) streams each 16 MiB runtime chunk and reports every 500 ms
+inside it. Before, at 300 kB/s the boot banner's runtime count stood still
+for ~56 s per chunk (live run of 22eda45, D5). Length, SHA-256 and the
+force-cache → reload retry are unchanged; after a failed first attempt the
+count can step back once. `src/install/profiles.ts` (`inflateTransport`)
+does the same for the core pack's parts, which game sessions skip.
+
+Pin `3e182ff` (2026-10-03): `3b42714` (below) plus
 **HARDENING #54**, which touches two vendored files and no runtime. The
 prefetch worker (`snapshot-prefetch.worker.js`) reports raw-region progress
 every 500 ms while bytes arrive, where it used to report once per 64 MiB of
