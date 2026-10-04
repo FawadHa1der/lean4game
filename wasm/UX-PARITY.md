@@ -1125,6 +1125,186 @@ Known gaps:
   network before the worker answers from its cache (not the warm-up storm).
 - Not yet verified on the live site.
 
+#### Round 2
+
+**Round-1 browser results.** Local build of 0f2ecb7 on :3006, headless
+Chromium, a pacing/cutting proxy in the probes (`qed64/work/lv-live4fix-*`,
+evidence `lv-shots/live4fix-*`):
+
+- **Offline** (`lv-live4fix-offline.mjs`, the proxy refusing every
+  connection, Chromium still online): 13/13 steps. Logic 7/7: Prepare
+  145/145 files; offline boot 6.1 s and a proof; a second level's goal in
+  1.6 s; an inventory doc; the landing tile "Ready — plays offline"; the D1
+  `partial` tile after deleting two runtime chunks, then game.json. NNG4
+  6/6 the same way (Prepare 192/192, offline boot 5.0 s). Each offline boot
+  still cost ~120 failing service-worker GETs (N1, N3 below).
+- **Slow link** (`lv-live4fix-slow.mjs`, 150 kB/s, fresh profile, NNG4).
+  Clicked once the worker was active: "region done; runtime 192/192 files
+  cached" after 2126 s, in 10 warm rounds of ~225 s (153.6 MB of chunks);
+  the tile read "Ready — plays offline", also after a reload. Clicked while
+  the first worker was still installing: "region done; runtime not warmed"
+  after 1146 s, no chunk cached, the tile `partial` "the checker 0 of 10
+  files, this game's files 0 of 2" (S1, N2).
+- **Tabs** (`lv-live4fix-tabs.mjs`, `-tabs-r.mjs`, NNG4): the other tabs
+  showed a Prepare within 0.05 s with live counts. A stalled download failed
+  on the 3-minute rule (179.7 s after the stall) and the other tabs dropped
+  it within 0.02 s; its Retry was done in 30.9 s and every tab read Ready
+  within 0.09 s. A game tab's boot region showed on a landing tab as "Being
+  downloaded in another tab… N / 154 MB", then Ready. Closing or reloading a
+  visible tab mid-Prepare left that line in the other tabs for 76.1 s and
+  75.3 s (F1).
+- **Boot** (`lv-live4fix-boot-D4.mjs`, a 20 s cut at 40 MB of the region,
+  5 MB/s): ready 92.3 s after the navigation (64.8 s after link-back) and
+  the proof completed; with an active worker (`PRESW=1`) 90.1 s and 62.4 s.
+  An injected worker crash still read "restarting the checker after a crash
+  (probe-injected crash)". A page-side watcher saw the crash label flash
+  (< 0.1 s) at link-back and when the modules loaded under an active worker,
+  and "after a crash (crash)" in a first visit's burst of deaths (D4
+  residuals). D7 (`lv-live4fix-boot-D7.mjs`, RAG cached, offline): boot
+  5.4 s and a proof, 165 failing service-worker /data GETs (~800 in the
+  live run of 22eda45).
+- **Smoke and Cypress:** the ten-game smoke 10/10 (each level proved and
+  "Next" shown); Cypress 24/24 (`01-basic-interface` 5/5,
+  `game-features` 19/19). The landing page on a fresh profile registered on
+  load and filled the shell (234/234) in 3.4 s.
+
+**The 76be299 closure sync (D5), commit 0f2ecb7.** The vendored
+`lean.worker.js` streams each 16 MiB runtime chunk and reports progress
+every 500 ms inside it (qed64 5e94697): at 300 kB/s the boot banner's
+runtime count used to stand still for ~56 s per chunk. Length and SHA-256
+verification and the force-cache → reload retry are unchanged;
+`profiles.ts` does the same for the core pack's parts (76be299), which game
+sessions do not install. In the round-1 runs the banner's count moved
+inside a chunk ("verifying lean.wasm · 98 / 154 MB"). Accepted: after a
+failed first attempt the in-chunk count steps back once (qed64 HARDENING
+#54).
+
+**Fixes of this round**, by finding:
+
+| Finding | Fix |
+|---|---|
+| S1 (major): a Prepare clicked before the first-visit service worker was active never warmed the runtime or the game's files (`warmTarget` gave up after ~60 s while the region downloaded for 19 more minutes) | A Prepare's warm-up waits for a worker with no fixed cap (`game-cache.ts activeWorkerWhenInstalled`): an installing registration until it activates (`ready`, and a look every 10 s), or this page's own registration while a game page still defers it (`sw-client.ts ownServiceWorkerRegistration`, never forced). The wait ends at activation or when no registration can be had (one re-registration per page; a second loss is final), so a Prepare ends `partial`, never hangs; no service worker or the dev server still answer within seconds. The tile says what it waits for (`awaitingWorker`): a note while the region runs, "waiting for the browser to finish installing this site's offline cache…" after it |
+| F1: closing or reloading a visible tab mid-Prepare left "Being downloaded in another tab…" in the other tabs for ~75 s (`pagehide` said the end, the `visibilitychange` after it said the download again, hidden) | A tab says nothing after `pagehide` until a persisted `pageshow` (a page restored from the back/forward cache says its downloads again under new ids); every download carries an id, and a receiver ignores progress of a (tab, id) it heard end for 75 s |
+| D4 residuals: (a) "restarting the checker after a crash (snapshot 'nng4' failed to load)" flashed at link-back under an active worker (the recorded snapshot failure is reset while the relay still reboots with the same death); (b) a first visit's burst of deaths showed "after a crash (crash)" | `death-kind.ts deathReader`: a death is read once, by object (`network`, `silent` — no message, or a snapshot death with no failure recorded — or `own`); a network episode runs from a death the link caused until the relay serves again, and inside it a `silent` death reads as the link's too. A death with evidence of its own (an unpaired or corrupt region, a messaged crash) keeps the crash label, as do `wedged` and `exit`; a stale death cannot reopen an episode after the relay served |
+| N1: offline with every file held, "the connection failed at 192/192 files — one more round" and "offline cache INCOMPLETE: 192/192" (~120 more failing GETs) | `heldButNotRevalidated`: such a round ends the warm-up as `done`; the log says all files are held but could not be revalidated |
+| N2: the partial tile read "this game's files 1 of 2" without a cached game.json | the offline report says whether game.json listed the files (`data.listed`); if not, the tile says "this game's own files are not cached yet" |
+| N3: offline, each network-first page read tried the network before the held copy answered | after a fetch fails outright, held `/data` and `/i18n` files answer cache-first for 5 s (bypass requests such as the L4 probe, and files not held, still go to the network; any HTTP answer ends it) |
+
+Review round on these fixes (adversarially verified, all applied):
+
+- **D4(b) episode** The episode lasts until a session arms, so it covered
+  the whole reboot after link-back: an unpaired region, or an
+  out-of-bounds crash after a network re-arm, read "waiting for the
+  connection" with the link up. Only `silent` deaths join the episode now,
+  and only a death not seen opening one opens it (the relay keeps handing
+  out the old death after it serves).
+- **R2-1** A Retry after the region failed joined the first Prepare's
+  warm-up (same build id), whose wait was told only to the first Prepare: the
+  retried tile never said it was waiting. The wait state lives on the
+  warm-up in flight; a joiner hears it at once.
+- **R2-2** A Prepare on a page whose registration was still deferred (a
+  game link, then the landing page in-app) gave up 3 s in. It now waits for
+  that registration; a Prepare whose region is in and whose warm-up waits
+  for a worker no longer counts as a running download
+  (`preparesDownloading`), so the deferral's fallback registers within ~5 s
+  instead of at its 30-minute cap when the boot is never served.
+- **R2-3** The wait could call `ensureServiceWorkerRegistration` on a page
+  whose own registration was deferred (another tab's registration lost),
+  starting the install beside the boot's download. Only a registration this
+  page made is registered again.
+- **R2-4** The N3 memo covered every network-first path: after a deploy and
+  one blip, a new page could get the previous worker scripts and snapshot
+  index. It covers `/data` and `/i18n` only.
+- **R2-5** The "lost registration" test passed only because
+  `import.meta.env.PROD` is undefined under node. The test now loads
+  `sw-client.ts` with a switch for it and checks the once-per-page
+  re-registration through `prepareGame`.
+
+Tests: `game-cache-sw-wait` 7/7 (new: S1, R2-1, R2-2/R2-3, R2-5 on a fake
+clock, service-worker container and prefetch worker), `game-cache-crosstab`
+15/15 (F1), `sw-offline-warm` 16/16 (N1, N3, R2-4 against the real
+`sw.template.js`), `game-data-urls` 9/9 (N2), `death-kind` (D4 residuals
+and the episode review), `sw-warm` 3/3, `game-cache-prefetch` 5/5,
+`vendor-liveness` 11/11, `msg-embed`, the translation suites,
+`infra/worker.test.mjs` 20/20. Each fix was broken on purpose once (27
+mutants) and its test failed. The `game-boot.ts` wiring of the episode was
+checked against the real vendored relay with fake sessions, not in a unit
+test (`game-boot` imports modules the test hook cannot resolve).
+
+Browser results of round 2. Local build, sw `9d0342ebba44`; evidence is under
+`lv-shots/live4r2-*`.
+
+- **S1 at 150 kB/s** (`lv-live4r2-slow.mjs immediate`):
+  - Prepare NNG4 was clicked while the first-visit worker was still
+    installing. The console then said "waiting for the service worker to
+    finish installing", and the tile showed the note.
+  - The worker became active 112 s later. The warm-up then ran 10 rounds
+    and ended "runtime 192/192 files cached".
+  - Click to done took 2229 s, with 334 MB on the wire since the click. The
+    tile read Ready, and still did after a reload.
+- **D5 at 300 kB/s:** an NNG4 first boot was sampled every 1 s and watched
+  for changes.
+  - Through the runtime phase the label never stood still for more than
+    7.0 s (it was 48–56 s per chunk before 0f2ecb7). The count never went
+    backwards.
+  - The boot was ready at 1086 s and proved `rfl`.
+  - One cosmetic flicker, fixed in the next commit: at 61 s the banner read
+    "starting the Lean checker" for 0.6 s, and the time-left estimate
+    restarted.
+- **F1** (`lv-live4r2-tabs.mjs` A/B/D/R/G and `-dwell`):
+  - When the sending tab was reloaded, the other tab dropped its line in
+    0.04 s. The reloaded tab's new Prepare then showed there from 0 MB.
+  - When the sending tab was closed, the other tabs dropped it in 0.21–0.49 s.
+  - When a game tab was closed while its boot streamed the region, the
+    landing tab dropped it in 0.12–0.20 s.
+  - Nothing came back within 12 s in any of these. Checks 1, 3 and 4 and the
+    game-tab report pass as in round 1.
+- **D4** (`lv-live4r2-boot-D4.mjs` with a page-side text watcher):
+  - Over a 20 s cut, neither the first visit nor the `PRESW=1` run showed
+    "after a crash" at any point. Each showed "waiting for the connection —
+    the download restarts on its own", recovered, and proved (ready
+    92.4 s / 89.5 s).
+  - The injected worker crash still read "restarting the checker after a
+    crash (probe-injected crash)".
+- **D7, N1, N3:** RAG fully cached, then reloaded offline.
+  - With the proxy refusing every connection, the boot took 6.0 s and the
+    proof completed. There were 12 failing service-worker /data GETs (165
+    in round 1, ~800 live). The log reads "all 357 files are held — the
+    connection failed, so they were not revalidated", with no INCOMPLETE.
+  - With `setOffline`, the boot took 5.4 s, with 0 failing GETs.
+- **D6, D1, N2** (`lv-live4r2b-offline.mjs`, `lv-live4r2b-rag.mjs`):
+  - NNG4 prepared from the landing page only. It booted offline at two
+    levels never opened online, both proved, and an inventory doc opened.
+  - With two runtime chunks deleted, the tile showed "checker 8 of 10";
+    Finish restored Ready. With game.json deleted, it said "this game's own
+    files are not cached yet"; Finish restored Ready.
+  - RAG's Prepare cached 356/356 files, including the 14 embedded images.
+    Offline, a level-introduction image (1594×732) and the 6 world-intro
+    images rendered from the service worker.
+- **Regression:**
+  - The ten-game smoke passed 10/10.
+  - The landing page loaded fresh in 0.4 s (shell filled in 3.5 s), cached
+    in 0.3 s and offline in 0.4 s, with 0 errors. After the smoke booted
+    every game, all 9 tiles read "Ready".
+  - Cypress 24/24.
+
+Known gaps after round 2:
+
+- A hidden tab that crashes without `pagehide` still shows its download in
+  the other tabs for up to 75 s (F1 covers closing and reloading).
+- A Prepare on a game page whose boot is never served waits, with its
+  region in, until the deferred registration's fallback runs (≤ 5 s once
+  nothing downloads) and the worker installs.
+- N3 covers game content only: offline, the unhashed shell files still try
+  the network once each. The memo lives in the worker's memory and is lost
+  when the browser stops an idle worker.
+- A bare death outside a network episode still reads as a crash until the
+  halt's link probe classifies it.
+- Accepted, unchanged: no stall indication while a link is held (F2; the
+  3-minute silence rule reports it), the ~55 kB/s shared-link floor for
+  completing the runtime warm-up in 24 rounds, the in-chunk count stepping
+  back once.
+
 ## Open
 
 - **Renderer crash: reloads then a 100 ms navigation storm (mitigated,
