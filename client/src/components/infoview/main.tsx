@@ -50,6 +50,7 @@ import { inventoryAtom } from '../../store/inventory-atoms';
 import { mobileAtom } from '../../store/preferences-atoms';
 import { deletedChatAtom, helpAtom, selectedStepAtom } from '../../store/chat-atoms';
 import { EXIT_CARD_RE } from '../../wasm/death-kind';
+import { BOOT_PARAM_REFUSED, SEC1_REFUSAL_RE, openWithoutOverrides } from '../../wasm/boot-params';
 import { wholeMB } from '../../wasm/sizes';
 
 /** Wrapper for the two editors. It is important that the `div` with `codeViewRef` is
@@ -185,6 +186,71 @@ function ExerciseStatement({ showLeanStatement = false }) {
   </>
 }
 
+/** A boot failure's detail line, shared by the typewriter's card
+ * (LevelLoadingIndicator, local to TypewriterInterface) and editor mode's
+ * (EditorBootFailureCard). L10: neutral wording — the failure may be in the
+ * middle of the checker download (then only its finished chunks are
+ * cached), and an interrupted game download is fetched again (bytes the
+ * browser already holds in its HTTP cache are reused: infra/worker.js
+ * answers Range). SEC1: a refusal (wasm/boot-params.ts) — a dev override in
+ * the address that is not one same-origin directory / build id, or an index
+ * or manifest naming another site — fetched nothing from it, and a reload
+ * refuses again: the card says what to change instead of "reloading
+ * retries". */
+function bootFailureDetail(reason: string, t: ReturnType<typeof useTranslation>['t']): React.ReactNode {
+  const refusal = SEC1_REFUSAL_RE.exec(reason)?.[1]
+  if (refusal === 'BOOT_PARAM_REFUSED') {
+    return <>{reason}. {t("Boot param refused note", { defaultValue: "A development override in this page's address may only name a directory on this site; nothing was downloaded for it. Remove the parameter from the address to play." })}</>
+  }
+  if (refusal !== undefined) {
+    return <>{reason}. {t("Foreign artifact refused note", { defaultValue: "This site's published files point to another site; nothing was downloaded from it. Reloading will not help until the published files are fixed." })}</>
+  }
+  return <>{reason}. Reloading the page retries: what finished downloading stays cached, an interrupted download is fetched again.</>
+}
+
+/** L4: the network hold's words, shared by the typewriter's card and editor
+ * mode's (SEC1-R1). The network went away in the middle of a download; the
+ * boot is held (or the halted relay is re-armed) until a connectivity probe
+ * succeeds — no user action needed; Reload stays on offer. */
+function networkHoldCopy(): { headline: React.ReactNode; detail: React.ReactNode } {
+  return {
+    headline: <>The download was interrupted — waiting for the connection</>,
+    detail: <>Lean starts on its own when the connection returns (checked every few seconds). What finished downloading stays cached in your browser; an interrupted download is picked up again automatically. Reloading the page is safe, too.</>,
+  }
+}
+
+/** A boot failure card's action (typewriter and editor mode): Reload — but
+ * SEC1-R2: for a refused address override a reload keeps the query and
+ * refuses again, and no in-app link drops it, so the card opens the same
+ * level without the overrides instead (boot-params openWithoutOverrides). */
+function BootFailureAction({ reason }: { reason?: string }) {
+  const { t } = useTranslation()
+  if (reason !== undefined && SEC1_REFUSAL_RE.exec(reason)?.[1] === BOOT_PARAM_REFUSED) {
+    return <Button className="btn" onClick={() => openWithoutOverrides()}>{t("Open without the override", { defaultValue: "Open without the override" })}</Button>
+  }
+  return <Button className="btn" onClick={() => window.location.reload()}>Reload</Button>
+}
+
+/** SEC1: editor mode's boot failure card — the same words and action as the
+ * typewriter's, which editor mode never rendered. SEC1-R1: and, like the
+ * typewriter's, the network hold before the failure — a first-visit
+ * download that loses the network halts the relay before it ever served,
+ * and classifyHalt publishes "Lean failed to start" AND schedules the
+ * automatic re-arm: "could not start … Reload" read as final for the whole
+ * offline window while recovery was already on its way. */
+function EditorBootFailureCard({ reason, hold }: { reason: string; hold: boolean }) {
+  const { t } = useTranslation()
+  const { headline, detail } = hold
+    ? networkHoldCopy()
+    : { headline: <>Lean could not start in your browser</>, detail: bootFailureDetail(reason, t) }
+  return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
+    {hold && <CircularProgress size={40} style={{ position: 'static', margin: 0 }} />}
+    <div style={{ color: '#333', fontSize: '0.95rem', textAlign: 'center', maxWidth: '30rem' }}>{headline}</div>
+    <div style={{ color: '#666', fontSize: '0.85rem', textAlign: 'center', maxWidth: '30rem' }}>{detail}</div>
+    <BootFailureAction reason={hold ? undefined : reason} />
+  </div>
+}
+
 // TODO: This is only used in `EditorInterface`
 // while `TypewriterInterface` has this copy-pasted in.
 export function Main() {
@@ -211,6 +277,14 @@ export function Main() {
   // Fresh-session retry while there is no state (see TypewriterInterface).
   const [retryTick, setRetryTick] = React.useState(0)
   const [activity] = useAtom(checkerActivityAtom)
+  // SEC1: a failed boot (a refused override above all — the reason must be
+  // seen) shows a failure card here too; editor mode showed "Loading goal…"
+  // for ever, the infoview waiting on a checker that never started.
+  const [bootStatus] = useAtom(bootStatusAtom)
+  const bootFailure = bootStatus.state !== 'busy' ? /^Lean failed to start: ([\s\S]*)$/.exec(bootStatus.label)?.[1] : undefined
+  // SEC1-R1: a failure under a network hold is the hold's card (the
+  // typewriter's LevelLoadingIndicator checks the hold first, too).
+  const [networkHold] = useAtom(networkHoldAtom)
 
   React.useEffect(() => {
     if (!uri || !worldId || !levelId) {
@@ -371,7 +445,7 @@ export function Main() {
             {proof?.completed ? t("Level completed! 🎉") : t("Level completed with warnings 🎭")}
           </div>
         }
-        <Infos />
+        {bootFailure !== undefined ? <EditorBootFailureCard reason={bootFailure} hold={networkHold !== null} /> : <Infos />}
       </div>
       {hintsToShow && (
         <Hints hints={hintsToShow}
@@ -719,6 +793,7 @@ function LeanGateOverlay() {
 type RemoveLastLine = { text: string; remove: () => void }
 
 function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: () => void; since: number; removeLastLine?: RemoveLastLine | null }) {
+  const { t } = useTranslation()
   const [status] = useAtom(bootStatusAtom)
   const [haltedStep] = useAtom(haltedStepAtom)
   const [activity] = useAtom(checkerActivityAtom)
@@ -775,18 +850,12 @@ function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: (
   }, [idle, noConnection, waited >= 20, clients.length])
   let headline: React.ReactNode, detail: React.ReactNode
   if (networkHold) {
-    // L4: the network went away in the middle of a download. The boot is
-    // held (or the halted relay is re-armed) until a connectivity probe
-    // succeeds — no user action needed; Reload stays on offer.
-    headline = <>The download was interrupted — waiting for the connection</>
-    detail = <>Lean starts on its own when the connection returns (checked every few seconds). What finished downloading stays cached in your browser; an interrupted download is picked up again automatically. Reloading the page is safe, too.</>
+    // L4 (networkHoldCopy): automatic recovery, Reload stays on offer.
+    ({ headline, detail } = networkHoldCopy())
   } else if (bootFailure !== undefined) {
     headline = <>Lean could not start in your browser</>
-    // L10: neutral wording — the failure may be in the middle of the checker
-    // download (then only its finished chunks are cached), and an interrupted
-    // game download is fetched again (bytes the browser already holds in its
-    // HTTP cache are reused: infra/worker.js answers Range).
-    detail = <>{bootFailure}. Reloading the page retries: what finished downloading stays cached, an interrupted download is fetched again.</>
+    // L10 neutral wording; SEC1 refusals say what to change (bootFailureDetail).
+    detail = bootFailureDetail(bootFailure, t)
   } else if (activity.halted && exitCode !== undefined) {
     // HARDENING #52 "exit": the FileWorker exited on every replay of this
     // level's text — a crash the content causes (the breaker's faithful
@@ -866,7 +935,7 @@ function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: (
     {idle && waited >= 15 && onRetry &&
       <Button className="btn" onClick={onRetry}>Retry now</Button>}
     {(bootFailure !== undefined || networkHold) &&
-      <Button className="btn" onClick={() => window.location.reload()}>Reload</Button>}
+      <BootFailureAction reason={networkHold ? undefined : bootFailure} />}
     {activity.halted && !networkHold && exitCode !== undefined && haltedStep === null && removeLastLine &&
       <Button className="btn" onClick={removeLastLine.remove}>Remove the last line (<code>{removeLastLine.text.length > 40 ? `${removeLastLine.text.slice(0, 40)}…` : removeLastLine.text}</code>)</Button>}
     {activity.halted && !networkHold &&

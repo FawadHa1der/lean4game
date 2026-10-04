@@ -274,7 +274,8 @@ Object.assign(globalThis, {
     addEventListener: (type: string, fn: Listener) => { winListeners.set(type, [...(winListeners.get(type) ?? []), fn]); },
     removeEventListener: () => {},
   },
-  location: { search: "" },
+  // The page's Location (SEC1: the same-origin checks resolve against it).
+  location: new URL(`${ORIGIN}/`),
   // The reply port, as the page uses it (no real MessagePort to close).
   MessageChannel: class {
     port1: { onmessage: ((e: { data: unknown }) => void) | null } = { onmessage: null };
@@ -417,6 +418,24 @@ await test("N1: offline with every file held while the browser says online — o
   assert.equal(messages.length, 1, "no second round of failing fetches");
   assert.deepEqual([r.cached, r.total, r.linkDown, r.partial], [313, 313, true, true]);
   assert.ok(sw.fetched.length <= 7, `one lane-full of failing fetches at most (${sw.fetched.length})`);
+});
+
+await test("SEC1 page: the warm-up and the early data warm-up send the service worker this origin's urls only", async () => {
+  onLine = true;
+  const messages = activeWorker((data, port) => {
+    const urls = data.urls as string[];
+    port.postMessage({ type: "warmed", cached: urls.length, pruned: 0, total: urls.length, partial: false, bytes: 0, linkDown: false });
+  });
+  const foreignChunk = "https://evil.example/runtime/chunks/lean.wasm.ee.part-000";
+  const r = await gc.warmRuntimeCacheOutcome(manifest("sec1", [CHUNKS10[0]!, foreignChunk]) as never, [DATA[0]!, "//evil.example/data/x.json"], 60_000);
+  assert.ok(typeof r !== "string");
+  assert.equal(messages.length, 1);
+  const sent = messages[0]!.urls as string[];
+  assert.ok(sent.includes(CHUNKS10[0]!) && sent.includes(DATA[0]!), "this origin's chunk and data file are sent");
+  assert.deepEqual(sent.filter((u) => u.includes("evil.example")), [], "no foreign url is sent");
+  messages.length = 0;
+  await gc.warmDataEarly(["https://evil.example/a.json", "\\\\evil.example/b.json", DATA[1]!]);
+  assert.deepEqual(messages.map((m) => [m.type, m.urls]), [["warm-data", [DATA[1]!]]]);
 });
 
 if (failures) { console.log(`sw-offline-warm: ${failures} FAILED`); process.exit(1); }

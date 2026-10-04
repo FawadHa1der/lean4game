@@ -112,6 +112,11 @@
   "Offline download stalled": "The download stopped making progress on this connection.",
   "Finish offline download": "Finish offline download",
   "Storage meter": "Games cached in this browser: {{n}} ({{used}} GB of the {{quota}} GB this site may use)",
+  "Address override refused": "This page refused a development override in its address: {{reason}}. Games use this site's own published files only; remove the parameter from the address to play.",
+  "Published files refused": "This site's published files were refused: {{reason}}. Games cannot start until they are fixed.",
+  "Boot param refused note": "A development override in this page's address may only name a directory on this site; nothing was downloaded for it. Remove the parameter from the address to play.",
+  "Foreign artifact refused note": "This site's published files point to another site; nothing was downloaded from it. Reloading will not help until the published files are fixed.",
+  "Open without the override": "Open without the override",
   "Progress": "Progress",
   "{{done}} of {{total}} levels done": "{{done}} of {{total}} levels done",
   "Wasm notice": {

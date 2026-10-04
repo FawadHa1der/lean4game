@@ -21,6 +21,7 @@ import { preferencesAtom } from '../store/preferences-atoms';
 import { completedLevelCountsAtom } from '../store/progress-atoms';
 import { gameTilesAtom } from '../store/tiles-atoms';
 import { fallbackSnapshotName, gameIdOf, tileSnapshotStates, type ApiGame, type TileSnapshotState } from '../wasm/games-api';
+import { bootParams, isSec1Refusal, openWithoutOverrides } from '../wasm/boot-params';
 import { onRemoteCacheChange, prepareGame, prepareStatusesAtom, queryRemoteDownloads, remoteDownloadsAtom, removeRawSnapshot, storageSummary } from '../wasm/game-cache';
 import { tenthsGB, wholeMB } from '../wasm/sizes';
 import { boundEnvironmentAtom } from '../wasm/game-boot';
@@ -278,6 +279,15 @@ function LandingPage() {
   // tile list is known. A plain effect: the query atoms only fetch while
   // mounted, and games-api memoises the requests it shares with the boot.
   const [snapshotStates, setSnapshotStates] = React.useState<Map<string, TileSnapshotState>>(new Map())
+  // SEC1: a refused dev override in the address (wasm/boot-params.ts) or a
+  // refused index / manifest (an entry on another origin). The tiles then
+  // carry no availability row (tileSnapshotStates threw before any fetch of
+  // a refused value — never the default index in its place), and this says
+  // why, once, above them; a game's boot shows the same reason on its card.
+  const [refusal, setRefusal] = React.useState<{ reason: string; param: boolean } | null>(() => {
+    const first = bootParams().refused[0]
+    return first ? { reason: first.message, param: true } : null
+  })
   const snapshotNames = tiles.map(tileSnapshotName).join(' ')
   // `<snapshot>=<game id>` per tile: the offline check (D1) reads each game's
   // files from the service worker's cache.
@@ -320,7 +330,10 @@ function LandingPage() {
     const games = tileGames.split(' ').map((k) => { const i = k.indexOf('='); return { snapshot: k.slice(0, i), gameId: k.slice(i + 1) } })
     tileSnapshotStates(games).then(
       (states) => { if (!cancelled) setSnapshotStates(states) },
-      (e) => console.warn('[landing] snapshot states unavailable:', e))
+      (e) => {
+        console.warn('[landing] snapshot states unavailable:', e)
+        if (!cancelled && isSec1Refusal(e)) setRefusal((r) => r ?? { reason: (e as Error).message, param: false })
+      })
     return () => { cancelled = true }
   }, [tileGames, cacheGeneration])
   // The storage meter: navigator.storage.estimate() (hidden where it is
@@ -408,6 +421,14 @@ function LandingPage() {
       </div>
     </header>
     <div className="game-list">
+      {refusal &&
+        <p className="storage-meter" role="alert">
+          {refusal.param
+            ? t("Address override refused", { defaultValue: "This page refused a development override in its address: {{reason}}. Games use this site's own published files only; remove the parameter from the address to play.", reason: refusal.reason })
+            : t("Published files refused", { defaultValue: "This site's published files were refused: {{reason}}. Games cannot start until they are fixed.", reason: refusal.reason })}
+          {/* SEC1-R2: the way out (a reload refuses again; a tile keeps the query) */}
+          {refusal.param && <> <button onClick={() => openWithoutOverrides()}>{t("Open without the override", { defaultValue: "Open without the override" })}</button></>}
+        </p>}
       {opfs === false &&
         <p className="storage-meter">
           {t("Offline storage unavailable", { defaultValue: "This browser mode cannot keep games offline; each visit downloads the game again." })}

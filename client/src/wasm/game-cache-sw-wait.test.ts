@@ -88,7 +88,8 @@ const json = (v: unknown) => new Response(JSON.stringify(v), { status: 200, head
 Object.assign(globalThis, {
   Worker: FakeWorker,
   BroadcastChannel: undefined, // no other tab: the words go nowhere
-  location: { search: "" },
+  // The page's Location (SEC1: the same-origin checks resolve against it).
+  location: new URL("https://l4g.test/"),
   document: { readyState: "complete", visibilityState: "visible", addEventListener: (): void => {}, querySelector: (): null => null },
   fetch: async (url: string) => {
     if (url === "/runtime/runtime-manifest.json") return json(manifest);

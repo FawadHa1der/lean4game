@@ -503,7 +503,11 @@ self.addEventListener("message", (event) => {
     return;
   }
   if (!data || (data.type !== "warm" && data.type !== "warm-data") || !Array.isArray(data.urls)) return;
-  const urls = data.type === "warm-data" ? data.urls.filter((u) => { try { return !isRuntimeChunk(new URL(u, self.location.origin).pathname); } catch { return false; } }) : data.urls;
+  // SEC1: this worker fetches and caches what a page names — this origin's
+  // urls only (a `//host/…` or absolute url to another site would be
+  // fetched with the site's own cache behind it). The page filters too.
+  const own = data.urls.filter((u) => { try { return typeof u === "string" && new URL(u, self.location.origin).origin === self.location.origin; } catch { return false; } });
+  const urls = data.type === "warm-data" ? own.filter((u) => !isRuntimeChunk(new URL(u, self.location.origin).pathname)) : own;
   event.waitUntil((async () => {
     const r = await warmUrls(urls, { prune: data.type === "warm" && data.prune !== false, revalidate: data.revalidate !== false });
     reply({ type: "warmed", ...r });

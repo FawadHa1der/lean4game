@@ -82,7 +82,8 @@ Object.assign(globalThis, {
   window: fakeWindow,
   Worker: FakeWorker,
   BroadcastChannel: FakeBroadcastChannel,
-  location: { search: "" },
+  // The page's Location (SEC1: the same-origin checks resolve against it).
+  location: new URL("https://l4g.test/"),
   fetch: async (url: string) => {
     fetched.push(url);
     if (url === "/runtime/runtime-manifest.json") return json(manifest);

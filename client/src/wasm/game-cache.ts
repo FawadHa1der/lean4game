@@ -17,6 +17,7 @@ import type { RuntimeManifest } from "./vendor/qed64/src/runtime/client";
 import { resolveRuntimeManifest } from "./games-api";
 import { LINK_RETRY_MS, ensureServiceWorkerRegistration, ownServiceWorkerRegistration, pendingServiceWorkerRegistration, retryAfterLinkFailure, type RoundStep } from "./sw-client";
 import { cachedLevelImageUrls, fetchGameDataUrls } from "./game-data-urls";
+import { SNAPSHOT_INDEX_FOREIGN_URL, isSameOrigin } from "./boot-params";
 
 const SNAPSHOT_DIR = "qed64-snapshots";
 const PREFETCH_WORKER = "/workers/snapshot-prefetch.worker.js";
@@ -436,6 +437,12 @@ export const PREFETCH_SILENCE_MS = 3 * 60 * 1000;
  * with the worker's terminal status; `busy` means another writer (the Lean
  * worker of a session in this page) holds the file. */
 export function prefetchRawSnapshot(entry: SnapshotEntry, onProgress?: (bytes: number, total: number) => void): Promise<{ result: PrefetchResult; error?: string }> {
+  // SEC1: the worker fetches `entry.url` and commits the bytes under the key
+  // the entry names — never for a url on another origin (the index is
+  // refused whole for one already; this is the last door before the fetch).
+  if (!isSameOrigin(entry.url)) {
+    return Promise.resolve({ result: "error", error: `refused: the snapshot url points to another origin (${SNAPSHOT_INDEX_FOREIGN_URL})` });
+  }
   return new Promise((resolve) => {
     const w = new Worker(PREFETCH_WORKER);
     let settled = false;
@@ -732,6 +739,14 @@ export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: rea
     const urls: string[] = [...new Set(extraUrls)];
     for (const u of ["/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json"]) if (!urls.includes(u)) urls.push(u);
     for (const f of Object.values(runtime.files)) for (const c of f.chunks) if (!urls.includes(c.url)) urls.push(c.url);
+    // SEC1: the service worker fetches and caches exactly what it is sent —
+    // same-origin urls only (resolveRuntimeManifest refused a manifest with
+    // a foreign chunk already; the worker filters again on its side).
+    const foreign = urls.filter((u) => !isSameOrigin(u));
+    if (foreign.length) {
+      console.warn(`[game-cache] runtime warm-up: ${foreign.length} url(s) on another origin left out (first: ${foreign[0]})`);
+      for (const u of foreign) urls.splice(urls.indexOf(u), 1);
+    }
     // On a slow link one message cannot cover the 154 MB runtime (the
     // worker answers `partial`): send it again while a round makes progress
     // (warmRoundProgressed) — every caller (the boot's warm-up, a
@@ -789,6 +804,7 @@ export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: rea
  * have pruned its whole runtime cache. Data only — never a chunk, never a
  * prune. */
 export async function warmDataEarly(urls: readonly string[], timeoutMs = 60000): Promise<WarmReply | null> {
+  urls = urls.filter((u) => isSameOrigin(u)); // SEC1: as warmRuntimeCacheOutcome
   if (!urls.length || !("serviceWorker" in navigator)) return null;
   const reg = await navigator.serviceWorker.getRegistration().catch(() => undefined);
   const target = reg?.active;

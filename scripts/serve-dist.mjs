@@ -9,6 +9,10 @@ import { join, normalize, extname } from "node:path";
 
 const DIST = new URL("../client/dist", import.meta.url).pathname;
 const PORT = Number(process.env.PORT) || 3006;
+// SEC1: the live edge's policy (infra/worker.js CONTENT_SECURITY_POLICY says
+// why), so a local probe sees what production sends — a connect the policy
+// refuses fails here too. infra/worker.test.mjs pins this copy to that one.
+const CONTENT_SECURITY_POLICY = "connect-src 'self' blob: data:";
 const MIME = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript",
   ".css": "text/css", ".json": "application/json", ".wasm": "application/wasm",
@@ -32,10 +36,11 @@ createServer(async (req, res) => {
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Embedder-Policy": "require-corp",
       "Cross-Origin-Resource-Policy": "cross-origin",
+      "Content-Security-Policy": CONTENT_SECURITY_POLICY,
       "Cache-Control": "no-transform",
     });
     res.end(body);
   } catch {
-    res.writeHead(404).end("not found");
+    res.writeHead(404, { "Content-Security-Policy": CONTENT_SECURITY_POLICY }).end("not found");
   }
 }).listen(PORT, () => console.log(`game dist on http://localhost:${PORT}`));

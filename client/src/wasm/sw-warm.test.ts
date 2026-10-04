@@ -189,5 +189,25 @@ await test("a second message that joins an in-flight chunk fetch reports its byt
   assert.equal(repliesB[0]?.bytes, 2 * MB, "the joiner's round made the same progress");
 });
 
+await test("SEC1: a `warm` / `warm-data` naming another origin's urls fetches and caches only this origin's", async () => {
+  const realFetch = sandbox.fetch as typeof fakeFetch;
+  const fetched: string[] = [];
+  sandbox.fetch = (req: Request, init?: { signal?: AbortSignal }) => { fetched.push(req.url); return realFetch(req, init); };
+  const foreign = ["https://evil.example/runtime/chunks/lean.wasm.ee.part-000", "//evil.example/data/g/x/y/game.json", "\\\\evil.example/data/z.json", "data:application/json,{}"];
+  try {
+    for (const type of ["warm", "warm-data"]) {
+      fetched.length = 0;
+      const replies: Reply[] = [];
+      const waits: Promise<unknown>[] = [];
+      listeners.get("message")!({ data: { type, urls: [...foreign, DATA, 42], pageFillsShell: true }, ports: [{ postMessage: (m: Reply) => replies.push(m) }], waitUntil: (p: Promise<unknown>) => waits.push(p) });
+      await flush();
+      await Promise.all(waits);
+      assert.deepEqual(fetched, [`${ORIGIN}${DATA}`], `${type}: only the same-origin file is fetched`);
+      assert.equal(replies[0]?.total, 1, `${type}: the foreign urls are not part of the warm-up`);
+      assert.ok([...runtime().store.keys()].every((k) => k.startsWith(`${ORIGIN}/`)), `${type}: nothing foreign cached`);
+    }
+  } finally { sandbox.fetch = realFetch; }
+});
+
 if (failures) { console.log(`sw-warm: ${failures} FAILED`); process.exit(1); }
 console.log("sw-warm: ALL TESTS PASS");

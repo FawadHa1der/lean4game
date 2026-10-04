@@ -48,6 +48,7 @@ import { NETWORK_WAIT_LABEL, STARTING_LABEL, deathReader, isRuntimeVerdict, halt
 import { MiB, devProfilesDir, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
 import { claimSnapshotForBoot, endDownload, heldButNotRevalidated, notifyCacheChanged, inFlightPrepare, inFlightRegions, preparesDownloading, prepareStatusesAtom, reportDownload, runWhenOnline, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
 import { embeddedImageUrls, fetchGameDataUrls } from "./game-data-urls";
+import { SEC1_REFUSAL_RE, assertBootParams, assertSameOriginSnapshot, isSameOrigin, refuseForeignManifestUrls, refuseForeignSnapshotUrls } from "./boot-params";
 import { ensureServiceWorkerRegistration, releaseServiceWorkerRegistration, requestShellFill, whenServiceWorkerReady } from "./sw-client";
 
 export interface GameDataBundle {
@@ -123,6 +124,9 @@ async function checkSnapshotPairing(snapshot: string): Promise<{ entry: Snapshot
   const entry = findSnapshotEntry(index, snapshot);
   if (!entry) throw unpublished(`no entry in the snapshot index; this shell runs ${buildId}`);
   if (entry.runtime !== buildId) throw unpublished(`baked for ${entry.runtime ?? "an unknown runtime"}, this shell runs ${buildId}`);
+  // SEC1: the index was refused whole if any url left this origin
+  // (fetchSnapshotIndexOnce); asserted again where the url meets fetch.
+  assertSameOriginSnapshot(entry.name, entry.url);
   if (!(await rawSnapshotCached(entry))) {
     const head = await fetch(entry.url, { method: "HEAD" }).catch(() => null);
     // A static host answers 404 for a missing object; a single-page fallback
@@ -159,18 +163,35 @@ async function checkSnapshotPairing(snapshot: string): Promise<{ entry: Snapshot
 async function installGameArtifacts(ui: StatusSink): Promise<Qed64Artifacts> {
   ui.busy("fetching manifests");
   const [runtime, snapshots] = await Promise.all([resolveRuntimeManifest(), fetchSnapshotIndexOnce()]);
+  // SEC1: this is where the urls leave for the vendored session, its
+  // prefetch worker and the Lean worker — both resolvers refused foreign
+  // urls already; re-asserted at the hand-off (two loops over memoised data).
+  refuseForeignManifestUrls(runtime);
+  if (snapshots) refuseForeignSnapshotUrls(snapshots);
   // Mirrors qed64-boot.ts installArtifacts (3b42714): the dev-only
   // `?profiles=<dir>` override re-roots the profile index to public/<dir>
   // (an unpromoted profile set). A game installs no pack, so only the index
   // read is re-rooted; the vendored ensureProfile keeps its own (identity)
   // re-root because installArtifacts never runs on the game path — no game
-  // path asks for a pack (GameSession never passes `packs`).
+  // path asks for a pack (GameSession never passes `packs`). SEC1: the
+  // override as boot-params accepted it (a refused one threw at the boot's
+  // gate and again here, before any fetch).
   const devProfiles = devProfilesDir();
   const indexUrl = devProfiles ? `/${devProfiles}/index.json` : "/profiles/index.json";
-  const index: ProfileIndex = await fetchProfileIndex(indexUrl).catch((e) => {
+  const empty = (): ProfileIndex => ({ schema: "qed64.profile-index/v1", runtime: { buildId: runtime.buildId, leanVersion: runtime.leanVersion }, profiles: [] });
+  let index: ProfileIndex = await fetchProfileIndex(indexUrl).catch((e) => {
     console.warn(`[game-boot] profile index unavailable at ${indexUrl} (${(e as Error).message}); a game needs no library pack`);
-    return { schema: "qed64.profile-index/v1", runtime: { buildId: runtime.buildId, leanVersion: runtime.leanVersion }, profiles: [] };
+    return empty();
   });
+  // SEC1: a profile manifest on another origin is never something to
+  // install from; the game reads no pack, so such an index is dropped (the
+  // same non-fatal empty list as a missing one) instead of being kept in
+  // the shape the vendored ensureProfile would fetch from.
+  const foreign = (Array.isArray(index.profiles) ? index.profiles : []).find((p) => !isSameOrigin(p?.manifest));
+  if (foreign) {
+    console.warn(`[game-boot] profile index at ${indexUrl} refused: profile "${foreign.id}" names a manifest on another origin; a game needs no library pack`);
+    index = empty();
+  }
   return { runtime, index, installed: new Map(), snapshots };
 }
 
@@ -440,7 +461,11 @@ const consoleSink: StatusSink = {
   },
   idle: (rawLabel) => {
     noteBootRegion();
-    const label = humanizeLabel(rawLabel);
+    // SEC1: a refusal's reason goes on the card verbatim — humanizeLabel
+    // would rewrite "same-origin environment" to "game environment" and
+    // strip a "(… MB …)"-shaped part of the quoted, attacker-chosen value
+    // together with the code the level pane recognises the refusal by.
+    const label = SEC1_REFUSAL_RE.test(rawLabel) ? rawLabel : humanizeLabel(rawLabel);
     console.info(`[game-boot] ✔ ${rawLabel}`);
     publishCheckerActivity("ready", label);
     publishBootStatus({ state: "ready", label });
@@ -1069,6 +1094,12 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
       bootPromise = null;
       return await new Promise<GameRuntime>(() => {});
     }
+    // SEC1: a dev override the rule refuses (boot-params.ts: `?snapshots=`
+    // or `?profiles=` that is not one same-origin directory, `?runtime=`
+    // that is not a build id) fails the boot HERE, before any artifact
+    // fetch, with the reason on the failure card — never a silent boot of
+    // the default environment in its place.
+    assertBootParams();
     const translation = ensureTranslation();
     // Bind the snapshot from the catalog and check its pairing before the
     // gamedata (80 small files for NNG4) and long before any artifact byte.
@@ -1082,7 +1113,9 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     // index is the truth about each name's live key); never a boot blocker.
     // Not under the `?snapshots=<dir>` dev re-rooting: that index's keys are
     // an unpromoted bake's, and the sweep would take the promoted regions
-    // for stale (and the next plain visit the unpromoted ones).
+    // for stale (and the next plain visit the unpromoted ones). SEC1:
+    // devSnapshotsDir is boot-params' once-per-page reading — the same one
+    // the index fetch went by, even if the address changed since.
     if (!sweptOnce) {
       sweptOnce = true;
       const dev = devSnapshotsDir();

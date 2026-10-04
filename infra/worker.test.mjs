@@ -8,7 +8,8 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import worker, { isImmutable, parseRange, resolveRange } from "./worker.js";
+import { readFileSync } from "node:fs";
+import worker, { CONTENT_SECURITY_POLICY, isImmutable, parseRange, resolveRange } from "./worker.js";
 
 const ORIGIN = "https://lean4game.example";
 const SNAPZ = "/snapshots/nng4.db264c5f3eb7c69c.snapz";
@@ -87,10 +88,15 @@ async function bodyBytes(response) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
+/** SEC1: the exact connect-src policy (no script-src / default-src: the
+ * infoview's blob: widget modules and monaco's workers must keep loading). */
+const CSP = "connect-src 'self' blob: data:";
+
 function assertIsolated(response) {
   assert.equal(response.headers.get("cross-origin-opener-policy"), "same-origin");
   assert.equal(response.headers.get("cross-origin-embedder-policy"), "require-corp");
   assert.equal(response.headers.get("cross-origin-resource-policy"), "same-origin");
+  assert.equal(response.headers.get("content-security-policy"), CSP);
 }
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
@@ -309,4 +315,33 @@ test("isImmutable is unchanged", () => {
   assert.equal(isImmutable(INDEX), false);
   assert.equal(isImmutable("/assets/index-SkPbkzVH.js"), true);
   assert.equal(isImmutable("/sw.js"), false);
+});
+
+test("SEC1: every response carries the connect-src policy — artifact GET, 206, HEAD, 404, 416, asset", async () => {
+  assert.equal(CONTENT_SECURITY_POLICY, CSP);
+  const cases = [
+    [SNAPZ, {}],
+    [SNAPZ, { headers: { range: "bytes=0-9" } }],
+    [SNAPZ, { method: "HEAD" }],
+    [INDEX, {}],
+    ["/snapshots/absent.0123456789abcdef.snapz", {}],
+    [SNAPZ, { headers: { range: "bytes=5000-" } }],
+    ["/index.html", {}],
+    ["/sw.js", {}],
+    ["/workers/lean.worker.js", {}],
+  ];
+  for (const [pathname, opts] of cases) {
+    const response = await call(makeEnv(), pathname, opts);
+    assert.equal(response.headers.get("content-security-policy"), CSP, `${opts.method ?? "GET"} ${pathname} ${JSON.stringify(opts.headers ?? {})} → ${response.status}`);
+  }
+});
+
+test("SEC1: client/public/_headers and scripts/serve-dist.mjs send the same policy as the worker", () => {
+  const headers = readFileSync(new URL("../client/public/_headers", import.meta.url), "utf8");
+  const lines = headers.split("\n").filter((l) => /^\s+Content-Security-Policy:/i.test(l));
+  assert.deepEqual(lines.map((l) => l.trim()), [`Content-Security-Policy: ${CSP}`]);
+  const serveDist = readFileSync(new URL("../scripts/serve-dist.mjs", import.meta.url), "utf8");
+  assert.ok(serveDist.includes(`const CONTENT_SECURITY_POLICY = ${JSON.stringify(CSP)};`), "serve-dist.mjs defines the same policy");
+  assert.equal((serveDist.match(/"Content-Security-Policy": CONTENT_SECURITY_POLICY/g) ?? []).length, 2, "serve-dist.mjs sends it on the 200 and the 404");
+  assert.ok(!/script-src|default-src/.test(headers + serveDist + CONTENT_SECURITY_POLICY), "no script-src / default-src");
 });

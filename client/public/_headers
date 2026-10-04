@@ -3,7 +3,11 @@
 # Applied by Workers static assets (and Cloudflare Pages) even when a
 # request is served before the worker script runs; infra/worker.js sets the
 # same headers for the R2-backed artifact paths.
+# SEC1: Content-Security-Policy connect-src — the page and its workers
+# connect to this origin, blob: and data: only (infra/worker.js
+# CONTENT_SECURITY_POLICY says why; infra/worker.test.mjs pins this line).
 /*
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
   Cross-Origin-Resource-Policy: same-origin
+  Content-Security-Policy: connect-src 'self' blob: data:

@@ -22,6 +22,7 @@ import { fetchSnapshotIndex, snapshotCacheKey, type SnapshotEntry, type Snapshot
 import type { RuntimeManifest } from "./vendor/qed64/src/runtime/client";
 import type { GameInfo, GameTileWithName } from "../store/api";
 import { offlineCacheReport, runtimeCachePaths, type OfflineCacheReport } from "./game-data-urls";
+import { assertBootParams, overrideOf, refuseForeignManifestUrls, refuseForeignSnapshotUrls } from "./boot-params";
 import { wholeMB } from "./sizes";
 
 export const MiB = 1048576;
@@ -117,20 +118,25 @@ let manifestPromise: Promise<RuntimeManifest> | null = null;
  * build the shell was built against, else the `?runtime=` dev override,
  * else the mutable manifest. Kept identical so the pairing check and the
  * boot can never disagree about which runtime runs. A failure is not
- * memoised, so a later caller retries. */
+ * memoised, so a later caller retries. SEC1: the override only as
+ * boot-params accepts it (a build id; a refused value throws — no fetch, no
+ * fallback to the served runtime), and a manifest naming a chunk on another
+ * origin is refused whole before the Lean worker or the service worker sees
+ * a single url of it. */
 export function resolveRuntimeManifest(): Promise<RuntimeManifest> {
   manifestPromise ??= (async () => {
+    const devRuntime = overrideOf("runtime");
     let manifestResponse: Response | null = null;
     if (typeof __QED64_BUILD_ID__ === "string") {
       const pinned = await fetch(`/runtime/runtime-manifest.${__QED64_BUILD_ID__}.json`);
       if (pinned.ok && (pinned.headers.get("content-type") ?? "").includes("json")) manifestResponse = pinned;
     }
-    const devRuntime = new URLSearchParams(location.search).get("runtime");
     if (devRuntime) manifestResponse = await fetch(`/runtime/runtime-manifest.${devRuntime}.json`, { cache: "no-cache" });
     if (!manifestResponse) manifestResponse = await fetch("/runtime/runtime-manifest.json", { cache: "no-cache" });
     if (!manifestResponse.ok) throw new Error(`runtime manifest: HTTP ${manifestResponse.status}`);
     const manifest = (await manifestResponse.json()) as RuntimeManifest;
     if (typeof manifest.buildId !== "string" || !manifest.buildId) throw new Error("runtime manifest: no buildId");
+    refuseForeignManifestUrls(manifest);
     return manifest;
   })();
   manifestPromise.catch(() => { manifestPromise = null; });
@@ -144,27 +150,38 @@ export const resolveRuntimeBuildId = (): Promise<string> => resolveRuntimeManife
  * served from public/<dir> whose index the page reads instead of the
  * promoted one. Its keys differ from the served bake's by design (content-
  * addressed), so anything that treats the index's keys as "the live ones"
- * (the stale-region sweep) must stand down while it is active. */
-export const devSnapshotsDir = (): string | null => new URLSearchParams(location.search).get("snapshots") || null;
+ * (the stale-region sweep) must stand down while it is active. SEC1: only a
+ * same-origin directory boot-params accepts; a refused value THROWS (it is
+ * never spliced into a URL, and never read as "no override"). */
+export const devSnapshotsDir = (): string | null => overrideOf("snapshots");
 /** The dev-only `?profiles=<dir>` override (qed64-boot.ts installArtifacts,
  * 3b42714): an unpromoted profile set served from public/<dir>; null in
- * production. Read by installGameArtifacts for the profile index. */
-export const devProfilesDir = (): string | null => new URLSearchParams(location.search).get("profiles") || null;
+ * production. Read by installGameArtifacts for the profile index. SEC1: as
+ * devSnapshotsDir — accepted by boot-params, or thrown. */
+export const devProfilesDir = (): string | null => overrideOf("profiles");
 
 let indexPromise: Promise<SnapshotIndex | null> | null = null;
 /** The served snapshot index, fetched once per page, honouring the
  * `?snapshots=<dir>` dev re-rooting exactly as the vendored boot does (an
  * unpromoted bake served from public/<dir>; the index's urls name the
- * promoted dir). `null` (unreadable) is not memoised. */
+ * promoted dir). `null` (unreadable) is not memoised. SEC1: a refused
+ * override throws before any fetch; and an index (the default one too) with
+ * an entry url on another origin after the re-root is refused WHOLE with a
+ * coded error (refuseForeignSnapshotUrls) — the re-root rewrites only
+ * `/snapshots/…`, so an absolute url survived it and reached the HEAD, the
+ * prefetch worker and the Lean worker, and the region landed in OPFS under
+ * the live key the index itself named. A refusal is not memoised either. */
 export function fetchSnapshotIndexOnce(): Promise<SnapshotIndex | null> {
   indexPromise ??= (async () => {
     const devSnapshots = devSnapshotsDir();
-    if (!devSnapshots) return fetchSnapshotIndex();
-    const idx = await fetchSnapshotIndex(`/${devSnapshots}/index.json`);
-    return idx && {
-      ...idx,
-      snapshots: idx.snapshots.map((e) => ({ ...e, url: e.url.replace(/^\/snapshots\//, `/${devSnapshots}/`) })),
-    };
+    const idx = devSnapshots
+      ? await fetchSnapshotIndex(`/${devSnapshots}/index.json`).then((i) => i && {
+          ...i,
+          snapshots: i.snapshots.map((e) => ({ ...e, url: e.url.replace(/^\/snapshots\//, `/${devSnapshots}/`) })),
+        })
+      : await fetchSnapshotIndex();
+    if (idx) refuseForeignSnapshotUrls(idx);
+    return idx;
   })();
   indexPromise.then((idx) => { if (!idx) indexPromise = null; }, () => { indexPromise = null; });
   return indexPromise;
@@ -233,6 +250,10 @@ export interface TileSnapshotState {
  * files in the runtime cache (game-data-urls offlineCacheReport); a region
  * without them is `partial`. */
 export async function tileSnapshotStates(games: readonly { snapshot: string; gameId: string }[]): Promise<Map<string, TileSnapshotState>> {
+  // SEC1: a page whose address carries a refused override shows no tile
+  // state at all (the landing page says why) — the same gate as the boot's,
+  // before the manifest or the index is fetched for it.
+  assertBootParams();
   const [runtime, index] = await Promise.all([resolveRuntimeManifest(), fetchSnapshotIndexOnce()]);
   // An unreadable index is "unknown", not "not available on this build":
   // the landing page then leaves every tile clickable with no availability

@@ -43,7 +43,8 @@ class FakeWorker {
 
 const removed: string[] = [];
 const dir = { removeEntry: async (name: string) => { removed.push(name); } };
-Object.assign(globalThis, { window: fakeWindow, Worker: FakeWorker });
+// The page's Location: SEC1's same-origin check resolves entry urls against it.
+Object.assign(globalThis, { window: fakeWindow, Worker: FakeWorker, location: new URL("https://l4g.test/") });
 Object.defineProperty(globalThis, "navigator", {
   configurable: true,
   value: { storage: { getDirectory: async () => ({ getDirectoryHandle: async () => dir }) } },
@@ -127,6 +128,17 @@ await test("worker error and terminal statuses settle once", async () => {
   await flush();
   assert.deepEqual(s.v, { result: "error", error: "boom" });
   assert.equal(timers.size, 0);
+});
+
+await test("SEC1: an entry url on another origin never reaches a prefetch worker (nothing is fetched, nothing committed under its key)", async () => {
+  for (const url of ["https://cdn.attacker.example/r.snapz", "//cdn.attacker.example/r.snapz", "\\\\cdn.attacker.example/r.snapz", "data:application/octet-stream;base64,AA=="]) {
+    const s = track(prefetchRawSnapshot({ ...entry, url }));
+    await flush();
+    assert.equal(FakeWorker.all.length, 0, `${url}: no worker spawned`);
+    assert.equal(s.v?.result, "error", url);
+    assert.match(s.v?.error ?? "", /SNAPSHOT_INDEX_FOREIGN_URL/);
+    assert.equal(timers.size, 0);
+  }
 });
 
 if (failures) { console.log(`game-cache-prefetch: ${failures} FAILED`); process.exit(1); }

@@ -19,6 +19,23 @@
 const ARTIFACT_PREFIXES = ["/runtime/", "/profiles/", "/snapshots/"];
 const R2_PREFIX = "lean4game/";
 
+/** SEC1: what the page and its workers may connect to — fetch, XHR,
+ * WebSocket, EventSource, sendBeacon — on every response (the document's
+ * policy governs the page; each worker script's own response carries it
+ * for that worker, the service worker included). `'self'`: the app, the
+ * artifacts, the game data, i18n — one origin. `blob:`: the Lean worker's
+ * reconstructed lean.js / lean.wasm (Emscripten fetches the wasm from its
+ * object URL). `data:`: lean4monaco's and the VS Code theme extension's
+ * small files, which vite inlines as data: URLs and the file service
+ * fetches (dark_plus.json, language-configuration.json, …) — no network,
+ * so no channel off the device. Nothing else: an index or a widget can name
+ * another site, and the browser refuses to connect there whatever the code
+ * says. ONLY connect-src — a script-src/default-src would have to allow the
+ * blob: widget modules and workers the infoview and monaco load, and is not
+ * this fix. client/public/_headers and scripts/serve-dist.mjs send the same
+ * value (worker.test.mjs pins all three). */
+export const CONTENT_SECURITY_POLICY = "connect-src 'self' blob: data:";
+
 export function isImmutable(pathname) {
   // Manifests and indexes revalidate, INCLUDING runtime-manifest.<buildId>.json
   // (the buildId is sha256(lean.wasm) alone; a relink of lean.js keeps the
@@ -34,6 +51,7 @@ function withHeaders(response, pathname) {
   headers.set("Cross-Origin-Opener-Policy", "same-origin");
   headers.set("Cross-Origin-Embedder-Policy", "require-corp");
   headers.set("Cross-Origin-Resource-Policy", "same-origin");
+  headers.set("Content-Security-Policy", CONTENT_SECURITY_POLICY);
   headers.set(
     "Cache-Control",
     isImmutable(pathname) ? "public, max-age=31536000, immutable" : "public, max-age=0, must-revalidate",
