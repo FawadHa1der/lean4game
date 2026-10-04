@@ -1318,8 +1318,171 @@ Known gaps after round 2:
   completing the runtime warm-up in 24 rounds, the in-chunk count stepping
   back once.
 
+## Live run of 4083fb4 (2026-10-04)
+
+Every fix of the live run of 22eda45 (rounds 1 and 2, the D5 sync and the
+banner fix) passed on the live site. Bundle `index-DBgcmA22.js`, sw
+`3f76c30b021b`, workers = qed64 76be299; evidence under `lv-shots/live5-*`.
+
+| Item | Live result |
+|---|---|
+| D6 offline after Prepare | NNG4 Prepare 29.8 s, 309 MB; offline (proxy refusing everything) Multiplication 1 boot 5.4 s, proved; Multiplication 2 goal in 1.6 s, proved; an inventory doc from the service worker; the offline tile still Ready. RAG 356/356 files incl. 14 images; offline, a level image (1594×732) and the 6 world-intro images render |
+| D8 sizes | NNG4 ≈154 MB, RAG ≈282 MB |
+| D1 / N2 tiles | 2 chunks deleted → "not yet playable offline", checker 8 of 10 → Finish → Ready in 2.1 s; game.json deleted → "this game's own files are not cached yet" → Ready in 1.8 s |
+| S1 | 300 kB/s, Prepare 21 s after load with the worker installing: waiting note, worker active 423 s later, 192/192 files, Ready (also after a reload); 1037 s, 318 MB |
+| D2 / D3 / F1 | the remote line in a tab open before the click 0.2 s after it; sender closed → other tabs drop it in 0.35 s; reload → 0.21 s after the old page unloaded, the new Prepare shown from 0 MB; a failure or a Retry reaches the other tabs at once |
+| D5 + banner | a 300 kB/s NNG4 first boot: the runtime count never still for more than 4.1 s, never backwards, no "starting the Lean checker" after the first stage; ready 1050 s, proved |
+| D4 | a 20 s cut, first visit and with the worker controlling: no "after a crash" text; recovered and proved |
+| D7 / N1 / N3 | RAG cached, proxy refusing: 12 failing service-worker /data GETs (~800 before), "all 357 files are held" log, boot 5.5 s, proved; Chromium offline: 0 |
+| Regression | ten-game smoke 10/10; Prepare + Remove (only that region removed); offline with two games (NNG4 prepared, Knights booted once): both boot and prove offline |
+
+Two new minor findings (adversarially confirmed; open below): a landing
+tab opened while another tab downloads shows the remote line ~4.2 s after
+its tiles render, because the tile waits for the index and manifest
+behind the download (NEW-2); "waiting for the connection" flashes
+(< 0.1 s) after link-back when the worker controls the page (NEW-3).
+Refuted: a held link with the warm-up running ends "network error" at
+~145 s instead of the 3-minute stall message (Chromium's HTTP/2 PING
+correctly closes the dead session when warm round 2 opens streams); the
+banner's unpacked total next to the tile's download size (by design; the
+level pane explains it).
+
+## SEC1: boot overrides and CSP (2026-10-04)
+
+**The hole** (found by the QED64 embedding-contract review of 4083fb4,
+reproduced twice): `games-api.ts` returned the raw `?snapshots=` /
+`?profiles=` values with no check and no dev gate, and the index fetch
+spliced `?snapshots` into `/${dir}/index.json`. `/evil.example/x`,
+`//evil.example/x`, `\evil.example`, `%2F%2F…`, `%5C%5C…` and `%09/…` all
+resolve to `https://evil.example/…/index.json` (COEP does not stop a
+CORS-enabled host; there was no CSP; the service worker passes cross-origin
+requests through). The `/snapshots/` re-root left the attacker index's
+absolute entry URLs alone, so the pairing HEAD, the prefetch worker and the
+Lean worker fetched the attacker region, and OPFS committed it under the key
+the index itself names (name + digest, never verified): one crafted link
+poisoned the live key for later visits, and in editor mode the infoview
+imports widget JS from that environment as a blob module on this origin.
+`?profiles` went cross-origin the same way; `?runtime` kept its same-origin
+prefix but could path-traverse.
+
+**The fix** (`wasm/boot-params.ts`, the rule of QED64's draft §4):
+
+- A directory override must match `^(?:snapshots/)?[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`
+  and `/<dir>/index.json` must resolve to the page's origin; `?runtime` must
+  match `^wasm64-[0-9a-f]{16}$`. Empty, repeated and off-pattern values are
+  refused loudly (`BOOT_PARAM_REFUSED`), never read as "no override". The
+  query is read once per document. The boot fails before any artifact fetch
+  with the reason on the card, and the landing page shows a notice and
+  fetches nothing for the tiles.
+- Second line: an index or a runtime manifest naming any URL on another
+  origin is refused whole (`SNAPSHOT_INDEX_FOREIGN_URL`,
+  `RUNTIME_MANIFEST_FOREIGN_URL`), the default ones included; the pairing
+  HEAD, the prefetch worker, both warm-ups and the service worker's
+  `warm`/`warm-data` take same-origin URLs only; a profile index naming a
+  foreign manifest is dropped (non-fatal, like a missing one).
+- `Content-Security-Policy: connect-src 'self' blob: data:` on every
+  response (`infra/worker.js`, `client/public/_headers`,
+  `scripts/serve-dist.mjs`). `blob:` because Emscripten fetches lean.wasm
+  from a blob URL; `data:` because vite inlines the Monaco theme and
+  language files as `data:` URLs that are fetched at runtime. No
+  `script-src` or `default-src`.
+- Editor mode now has a boot failure card (it showed "Loading goal…" for
+  ever). Review round: under a network hold it is the typewriter's "waiting
+  for the connection" card (R1: a first-visit network halt publishes "Lean
+  failed to start" and schedules the automatic re-arm at once), and a
+  refused override's card and the landing notice offer "Open without the
+  override" instead of Reload (R2: a reload keeps the query and refuses
+  again).
+- Still working: `?snapshots=staging` (an unpromoted same-origin index; the
+  sweep stands down under it).
+
+**Tests.** `client/src/wasm/boot-params.test.ts` (16 groups): every review
+vector refused for `?snapshots` and `?profiles`, `staging` /
+`snapshots-0031` / `snapshots/widgets8` accepted, the `?runtime` vectors,
+the way out without the overrides, and the real `games-api.ts` against a
+recording fetch (a refused value fetches nothing, no fallback to the served
+index; a foreign index entry or manifest chunk is refused). Added cases in
+`game-cache-prefetch` (no worker for a foreign URL), `sw-warm`,
+`sw-offline-warm` and `infra/worker.test.mjs` (the CSP on every response
+kind; `_headers` and `serve-dist` in step). 26 of 26 test-breaking
+mutations caught.
+
+**Browser results** (final build `index-3o78CzBM.js`; an attacker server on
+another local origin serving a CORS + CORP index that copies every real
+entry's name and digest; evidence `lv-shots/sec1-exploit`, `sec1-regress`):
+
+- **Vectors:** 20 level-URL vectors refused on the card with
+  `BOOT_PARAM_REFUSED` and "Open without the override", 3 more in editor
+  mode, and the landing page refused one with a notice. Across all of them
+  the attacker logged **0 requests**, nothing was written to OPFS, and a
+  stored real nng4 region was untouched.
+  - `?snapshots=` with `/H/x`, `//H/x`, `%2F%2F…`, `%5C%5C…`, `%5C/…`,
+    `\/…`, `%09/…`, `http://H/x`, the bare host `H`, a traversal, and an
+    empty value.
+  - A repeated parameter in both orders, and the encoded name
+    `%73napshots`.
+  - `?profiles=` with three vectors, and `?runtime=` with two traversals.
+- **Tampered index:** a site whose own index names an attacker URL
+  (absolute or `//`) is refused whole with `SNAPSHOT_INDEX_FOREIGN_URL`, on
+  the card and on the landing page.
+- **Legit override:** `?snapshots=snapshots` booted and proved under the
+  CSP, and the sweep stood down.
+- **CSP itself:** the header blocks cross-origin fetch, XHR and WebSocket
+  from the page console, while same-origin, `blob:` and `data:` pass.
+- **Regression under the CSP**, with Chromium's own log watched so that
+  worker and service-worker refusals count too:
+  - ten-game smoke 10/10;
+  - Prepare NNG4 then an offline boot of two never-visited levels and a doc;
+  - the partial-tile checks;
+  - an editor-mode proof;
+  - Cypress 24/24 with the app's CSP enforced (`experimentalCspAllowList`;
+    plain Cypress strips it).
+  - **0** CSP violations in ~8,400 console lines.
+- **Not covered:** `connect-src` does not govern script loads. A
+  cross-origin `import()` from the console still reaches its host. No SEC1
+  path uses one, since overrides are refused before any fetch and widget
+  code comes through a covered fetch. A `script-src` would need its own
+  inventory (blob: widget modules and workers, wasm).
+
+Not changed: the vendored `qed64-boot.ts` `installArtifacts` still reads the
+raw parameters (tree-shaken out of the game bundle; the fix belongs
+upstream in QED64). Residual: see Open.
+
 ## Open
 
+- **Editor mode: the tab crashes after select-all + Backspace, then typing
+  a line (found during SEC1, older than it).**
+  - Reproduces on the live 4083fb4, on TestGame, and in branded Chrome.
+  - Chromium reports a V8 out-of-memory about 1 s later, at only ~48–80 MB
+    of JS heap. That points at address-space exhaustion, not a JS leak;
+    compare qed64 HARDENING #55 (pool growth).
+  - It does not happen when idling in editor mode, when typing at the end
+    of the text, or when the line comes 15 s after the delete.
+  - Evidence: `lv-shots/sec1-regress/editor*.log`, `editor-key-*/`. Needs
+    its own investigation.
+- **NEW-2 (minor):** a landing tab opened while another tab downloads shows
+  "Being downloaded in another tab" only after its index and manifest
+  fetches finish behind the download (~4.2 s at 1.5 MB/s). The
+  BroadcastChannel state is already there 0.2 s after the click.
+- **NEW-3 (cosmetic):** "waiting for the connection" flashes (< 0.1 s) after
+  link-back when the service worker controls the page. It sits between
+  "starting Lean" and "verifying", during the re-arm reboot.
+- **SEC1 residual: a region poisoned before the fix stays (R3).** A browser
+  that opened a crafted `?snapshots=` link while 4083fb4 was live may hold an
+  attacker region under the real live key (e.g. `nng4.db264c5f3eb7c69c`).
+  The fix stops new poisoning but cannot detect an old one: the index digest
+  covers the compressed transfer bytes, the browser keeps only the inflated
+  region (the Lean worker checks size and the `olean` magic), and no record
+  of where a region came from was kept. A purge of every committed region
+  would cost every returning player a full re-download. Bounds: only a
+  region of exactly the live byte count survives (any other size is
+  discarded on the next visit), and only a browser that did not already
+  hold the live region could have been poisoned. It closes with the next
+  rebake or runtime release (new digests; the sweep drops the old keys),
+  "Remove download", or clearing site data. Open decision: rotate the live
+  digests now with a rebake, or ship a one-time purge; longer term, a digest
+  of the raw region in the index, checked once when a region is first
+  opened.
 - **Renderer crash: reloads then a 100 ms navigation storm (mitigated,
   not closed).** Recipe (qed64 `work/reload-storm-probe.mjs`): boot → reload
   → six hash switches at 250 ms → reload → six at 250 ms → six at 100 ms.
