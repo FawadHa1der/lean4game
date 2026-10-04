@@ -62,11 +62,12 @@ async function freshCopy(res) {
 }
 
 /** Run `fn` over `items` in order with at most `n` in flight, starting no
- * new item after `deadline`; true when every item was run. */
-async function pool(items, n, fn, deadline = Infinity) {
+ * new item after `deadline` or once `stop()` says so; true when every item
+ * was run. */
+async function pool(items, n, fn, deadline = Infinity, stop = () => false) {
   let next = 0;
   const lane = async () => {
-    while (next < items.length && Date.now() < deadline) {
+    while (next < items.length && Date.now() < deadline && !stop()) {
       const k = next++;
       try { await fn(items[k], k); } catch { /* fn reports its own failures */ }
     }
@@ -81,29 +82,39 @@ async function shellHas() {
   return new Set((await cache.keys()).map((r) => new URL(r.url).pathname));
 }
 
+/** D7: a fetch() that rejected with no answer and no abort — the link is
+ * down (offline, a refused tunnel, DNS), not the host's word on one file.
+ * An abort rejects with an AbortError, an HTTP error resolves. */
+const isLinkFailure = (e, signal) => !!e && e.name === "TypeError" && !signal?.aborted;
+
 /** Fetch `paths` into the shell cache (skipping what it holds); the shell
  * document always as a fresh, redirect-free copy of "/" under both names.
- * Returns {fetched, refused, errors}: `refused` = the host answered, but
- * not with a storable copy (404, an HTML fallback for a non-HTML name). */
-async function fillShell(paths, { concurrency = 6, deadline = Infinity, freshDoc = false, signal = undefined } = {}) {
+ * Returns {fetched, refused, errors, done, linkDown}: `refused` = the host
+ * answered, but not with a storable copy (404, an HTML fallback for a
+ * non-HTML name). `failFast` (D7, the "warm-shell" fill): no fetch is
+ * started after the first link failure (`linkDown`) — offline, an
+ * incomplete shell's every missing file failed one by one, round after
+ * round. Not for the install's first pass: one dropped connection must not
+ * leave the rest to its single retry pass. */
+async function fillShell(paths, { concurrency = 6, deadline = Infinity, freshDoc = false, signal = undefined, failFast = false } = {}) {
   const cache = await caches.open(SHELL);
   const have = await shellHas();
-  let fetched = 0, refused = 0, errors = 0;
+  let fetched = 0, refused = 0, errors = 0, linkDown = false;
   const todo = paths.filter((p) => p !== DOC && !have.has(p));
   const done = await pool(todo, concurrency, async (p) => {
     let res;
-    try { res = await fetch(new Request(p), { signal }); } catch (e) { errors += 1; throw e; }
+    try { res = await fetch(new Request(p), { signal }); } catch (e) { errors += 1; if (isLinkFailure(e, signal)) linkDown = true; throw e; }
     if (!storable(p, res)) { refused += 1; throw new Error(`${p}: ${res.status} ${res.headers.get("content-type") || ""}`); }
     try { await cache.put(p, res); fetched += 1; } catch (e) { errors += 1; throw e; }
-  }, deadline);
-  if (freshDoc || !have.has(DOC) || !have.has("/")) {
+  }, deadline, () => failFast && linkDown);
+  if ((freshDoc || !have.has(DOC) || !have.has("/")) && !(failFast && linkDown)) {
     try {
       const doc = await fetch(new Request("/", { cache: "no-cache" }), { signal });
       if (doc.ok) { const copy = await freshCopy(doc); await cache.put(DOC, copy.clone()); await cache.put("/", copy); fetched += 1; }
       else refused += 1;
-    } catch { errors += 1; }
+    } catch (e) { errors += 1; if (isLinkFailure(e, signal)) linkDown = true; }
   }
-  return { fetched, refused, errors, done };
+  return { fetched, refused, errors, done, linkDown };
 }
 
 /** Delete superseded shell caches, keeping the newest `keep` previous ones
@@ -281,6 +292,39 @@ self.addEventListener("fetch", (event) => {
 // worker of another build (a page that loaded while the previous deploy's
 // worker was still active) answers `current: false` without filling, and the
 // page waits for the update and asks the new worker.
+// D1 (live 2026-10-03): the reply's `bytes` — runtime-chunk body bytes the
+// message's fetches received beyond what an earlier round of this worker
+// already had of that chunk (chunkHighWater), counted as they stream into
+// cache.put, a fetch cut by the hard abort included: on a slow link a 16 MB
+// chunk can take a whole round, and the page counted such a round as "no
+// progress" (no whole file) and gave up with the runtime partly cached,
+// although the HTTP cache resumes the chunk next round. The high-water mark
+// keeps the prefix the HTTP cache replays before the resumed range from
+// counting again (a link that stalls right after it is no progress). Data
+// files are not counted: small, fetched whole (a completed one counts in
+// `cached`).
+// D7 (live 2026-10-03): fail fast on a dead link. Every non-chunk URL is
+// fetched every round, and the loop went on after network errors: an offline
+// boot of a cached game (RAG: 329 data files, named by the early `warm-data`
+// and again by the boot's `warm`) fired ~800 failing GETs. After the first
+// fetch of a message that rejects outright (isLinkFailure — not an abort,
+// not an HTTP error) the message starts no more fetches: the rest are only
+// looked up (cache.match), so `cached` still reports what an offline reload
+// finds; the reply says `linkDown: true` and `partial: true` (nothing was
+// verified against the host, nothing is pruned), and the page does not send
+// another round for it unless that round gained something
+// (warmRoundProgressed). Fetches already in flight run out (at most
+// WARM_CONCURRENCY + CHUNK_CONCURRENCY). Per message: a later message tries
+// the network again.
+// R4 (review of D1/D6): `revalidate: false` — a held copy of ANY file
+// answers for itself, as a chunk's always does; only what the cache lacks is
+// fetched. The page sends it from the second round of one warm-up on (the
+// first round revalidated the data files; game-cache warmRuntimeCacheOutcome)
+// and for a boot whose early `warm-data` just did: every data file is served
+// `max-age=0, must-revalidate`, and re-fetching all of them every round made
+// a slow-link Prepare (RAG: 330 data files, up to WARM_ROUNDS rounds) send
+// thousands of revalidations to the edge. Absent (a page of an older build):
+// every data file is fetched, as before.
 const WARM_CONCURRENCY = 6;
 const CHUNK_CONCURRENCY = 1;
 const WARM_BUDGET_MS = 3 * 60 * 1000;
@@ -289,38 +333,76 @@ const SHELL_BUDGET_MS = 45 * 1000;
 const SHELL_HARD_MS = 2 * 60 * 1000;
 /** Chromium stops a worker whose event runs longer than this. */
 const EVENT_LIMIT_MS = 5 * 60 * 1000;
+/** url → { done: Promise<boolean>, gained: number } — one fetch per URL
+ * across concurrent warms; `gained` is the job's D1 byte count. */
 const warmFetches = new Map();
+/** D1: per runtime chunk URL, the most body bytes any warm fetch of this
+ * worker has received (cleared once the chunk is stored). Lost when the
+ * browser stops the idle worker — the next round then counts the replayed
+ * prefix once, which costs at most one extra round. */
+const chunkHighWater = new Map();
 
-async function warmUrls(urls, { prune }) {
+/** `res` with its body counted into `job.gained` (bytes past the URL's
+ * high-water mark) as cache.put consumes it. */
+function countedChunk(res, url, job) {
+  if (!res.body || typeof TransformStream !== "function") return res;
+  let n = 0;
+  const body = res.body.pipeThrough(new TransformStream({
+    transform(piece, ctl) {
+      n += piece.byteLength;
+      const high = chunkHighWater.get(url) ?? 0;
+      if (n > high) { job.gained += n - high; chunkHighWater.set(url, n); }
+      ctl.enqueue(piece);
+    },
+  }));
+  return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
+}
+
+async function warmUrls(urls, { prune, revalidate = true }) {
   const cache = await caches.open(RUNTIME);
   const ac = new AbortController();
   const hard = setTimeout(() => ac.abort(), WARM_HARD_MS);
   let cached = 0, pruned = 0;
+  /** The fetch jobs this message started or joined (their D1 bytes). */
+  const touched = new Set();
+  /** D7: a fetch this message started or joined failed outright. */
+  let linkDown = false;
   const one = async (u) => {
-    let req = null;
+    let req = null, job = null;
     try {
       req = new Request(u);
       const p = new URL(req.url).pathname;
       if (isNetworkOnly(p)) return;
-      if (isRuntimeChunk(p) && await cache.match(req)) { cached += 1; return; }
-      let job = warmFetches.get(req.url);
+      if ((isRuntimeChunk(p) || !revalidate) && await cache.match(req)) { cached += 1; return; } // R4
+      // D7: the link is down — no new fetch, only what is held counts. A
+      // fetch another message has in flight is still joined (it costs
+      // nothing more and may yet land).
+      job = warmFetches.get(req.url) ?? null;
+      if (!job && linkDown) { if (await cache.match(req)) cached += 1; return; }
       if (!job) {
         const r = req;
-        job = (async () => {
-          const res = await fetch(r, { signal: ac.signal });
+        const chunk = isRuntimeChunk(p);
+        const fresh = { gained: 0, done: null, linkDown: false };
+        fresh.done = (async () => {
+          let res;
+          try { res = await fetch(r, { signal: ac.signal }); } catch (e) { if (isLinkFailure(e, ac.signal)) fresh.linkDown = true; throw e; }
           if (!storable(new URL(r.url).pathname, res)) return false;
-          await cache.put(r, res);
+          await cache.put(r, chunk ? countedChunk(res, r.url, fresh) : res);
+          if (chunk) chunkHighWater.delete(r.url);
           return true;
         })().finally(() => warmFetches.delete(r.url));
+        job = fresh;
         warmFetches.set(req.url, job);
       }
-      if (await job) { cached += 1; return; }
+      touched.add(job);
+      if (await job.done) { cached += 1; return; }
       // Refused (404 / an HTML fallback): a copy already held still counts.
       if (await cache.match(req)) cached += 1;
     } catch {
       // Offline, quota, or aborted at the hard deadline: the next warm-up
       // retries; a copy already held stays (and counts — the reply reports
       // what an offline reload finds).
+      if (job?.linkDown) linkDown = true;
       try { if (req && await cache.match(req)) cached += 1; } catch { /* storage gone */ }
     }
   };
@@ -336,7 +418,7 @@ async function warmUrls(urls, { prune }) {
     pool(chunks, CHUNK_CONCURRENCY, one, deadline),
   ]);
   clearTimeout(hard);
-  const partial = !dataDone || !chunksDone || ac.signal.aborted;
+  const partial = !dataDone || !chunksDone || ac.signal.aborted || linkDown;
   const keep = new Set(urls.map((u) => new URL(u, self.location.origin).pathname));
   if (!partial && prune && [...keep].some(isRuntimeChunk)) {
     for (const req of await cache.keys()) {
@@ -344,7 +426,9 @@ async function warmUrls(urls, { prune }) {
       if (isRuntimeChunk(p) && !keep.has(p)) { await cache.delete(req); pruned += 1; }
     }
   }
-  return { cached, pruned, total: urls.length, partial };
+  let bytes = 0;
+  for (const job of touched) bytes += job.gained;
+  return { cached, pruned, total: urls.length, partial, bytes, linkDown };
 }
 
 let shellFill = null;
@@ -355,7 +439,9 @@ async function warmShell(hardMs = SHELL_HARD_MS) {
   const hard = setTimeout(() => ac.abort(), hardMs);
   let r;
   try {
-    r = await fillShell(PRECACHE, { concurrency: WARM_CONCURRENCY, deadline: Date.now() + Math.min(SHELL_BUDGET_MS, hardMs), signal: ac.signal });
+    // D7: fail fast — offline, an incomplete shell's missing files (up to
+    // the whole non-critical list) each failed, in every round the page sent.
+    r = await fillShell(PRECACHE, { concurrency: WARM_CONCURRENCY, deadline: Date.now() + Math.min(SHELL_BUDGET_MS, hardMs), signal: ac.signal, failFast: true });
   } finally { clearTimeout(hard); }
   // Which of the still-missing paths the host refused outright (recorded by
   // fillShell's errors only as counts): re-derive from a cheap pass — a
@@ -365,7 +451,7 @@ async function warmShell(hardMs = SHELL_HARD_MS) {
   if (r.done && r.errors === 0) refusedPaths = new Set(missing);
   const complete = await shellComplete();
   const pruned = await pruneShells(complete ? 1 : 2);
-  return { type: "shell-filled", version: VERSION, current: true, present: PRECACHE.length - missing.length, total: PRECACHE.length, fetched: r.fetched, failed: r.refused + r.errors, complete, pruned };
+  return { type: "shell-filled", version: VERSION, current: true, present: PRECACHE.length - missing.length, total: PRECACHE.length, fetched: r.fetched, failed: r.refused + r.errors, complete, pruned, linkDown: r.linkDown };
 }
 
 /** One shell fill at a time, shared by concurrent messages. */
@@ -395,7 +481,7 @@ self.addEventListener("message", (event) => {
   if (!data || (data.type !== "warm" && data.type !== "warm-data") || !Array.isArray(data.urls)) return;
   const urls = data.type === "warm-data" ? data.urls.filter((u) => { try { return !isRuntimeChunk(new URL(u, self.location.origin).pathname); } catch { return false; } }) : data.urls;
   event.waitUntil((async () => {
-    const r = await warmUrls(urls, { prune: data.type === "warm" && data.prune !== false });
+    const r = await warmUrls(urls, { prune: data.type === "warm" && data.prune !== false, revalidate: data.revalidate !== false });
     reply({ type: "warmed", ...r });
     // A page that predates "warm-shell" (an old-build tab this worker claimed
     // after a deploy) never asks for the shell: fill it here, inside what is

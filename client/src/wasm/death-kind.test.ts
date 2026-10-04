@@ -3,8 +3,10 @@
 // reasons. "wedged" and "exit" are runtime verdicts (never the link's doing);
 // "wedged" reboots under the stalled label; "exit" is a crash whose code the
 // reboot label and the halted card name; ordinary deaths keep the old labels.
+// D4 (live 2026-10-03): a reboot after a death the link caused reads as L4's
+// wait for the connection, not as a crash; a real crash keeps the crash label.
 import assert from "node:assert";
-import { EXIT_CARD_RE, STALLED_LABEL, exitCodeOf, haltedNote, isRuntimeVerdict, rebootNote } from "./death-kind.ts";
+import { EXIT_CARD_RE, NETWORK_WAIT_LABEL, STALLED_LABEL, exitCodeOf, haltedNote, isNetworkDeath, isRuntimeVerdict, rebootLabel, rebootNote } from "./death-kind.ts";
 
 const wedged = { reason: "wedged", message: "the Lean runtime stopped answering (no output for 22 s while work was owed; liveness probe unanswered)" };
 const exit1 = { reason: "exit", message: "lean --worker exited with code 1" };
@@ -58,5 +60,41 @@ assert.equal(haltedNote(net), null);
 assert.equal(haltedNote(null), null);
 // the generic halted label never matches the exit card
 assert.equal(EXIT_CARD_RE.exec("the checker halted after repeated crashes (snapshot 'nng4' failed to load)"), null);
+
+// D4: the link's deaths, by the underlying text
+const snapDeath = { reason: "bootFailed", message: "snapshot 'nng4' failed to load" };
+assert.equal(isNetworkDeath(snapDeath, "Failed to fetch"), true); // the live case: read through the recorded snapshot failure
+assert.equal(isNetworkDeath(snapDeath, "SNAPSHOT_UNPAIRED: built for another runtime"), false); // a corrupt / unpaired region is no link problem
+assert.equal(isNetworkDeath(snapDeath, ""), false);
+assert.equal(isNetworkDeath(net, ""), true); // RUNTIME_FETCH_FAILED: Failed to fetch
+assert.equal(isNetworkDeath({ reason: "bootFailed", message: "RUNTIME_FETCH_FAILED: chunk 3: HTTP 404" }, ""), false);
+assert.equal(isNetworkDeath({ reason: "crash", message: "net::ERR_INTERNET_DISCONNECTED" }, ""), true);
+assert.equal(isNetworkDeath(crash, "Failed to fetch"), false); // a bare crash is not read through a snapshot failure
+assert.equal(isNetworkDeath(null, "Failed to fetch"), false);
+
+// D4: the reboot label
+const rebooting = (rebootReason: string | null | undefined, lastDeath: typeof net | null) => ({ relay: "rebooting", rebootReason, lastDeath });
+assert.equal(NETWORK_WAIT_LABEL, "waiting for the connection — the download restarts on its own"); // L4's wording, not a third one
+assert.equal(rebootLabel(rebooting("bootFailed", snapDeath), true), NETWORK_WAIT_LABEL);
+assert.equal(rebootLabel(rebooting("crash", net), true), NETWORK_WAIT_LABEL);
+assert.equal(rebootLabel(rebooting("heartbeat", net), true), NETWORK_WAIT_LABEL);
+assert.equal(rebootLabel(rebooting(undefined, net), true), NETWORK_WAIT_LABEL); // a relay without rebootReason
+// a real crash keeps the crash label
+assert.equal(rebootLabel(rebooting("bootFailed", snapDeath), false), "restarting the checker after a crash (snapshot 'nng4' failed to load)");
+assert.equal(rebootLabel(rebooting("crash", { reason: "crash", message: "" }), false), "restarting the checker after a crash (crash)");
+assert.equal(rebootLabel(rebooting("crash", { reason: "crash", message: "x".repeat(200) }), false), `restarting the checker after a crash (${"x".repeat(80)})`);
+// #52 deaths keep their own labels, whatever the network classification says
+assert.equal(rebootLabel(rebooting("wedged", wedged), true), STALLED_LABEL);
+assert.equal(rebootLabel(rebooting("crash", exit1), true), "Lean exited with code 1 — restarting the checker");
+// lastDeath outlives its reboot: a user/boot reboot (the automatic re-arm once
+// the link is back) is not waiting for the link — and was no crash either
+assert.equal(rebootLabel(rebooting("user", net), true), "starting the Lean checker");
+assert.equal(rebootLabel(rebooting("boot", snapDeath), true), "starting the Lean checker");
+assert.equal(rebootLabel(rebooting("user", crash), true), "starting the Lean checker"); // a bare death the halt classified as the link's
+// a user restart after a real crash keeps naming it
+assert.equal(rebootLabel(rebooting("user", crash), false), "restarting the checker after a crash (crash)");
+// no death, or a serving relay's booting phase
+assert.equal(rebootLabel(rebooting("boot", null), false), "starting the Lean checker");
+assert.equal(rebootLabel({ relay: "serving", rebootReason: null, lastDeath: net }, true), "starting the Lean checker");
 
 console.log("death-kind: all assertions passed");

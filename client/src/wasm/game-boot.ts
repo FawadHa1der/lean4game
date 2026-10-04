@@ -44,9 +44,10 @@ import { preferencesAtom } from "../store/preferences-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
 import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing, publishNetworkHold } from "../store/boot-atoms";
 import { rememberGamedata } from "./gamedata-cache";
-import { isRuntimeVerdict, haltedNote, rebootNote } from "./death-kind";
+import { NETWORK_WAIT_LABEL, isNetworkDeath, isRuntimeVerdict, haltedNote, rebootLabel, rebootNote } from "./death-kind";
 import { MiB, devProfilesDir, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
-import { claimSnapshotForBoot, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareStatusesAtom, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
+import { claimSnapshotForBoot, endDownload, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareStatusesAtom, reportDownload, runWhenOnline, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
+import { embeddedImageUrls, fetchGameDataUrls } from "./game-data-urls";
 import { ensureServiceWorkerRegistration, releaseServiceWorkerRegistration, requestShellFill, whenServiceWorkerReady } from "./sw-client";
 
 export interface GameDataBundle {
@@ -381,9 +382,30 @@ function noteSnapshotFailure(rawLabel: string): void {
   else if (!relayHalted && /^starting Lean$/i.test(rawLabel.trim())) lastSnapshotFailure = "";
 }
 
+/** D2 (live 2026-10-03): the bound game's region streaming in through this
+ * boot (the vendored prefetch's `snapshot` progress, after
+ * claimSnapshotForBoot) is reported to the other tabs like a Prepare
+ * (game-cache reportDownload): their tile shows "Being downloaded in another
+ * tab…" instead of a Prepare that could only meet a busy file. The first
+ * event of any other stage ends it. Not while a game switch mirrors another
+ * snapshot's Prepare onto this banner (those bytes are not this region's). */
+let bootRegionClaimed = false;
+let bootRegionReported = false;
+function noteBootRegion(info?: { phase?: string; loaded?: number; total?: number }): void {
+  if (!bootRegionClaimed || !boundEntry || switchPending) return;
+  if (info?.phase === "snapshot" && !everServed) {
+    bootRegionReported = true;
+    reportDownload(boundEntry.name, { phase: "running", bytes: info.loaded ?? 0, total: info.total || boundEntry.bytes });
+  } else if (bootRegionReported) {
+    bootRegionReported = false;
+    endDownload(boundEntry.name, "ended");
+  }
+}
+
 const consoleSink: StatusSink = {
   busy: (rawLabel) => {
     noteSnapshotFailure(rawLabel);
+    noteBootRegion();
     if (relayHalted) { console.info(`[game-boot] (halted, not shown) ⏳ ${rawLabel}`); return; }
     const label = (relayRebooting && relayRebootNote) || humanizeLabel(rawLabel);
     console.info(`[game-boot] ⏳ ${rawLabel}`);
@@ -394,6 +416,7 @@ const consoleSink: StatusSink = {
   },
   progress: (rawLabel, info) => {
     noteSnapshotFailure(rawLabel);
+    noteBootRegion(info);
     if (relayHalted) return;
     const label = (relayRebooting && relayRebootNote) || humanizeLabel(rawLabel);
     console.debug(`[game-boot] … ${rawLabel}`, info ?? "");
@@ -403,6 +426,7 @@ const consoleSink: StatusSink = {
     }
   },
   idle: (rawLabel) => {
+    noteBootRegion();
     const label = humanizeLabel(rawLabel);
     console.info(`[game-boot] ✔ ${rawLabel}`);
     publishCheckerActivity("ready", label);
@@ -445,7 +469,11 @@ function markServed(ui: StatusSink): void {
   // offline warm-up (game data first, N5), then the rest of the shell, which
   // waits while a Prepare downloads in this page.
   releaseServiceWorkerRegistration();
-  void warmOfflineCache().finally(() => { void requestShellFill(leanDownloadInFlight); });
+  // D7: not while the browser says it is offline (a cached game boots
+  // offline in seconds): every data file the warm-up names would be a
+  // failing fetch — once the `online` event fires instead.
+  const warm = () => { void warmOfflineCache().finally(() => { void requestShellFill(leanDownloadInFlight); }); };
+  if (!runWhenOnline(warm)) console.info("[game-boot] offline — the offline-cache warm-up waits for the connection");
 }
 
 /** A Lean download runs in this page: a boot not yet served (runtime and
@@ -470,8 +498,8 @@ export function leanDownloadInFlight(): boolean {
  * are not needed here (OPFS). */
 let warmedArtifacts: Qed64Artifacts | null = null;
 /** D2: the bound game's data the level UI fetches on its own (not through
- * the boot): game.json and every level file the boot fetched, the
- * inventory and every documentation file it lists (the inventory panel's
+ * the boot): game.json and every level file, the inventory and every
+ * documentation file it lists (the inventory panel's
  * doc__<Tactic|Theorem|Definition>__<name>.json — 97 files / 40 KB for
  * NNG4, at most 188 / 85 KB per game), the UI language's i18n namespace
  * (and English, the fallback). A first visit fetched them before the
@@ -479,39 +507,34 @@ let warmedArtifacts: Qed64Artifacts | null = null;
  * 404'd on game.json / level__*.json / inventory.json / i18n although the
  * checker and the region were cached. NOT `/api/games`: it is in the
  * shell precache, and network-first refreshes only the shell's copy — a
- * runtime-cache copy would never be replaced. Images stay cached-on-use.
- * Always sent WITH the runtime list (one `warm` message): the worker's
- * prune keeps exactly the chunks the message names, and a data-only
- * message to a previous deploy's worker would have pruned the whole
- * runtime. */
+ * runtime-cache copy would never be replaced. Always sent WITH the runtime
+ * list (one `warm` message): the worker's prune keeps exactly the chunks the
+ * message names, and a data-only message to a previous deploy's worker
+ * would have pruned the whole runtime. D6 (live 2026-10-03): the list is
+ * game-data-urls.ts's, the one a landing-page Prepare sends too — every
+ * level game.json's worldSize lists and every doc inventory.json lists
+ * (through the HTTP cache: the boot has just read both files) — plus
+ * anything else this visit fetched. R3: and the images the game's texts
+ * embed — game.json's from that list, the level files' from the bundle this
+ * boot holds (images were cached on use only: an offline visit showed the
+ * world introductions' pictures broken). */
 async function offlineDataUrls(): Promise<string[]> {
   const id = boundGameId;
   if (!id) return [];
-  const langs = new Set(["en"]);
-  try { langs.add(getDefaultStore().get(preferencesAtom).language || "en"); } catch { /* the atom is fine; belt and braces */ }
+  const langs: string[] = [];
+  try { langs.push(getDefaultStore().get(preferencesAtom).language || "en"); } catch { /* the atom is fine; belt and braces */ }
+  const bundle = bundlePromise ? await bundlePromise.catch(() => null) : null;
   // N5: the inventory and its docs first — the worker fetches in this order
   // (bounded concurrency), and they are what an offline inventory opens.
-  const urls = [`/data/${id}/inventory.json`, ...(await inventoryDocUrls(id)), `/data/${id}/game.json`, ...fetchedDataUrls, ...[...langs].map((l) => `/i18n/${id}/${l}`)];
+  const urls = [...(await fetchGameDataUrls(id, langs)), ...fetchedDataUrls, ...(bundle ? embeddedImageUrls(id, ...bundle.levels.values()) : [])];
   return [...new Set(urls.map((u) => { try { return new URL(u, window.location.origin).pathname; } catch { return u; } }))];
 }
 
-/** The documentation files the inventory panel opens (store/inventory-atoms
- * docAtomFamily: `doc__${Type}__${name}.json`, Type = the capitalised tab),
- * from the game's inventory.json — through the HTTP cache, the UI has just
- * read it. Nothing on a failure: the docs are a bonus, not the warm-up. */
-async function inventoryDocUrls(id: string): Promise<string[]> {
-  try {
-    const r = await fetch(`/data/${id}/inventory.json`);
-    if (!r.ok) return [];
-    const inv = (await r.json()) as Record<string, unknown>;
-    const out: string[] = [];
-    for (const [key, type] of [["tactics", "Tactic"], ["lemmas", "Theorem"], ["definitions", "Definition"]] as const) {
-      const items = Array.isArray(inv?.[key]) ? (inv[key] as { name?: unknown }[]) : [];
-      for (const it of items) if (typeof it?.name === "string" && it.name) out.push(`/data/${id}/doc__${type}__${it.name}.json`);
-    }
-    return out.slice(0, 400); // the largest game lists 188
-  } catch { return []; }
-}
+/** R4: this page's early `warm-data` revalidated every data file the boot's
+ * warm-up names (it completed, with the link up): that warm-up then only
+ * fetches what the cache lacks instead of revalidating all of them again
+ * (RAG: ~330 conditional GETs per visit). */
+let dataRevalidated = false;
 
 let rewarmArmed = false;
 async function warmOfflineCache(): Promise<void> {
@@ -523,10 +546,14 @@ async function warmOfflineCache(): Promise<void> {
     // fetching the runtime chunks this message names (the worker dedupes).
     // A slow link's `partial` replies are continued inside
     // warmRuntimeCacheOutcome (bounded rounds while they make progress).
-    outcome = await warmRuntimeCacheOutcome(a.runtime, await offlineDataUrls(), 10 * 60 * 1000);
+    outcome = await warmRuntimeCacheOutcome(a.runtime, await offlineDataUrls(), 10 * 60 * 1000, { revalidated: dataRevalidated });
     if (typeof outcome !== "string") {
       warmedArtifacts = null;
-      if (outcome.partial) console.warn(`[game-boot] offline cache INCOMPLETE: ${outcome.cached}/${outcome.total} runtime + game-data files cached — the warm-up stopped making progress; the next visit continues it`);
+      // D1 (live 2026-10-03): a landing tile says "plays offline" only once
+      // the runtime and the game's files are in this cache — the landing
+      // page of this tab (navigated to in-app) and of other tabs re-probe.
+      notifyCacheChanged(true);
+      if (outcome.partial) console.warn(`[game-boot] offline cache INCOMPLETE: ${outcome.cached}/${outcome.total} runtime + game-data files cached — ${outcome.linkDown ? "the connection failed" : "the warm-up stopped making progress"}; the next visit continues it`);
       else console.info(`[game-boot] offline cache: ${outcome.cached}/${outcome.total} runtime + game-data files cached, ${outcome.pruned} superseded pruned`);
       return;
     }
@@ -553,7 +580,7 @@ async function warmOfflineCache(): Promise<void> {
   rewarmArmed = true;
   void ensureServiceWorkerRegistration().catch(() => false)
     .then(() => whenServiceWorkerReady())
-    .then((ok) => { rewarmArmed = false; if (ok) void warmOfflineCache(); }, () => { rewarmArmed = false; });
+    .then((ok) => { rewarmArmed = false; if (ok) runWhenOnline(() => void warmOfflineCache()); }, () => { rewarmArmed = false; });
 }
 
 /* ---- L4: network-aware recovery -------------------------------------------
@@ -576,11 +603,16 @@ async function warmOfflineCache(): Promise<void> {
  * a failed SHA-256 check. A corrupt snapshot with the network up was held
  * under the "download was interrupted" card and re-armed three times (12
  * boots, 24 .snapz GETs) before the right card showed. */
-const NETWORK_DETAIL = /Failed to fetch|NetworkError|Load failed|network (error|changed)|ERR_(INTERNET|NETWORK|CONNECTION|TUNNEL|NAME)/i;
-const SNAPSHOT_DEATH = /^snapshot '.*' failed to load$/;
 const looksLikeNetworkDeath = (d: { reason: string; message: string } | null | undefined): boolean =>
-  !!d && NETWORK_DETAIL.test(SNAPSHOT_DEATH.test(d.message) ? lastSnapshotFailure : d.message);
-const NETWORK_WAIT_LABEL = "waiting for the connection — the download restarts on its own";
+  isNetworkDeath(d, lastSnapshotFailure); // death-kind.ts (pure, unit-tested)
+/** D4: the death a halt was classified as the link's doing by the probe
+ * (classifyHalt — a bare "crash" whose text says nothing). By identity: the
+ * relay hands out the same `lastDeath` object until the next death, so the
+ * re-arm's reboot (which carries that death on) is labelled as the link's,
+ * and a later death is not. */
+let networkHaltDeath: object | null = null;
+const deathWasNetwork = (d: { reason: string; message: string } | null | undefined): boolean =>
+  looksLikeNetworkDeath(d) || (!!d && d === networkHaltDeath);
 
 /* D1 (live 2026-09-22): on a FIRST visit the service worker's 37 MB precache
  * install takes minutes on a slow link (the registration even disappears
@@ -824,6 +856,7 @@ async function classifyHalt(st: RelayStatus, ui: StatusSink): Promise<void> {
     network = await networkSuspected(st.lastDeath);
     if (gen !== haltGen || !relayHalted) return;
   }
+  networkHaltDeath = network && st.lastDeath ? st.lastDeath : null;
   if (network && autoRearms < MAX_AUTO_REARMS) {
     console.warn(`[game-boot] the checker halted after "${death || "a bare worker death"}" with the network unreachable — recovery is automatic`);
     scheduleNetworkRearm();
@@ -849,7 +882,6 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   // banner shows THAT wait, and the outgoing game's relay (still serving,
   // its document closing) must not blank it with a "ready" in between.
   if (switchPending) return;
-  const death = st.lastDeath ? `${st.lastDeath.message || st.lastDeath.reason}` : "";
   if (st.relay === "halted") {
     relayRebooting = false;
     relayRebootNote = null;
@@ -865,8 +897,11 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
     // The relay's reboot reason (lsp-relay.ts 3b42714: "wedged" | "crash" |
     // "heartbeat" | "bootFailed") and the death: a #52 death keeps its own
     // label for the whole reboot (relayRebootNote, read by the StatusSink).
+    // D4: a death the link caused (a snapshot that "failed to load" on a
+    // "Failed to fetch") reads as L4's wait for the connection, not as a
+    // crash (rebootLabel); the settle's hold takes over from there.
     if (st.relay === "rebooting") relayRebootNote = rebootNote(st.rebootReason, st.lastDeath);
-    const label = relayRebootNote ?? (death && st.relay === "rebooting" ? `restarting the checker after a crash (${death.slice(0, 80)})` : "starting the Lean checker");
+    const label = relayRebootNote ?? rebootLabel(st, deathWasNetwork(st.lastDeath));
     publishCheckerActivity("busy", label, !bootFinishedOnce, true);
     publishBootStatus({ state: "busy", label });
     return;
@@ -1019,9 +1054,12 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     // bounded concurrency — instead of after markServed's serial warm-up,
     // which left the docs uncached for 9–20 s after the first goal. A first
     // visit has no worker yet (its registration waits for markServed).
-    void offlineDataUrls().then((urls) => warmDataEarly(urls)).then((r) => {
+    // D7: not while the browser says it is offline — each file would be a
+    // failing service-worker fetch (329 for RAG); once it is back instead.
+    runWhenOnline(() => void offlineDataUrls().then((urls) => warmDataEarly(urls)).then((r) => {
       if (r) console.info(`[game-boot] game data cached early: ${r.cached}/${r.total} files`);
-    }).catch(() => {});
+      if (r && !r.partial) dataRevalidated = true; // R4
+    }).catch(() => {}));
     translation.configure({
       gameName: bundle.gameName,
       levelData: (w, l) => bundle.levels.get(`${w}/${l}`),
@@ -1048,6 +1086,7 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     // From here the session's own prefetch worker owns the region file: a
     // Prepare of this snapshot started later would only collide with it.
     claimSnapshotForBoot(snapshot);
+    bootRegionClaimed = true;
     const artifacts = await installGameArtifacts(ui);
     warmedArtifacts = artifacts;
 

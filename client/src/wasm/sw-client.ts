@@ -152,9 +152,45 @@ async function watchServiceWorkerReady(capMs: number): Promise<boolean> {
   return ok;
 }
 
-export interface ShellFillReply { type: "shell-filled"; version?: string; current?: boolean; present: number; total: number; fetched: number; failed: number; complete: boolean; pruned: number }
+/** `linkDown` (D7): a fetch failed outright and the worker started no more
+ * (absent from a worker deployed before D7). */
+export interface ShellFillReply { type: "shell-filled"; version?: string; current?: boolean; present: number; total: number; fetched: number; failed: number; complete: boolean; pruned: number; linkDown?: boolean }
 
 const wait = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
+
+/* ---- R2 (review of D7): a link failure ends a loop only once confirmed ----
+ * D7 made the worker stop starting fetches at the first one that rejects
+ * outright (`linkDown`), and the page loops — the shell fill below, the
+ * offline-cache warm-up (game-cache warmRuntimeCacheOutcome) — ended on such
+ * a round. But fetch() rejects with the same TypeError for a moment's
+ * failure (ERR_NETWORK_CHANGED on a Wi-Fi or VPN switch, one reset
+ * connection): one of them cut the round short and nothing asked again for
+ * the rest of the visit (a shell fill left at 17/203, a warm-up at 5/300 game
+ * files, where HEAD lost one file). So a round that ended on a link failure
+ * and gained nothing earns ONE more round after LINK_RETRY_MS while the
+ * browser does not say it is offline; a second such round in a row ends the
+ * loop — a dead link then costs one more lane-full of failing fetches, not
+ * D7's storm. A round that gained something before the link failed goes on
+ * at once (the next round finds out whether the link is back). */
+/** The wait before that one more round. */
+export const LINK_RETRY_MS = 10_000;
+/** What a warm-up or shell-fill loop does after a round: go on, wait
+ * LINK_RETRY_MS and go on, or stop. */
+export type RoundStep = "continue" | "retry" | "stop";
+/** A round that ended on a link failure and gained nothing: retry it, unless
+ * this loop already did for the previous round or the browser says offline
+ * (navigator.onLine === false — reliable in that direction only). */
+export const retryAfterLinkFailure = (retried: boolean): boolean =>
+  !retried && (typeof navigator === "undefined" || navigator.onLine !== false);
+
+/** The shell-fill loop's step after `reply` (pure; `last`: the previous
+ * round's reply on this worker). A link-down round that fetched nothing
+ * (R2: retried once); otherwise on while the shell grows. */
+export function shellRoundStep(last: ShellFillReply | null, reply: ShellFillReply, linkRetried: boolean): RoundStep {
+  if (reply.complete) return "stop";
+  if (reply.linkDown && !(reply.fetched > 0)) return retryAfterLinkFailure(linkRetried) ? "retry" : "stop";
+  return !last || reply.present > last.present ? "continue" : "stop";
+}
 
 /** This page's entry script (/assets/index-<hash>.js), which names its
  * build: the worker answers `current: false` to a page whose entry is not in
@@ -246,6 +282,7 @@ async function runShellFill(busy: () => boolean): Promise<ShellFillReply | null>
   const busyUntil = Date.now() + BUSY_CAP_MS;
   let last: ShellFillReply | null = null;
   let checkedUpdate = false;
+  let linkRetried = false;
   for (let round = 0, switches = 0; round < MAX_ROUNDS; ) {
     while (busy() && Date.now() < busyUntil) await wait(5000);
     // The page may have loaded under the previous deploy's worker: let the
@@ -267,12 +304,20 @@ async function runShellFill(busy: () => boolean): Promise<ShellFillReply | null>
       }
       continue;
     }
-    const progressed = !last || reply.present > last.present;
+    const step = shellRoundStep(last, reply, linkRetried);
     last = reply;
     round += 1;
     console.info(`[sw] shell fill: ${reply.present}/${reply.total} shell files cached${reply.complete ? " — complete" : ""}${reply.failed ? `, ${reply.failed} failed` : ""}${reply.pruned ? `, ${reply.pruned} superseded shell cache(s) pruned` : ""}${reply.version ? ` (worker ${reply.version})` : ""}`);
     if (switched) { last = null; continue; } // answered for the outgoing build's shell: start over on the new worker
-    if (reply.complete || !progressed) return reply;
+    // D7: a round the link cut off is not repeated at once (offline, the
+    // next one would fail at its first file again) — R2: once, after
+    // LINK_RETRY_MS, unless the browser says it is offline.
+    if (step === "stop") return reply;
+    linkRetried = step === "retry";
+    if (linkRetried) {
+      console.info(`[sw] shell fill: the connection failed — one more round in ${LINK_RETRY_MS / 1000} s`);
+      await wait(LINK_RETRY_MS);
+    }
   }
   return last;
 }

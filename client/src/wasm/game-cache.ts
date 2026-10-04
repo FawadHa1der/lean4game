@@ -15,7 +15,8 @@ import { atom, getDefaultStore } from "jotai";
 import { snapshotCacheKey, type SnapshotEntry, type SnapshotIndex } from "./vendor/qed64/src/runtime/snapshots";
 import type { RuntimeManifest } from "./vendor/qed64/src/runtime/client";
 import { resolveRuntimeManifest } from "./games-api";
-import { pendingServiceWorkerRegistration } from "./sw-client";
+import { LINK_RETRY_MS, pendingServiceWorkerRegistration, retryAfterLinkFailure, type RoundStep } from "./sw-client";
+import { cachedLevelImageUrls, fetchGameDataUrls } from "./game-data-urls";
 
 const SNAPSHOT_DIR = "qed64-snapshots";
 const PREFETCH_WORKER = "/workers/snapshot-prefetch.worker.js";
@@ -49,26 +50,265 @@ function channel(): BroadcastChannel | null {
     cacheChannel = typeof BroadcastChannel === "function" ? new BroadcastChannel(CACHE_CHANNEL) : null;
   } catch { cacheChannel = null; }
   if (cacheChannel) cacheChannel.onmessage = (e) => {
-    if ((e.data as { type?: string } | null)?.type !== "cache-changed") return;
-    clearFailedPrepares();
-    for (const cb of remoteListeners) { try { cb(); } catch (err) { console.warn("[game-cache] cache-change listener failed:", err); } }
+    const m = e.data as { type?: string; name?: unknown; tab?: unknown; hidden?: unknown; phase?: unknown; bytes?: unknown; total?: unknown; outcome?: unknown } | null;
+    const tab = typeof m?.tab === "string" ? m.tab : "";
+    switch (m?.type) {
+      case "cache-changed":
+        cacheChangedElsewhere();
+        return;
+      // D2/D3 (below): another tab's download.
+      case "prepare-progress":
+        if (typeof m.name === "string") noteRemoteDownload(m.name, tab, {
+          phase: m.phase === "warming" ? "warming" : "running",
+          bytes: typeof m.bytes === "number" ? m.bytes : 0,
+          total: typeof m.total === "number" ? m.total : 0,
+        }, m.hidden === true);
+        return;
+      case "prepare-ended":
+        if (typeof m.name === "string") {
+          dropRemoteDownload(m.name, tab);
+          console.info(`[game-cache] ${m.name}: the download in another tab ended (${typeof m.outcome === "string" ? m.outcome : "?"})`);
+        }
+        cacheChangedElsewhere();
+        return;
+      case "prepare-query":
+        for (const name of localDownloads.keys()) sayProgress(name);
+        return;
+    }
   };
   return cacheChannel;
+}
+
+function post(message: Record<string, unknown>): void {
+  try { channel()?.postMessage(message); } catch { /* closed or unsupported */ }
+}
+
+/** Another tab changed the cache, or ended a download: this tab's busy
+ * refusals are over and every tile re-probes. */
+function cacheChangedElsewhere(): void {
+  clearFailedPrepares();
+  for (const cb of remoteListeners) { try { cb(); } catch (err) { console.warn("[game-cache] cache-change listener failed:", err); } }
 }
 
 /** This tab changed the region cache (a prepare committed, a download was
  * removed, stale regions were swept, the bound game's boot landed its
  * region): tell the other tabs. A BroadcastChannel never delivers to its
- * own tab — the local callers re-probe themselves, as before. */
-export function notifyCacheChanged(): void {
-  try { channel()?.postMessage({ type: "cache-changed" }); } catch { /* closed or unsupported */ }
+ * own tab — the local callers re-probe themselves, as before. `alsoHere`:
+ * a change no local caller re-probes for (the bound game's background
+ * warm-up finished filling the service worker's cache — D1's tile reads it)
+ * runs this tab's listeners too. */
+export function notifyCacheChanged(alsoHere = false): void {
+  post({ type: "cache-changed" });
+  if (alsoHere) for (const cb of remoteListeners) { try { cb(); } catch (err) { console.warn("[game-cache] cache-change listener failed:", err); } }
 }
 
-/** Subscribe to cache changes made by OTHER tabs; returns the unsubscribe. */
+/** Subscribe to cache changes made by OTHER tabs (and the background ones
+ * `notifyCacheChanged(true)` reports here); returns the unsubscribe. */
 export function onRemoteCacheChange(cb: () => void): () => void {
   channel();
   remoteListeners.add(cb);
   return () => { remoteListeners.delete(cb); };
+}
+
+/* ---- D2/D3 (live 2026-10-03): downloads running in another tab -----------
+ * The channel above only said "the cache changed" on commit / remove / sweep.
+ * A second landing tab therefore showed "Download ≈N MB" and an active
+ * "Prepare offline" for the whole of another tab's Prepare (D2), and after
+ * that Prepare FAILED its "Already being downloaded… Retry" stayed for good:
+ * a failure changes nothing in the cache, so nothing was said (D3). Now:
+ *  - a tab with a running download (a Prepare; a game tab whose boot streams
+ *    its region) heartbeats `prepare-progress {name, tab, hidden, phase,
+ *    bytes, total}` once a second — also while no byte arrives — and says
+ *    `prepare-ended {name, tab, outcome}` when it stops, whatever the outcome
+ *    (done, partial, failed, busy, unavailable);
+ *  - a tab that opens or is looked at again asks (`prepare-query`) and every
+ *    running tab answers at once;
+ *  - a remote download not heard of for REMOTE_DOWNLOAD_TTL_MS (its tab
+ *    closed, crashed or froze) is dropped and the tiles re-probe;
+ *  - an ended download drops this tab's busy refusals and re-probes, as
+ *    `cache-changed` does; and a look at the tab (queryRemoteDownloads) drops
+ *    a busy refusal whose holder runs nowhere any more.
+ * Review round:
+ *  - R1: a hidden tab's chained timers wake once a minute after 5 minutes
+ *    (Chrome's intensive wake-up throttling), so a Prepare left running in a
+ *    background tab — D2's own slow-link case — went silent for ~54 s of
+ *    every minute and the other tabs dropped it after 6 s: its tile flipped
+ *    back to "Download ≈N MB" + Prepare. Now progress is said from the
+ *    progress path too (the prefetch worker's messages are not throttled),
+ *    each word says whether its tab is `hidden` (the receivers then wait
+ *    HIDDEN_DOWNLOAD_TTL_MS, not 6 s — the warm-up phase has only the
+ *    timer), a visibility change is said at once, and a tab that closes says
+ *    `prepare-ended` on pagehide, so the long wait only covers a crash;
+ *  - R3: every word carries its tab's id and the tabs keep one entry per
+ *    sender: two tabs reporting the same snapshot (a Prepare, and a game tab
+ *    whose boot met its busy file and streams the region itself) used to
+ *    overwrite each other, and the first one's `prepare-ended` dropped the
+ *    other's live download;
+ *  - UX5: a phase change is said at once ("Finish offline download" moves
+ *    from `running` to `warming` within milliseconds; the other tabs showed
+ *    "Being downloaded… 0 / N MB" until the next beat). */
+
+/** One running download as the tiles show it: `bytes`/`total` are the
+ * prefetch worker's INFLATED offsets (the tile scales them to the transfer
+ * size), `warming` — the region is committed, the runtime warm-up runs. */
+export interface DownloadProgress { phase: "running" | "warming"; bytes: number; total: number }
+/** A download another tab reported: when it was last heard of, and how long
+ * its silence is borne (`ttl`: R1 — longer for a sender in a hidden tab). */
+export interface RemoteDownload extends DownloadProgress { at: number; ttl: number }
+
+/** Heartbeat period of a running download. */
+export const DOWNLOAD_HEARTBEAT_MS = 1000;
+/** A remote download not heard of for this long is over (six missed beats). */
+export const REMOTE_DOWNLOAD_TTL_MS = 6000;
+/** R1: the same for a sender whose tab is hidden — its timers may wake only
+ * once a minute; 15 s of slack. */
+export const HIDDEN_DOWNLOAD_TTL_MS = 75_000;
+/** How long queryRemoteDownloads waits for the running tabs' answers before
+ * it treats a busy refusal as stale. */
+export const QUERY_ANSWER_MS = 1500;
+
+/** R3: this tab's id on the channel. */
+const TAB_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+const pageHidden = (): boolean => typeof document !== "undefined" && document.visibilityState === "hidden";
+
+/** Every download other tabs reported, by snapshot name, then by sender tab
+ * (R3) — in the order the senders were first heard of. */
+export const remoteSendersAtom = atom<Record<string, Record<string, RemoteDownload>>>({});
+/** Downloads running in OTHER tabs, by snapshot name (the landing tiles):
+ * the first sender of each still heard of — the same one while it lasts, so
+ * two senders do not make the tile flicker between their counts. */
+export const remoteDownloadsAtom = atom((get): Record<string, RemoteDownload> => {
+  const view: Record<string, RemoteDownload> = {};
+  for (const [name, by] of Object.entries(get(remoteSendersAtom))) {
+    const first = Object.values(by)[0];
+    if (first) view[name] = first;
+  }
+  return view;
+});
+/** This tab's running downloads: the latest progress, and when it was last
+ * said to the other tabs. */
+const localDownloads = new Map<string, { progress: DownloadProgress; saidAt: number }>();
+let heartbeatTimer = 0;
+let expiryTimer = 0;
+let pageEventsWatched = false;
+
+function sayProgress(name: string): void {
+  const d = localDownloads.get(name);
+  if (!d) return;
+  d.saidAt = Date.now();
+  post({ type: "prepare-progress", name, tab: TAB_ID, hidden: pageHidden(), ...d.progress });
+}
+
+/** R1: say every running download at once when this tab is hidden or shown
+ * (the receivers switch to the matching ttl before this tab's timers are
+ * throttled), and end them when the tab goes away (pagehide — a reload or a
+ * close kills the downloads; a page restored from the back/forward cache
+ * says its downloads again at the next beat). */
+function watchPageEvents(): void {
+  if (pageEventsWatched || typeof document === "undefined") return;
+  pageEventsWatched = true;
+  document.addEventListener("visibilitychange", () => { for (const name of localDownloads.keys()) sayProgress(name); });
+  window.addEventListener("pagehide", () => { for (const name of localDownloads.keys()) post({ type: "prepare-ended", name, tab: TAB_ID, outcome: "closed" }); });
+}
+
+/** The heartbeat: every running download once per DOWNLOAD_HEARTBEAT_MS
+ * (but one the progress path said in the last half beat), also while no byte
+ * arrives. */
+function armHeartbeat(): void {
+  if (heartbeatTimer || !localDownloads.size) return;
+  heartbeatTimer = window.setTimeout(() => {
+    heartbeatTimer = 0;
+    for (const [name, d] of localDownloads) if (Date.now() - d.saidAt >= DOWNLOAD_HEARTBEAT_MS / 2) sayProgress(name);
+    armHeartbeat();
+  }, DOWNLOAD_HEARTBEAT_MS);
+}
+
+/** Report (or update) one of this tab's running downloads. Said at once:
+ * the first report, a phase change (UX5), and progress a heartbeat period
+ * after the last word (R1: the progress path is not throttled in a hidden
+ * tab); the heartbeat says the latest state in between, so progress
+ * callbacks may call this at any rate. */
+export function reportDownload(name: string, progress: DownloadProgress): void {
+  const prev = localDownloads.get(name);
+  localDownloads.set(name, { progress, saidAt: prev?.saidAt ?? 0 });
+  if (!prev || prev.progress.phase !== progress.phase || Date.now() - prev.saidAt >= DOWNLOAD_HEARTBEAT_MS) sayProgress(name);
+  watchPageEvents();
+  armHeartbeat();
+}
+
+/** One of this tab's downloads reached a terminal outcome — said for EVERY
+ * outcome (D3), also for a Prepare that never reported progress (a refusal):
+ * the other tabs drop their stale busy status and re-probe. `outcome` is
+ * logged by the receivers (done, partial, failed, busy, unavailable; a boot's
+ * region `ended`; a tab that went away `closed`). */
+export function endDownload(name: string, outcome: string): void {
+  localDownloads.delete(name);
+  if (!localDownloads.size && heartbeatTimer) { window.clearTimeout(heartbeatTimer); heartbeatTimer = 0; }
+  post({ type: "prepare-ended", name, tab: TAB_ID, outcome });
+}
+
+/** The senders still heard of at `now` (each by its own ttl), and the
+ * snapshot names no sender is heard of any more (pure; the sweep below
+ * applies it). */
+export function expireRemoteDownloads(cur: Readonly<Record<string, Record<string, RemoteDownload>>>, now: number): { kept: Record<string, Record<string, RemoteDownload>>; expired: string[] } {
+  const kept: Record<string, Record<string, RemoteDownload>> = {};
+  const expired: string[] = [];
+  for (const [name, by] of Object.entries(cur)) {
+    const alive = Object.entries(by).filter(([, d]) => now - d.at < d.ttl);
+    if (alive.length) kept[name] = Object.fromEntries(alive);
+    else expired.push(name);
+  }
+  return { kept, expired };
+}
+
+const senderCount = (s: Record<string, Record<string, RemoteDownload>>): number =>
+  Object.values(s).reduce((n, by) => n + Object.keys(by).length, 0);
+
+function noteRemoteDownload(name: string, tab: string, progress: DownloadProgress, hidden: boolean): void {
+  const store = getDefaultStore();
+  const cur = store.get(remoteSendersAtom);
+  const ttl = hidden ? HIDDEN_DOWNLOAD_TTL_MS : REMOTE_DOWNLOAD_TTL_MS;
+  store.set(remoteSendersAtom, { ...cur, [name]: { ...cur[name], [tab]: { ...progress, at: Date.now(), ttl } } });
+  if (expiryTimer) return;
+  const sweep = () => {
+    expiryTimer = 0;
+    const heard = store.get(remoteSendersAtom);
+    const { kept, expired } = expireRemoteDownloads(heard, Date.now());
+    if (senderCount(kept) !== senderCount(heard)) store.set(remoteSendersAtom, kept);
+    if (expired.length) {
+      console.info(`[game-cache] no word from the tab downloading ${expired.join(", ")} — re-probing`);
+      cacheChangedElsewhere();
+    }
+    if (Object.keys(kept).length) expiryTimer = window.setTimeout(sweep, DOWNLOAD_HEARTBEAT_MS);
+  };
+  expiryTimer = window.setTimeout(sweep, DOWNLOAD_HEARTBEAT_MS);
+}
+
+/** One sender's download ended (R3: another tab's download of the same
+ * snapshot stays). */
+function dropRemoteDownload(name: string, tab: string): void {
+  const store = getDefaultStore();
+  const cur = store.get(remoteSendersAtom);
+  if (!cur[name] || !(tab in cur[name])) return;
+  const { [tab]: _gone, ...rest } = cur[name];
+  const next = { ...cur };
+  if (Object.keys(rest).length) next[name] = rest;
+  else delete next[name];
+  store.set(remoteSendersAtom, next);
+}
+
+/** This tab opened or is looked at again: ask the other tabs what they are
+ * downloading (they answer at once), then drop every busy refusal whose
+ * holder runs nowhere — neither a Prepare of this tab nor a download another
+ * tab reported. Without a channel nobody answers, and a busy refusal is
+ * dropped on the next look (the tile then offers Prepare again, which
+ * re-checks the file). */
+export function queryRemoteDownloads(): void {
+  post({ type: "prepare-query" });
+  window.setTimeout(() => {
+    const remote = getDefaultStore().get(remoteDownloadsAtom);
+    clearFailedPrepares((name) => !inFlight.has(name) && !(name in remote));
+  }, QUERY_ANSWER_MS);
 }
 
 /** The raw-region file name of an index entry (`<cacheKey>.raw`). */
@@ -184,8 +424,15 @@ export function prefetchRawSnapshot(entry: SnapshotEntry, onProgress?: (bytes: n
 /** `partial`: the worker stopped at its per-message budget (a message event
  * must end inside Chromium's 5-minute limit) — warmRuntimeCacheOutcome sends
  * the warm-up again while rounds make progress; a `partial` it returns means
- * the rounds ran out (or stopped progressing) with the list incomplete. */
-export interface WarmReply { cached: number; pruned: number; total: number; partial?: boolean }
+ * the rounds ran out (or stopped progressing) with the list incomplete.
+ * `bytes` (D1): runtime-chunk body bytes this round received beyond what an
+ * earlier round already had of that chunk — a chunk cut at the round's hard
+ * abort is progress the HTTP cache resumes. Absent from a worker deployed
+ * before D1. `linkDown` (D7): a fetch of this round failed outright
+ * (offline, a refused connection), after which the worker started no more
+ * fetches and only looked the rest up — `cached` is still what the cache
+ * holds. Absent from a worker deployed before D7. */
+export interface WarmReply { cached: number; pruned: number; total: number; partial?: boolean; bytes?: number; linkDown?: boolean }
 
 /** The active service worker a `warm` can be posted to, or null: none in
  * this browser, none registered, or none active within 30 s. The page
@@ -222,9 +469,56 @@ async function warmTarget(): Promise<ServiceWorker | null> {
  * gives its message the Prepare's 10-minute window: chunks a Prepare is
  * still fetching are awaited, not fetched twice. */
 let warmInFlight: { buildId: string; p: Promise<WarmOutcome> } | null = null;
-/** At most this many `warm` messages per warm-up (each bounded by the
- * worker to ~4 min; 8 rounds cover the runtime down to ~80 kB/s). */
-const WARM_ROUNDS = 8;
+/** At most this many `warm` messages per warm-up, each bounded by the worker
+ * to ~4 min (it starts no fetch after 3 min, aborts at 4). D1 (live
+ * 2026-10-03): sized for the runtime (154 MB, 16 MiB chunks one at a time)
+ * on a ~40 kB/s share of a slow link — a Prepare's region and the runtime
+ * split a 300 kB/s line — which moves ~7–10 MB per round: ~16–19 rounds; 24
+ * cover ~27 kB/s. Safe because a round counts as progress only when a file
+ * was completed or new chunk bytes arrived (warmRoundProgressed): a dead link
+ * ends the warm-up after one empty round (two while the browser still says
+ * online — warmRoundStep's one retry, R2), not after 24. (8 rounds covered
+ * ~80 kB/s, and the old whole-file rule quit at a round spent inside one
+ * chunk: 7/13 live.) */
+const WARM_ROUNDS = 24;
+
+/** D1 (live 2026-10-03): did this warm round make progress? A round that completed a file
+ * (cached grew) did; so did one that received new runtime-chunk bytes — a
+ * 16 MiB chunk can take a whole round on a slow link, cut by the worker's
+ * hard abort and resumed by the HTTP cache next round; the old rule (whole
+ * files only) quit "stopped making progress" there with the runtime partly
+ * cached. A reply without `bytes` (a worker deployed before D1) keeps the
+ * whole-file rule. The first round always counts — unless (D7) the link
+ * failed in it: such a round counts only on chunk bytes it received or files
+ * it added since the previous round, so an offline page sends one `warm`,
+ * not two. */
+export function warmRoundProgressed(last: WarmReply | null, reply: WarmReply): boolean {
+  const gotBytes = typeof reply.bytes === "number" && reply.bytes > 0;
+  if (reply.linkDown) return gotBytes || (!!last && reply.cached > last.cached);
+  if (!last || reply.cached > last.cached) return true;
+  return gotBytes;
+}
+
+/** The warm-up loop's step after `reply` (pure): done once a round is not
+ * `partial`; on while rounds progress; a link-down round that gained nothing
+ * is retried once after LINK_RETRY_MS (R2, sw-client) — one transient fetch
+ * failure ended a Prepare's warm-up at 5 of 300 game files. */
+export function warmRoundStep(last: WarmReply | null, reply: WarmReply, linkRetried: boolean): RoundStep {
+  if (!reply.partial) return "stop";
+  if (warmRoundProgressed(last, reply)) return "continue";
+  return reply.linkDown && retryAfterLinkFailure(linkRetried) ? "retry" : "stop";
+}
+
+/** D7 (live 2026-10-03): run `fn` now unless the browser says it is offline
+ * (navigator.onLine === false — reliable in that direction only), else once,
+ * at the next `online` event. For the page's offline-cache warm-ups: an
+ * offline boot of a cached game sent the service worker every data file to
+ * re-fetch, and each failed. True when `fn` ran now. */
+export function runWhenOnline(fn: () => void): boolean {
+  if (typeof navigator === "undefined" || navigator.onLine !== false) { fn(); return true; }
+  window.addEventListener("online", () => fn(), { once: true });
+  return false;
+}
 
 /** Why a warm-up produced no reply: `no-worker` — no active service worker
  * to post to (none registered, or none active within warmTarget's wait);
@@ -244,8 +538,11 @@ export function warmRuntimeCache(runtime: RuntimeManifest, extraUrls: readonly s
 /** warmRuntimeCache, telling a missing worker from a silent one (game-boot
  * re-warms on `serviceWorker.ready` only for the former: `ready` has
  * already resolved for an active worker, so a re-warm armed on a timeout
- * fired at once and repeated every timeout without limit). */
-export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: readonly string[] = [], timeoutMs = 120000): Promise<WarmOutcome> {
+ * fired at once and repeated every timeout without limit). `revalidated`:
+ * this page has just revalidated the data files among `extraUrls` (the
+ * boot's early `warm-data`) — even the first round only fetches what the
+ * cache lacks (R4). */
+export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: readonly string[] = [], timeoutMs = 120000, opts: { revalidated?: boolean } = {}): Promise<WarmOutcome> {
   // D2: `extraUrls` — the bound game's data and i18n files (game-boot
   // offlineDataUrls) — ride in the SAME message as the runtime list: the
   // worker's prune keeps exactly the chunks the message names, so a
@@ -262,10 +559,19 @@ export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: rea
     for (const u of ["/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json"]) if (!urls.includes(u)) urls.push(u);
     for (const f of Object.values(runtime.files)) for (const c of f.chunks) if (!urls.includes(c.url)) urls.push(c.url);
     // On a slow link one message cannot cover the 154 MB runtime (the
-    // worker answers `partial`): send it again while a round adds files —
-    // every caller (the boot's warm-up, a landing-page Prepare) gets the
-    // continuation; each round has `timeoutMs`.
+    // worker answers `partial`): send it again while a round makes progress
+    // (warmRoundProgressed) — every caller (the boot's warm-up, a
+    // landing-page Prepare) gets the continuation; each round has `timeoutMs`.
     let last: WarmReply | null = null;
+    let linkRetried = false;
+    // R4: the data files are revalidated by the first round that reaches the
+    // host; from then on a round fetches only what the cache lacks (each
+    // round used to re-fetch every one of them — `max-age=0,
+    // must-revalidate`: thousands of revalidations over a slow-link
+    // Prepare's rounds). A data file a cut-short first round did not reach
+    // keeps its held copy until the next visit; the pages the game opens
+    // refresh theirs network-first anyway.
+    let revalidate = !opts.revalidated;
     for (let round = 0; round < WARM_ROUNDS; round++) {
       const target = await warmTarget();
       if (!target) return last ?? "no-worker";
@@ -276,13 +582,21 @@ export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: rea
         // pageFillsShell: this page asks for the shell itself (sw-client
         // requestShellFill) when no download runs — the worker must not
         // start its own fill behind a warm-up a Prepare's region competes with.
-        target.postMessage({ type: "warm", urls, pageFillsShell: true }, [ch.port2]);
+        target.postMessage({ type: "warm", urls, pageFillsShell: true, revalidate }, [ch.port2]);
       });
       if (reply === "timeout") return last ?? "timeout";
-      const progressed = !last || reply.cached > last.cached;
+      const step = warmRoundStep(last, reply, linkRetried);
       last = reply;
-      if (!reply.partial || !progressed) return reply;
-      console.info(`[game-cache] runtime warm-up: ${reply.cached}/${reply.total} files so far — continuing (round ${round + 2})`);
+      if (!reply.linkDown) revalidate = false;
+      if (step === "stop") return reply;
+      linkRetried = step === "retry";
+      if (linkRetried) {
+        console.info(`[game-cache] runtime warm-up: the connection failed at ${reply.cached}/${reply.total} files — one more round in ${LINK_RETRY_MS / 1000} s`);
+        await new Promise<void>((r) => window.setTimeout(r, LINK_RETRY_MS));
+        continue;
+      }
+      const got = typeof reply.bytes === "number" && reply.bytes > 0 ? ` (+${(reply.bytes / 1e6).toFixed(1)} MB of chunks this round)` : "";
+      console.info(`[game-cache] runtime warm-up: ${reply.cached}/${reply.total} files so far${got} — continuing (round ${round + 2})`);
     }
     return last ?? "timeout";
   })();
@@ -344,11 +658,12 @@ const publish = (name: string, status: PrepareStatus): void => {
  * "Already being downloaded…" of a file the other tab held) describe a state
  * that is over; dropped, the tile shows what the re-probe finds. Only those:
  * a genuine local failure ("Preparation failed: …" + Retry, or `unavailable`
- * whose tile deliberately hides the button) is this tab's own fact and stays. */
-function clearFailedPrepares(): void {
+ * whose tile deliberately hides the button) is this tab's own fact and stays.
+ * `stale` narrows it to some names (D3: queryRemoteDownloads). */
+function clearFailedPrepares(stale: (name: string) => boolean = () => true): void {
   const store = getDefaultStore();
   const cur = store.get(prepareStatusesAtom);
-  const kept = Object.fromEntries(Object.entries(cur).filter(([, st]) => !(st.phase === "failed" && st.result === "busy")));
+  const kept = Object.fromEntries(Object.entries(cur).filter(([name, st]) => !(st.phase === "failed" && st.result === "busy" && stale(name))));
   if (Object.keys(kept).length !== Object.keys(cur).length) store.set(prepareStatusesAtom, kept);
 }
 
@@ -380,19 +695,31 @@ export const inFlightRegions = (): { name: string; region: Promise<PrepareStatus
  * refuses such a snapshot; the tile hides the button for the bound game. */
 export const claimSnapshotForBoot = (name: string): void => { claimedByBoot.add(name); };
 
+/** The terminal outcome a Prepare reports to the other tabs (D3), from the
+ * structured status only (CQ1: "stalled" was read off the error's wording). */
+function prepareOutcome(st: PrepareStatus): string {
+  if (st.phase === "failed") return st.result === "busy" || st.result === "unavailable" ? st.result : "failed";
+  return st.runtime && !st.runtime.partial ? "done" : "partial";
+}
+
 /** "Prepare offline": the raw region into OPFS (prefetch worker) and the
- * runtime chunks into the service worker's cache, concurrently, without
+ * runtime chunks plus the game's own files (D6: `gameId` — game.json, every
+ * level file, inventory.json and its docs, the i18n namespaces of `langs`
+ * and English) into the service worker's cache, concurrently, without
  * booting Lean. Idempotent per snapshot while running. The worker lives in
  * this document, so navigating within the app keeps it going; a full page
  * reload kills it (the prefetch worker discards the partial on its next
  * run). `sessionBound`: a game session is loaded in this page — allowed
- * (the inflate runs in its own worker), but a small device is told once. */
-export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean } = {}): Promise<PrepareStatus> {
+ * (the inflate runs in its own worker), but a small device is told once.
+ * A region already in OPFS settles at once (`already-cached`): the landing
+ * tile's "Finish offline download" is this call. */
+export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean; gameId?: string; langs?: readonly string[] } = {}): Promise<PrepareStatus> {
   const existing = inFlight.get(entry.name);
   if (existing) return existing.all;
   if (claimedByBoot.has(entry.name)) {
     const refused: PrepareStatus = { phase: "failed", bytes: 0, total: entry.bytes, result: "busy" };
     publish(entry.name, refused);
+    endDownload(entry.name, "busy"); // D3
     console.warn(`[game-cache] prepare ${entry.name}: refused — the game loaded in this page owns its region`);
     return Promise.resolve(refused);
   }
@@ -400,19 +727,43 @@ export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean
   const memoryNote = !!opts.sessionBound && typeof deviceGb === "number" && deviceGb < 8 && !memoryNoteShown;
   if (memoryNote) memoryNoteShown = true;
   let status: PrepareStatus = { phase: "running", bytes: 0, total: entry.bytes, memoryNote };
-  publish(entry.name, status);
-  const warm = resolveRuntimeManifest().then((m) => warmRuntimeCache(m, [], 10 * 60 * 1000)).catch((e) => {
+  // D2: every state change is this tab's word to the others (the heartbeat
+  // sends the latest once a second).
+  const show = (st: PrepareStatus) => {
+    publish(entry.name, st);
+    if (st.phase === "running" || st.phase === "warming") reportDownload(entry.name, { phase: st.phase, bytes: st.bytes, total: st.total });
+  };
+  show(status);
+  // D6: the game's files ride in the SAME message as the runtime list (the
+  // worker's prune keeps exactly the chunks a message names — a data-only
+  // `warm` would prune the runtime), listed from its game.json and
+  // inventory.json. Without a gameId (a caller that predates D6) the runtime
+  // alone, as before — the tile then reads the game's files as missing.
+  const warm = resolveRuntimeManifest().then(async (m) => {
+    const data = opts.gameId ? await fetchGameDataUrls(opts.gameId, opts.langs ?? []) : [];
+    const reply = await warmRuntimeCache(m, data, 10 * 60 * 1000);
+    // R3: the images the level texts embed are known only from the level
+    // files — read from the cache the warm-up just filled (no download), and
+    // cached by one data-only `warm-data` (never a chunk, never a prune).
+    // Not essential: the outcome is the warm-up's.
+    if (reply && !reply.linkDown && opts.gameId) {
+      const images = await cachedLevelImageUrls(opts.gameId, data);
+      const r = images.length ? await warmDataEarly(images) : null;
+      if (r) console.info(`[game-cache] prepare ${entry.name}: ${r.cached}/${r.total} images of the level texts cached`);
+    }
+    return reply;
+  }).catch((e) => {
     console.warn("[game-cache] runtime warm-up skipped:", e);
     return null;
   });
   const region = (async (): Promise<PrepareStatus> => {
     const { result, error } = await prefetchRawSnapshot(entry, (bytes, total) => {
       status = { ...status, bytes, total };
-      publish(entry.name, status);
+      show(status);
     });
     const ok = result === "done" || result === "already-cached";
     status = ok ? { ...status, phase: "warming", bytes: entry.bytes, result } : { ...status, phase: "failed", result, error };
-    publish(entry.name, status);
+    show(status);
     if (ok) notifyCacheChanged(); // L12: the region is committed — other tabs re-probe
     return status;
   })();
@@ -425,8 +776,8 @@ export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean
       return afterRegion;
     }
     // The phase stays 'warming' (the tile: "caching the checker…") through
-    // every round of the runtime warm-up; a reply still `partial` after them
-    // is surfaced on the tile (runtime.partial), not shown as plain done.
+    // every round of the runtime warm-up; what is still missing after them
+    // is the tile's to say (it reads the service worker's cache: `partial`).
     const runtime = await warm;
     status = { ...status, phase: "done", runtime };
     publish(entry.name, status);
@@ -434,7 +785,10 @@ export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean
     return status;
   })();
   inFlight.set(entry.name, { region, all });
-  all.finally(() => inFlight.delete(entry.name)).catch(() => {});
+  // D3: every terminal outcome is said to the other tabs (a failure used to
+  // say nothing, and their "Already being downloaded…" stayed for good).
+  all.then((st) => endDownload(entry.name, prepareOutcome(st)), () => endDownload(entry.name, "failed"))
+    .finally(() => inFlight.delete(entry.name)).catch(() => {});
   return all;
 }
 

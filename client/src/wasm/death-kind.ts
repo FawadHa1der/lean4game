@@ -39,7 +39,8 @@ const exitWords = (d: DeathLike): string => {
 };
 
 /** The sticky label of a relay reboot after a #52 death; null for any other
- * reboot (the caller keeps its "restarting the checker after a crash (…)").
+ * reboot (rebootLabel: the network wording or "restarting the checker after
+ * a crash (…)").
  * Keyed on the relay's reboot reason first (lsp-relay.ts: an "exit" death
  * reboots as "crash", a "wedged" one as "wedged"): `lastDeath` outlives its
  * reboot, so a later "user"/"boot" reboot must not repeat an old note. A
@@ -49,6 +50,46 @@ export function rebootNote(rebootReason: string | null | undefined, d: DeathLike
   if (rebootReason === "wedged" || (!known && d?.reason === "wedged")) return STALLED_LABEL;
   if ((rebootReason === "crash" || !known) && d?.reason === "exit") return `${exitWords(d)} — restarting the checker`;
   return null;
+}
+
+/* ---- L4: the link's deaths -------------------------------------------------
+ * Classified by the UNDERLYING error text, never by the generic death (the
+ * reasoning is game-boot.ts's L4 block): a "snapshot '<name>' failed to load"
+ * death is read through the snapshot failure the boot recorded before it
+ * (`snapshotFailure`, qed64-boot's "<name> snapshot failed: <error>"). */
+const NETWORK_DETAIL = /Failed to fetch|NetworkError|Load failed|network (error|changed)|ERR_(INTERNET|NETWORK|CONNECTION|TUNNEL|NAME)/i;
+const SNAPSHOT_DEATH = /^snapshot '.*' failed to load$/;
+/** Is this death the link's doing, by its text? */
+export const isNetworkDeath = (d: DeathLike, snapshotFailure: string): boolean =>
+  !!d && NETWORK_DETAIL.test(SNAPSHOT_DEATH.test(d.message) ? snapshotFailure : d.message);
+
+/** L4's word for a download the network cut: the held boot's banner, and
+ * (D4) the reboot after a network-shaped death. */
+export const NETWORK_WAIT_LABEL = "waiting for the connection — the download restarts on its own";
+
+/** The label of a relay status that replaces its session (game-boot
+ * publishRelayStatus): a #52 death's own note; D4 (live 2026-10-03) — a
+ * reboot after a death the link caused (`networkDeath`: isNetworkDeath) gets
+ * L4's network wording, not "restarting the checker after a crash (snapshot
+ * 'nng4' failed to load)" for a "Failed to fetch"; any other death keeps the
+ * crash label. The network wording only for a reboot the death caused
+ * (bootFailed / crash / heartbeat, or a relay without `rebootReason`):
+ * `lastDeath` outlives its reboot, and a later "user"/"boot" reboot — the
+ * automatic re-arm once the link is back (a didChange replay: "user") — is
+ * not waiting for the link; it is "starting the Lean checker", never "after a
+ * crash" (live: "restarting the checker after a crash (crash)" for the re-arm
+ * after a 1 s cut). A status with no death, or not a relay reboot (a serving
+ * relay's booting phase), is "starting the Lean checker". */
+export function rebootLabel(st: { relay: string; rebootReason?: string | null; lastDeath?: DeathLike }, networkDeath: boolean): string {
+  const d = st.lastDeath;
+  if (st.relay === "rebooting") {
+    const note = rebootNote(st.rebootReason, d);
+    if (note) return note;
+  }
+  const death = d ? `${d.message || d.reason}` : "";
+  if (!death || st.relay !== "rebooting") return "starting the Lean checker";
+  if (networkDeath) return st.rebootReason === "user" || st.rebootReason === "boot" ? "starting the Lean checker" : NETWORK_WAIT_LABEL;
+  return `restarting the checker after a crash (${death.slice(0, 80)})`;
 }
 
 /** The halted relay's label (the failure card's detail) after a #52 death;

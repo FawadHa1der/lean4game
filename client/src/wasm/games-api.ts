@@ -21,6 +21,8 @@
 import { fetchSnapshotIndex, snapshotCacheKey, type SnapshotEntry, type SnapshotIndex } from "./vendor/qed64/src/runtime/snapshots";
 import type { RuntimeManifest } from "./vendor/qed64/src/runtime/client";
 import type { GameInfo, GameTileWithName } from "../store/api";
+import { offlineCacheReport, runtimeCachePaths, type OfflineCacheReport } from "./game-data-urls";
+import { wholeMB } from "./sizes";
 
 export const MiB = 1048576;
 export const GiB = 1073741824;
@@ -172,8 +174,9 @@ export const findSnapshotEntry = (index: SnapshotIndex | null, name: string): Sn
   index?.snapshots.find((s) => s.name === name);
 
 /** What the first play of this snapshot transfers (gzip on the wire when
- * the index says so; the raw size otherwise), in whole MB. */
-export const snapshotTransferMB = (entry: SnapshotEntry): number => Math.round((entry.transfer ?? entry.bytes) / MiB);
+ * the index says so; the raw size otherwise), in whole decimal MB (D8: the
+ * tile said "≈269 MB" for RAG's 282.0 MB, MiB labelled MB). */
+export const snapshotTransferMB = (entry: SnapshotEntry): number => wholeMB(entry.transfer ?? entry.bytes);
 
 /** Is the inflated region already in OPFS? The same check the vendored boot
  * makes before spawning the prefetch worker (`qed64-snapshots/<key>.raw`
@@ -190,12 +193,16 @@ export async function rawSnapshotCached(entry: SnapshotEntry): Promise<boolean> 
   }
 }
 
-/** ready: plays offline from OPFS; download: published for this build, not
- * yet cached; unavailable: not in the index, or baked for another runtime
- * (snapshots are binary-paired to one build — loading one against another
- * traps in the worker). */
-export type SnapshotState = "ready" | "download" | "unavailable";
+/** ready: plays offline — the region is in OPFS AND the service worker
+ * holds the runtime and the game's files (D1); partial: the region is in
+ * OPFS but the rest is not (yet) cached — the game boots online only;
+ * download: published for this build, not yet cached; unavailable: not in
+ * the index, or baked for another runtime (snapshots are binary-paired to
+ * one build — loading one against another traps in the worker). */
+export type SnapshotState = "ready" | "partial" | "download" | "unavailable";
 
+/** The region-only verdict (no `partial`: that needs the runtime cache —
+ * tileSnapshotStates). */
 export async function snapshotStateFor(entry: SnapshotEntry | undefined, buildId: string): Promise<SnapshotState> {
   if (!entry || entry.runtime !== buildId) return "unavailable";
   return (await rawSnapshotCached(entry)) ? "ready" : "download";
@@ -204,26 +211,45 @@ export async function snapshotStateFor(entry: SnapshotEntry | undefined, buildId
 /** One landing-page tile's truth. */
 export interface TileSnapshotState {
   state: SnapshotState;
-  /** Whole MB the first play transfers (`download` and `ready` states). */
+  /** Whole decimal MB the first play transfers (every state but
+   * `unavailable`). */
   transferMB?: number;
-  /** The served index entry (`download` and `ready` states): what Prepare
+  /** The served index entry (every state but `unavailable`): what Prepare
    * downloads and what Remove download deletes (its cache key). */
   entry?: SnapshotEntry;
+  /** `ready` / `partial`: what the service worker's runtime cache holds for
+   * this game (null: no Cache API — never `ready`). */
+  offline?: OfflineCacheReport | null;
 }
 
-/** The tile states for a set of snapshot names, from one index fetch, one
- * manifest fetch and one OPFS probe per name. */
-export async function tileSnapshotStates(names: readonly string[]): Promise<Map<string, TileSnapshotState>> {
-  const [buildId, index] = await Promise.all([resolveRuntimeBuildId(), fetchSnapshotIndexOnce()]);
+/** The tile states for a set of games (keyed by snapshot name), from one
+ * index fetch, one manifest fetch, one OPFS probe per game and one read of
+ * the service worker's runtime cache. D1 (live 2026-10-03): a region in OPFS
+ * alone used to read "Ready — plays offline" after a reload although runtime
+ * chunks or the game's files were missing (a Prepare's warm-up that stopped
+ * short; a Prepare from before D6, which cached no game file) — the offline
+ * boot then failed "Failed to fetch". `ready` now also needs every chunk of
+ * the current runtime and the game's game.json, inventory.json and level
+ * files in the runtime cache (game-data-urls offlineCacheReport); a region
+ * without them is `partial`. */
+export async function tileSnapshotStates(games: readonly { snapshot: string; gameId: string }[]): Promise<Map<string, TileSnapshotState>> {
+  const [runtime, index] = await Promise.all([resolveRuntimeManifest(), fetchSnapshotIndexOnce()]);
   // An unreadable index is "unknown", not "not available on this build":
   // the landing page then leaves every tile clickable with no availability
   // row, and the boot's pairing check (which re-fetches) reports the reason.
   if (!index) throw new Error("the snapshot index could not be read");
+  const held = await runtimeCachePaths();
   const out = new Map<string, TileSnapshotState>();
-  await Promise.all(names.map(async (name) => {
+  await Promise.all(games.map(async ({ snapshot: name, gameId }) => {
     const entry = findSnapshotEntry(index, name);
-    const state = await snapshotStateFor(entry, buildId);
-    out.set(name, entry && state !== "unavailable" ? { state, transferMB: snapshotTransferMB(entry), entry } : { state });
+    let state = await snapshotStateFor(entry, runtime.buildId);
+    if (!entry || state === "unavailable") { out.set(name, { state }); return; }
+    let offline: OfflineCacheReport | null | undefined;
+    if (state === "ready") {
+      offline = await offlineCacheReport(gameId, runtime, held);
+      if (!offline?.complete) state = "partial";
+    }
+    out.set(name, { state, transferMB: snapshotTransferMB(entry), entry, offline });
   }));
   return out;
 }

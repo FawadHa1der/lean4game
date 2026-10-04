@@ -21,7 +21,8 @@ import { preferencesAtom } from '../store/preferences-atoms';
 import { completedLevelCountsAtom } from '../store/progress-atoms';
 import { gameTilesAtom } from '../store/tiles-atoms';
 import { fallbackSnapshotName, gameIdOf, tileSnapshotStates, type ApiGame, type TileSnapshotState } from '../wasm/games-api';
-import { onRemoteCacheChange, prepareGame, prepareStatusesAtom, removeRawSnapshot, storageSummary } from '../wasm/game-cache';
+import { onRemoteCacheChange, prepareGame, prepareStatusesAtom, queryRemoteDownloads, remoteDownloadsAtom, removeRawSnapshot, storageSummary } from '../wasm/game-cache';
+import { tenthsGB, wholeMB } from '../wasm/sizes';
 import { boundEnvironmentAtom } from '../wasm/game-boot';
 import { bootStatusAtom } from '../store/boot-atoms';
 
@@ -46,13 +47,18 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
   // a page-level atom the boot reads too.
   const [prepares] = useAtom(prepareStatusesAtom)
   const [boundEnv] = useAtom(boundEnvironmentAtom)
+  // D2: a Prepare (or a game's first boot) downloading this environment in
+  // another tab, from its heartbeat (game-cache remoteDownloadsAtom).
+  const [remotes] = useAtom(remoteDownloadsAtom)
   const snapshotName = tileSnapshotName(tileWithName)
+  const gameId = gameIdOf(tileWithName)
   const prep = prepares[snapshotName]
+  const remote = remotes[snapshotName]
   // The region is in OPFS from 'warming' on (the runtime warm-up still runs):
   // the availability row and the meter re-probe then, and once more at 'done'.
   React.useEffect(() => { if (prep?.phase === 'warming' || prep?.phase === 'done') onCacheChanged() }, [prep?.phase])
   const entry = snapshot?.entry
-  const mb = (n: number) => Math.round(n / 1048576)
+  const mb = wholeMB // D8: decimal MB, as the docs and the catalog count
   // The game loaded in this tab: its session's own prefetch worker owns the
   // region file (a Prepare would find it busy and fail), and removing its
   // region would make the next crash-reboot download it again mid-play —
@@ -73,7 +79,9 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
   const prepare = (ev: React.MouseEvent) => {
     ev.stopPropagation()
     keepFocus.current = ev.detail === 0
-    if (entry) void prepareGame(entry, { sessionBound: boundEnv !== null })
+    // D6: the game's own files (game.json, levels, inventory, docs, this
+    // language's texts) are cached with the runtime, so the game boots offline.
+    if (entry) void prepareGame(entry, { sessionBound: boundEnv !== null, gameId, langs: [i18n.language] })
   }
   const remove = async (ev: React.MouseEvent) => {
     ev.stopPropagation()
@@ -87,7 +95,7 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
     if (active !== document.body && active !== null && !cell.contains(active)) { keepFocus.current = false; return }
     const target = cell.querySelector<HTMLElement>('button') ?? cell
     if (active !== target) target.focus({ preventScroll: true })
-  }, [prep?.phase, prep?.result, snapshot?.state, inUse])
+  }, [prep?.phase, prep?.result, snapshot?.state, inUse, !!remote])
   let cacheActions: React.ReactNode = null
   if (entry && (prep?.phase === 'running' || prep?.phase === 'warming')) {
     const progressText = prep.phase === 'warming'
@@ -105,6 +113,18 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
     cacheActions = <div className="note">{t("In use by this tab", { defaultValue: "Loaded in this tab — its download is managed by the game." })}</div>
   } else if (opfs === false) {
     cacheActions = null // no offline storage: the page-level note says so once
+  } else if (entry && remote) {
+    // D2: another tab is downloading this environment — its progress, and no
+    // Prepare (it could only meet a busy file). The heartbeat stops when that
+    // tab ends (any outcome, or it closes) or goes silent for 6 s (75 s for a
+    // hidden tab, whose timers the browser throttles); the tile re-probes then.
+    const remoteText = remote.phase === 'warming'
+      ? t("Being cached in another tab", { defaultValue: "Environment downloaded in another tab — caching the checker there…" })
+      : t("Being downloaded in another tab… {{done}} / {{total}} MB", { defaultValue: "Being downloaded in another tab… {{done}} / {{total}} MB", done: mb(scaled(remote.bytes, remote.total)), total: mb(transfer) })
+    cacheActions = <>
+      <progress aria-label={remoteText} value={remote.bytes} max={remote.total} />
+      <div>{remoteText}</div>
+    </>
   } else if (entry && snapshot?.state === 'download') {
     // The worker's exit status in the user's words; a Retry only where one
     // can succeed (a bare error, or a file another tab held).
@@ -117,27 +137,55 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
       {failure && <div className="note failed">{failure}</div>}
       {(prep?.phase !== 'failed' || retryable) && <button onClick={prepare}>{retryable ? t("Retry") : t("Prepare offline")}</button>}
     </>
-  } else if (entry && snapshot?.state === 'ready') {
-    // The region is in OPFS, but this Prepare's runtime warm-up stopped
-    // short (a slow link: its rounds stopped making progress) — the checker
-    // is not fully cached, so the game does not yet play offline.
-    const runtimeShort = prep?.phase === 'done' && prep.runtime?.partial
+  } else if (entry && snapshot?.state === 'partial') {
+    // D1: the region is in OPFS but the service worker's cache lacks runtime
+    // chunks or this game's files (a warm-up that stopped short on a slow
+    // link, a Prepare from before D6, a cache the browser evicted) — the game
+    // does not play offline yet. The counts are read from the cache itself,
+    // so they hold after a reload; this tab's own Prepare adds why it stopped.
+    // "Finish offline download" is Prepare again: the region step answers
+    // `already-cached` at once and the warm-up fetches what is missing.
+    const off = snapshot.offline
+    const why = prep?.phase === 'failed'
+        ? (prep.result === 'busy' ? t("Prepare busy", { defaultValue: "Already being downloaded — by the game loaded in this tab or by another tab." }) : t("Preparation failed: {{error}}", { error: prep.error ?? prep.result }))
+      : prep?.phase !== 'done' ? null
+      : prep.runtime === null ? t("Offline cache not ready", { defaultValue: "The browser's offline cache did not answer — try again in a moment." })
+      // UX3: a warm-up the link cut off (the worker's `linkDown`) is not a
+      // slow connection.
+      : prep.runtime?.linkDown ? t("Offline download no connection", { defaultValue: "The connection dropped — try again once you are online." })
+      : prep.runtime?.partial ? t("Offline download stalled", { defaultValue: "The download stopped making progress on this connection." })
+      : null
+    // UX4: why it stopped is a failure, styled as the download branch's is.
+    // UX1: no Cache API (`off` null) — "Finish" could never reach Ready
+    // there, so it is not offered (as `unavailable` hides Prepare).
     cacheActions = <>
-      {runtimeShort && <div className="note">{t("Checker partly cached", { defaultValue: "The checker is only partly cached ({{done}}/{{total}} files) — open the game once while online to finish caching it.", done: prep.runtime!.cached, total: prep.runtime!.total })}</div>}
+      {why && <div className="note failed">{why}</div>}
+      <div className="note">
+        {off
+          ? t("Offline cache incomplete", { defaultValue: "Cached so far: the checker {{chunks}} of {{chunkTotal}} files, this game's files {{data}} of {{dataTotal}}.", chunks: off.chunks.have, chunkTotal: off.chunks.total, data: off.data.have, dataTotal: off.data.total })
+          : t("Offline cache unavailable", { defaultValue: "This browser does not let the site keep the checker offline." })}
+      </div>
+      {off && <button onClick={prepare}>{t("Finish offline download", { defaultValue: "Finish offline download" })}</button>}
       <button onClick={remove}>{t("Remove download")}</button>
     </>
+  } else if (entry && snapshot?.state === 'ready') {
+    cacheActions = <button onClick={remove}>{t("Remove download")}</button>
   }
 
   const gameTile = tileWithName.tile
-  const gameId = gameIdOf(tileWithName)
   // The tile's truth before the click (served index + this shell's runtime
-  // + OPFS): cached and playable offline, a download of N MB, or not
-  // published for this build — the last cannot boot, so it does not navigate.
-  // Unknown (not resolved yet, or the index/manifest unreadable) shows no
-  // row and navigates: the boot's own pairing check reports the reason.
+  // + OPFS + the service worker's cache): playable offline, downloaded but
+  // not yet playable offline (D1), a download of N MB, or not published for
+  // this build — the last cannot boot, so it does not navigate. Unknown (not
+  // resolved yet, or the index/manifest unreadable) shows no row and
+  // navigates: the boot's own pairing check reports the reason.
   const unavailable = snapshot?.state === 'unavailable'
   const availability = snapshot === undefined ? null
     : snapshot.state === 'ready' ? t("Ready — plays offline")
+    // UX2: a state, not an instruction — the row below says what runs or
+    // what can be done (caching may be running here or in another tab, or
+    // the game loaded in this tab may own it).
+    : snapshot.state === 'partial' ? t("Environment partly cached", { defaultValue: "Environment downloaded — not yet playable offline" })
     : snapshot.state === 'download' ? t("Download ≈{{mb}} MB", { mb: snapshot.transferMB })
     : t("Not available on this build")
 
@@ -221,6 +269,9 @@ function LandingPage() {
   // mounted, and games-api memoises the requests it shares with the boot.
   const [snapshotStates, setSnapshotStates] = React.useState<Map<string, TileSnapshotState>>(new Map())
   const snapshotNames = tiles.map(tileSnapshotName).join(' ')
+  // `<snapshot>=<game id>` per tile: the offline check (D1) reads each game's
+  // files from the service worker's cache.
+  const tileGames = tiles.map((row) => `${tileSnapshotName(row)}=${gameIdOf(row)}`).join(' ')
   // Bumped by a tile when it changed the cache (a prepare finished, a
   // download was removed): the tile states and the storage meter re-probe.
   const [cacheGeneration, setCacheGeneration] = React.useState(0)
@@ -228,12 +279,16 @@ function LandingPage() {
   // L12: a region another tab prepared, removed or booted — re-probe when it
   // says so (BroadcastChannel 'l4g-cache'), and, for browsers without the
   // channel, whenever this tab is looked at again.
+  // D2/D3: on opening and on every look, ask the other tabs what they are
+  // downloading; a busy refusal whose holder runs nowhere is dropped.
   React.useEffect(() => {
     const off = onRemoteCacheChange(onCacheChanged)
-    const onVisible = () => { if (document.visibilityState === 'visible') onCacheChanged() }
+    const onLook = () => { queryRemoteDownloads(); onCacheChanged() }
+    const onVisible = () => { if (document.visibilityState === 'visible') onLook() }
     document.addEventListener('visibilitychange', onVisible)
-    window.addEventListener('focus', onCacheChanged)
-    return () => { off(); document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('focus', onCacheChanged) }
+    window.addEventListener('focus', onLook)
+    queryRemoteDownloads()
+    return () => { off(); document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('focus', onLook) }
   }, [onCacheChanged])
   // The game loaded in this tab caches its region through its own boot (no
   // prepare status flips for it): re-probe the tiles once that boot is ready.
@@ -250,13 +305,14 @@ function LandingPage() {
     return () => { cancelled = true }
   }, [])
   React.useEffect(() => {
-    if (!snapshotNames) return
+    if (!tileGames) return
     let cancelled = false
-    tileSnapshotStates(snapshotNames.split(' ')).then(
+    const games = tileGames.split(' ').map((k) => { const i = k.indexOf('='); return { snapshot: k.slice(0, i), gameId: k.slice(i + 1) } })
+    tileSnapshotStates(games).then(
       (states) => { if (!cancelled) setSnapshotStates(states) },
       (e) => console.warn('[landing] snapshot states unavailable:', e))
     return () => { cancelled = true }
-  }, [snapshotNames, cacheGeneration])
+  }, [tileGames, cacheGeneration])
   // The storage meter: navigator.storage.estimate() (hidden where it is
   // unavailable — Firefox private mode) and the count of tiles whose
   // region is in OPFS.
@@ -266,8 +322,10 @@ function LandingPage() {
     storageSummary().then((s) => { if (!cancelled) setStorage(s) })
     return () => { cancelled = true }
   }, [cacheGeneration])
-  const cachedGames = [...snapshotStates.values()].filter((s) => s.state === 'ready').length
-  const gb = (n: number) => (n / 1e9).toFixed(1)
+  // The meter counts what takes the space: every region in OPFS, also one
+  // whose offline cache is still incomplete (D1 `partial`).
+  const cachedGames = [...snapshotStates.values()].filter((s) => s.state === 'ready' || s.state === 'partial').length
+  const gb = tenthsGB
   // Chrome reports navigator.deviceMemory in {0.25 … 8}: below 8 the device
   // really is small; 8 means "8 or more". Said here, before the first click,
   // and again in the level pane (deep links never see this page).
