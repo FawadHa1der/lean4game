@@ -50,6 +50,7 @@ import { inventoryAtom } from '../../store/inventory-atoms';
 import { mobileAtom } from '../../store/preferences-atoms';
 import { deletedChatAtom, helpAtom, selectedStepAtom } from '../../store/chat-atoms';
 import { EXIT_CARD_RE } from '../../wasm/death-kind';
+import { wholeMB } from '../../wasm/sizes';
 
 /** Wrapper for the two editors. It is important that the `div` with `codeViewRef` is
  * always present, or the monaco editor cannot start.
@@ -834,8 +835,8 @@ function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: (
     // by game-boot once the pairing check passed: the transfer bytes (what
     // the download costs) and the raw bytes (what the banner's byte count
     // above runs up to — the prefetch reports the inflated region).
-    const mb = (n: number) => Math.round(n / 1048576)
-    const envSize = boundEnv ? ` (about ${mb(boundEnv.transfer)} MB to download, ${mb(boundEnv.bytes)} MB once unpacked)` : ''
+    // D8: decimal MB, as the tiles and the banner count.
+    const envSize = boundEnv ? ` (about ${wholeMB(boundEnv.transfer)} MB to download, ${wholeMB(boundEnv.bytes)} MB once unpacked)` : ''
     detail = downloading
       ? <>The first visit downloads the Lean checker (about 150 MB, once) and this game&apos;s mathematics{envSize} and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.{smallDevice}</>
       : <>Starting the checker inside this tab: unpacking and loading the mathematics environment. On a laptop this takes about 10–30 seconds after the download.{smallDevice}</>

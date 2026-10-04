@@ -7,6 +7,7 @@
  * BootBanner and the level loading pane read it.
  */
 import { atom, getDefaultStore } from "jotai";
+import { wholeMB } from "../wasm/sizes";
 
 export interface BootStatus {
   /** "busy" while a stage runs, "ready" once the checker is usable. */
@@ -40,13 +41,10 @@ export function publishBootStatus(status: BootStatus): void {
   store.set(bootStatusAtom, status);
 }
 
-/** Pretty progress text: "213 / 600 MB" or "37 / 152 modules". */
+/** Pretty progress text: "213 / 600 MB" (decimal MB — D8) or "37 / 152 modules". */
 export function formatProgress(s: BootStatus): string | null {
   if (s.loaded === undefined || !s.total) return null;
-  if (s.unit === "bytes") {
-    const mb = (n: number) => Math.round(n / 1048576);
-    return `${mb(s.loaded)} / ${mb(s.total)} MB`;
-  }
+  if (s.unit === "bytes") return `${wholeMB(s.loaded)} / ${wholeMB(s.total)} MB`;
   return `${s.loaded} / ${s.total}${s.unit ? ` ${s.unit}` : ""}`;
 }
 
