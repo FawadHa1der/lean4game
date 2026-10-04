@@ -120,6 +120,11 @@ export const networkInEpisode = (reading: DeathReading | null, network: boolean,
  * (D4) the reboot after a network-shaped death. */
 export const NETWORK_WAIT_LABEL = "waiting for the connection — the download restarts on its own";
 
+/** The relay's own label for a session that boots: no death to name, or a
+ * reboot that is not waiting for the link. The session's boot stages say
+ * more (game-boot publishRelayStatus keeps them over this one). */
+export const STARTING_LABEL = "starting the Lean checker";
+
 /** The label of a relay status that replaces its session (game-boot
  * publishRelayStatus): a #52 death's own note; D4 (live 2026-10-03) — a
  * reboot after a death the link caused (`networkDeath`: isNetworkDeath) gets
@@ -140,8 +145,8 @@ export function rebootLabel(st: { relay: string; rebootReason?: string | null; l
     if (note) return note;
   }
   const death = d ? `${d.message || d.reason}` : "";
-  if (!death || st.relay !== "rebooting") return "starting the Lean checker";
-  if (networkDeath) return st.rebootReason === "user" || st.rebootReason === "boot" ? "starting the Lean checker" : NETWORK_WAIT_LABEL;
+  if (!death || st.relay !== "rebooting") return STARTING_LABEL;
+  if (networkDeath) return st.rebootReason === "user" || st.rebootReason === "boot" ? STARTING_LABEL : NETWORK_WAIT_LABEL;
   return `restarting the checker after a crash (${death.slice(0, 80)})`;
 }
 

@@ -1248,9 +1248,22 @@ Browser results of round 2. Local build, sw `9d0342ebba44`; evidence is under
     7.0 s (it was 48–56 s per chunk before 0f2ecb7). The count never went
     backwards.
   - The boot was ready at 1086 s and proved `rfl`.
-  - One cosmetic flicker, fixed in the next commit: at 61 s the banner read
-    "starting the Lean checker" for 0.6 s, and the time-left estimate
-    restarted.
+  - One cosmetic flicker: at 61 s the banner read "starting the Lean
+    checker" for 0.6 s, and the time-left estimate restarted. A worker
+    status during the boot re-published the relay's generic label over the
+    session's stage.
+  - The fix: `publishRelayStatus` keeps the StatusSink's label once the sink
+    has described the boot of the same session and relay state
+    (`STARTING_LABEL`, `sinkSpoke`). A new session or relay state still
+    shows the relay's label until the sink speaks.
+  - The same 300 kB/s NNG4 first boot after the fix (sw `56b5013751f2`):
+    "starting the Lean checker" never appeared, and the runtime count was
+    never still for more than 7.0 s. Ready at 1086 s, proved.
+  - Also re-run after the fix:
+    - `PRESW=1` D4: no crash text, the injected crash still labelled,
+      ready 89.9 s.
+    - Smoke 10/10.
+    - Cypress 24/24.
 - **F1** (`lv-live4r2-tabs.mjs` A/B/D/R/G and `-dwell`):
   - When the sending tab was reloaded, the other tab dropped its line in
     0.04 s. The reloaded tab's new Prepare then showed there from 0 MB.

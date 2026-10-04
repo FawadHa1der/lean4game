@@ -44,7 +44,7 @@ import { preferencesAtom } from "../store/preferences-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
 import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing, publishNetworkHold } from "../store/boot-atoms";
 import { rememberGamedata } from "./gamedata-cache";
-import { NETWORK_WAIT_LABEL, deathReader, isRuntimeVerdict, haltedNote, networkInEpisode, rebootLabel, rebootNote } from "./death-kind";
+import { NETWORK_WAIT_LABEL, STARTING_LABEL, deathReader, isRuntimeVerdict, haltedNote, networkInEpisode, rebootLabel, rebootNote } from "./death-kind";
 import { MiB, devProfilesDir, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
 import { claimSnapshotForBoot, endDownload, heldButNotRevalidated, notifyCacheChanged, inFlightPrepare, inFlightRegions, preparesDownloading, prepareStatusesAtom, reportDownload, runWhenOnline, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
 import { embeddedImageUrls, fetchGameDataUrls } from "./game-data-urls";
@@ -360,6 +360,17 @@ let relayRebooting = false;
  * Set and cleared by publishRelayStatus only. */
 let relayRebootNote: string | null = null;
 
+/** The StatusSink has described the boot of the relay session now shown
+ * (its stages and byte counts: "verifying lean.js · 3 / 154 MB"). A worker
+ * status during that boot re-published the relay's generic STARTING_LABEL
+ * over them: live at 300 kB/s the banner read "starting the Lean checker"
+ * for 0.6 s mid-download and its time-left estimate started over (round-2
+ * D5 run). publishRelayStatus keeps the sink's label then; a new session
+ * or relay state shows the relay's label until the sink speaks again.
+ * `relayKey` is the session and relay state the flag belongs to. */
+let sinkSpoke = false;
+let relayKey = "";
+
 /** L4/L5 latch: the relay is halted. A session the breaker left behind can
  * still run its start() after the settle and publish "starting Lean" over
  * the failure card — for good, since nothing follows it (seen live: an
@@ -407,6 +418,7 @@ const consoleSink: StatusSink = {
     noteSnapshotFailure(rawLabel);
     noteBootRegion();
     if (relayHalted) { console.info(`[game-boot] (halted, not shown) ⏳ ${rawLabel}`); return; }
+    sinkSpoke = true;
     const label = (relayRebooting && relayRebootNote) || humanizeLabel(rawLabel);
     console.info(`[game-boot] ⏳ ${rawLabel}`);
     publishCheckerActivity("busy", label, !bootFinishedOnce, relayRebooting || !bootFinishedOnce);
@@ -418,6 +430,7 @@ const consoleSink: StatusSink = {
     noteSnapshotFailure(rawLabel);
     noteBootRegion(info);
     if (relayHalted) return;
+    sinkSpoke = true;
     const label = (relayRebooting && relayRebootNote) || humanizeLabel(rawLabel);
     console.debug(`[game-boot] … ${rawLabel}`, info ?? "");
     publishCheckerActivity("busy", label, !bootFinishedOnce, relayRebooting || !bootFinishedOnce);
@@ -915,6 +928,8 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   }
   relayHalted = false;
   haltGen += 1; // a classification still running belongs to a halt that is over
+  const key = `${st.session}|${st.relay}`;
+  if (key !== relayKey) { relayKey = key; sinkSpoke = false; }
   if (st.relay === "serving") { publishNetworkHold(null); networkEpisode = false; } // D4(b): the episode ends
   if (st.relay === "rebooting" || st.phase === "booting" || st.phase === "dead") {
     relayRebooting = true;
@@ -930,6 +945,7 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
     const byDeath = deathWasNetwork(st.lastDeath);
     if (byDeath && st.lastDeath && st.lastDeath !== episodeDeath) { networkEpisode = true; episodeDeath = st.lastDeath; }
     const label = relayRebootNote ?? rebootLabel(st, networkInEpisode(readDeathOnce(st.lastDeath, lastSnapshotFailure), byDeath, networkEpisode));
+    if (label === STARTING_LABEL && sinkSpoke) return; // the session's own stage says more
     publishCheckerActivity("busy", label, !bootFinishedOnce, true);
     publishBootStatus({ state: "busy", label });
     return;
