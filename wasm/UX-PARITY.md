@@ -1041,6 +1041,90 @@ Unit test `client/src/wasm/game-cache-prefetch.test.ts` (fake clock, Worker
 and OPFS): 5/5. It fails both regressions it guards against: no re-arm on
 progress, and a re-arm after the outcome.
 
+### Live run of 22eda45 (D1–D8) and the fixes, 2026-10-03
+
+The live run of 22eda45 (evidence `lv-shots/live4-*`) confirmed seven
+findings; D5 (the boot banner frozen per 16 MiB runtime chunk) is in the
+vendored `lean.worker.js` and was reported to qed64. The fixes, by finding:
+
+| Finding | Fix |
+|---|---|
+| D6 (major): a game prepared only from the landing page did not boot offline ("Failed to fetch") although its tile said "Ready — plays offline": Prepare cached the region and the runtime, no game file | `game-data-urls.ts` lists a game's offline files from its `game.json` and `inventory.json` (inventory and docs first, game.json, every `level__<World>__<n>.json`, the i18n namespaces, the images its texts embed); a Prepare sends them in the same `warm` message as the runtime, and the boot's warm-up uses the same list |
+| D1: the warm-up quit "stopped making progress" inside one 16 MiB chunk on a slow link; after a reload the tile said "Ready" from the OPFS region alone | the worker reports the chunk bytes a round received beyond any earlier round's (`bytes`), and such a round counts as progress; `WARM_ROUNDS` 8 → 24. A tile is `ready` only when the runtime cache holds every chunk of the current runtime and the game's `game.json`, `inventory.json` and level files; otherwise `partial` ("Environment downloaded — not yet playable offline", the cached counts, "Finish offline download", "Remove download"), read from the cache, so it holds after a reload |
+| D2: a second landing tab did not show another tab's running Prepare | the `l4g-cache` channel carries `prepare-progress` (said at once, on progress at most once a second, on a phase or visibility change, and by a once-a-second heartbeat), `prepare-query` and `prepare-ended`; the tile shows "Being downloaded in another tab… N / M MB" and no Prepare. A game tab whose boot streams its region reports it too |
+| D3: after tab 1's Prepare failed, tab 2's "Already being downloaded… Retry" stayed | every terminal outcome says `prepare-ended`; a look at a tab drops a busy refusal whose holder runs nowhere |
+| D4: a network failure during a boot was labelled "restarting the checker after a crash (snapshot 'nng4' failed to load)" | `death-kind.ts rebootLabel`: a death the link caused reads "waiting for the connection — the download restarts on its own"; the automatic re-arm reads "starting the Lean checker" |
+| D7: an offline boot of a cached game fired ~800 failing service-worker GETs | warm-ups wait for the `online` event while `navigator.onLine` is false; the worker starts no fetch after the first that fails outright (`linkDown`) and only looks the rest up |
+| D8: sizes in MiB labelled "MB" (RAG "≈269 MB") | `sizes.ts`: decimal MB/GB for the tiles, Prepare's progress, the storage meter, the boot banner and the level pane (RAG "≈282 MB") |
+
+Review round on the fixes (adversarially verified findings, all applied):
+
+- **R1** A Prepare left running in a background tab: Chrome wakes a hidden
+  tab's chained timers once a minute after 5 minutes, and the other tabs
+  dropped the download after 6 s, so the tile went back to Prepare for ~54 s
+  of every minute. Progress is now also said from the progress path (worker
+  messages are not throttled); each message says whether its tab is hidden,
+  and receivers keep a hidden sender 75 s; a tab that closes says
+  `prepare-ended` on `pagehide`.
+- **R2** A single transient fetch failure (ERR_NETWORK_CHANGED, one reset)
+  ended the warm-up at its first round (a Prepare at 5 of 300 game files)
+  or the shell fill at 17/203 for the rest of the visit. Now a link-down
+  round that gained nothing gets one more round after 10 s while the
+  browser says online; a second in a row ends it (`sw-client.ts
+  retryAfterLinkFailure`).
+- **R3** Remote downloads are kept per sender tab, so one tab's end does not
+  drop another tab's download of the same snapshot. The game texts'
+  embedded images are listed (RAG: 13 in game.json, 1 in a level file,
+  1.8 MB); a Prepare reads the level files' images back from the runtime
+  cache and caches them with one `warm-data`.
+- **R4** Every warm round re-fetched every data file (`max-age=0,
+  must-revalidate`): up to ~7,900 revalidations for a slow-link RAG Prepare.
+  The page now sends `revalidate: false` from the round after the first one
+  that reached the host, and for a boot whose early `warm-data` already
+  revalidated; the worker then fetches only what the cache lacks.
+- **UX1–UX5, I18N1, CQ1** No "Finish offline download" without a Cache API;
+  the `partial` row states a fact, not an instruction; a warm-up the link cut
+  off says "The connection dropped — try again once you are online.", not
+  "stopped making progress"; failures in the `partial` row use the red
+  `note failed` style; a phase change is said to other tabs at once (no
+  "0 / N MB" flash); the nine new tile strings are in
+  `public/locales/en/translation.json`; `prepare-ended`'s outcome is
+  derived from the status (not the error's wording) and logged by receivers.
+
+Tests: `game-cache-crosstab` 12/12, `game-data-urls` 9/9, `sw-offline-warm`
+12/12 (the page's real warm-up loop against the real `sw.template.js` for
+R2), `sw-warm` 3/3, `death-kind`, `game-cache-prefetch` 5/5,
+`vendor-liveness` 11/11, `msg-embed`, the translation suites,
+`infra/worker.test.mjs` 20/20. Each R fix was broken on purpose once and
+its test failed. Smoke runs on the local build before the review round
+(`qed64/work/lv-live4fix-A-smoke.mjs`, `lv-live4fix-B-smoke.mjs`): D2, D6
+(NNG4 Prepare then an offline boot and proof), D1 (a deleted chunk and level
+→ `partial` 9/10 and 80/81 → Finish → Ready), D7 (offline: 0 failing
+warm-up GETs; a proxy cut: ~16) and D4 (a 1 s cut: no crash label) passed.
+The A smoke's D1 check still matches the old `partial` wording ("finish
+caching so it plays offline").
+
+Known gaps:
+
+- A bare "crash" death during a cut, while the relay is not halted, can
+  still read "restarting the checker after a crash (crash)" for ~1.5 s,
+  until the link probe classifies it and the network hold's label replaces
+  it.
+- The slow-link paths (byte-based progress, 24 rounds, the R2 retry, R4) and
+  a reply from a worker deployed before this round (no `bytes`, `linkDown`
+  or `revalidate`) are unit-tested only, not run on a throttled live link.
+- Without a working service worker (the vite dev server, a failed
+  registration) a downloaded game stays `partial`: "Finish offline
+  download" ends with "The browser's offline cache did not answer".
+- "Ready" covers the runtime chunks and the essential game files, not the
+  shell, the docs, the i18n namespaces or the images (they degrade
+  gracefully).
+- A hidden tab that crashes without `pagehide` keeps showing "Being
+  downloaded in another tab" for up to 75 s.
+- Offline, the page's own reads of game files still fail once each at the
+  network before the worker answers from its cache (not the warm-up storm).
+- Not yet verified on the live site.
+
 ## Open
 
 - **Renderer crash: reloads then a 100 ms navigation storm (mitigated,
