@@ -26,7 +26,8 @@
  *  - serves content-addressed files cache-first (vite's hashed /assets,
  *    the digest-named runtime chunks) and everything else network-first
  *    with the cache as the offline fallback — so a new release's unhashed
- *    worker scripts are never served stale by an old worker;
+ *    worker scripts are never served stale by an old worker (N3: for a few
+ *    seconds after the link failed outright, held game data answers first);
  *  - honours cache: "reload" / "no-store" (the substrate's poison recovery
  *    refetches a chunk that failed verification) and never stores an HTML
  *    body under a non-HTML name (a single-page fallback page is not a chunk);
@@ -204,10 +205,33 @@ async function cacheFirst(req, cacheName) {
   return res;
 }
 
+/* N3 (live run of f468f2c): offline, every page request on the
+ * network-first path (a boot's ~150 /data reads) tried the network first and
+ * failed before the held copy answered. After a fetch of this path rejects
+ * outright (isLinkFailure — not an HTTP error, not an abort), held GAME
+ * content (MEMO_PATH: /data, /i18n) answers cache-first for LINK_MEMO_MS;
+ * what is not held still goes to the network, and so does a bypass request
+ * (the page's L4 probe is `no-store`). R2-4 (review of N3): only game
+ * content — the unhashed shell files stay strictly network-first: a deploy
+ * plus one blip used to hand a new page the old worker scripts (no longer
+ * paired with the vendored shim) and the old snapshot index ("not
+ * published for this build"). The staleness is bounded: a held game file is
+ * served without asking the host at most LINK_MEMO_MS after the host could
+ * not be reached at all, and any HTTP answer in between ends the memo. Lost
+ * when the browser stops the idle worker (the next failure sets it again). */
+const LINK_MEMO_MS = 5000;
+const MEMO_PATH = /^\/(data|i18n)\//;
+let linkDownUntil = 0;
+
 async function networkFirst(req, cacheName) {
   const p = new URL(req.url).pathname;
+  if (Date.now() < linkDownUntil && MEMO_PATH.test(p) && !bypass(req)) {
+    const held = await lookup(req, { ignoreMethod: req.method === "HEAD" });
+    if (held) return req.method === "HEAD" ? headOf(held) : held;
+  }
   let res = null;
-  try { res = await fetch(req); } catch { /* offline */ }
+  // Any HTTP answer: the host is reachable again — the memo ends at once.
+  try { res = await fetch(req); linkDownUntil = 0; } catch (e) { if (isLinkFailure(e, req.signal)) linkDownUntil = Date.now() + LINK_MEMO_MS; }
   if (res && res.ok) { await putIfStorable(cacheName, req, res); return res; }
   // Offline, or a 404/5xx for something we hold (a redeployed shell no
   // longer serving an old hashed name): the cache is the answer.

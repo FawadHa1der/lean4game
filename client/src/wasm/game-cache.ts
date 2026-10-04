@@ -15,7 +15,7 @@ import { atom, getDefaultStore } from "jotai";
 import { snapshotCacheKey, type SnapshotEntry, type SnapshotIndex } from "./vendor/qed64/src/runtime/snapshots";
 import type { RuntimeManifest } from "./vendor/qed64/src/runtime/client";
 import { resolveRuntimeManifest } from "./games-api";
-import { LINK_RETRY_MS, pendingServiceWorkerRegistration, retryAfterLinkFailure, type RoundStep } from "./sw-client";
+import { LINK_RETRY_MS, ensureServiceWorkerRegistration, ownServiceWorkerRegistration, pendingServiceWorkerRegistration, retryAfterLinkFailure, type RoundStep } from "./sw-client";
 import { cachedLevelImageUrls, fetchGameDataUrls } from "./game-data-urls";
 
 const SNAPSHOT_DIR = "qed64-snapshots";
@@ -50,7 +50,7 @@ function channel(): BroadcastChannel | null {
     cacheChannel = typeof BroadcastChannel === "function" ? new BroadcastChannel(CACHE_CHANNEL) : null;
   } catch { cacheChannel = null; }
   if (cacheChannel) cacheChannel.onmessage = (e) => {
-    const m = e.data as { type?: string; name?: unknown; tab?: unknown; hidden?: unknown; phase?: unknown; bytes?: unknown; total?: unknown; outcome?: unknown } | null;
+    const m = e.data as { type?: string; name?: unknown; tab?: unknown; id?: unknown; hidden?: unknown; phase?: unknown; bytes?: unknown; total?: unknown; outcome?: unknown } | null;
     const tab = typeof m?.tab === "string" ? m.tab : "";
     switch (m?.type) {
       case "cache-changed":
@@ -58,7 +58,8 @@ function channel(): BroadcastChannel | null {
         return;
       // D2/D3 (below): another tab's download.
       case "prepare-progress":
-        if (typeof m.name === "string") noteRemoteDownload(m.name, tab, {
+        // F1: a word of a download that tab already ended is a ghost.
+        if (typeof m.name === "string" && !remoteDownloadEnded(tab, m.id)) noteRemoteDownload(m.name, tab, {
           phase: m.phase === "warming" ? "warming" : "running",
           bytes: typeof m.bytes === "number" ? m.bytes : 0,
           total: typeof m.total === "number" ? m.total : 0,
@@ -66,6 +67,7 @@ function channel(): BroadcastChannel | null {
         return;
       case "prepare-ended":
         if (typeof m.name === "string") {
+          noteRemoteDownloadEnded(tab, m.id);
           dropRemoteDownload(m.name, tab);
           console.info(`[game-cache] ${m.name}: the download in another tab ended (${typeof m.outcome === "string" ? m.outcome : "?"})`);
         }
@@ -146,7 +148,19 @@ export function onRemoteCacheChange(cb: () => void): () => void {
  *    other's live download;
  *  - UX5: a phase change is said at once ("Finish offline download" moves
  *    from `running` to `warming` within milliseconds; the other tabs showed
- *    "Being downloaded… 0 / N MB" until the next beat). */
+ *    "Being downloaded… 0 / N MB" until the next beat).
+ * F1 (live run of f468f2c): closing or reloading a VISIBLE tab mid-Prepare
+ * left "Being downloaded in another tab… N / M MB" in the other tabs for
+ * ~75 s: its pagehide said `prepare-ended`, but the visibilitychange
+ * (hidden) that follows pagehide said the download again — with
+ * `hidden: true`, so the receivers kept the ghost for the hidden ttl (a game
+ * tab closed while its boot streamed the region did the same, and a reloaded
+ * tab whose new Prepare started within 75 s showed under its own ghost's
+ * counts). Both ends now: after pagehide this tab says no progress until a
+ * persisted pageshow (a page restored from the back/forward cache, whose
+ * downloads then take new ids); and every download carries an `id`, one per
+ * download of its tab, and a receiver ignores progress of a (tab, id) it
+ * heard end — a new download of the same tab has a new id and shows. */
 
 /** One running download as the tiles show it: `bytes`/`total` are the
  * prefetch worker's INFLATED offsets (the tile scales them to the transfer
@@ -185,30 +199,45 @@ export const remoteDownloadsAtom = atom((get): Record<string, RemoteDownload> =>
   }
   return view;
 });
-/** This tab's running downloads: the latest progress, and when it was last
- * said to the other tabs. */
-const localDownloads = new Map<string, { progress: DownloadProgress; saidAt: number }>();
+/** This tab's running downloads: the latest progress, when it was last said
+ * to the other tabs, and its id (F1: one per download of this tab). */
+const localDownloads = new Map<string, { progress: DownloadProgress; saidAt: number; id: number }>();
+let downloadSeq = 0;
+/** F1: this page went away (pagehide) and has not come back from the
+ * back/forward cache: it says no progress. */
+let pageGone = false;
 let heartbeatTimer = 0;
 let expiryTimer = 0;
 let pageEventsWatched = false;
 
 function sayProgress(name: string): void {
   const d = localDownloads.get(name);
-  if (!d) return;
+  if (!d || pageGone) return;
   d.saidAt = Date.now();
-  post({ type: "prepare-progress", name, tab: TAB_ID, hidden: pageHidden(), ...d.progress });
+  post({ type: "prepare-progress", name, tab: TAB_ID, id: d.id, hidden: pageHidden(), ...d.progress });
 }
 
 /** R1: say every running download at once when this tab is hidden or shown
  * (the receivers switch to the matching ttl before this tab's timers are
  * throttled), and end them when the tab goes away (pagehide — a reload or a
- * close kills the downloads; a page restored from the back/forward cache
- * says its downloads again at the next beat). */
+ * close kills the downloads). F1: from pagehide on nothing more is said —
+ * the visibilitychange that follows it would bring the ended downloads back
+ * as hidden ghosts — until a persisted pageshow: a page restored from the
+ * back/forward cache says its downloads at once, under new ids (the other
+ * tabs heard the old ones end). */
 function watchPageEvents(): void {
   if (pageEventsWatched || typeof document === "undefined") return;
   pageEventsWatched = true;
   document.addEventListener("visibilitychange", () => { for (const name of localDownloads.keys()) sayProgress(name); });
-  window.addEventListener("pagehide", () => { for (const name of localDownloads.keys()) post({ type: "prepare-ended", name, tab: TAB_ID, outcome: "closed" }); });
+  window.addEventListener("pagehide", () => {
+    pageGone = true;
+    for (const [name, d] of localDownloads) post({ type: "prepare-ended", name, tab: TAB_ID, id: d.id, outcome: "closed" });
+  });
+  window.addEventListener("pageshow", (e) => {
+    if (!(e as PageTransitionEvent).persisted || !pageGone) return;
+    pageGone = false;
+    for (const [name, d] of localDownloads) { d.id = ++downloadSeq; sayProgress(name); }
+  });
 }
 
 /** The heartbeat: every running download once per DOWNLOAD_HEARTBEAT_MS
@@ -230,7 +259,7 @@ function armHeartbeat(): void {
  * callbacks may call this at any rate. */
 export function reportDownload(name: string, progress: DownloadProgress): void {
   const prev = localDownloads.get(name);
-  localDownloads.set(name, { progress, saidAt: prev?.saidAt ?? 0 });
+  localDownloads.set(name, { progress, saidAt: prev?.saidAt ?? 0, id: prev?.id ?? ++downloadSeq });
   if (!prev || prev.progress.phase !== progress.phase || Date.now() - prev.saidAt >= DOWNLOAD_HEARTBEAT_MS) sayProgress(name);
   watchPageEvents();
   armHeartbeat();
@@ -242,9 +271,30 @@ export function reportDownload(name: string, progress: DownloadProgress): void {
  * logged by the receivers (done, partial, failed, busy, unavailable; a boot's
  * region `ended`; a tab that went away `closed`). */
 export function endDownload(name: string, outcome: string): void {
+  const id = localDownloads.get(name)?.id; // none for a Prepare refused before any progress
   localDownloads.delete(name);
   if (!localDownloads.size && heartbeatTimer) { window.clearTimeout(heartbeatTimer); heartbeatTimer = 0; }
-  post({ type: "prepare-ended", name, tab: TAB_ID, outcome });
+  post({ type: "prepare-ended", name, tab: TAB_ID, id, outcome });
+}
+
+/** F1: the downloads other tabs said ended, `<tab> <id>` → until when a
+ * late word of one is ignored. HIDDEN_DOWNLOAD_TTL_MS: no ghost could have
+ * lasted longer (a closed tab's late word is posted within its unload). An
+ * end without an id (a tab of a build before F1) is not remembered — that
+ * tab's words carry no id to tell its next download apart. */
+const endedRemote = new Map<string, number>();
+
+function noteRemoteDownloadEnded(tab: string, id: unknown): void {
+  if (typeof id !== "number") return;
+  const now = Date.now();
+  for (const [key, until] of endedRemote) if (until <= now) endedRemote.delete(key);
+  endedRemote.set(`${tab} ${id}`, now + HIDDEN_DOWNLOAD_TTL_MS);
+}
+
+function remoteDownloadEnded(tab: string, id: unknown): boolean {
+  if (typeof id !== "number") return false;
+  const until = endedRemote.get(`${tab} ${id}`);
+  return until !== undefined && until > Date.now();
 }
 
 /** The senders still heard of at `now` (each by its own ttl), and the
@@ -441,10 +491,15 @@ export interface WarmReply { cached: number; pruned: number; total: number; part
  * and a short grace has passed; before that the `ready` wait runs. Without
  * this, `serviceWorker.ready` — which never settles when nothing registers
  * (the vite dev server, a failed production registration) — idled every
- * Prepare, and a boot awaiting it, for the full 30 s. */
-async function warmTarget(): Promise<ServiceWorker | null> {
+ * Prepare, and a boot awaiting it, for the full 30 s. `how.patient` (S1, a
+ * Prepare): the worker is waited for without a fixed cap
+ * (activeWorkerWhenInstalled) — a registration still installing, or this
+ * page's own registration still deferred; where nothing will register (no
+ * service worker, the dev server) it still answers null at once. */
+async function warmTarget(how: WarmWait = {}): Promise<ServiceWorker | null> {
   if (!("serviceWorker" in navigator)) return null;
   const sw = navigator.serviceWorker;
+  if (how.patient) return activeWorkerWhenInstalled(sw, how.onWait);
   const wait = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
   // N2: a registration this page started (possibly deferred until the game
   // was served) is awaited rather than polled for.
@@ -460,6 +515,92 @@ async function warmTarget(): Promise<ServiceWorker | null> {
   return reg?.active ?? null;
 }
 
+/** S1 (live run of f468f2c): how a warm-up waits for its service worker.
+ * `patient` — a Prepare: no fixed cap (activeWorkerWhenInstalled);
+ * `onWait(true)` when it starts waiting for a worker to activate (its
+ * install, or R2-2 this page's deferred registration first),
+ * `onWait(false)` when that wait ends, either way (the tile says what the
+ * Prepare waits for). */
+export interface WarmWait { patient?: boolean; onWait?: (waiting: boolean) => void }
+
+/** How often a patient wait looks at the registration besides `ready`. */
+const WORKER_LOOK_MS = 10_000;
+
+/** S1 (live run of f468f2c, 150 kB/s first visit): a Prepare clicked while
+ * the first service worker was still installing its 17 MB critical shell
+ * (~2 min there) raced `ready` against 30 s, got no worker, and ended
+ * "region done; runtime not warmed" after its region had downloaded for 19
+ * more minutes — no runtime chunk, no game file cached. A Prepare now waits
+ * for the registration's worker to activate, with no clock: the wait ends
+ * when a worker is active, or when no registration can be had any more — an
+ * install that fails (Chromium stops one at 300 s) takes a first version's
+ * registration with it; sw-client registers again once per page
+ * (ensureServiceWorkerRegistration), and a second loss is final. `ready`
+ * settles at activation; the registration is also looked at every
+ * WORKER_LOOK_MS (`ready` never settles for a registration deleted under
+ * it). R2-2 / R2-3 (review of S1): with no registration to look at and none
+ * started by this page — a game page holds its registration back while its
+ * boot downloads (sw-client (2)), and the Prepare may run on the landing
+ * page it navigated to in-app — the page's own registration is waited for
+ * (ownServiceWorkerRegistration), never forced: the Prepare used to give up
+ * 3 s in, and registering on its own (when another tab's registration was
+ * lost) started the 17 MB install beside the boot's download. Only a
+ * registration this page made is registered again. Null: no worker will
+ * come (none can be registered here, or the second install failed too) —
+ * the Prepare ends `partial`. */
+async function activeWorkerWhenInstalled(sw: ServiceWorkerContainer, onWait?: (waiting: boolean) => void): Promise<ServiceWorker | null> {
+  const since = Date.now();
+  let waitingFor: "" | "install" | "registration" = "";
+  const waitFor = (what: "install" | "registration") => {
+    if (waitingFor === what) return;
+    if (!waitingFor) onWait?.(true);
+    waitingFor = what;
+    console.info(what === "install" ? "[game-cache] runtime warm-up: waiting for the service worker to finish installing"
+      : "[game-cache] runtime warm-up: waiting for this page's service-worker registration (held back while a Lean download runs)");
+  };
+  let waited = false;
+  // `ready` settles once a worker is active: the wait is over from that very
+  // reaction (R2-2) — the Prepare reads as downloading again
+  // (preparesDownloading) before the shell fill, woken by the same `ready`
+  // a few hops later, asks whether a Lean download runs.
+  const endWait = () => { if (waitingFor) { waitingFor = ""; waited = true; onWait?.(false); } };
+  let readySettled = false;
+  const ready = sw.ready.then(() => { readySettled = true; endWait(); });
+  try {
+    for (;;) {
+      const reg = await sw.getRegistration().catch(() => undefined);
+      if (reg?.active) {
+        if (waitingFor || waited) console.info(`[game-cache] runtime warm-up: the service worker is active after ${Math.round((Date.now() - since) / 1000)} s — warming`);
+        return reg.active;
+      }
+      let own: Promise<unknown> | null = null;
+      if (reg) waitFor("install");
+      else if (pendingServiceWorkerRegistration()) {
+        waitFor("install");
+        if (!(await ensureServiceWorkerRegistration().catch(() => false))) {
+          console.warn("[game-cache] runtime warm-up: the service worker's install failed and no registration can be had — not warmed");
+          return null;
+        }
+      } else {
+        own = ownServiceWorkerRegistration();
+        if (!own) {
+          if (waitingFor || waited) console.warn("[game-cache] runtime warm-up: the registration is gone and none can be made here — not warmed");
+          return null;
+        }
+        waitFor("registration");
+      }
+      await new Promise<void>((resolve) => {
+        const t = window.setTimeout(done, WORKER_LOOK_MS);
+        function done() { window.clearTimeout(t); resolve(); }
+        if (!readySettled) void ready.then(done);
+        void own?.then(done, done);
+      });
+    }
+  } finally {
+    endWait();
+  }
+}
+
 /** One warm-up in flight per (runtime build, extra URLs) set: two Prepares
  * clicked together share one `warm` message. The boot's own warm-up names
  * the bound game's data too, so it is a SEPARATE message even while a
@@ -467,8 +608,23 @@ async function warmTarget(): Promise<ServiceWorker | null> {
  * loop started while the first's fetches were in flight used to miss each
  * cache.match and download the 154 MB runtime a second time), and the boot
  * gives its message the Prepare's 10-minute window: chunks a Prepare is
- * still fetching are awaited, not fetched twice. */
-let warmInFlight: { buildId: string; p: Promise<WarmOutcome> } | null = null;
+ * still fetching are awaited, not fetched twice. `wait` (R2-1, review of
+ * S1): whether its patient wait waits for a service worker now, and the
+ * onWait of every Prepare that started or JOINED it — a Retry after its
+ * region failed (the first Prepare's warm-up waits on for the install) gets
+ * the same build id and this same warm-up, and its tile must say the wait
+ * too: a joiner hears it at once while it runs, and every listener hears it
+ * end. */
+interface WarmWaiters { waiting: boolean; listeners: Set<(waiting: boolean) => void> }
+let warmInFlight: { buildId: string; p: Promise<WarmOutcome>; wait: WarmWaiters } | null = null;
+/** Every warm-up's WarmWaiters until it settles (one no longer in flight —
+ * another set's warm-up started since — still runs and still says its wait). */
+const warmWaits = new Set<WarmWaiters>();
+
+/** R2-1: a Prepare that settled stops hearing the wait it started or joined. */
+function stopHearingWarmWait(onWait: (waiting: boolean) => void): void {
+  for (const w of warmWaits) w.listeners.delete(onWait);
+}
 /** At most this many `warm` messages per warm-up, each bounded by the worker
  * to ~4 min (it starts no fetch after 3 min, aborts at 4). D1 (live
  * 2026-10-03): sized for the runtime (154 MB, 16 MiB chunks one at a time)
@@ -499,12 +655,20 @@ export function warmRoundProgressed(last: WarmReply | null, reply: WarmReply): b
   return gotBytes;
 }
 
+/** N1 (live run of f468f2c): the link failed in this round, but the cache
+ * holds every file the round named — nothing is missing; only the
+ * revalidation of the data files could not be done. */
+export const heldButNotRevalidated = (reply: WarmReply): boolean => !!reply.linkDown && reply.total > 0 && reply.cached >= reply.total;
+
 /** The warm-up loop's step after `reply` (pure): done once a round is not
  * `partial`; on while rounds progress; a link-down round that gained nothing
  * is retried once after LINK_RETRY_MS (R2, sw-client) — one transient fetch
- * failure ended a Prepare's warm-up at 5 of 300 game files. */
+ * failure ended a Prepare's warm-up at 5 of 300 game files. N1: not when
+ * every file is held (heldButNotRevalidated) — the retry could only
+ * revalidate, and offline it cost ~120 failing service-worker GETs and the
+ * log line "the connection failed at 192/192 files". */
 export function warmRoundStep(last: WarmReply | null, reply: WarmReply, linkRetried: boolean): RoundStep {
-  if (!reply.partial) return "stop";
+  if (!reply.partial || heldButNotRevalidated(reply)) return "stop";
   if (warmRoundProgressed(last, reply)) return "continue";
   return reply.linkDown && retryAfterLinkFailure(linkRetried) ? "retry" : "stop";
 }
@@ -531,8 +695,8 @@ export type WarmOutcome = WarmReply | "no-worker" | "timeout";
  * runtimes). Needs no page control, so it works on the very first visit —
  * but a worker must have registered and activated (warmTarget). Null when
  * there is no service worker, or no reply in time. */
-export function warmRuntimeCache(runtime: RuntimeManifest, extraUrls: readonly string[] = [], timeoutMs = 120000): Promise<WarmReply | null> {
-  return warmRuntimeCacheOutcome(runtime, extraUrls, timeoutMs).then((o) => (typeof o === "string" ? null : o));
+export function warmRuntimeCache(runtime: RuntimeManifest, extraUrls: readonly string[] = [], timeoutMs = 120000, how: WarmWait = {}): Promise<WarmReply | null> {
+  return warmRuntimeCacheOutcome(runtime, extraUrls, timeoutMs, how).then((o) => (typeof o === "string" ? null : o));
 }
 
 /** warmRuntimeCache, telling a missing worker from a silent one (game-boot
@@ -541,16 +705,26 @@ export function warmRuntimeCache(runtime: RuntimeManifest, extraUrls: readonly s
  * fired at once and repeated every timeout without limit). `revalidated`:
  * this page has just revalidated the data files among `extraUrls` (the
  * boot's early `warm-data`) — even the first round only fetches what the
- * cache lacks (R4). */
-export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: readonly string[] = [], timeoutMs = 120000, opts: { revalidated?: boolean } = {}): Promise<WarmOutcome> {
+ * cache lacks (R4). `opts.patient` / `opts.onWait`: S1 (WarmWait) — every
+ * round's worker is waited for without a fixed cap; a caller that joins the
+ * warm-up in flight hears its wait too (R2-1). */
+export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: readonly string[] = [], timeoutMs = 120000, opts: { revalidated?: boolean } & WarmWait = {}): Promise<WarmOutcome> {
   // D2: `extraUrls` — the bound game's data and i18n files (game-boot
   // offlineDataUrls) — ride in the SAME message as the runtime list: the
   // worker's prune keeps exactly the chunks the message names, so a
   // data-only message would prune the runtime. One warm-up in flight per
   // (build, extras) set; a Prepare's plain warm-up and the boot's warm-up
-  // with extras may overlap — the worker dedupes the fetches per URL.
-  const buildId = `${runtime.buildId}|${[...extraUrls].sort().join(" ")}`;
-  if (warmInFlight?.buildId === buildId) return warmInFlight.p;
+  // with extras may overlap — the worker dedupes the fetches per URL. S1: a
+  // patient warm-up never joins one that gives up on a missing worker.
+  const buildId = `${runtime.buildId}|${opts.patient ? "patient|" : ""}${[...extraUrls].sort().join(" ")}`;
+  if (warmInFlight?.buildId === buildId) {
+    // R2-1: a joiner hears the wait in flight (WarmWaiters).
+    const { wait } = warmInFlight;
+    if (opts.onWait) { wait.listeners.add(opts.onWait); if (wait.waiting) opts.onWait(true); }
+    return warmInFlight.p;
+  }
+  const wait: WarmWaiters = { waiting: false, listeners: new Set(opts.onWait ? [opts.onWait] : []) };
+  const how: WarmWait = { patient: opts.patient, onWait: (waiting) => { wait.waiting = waiting; for (const l of wait.listeners) l(waiting); } };
   const p = (async (): Promise<WarmOutcome> => {
     // N5: the game data first — the worker works through the list in order
     // (bounded concurrency): the small files an offline inventory opens are
@@ -573,7 +747,7 @@ export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: rea
     // refresh theirs network-first anyway.
     let revalidate = !opts.revalidated;
     for (let round = 0; round < WARM_ROUNDS; round++) {
-      const target = await warmTarget();
+      const target = await warmTarget(how);
       if (!target) return last ?? "no-worker";
       const reply = await new Promise<WarmReply | "timeout">((resolve) => {
         const ch = new MessageChannel();
@@ -588,6 +762,7 @@ export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: rea
       const step = warmRoundStep(last, reply, linkRetried);
       last = reply;
       if (!reply.linkDown) revalidate = false;
+      if (step === "stop" && heldButNotRevalidated(reply)) console.info(`[game-cache] runtime warm-up: all ${reply.total} files are held — the connection failed, so they were not revalidated`);
       if (step === "stop") return reply;
       linkRetried = step === "retry";
       if (linkRetried) {
@@ -600,8 +775,9 @@ export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: rea
     }
     return last ?? "timeout";
   })();
-  warmInFlight = { buildId, p };
-  p.finally(() => { if (warmInFlight?.p === p) warmInFlight = null; }).catch(() => {});
+  warmInFlight = { buildId, p, wait };
+  warmWaits.add(wait);
+  p.finally(() => { warmWaits.delete(wait); if (warmInFlight?.p === p) warmInFlight = null; }).catch(() => {});
   return p;
 }
 
@@ -641,6 +817,9 @@ export interface PrepareStatus {
   /** Runtime files the service worker holds after the warm-up (null: no
    * service worker answered — the boot's own warm-up retries). */
   runtime?: WarmReply | null;
+  /** S1: the warm-up waits for this site's service worker to finish
+   * installing (a first visit) — the tile says so. */
+  awaitingWorker?: boolean;
   /** Show the small-device memory heads-up on this tile (once per page). */
   memoryNote?: boolean;
 }
@@ -670,7 +849,7 @@ function clearFailedPrepares(stale: (name: string) => boolean = () => true): voi
 /** A prepare in flight: `region` settles when the raw region is committed
  * to OPFS (or failed) — what a boot must wait for; `all` when the runtime
  * warm-up has settled too — what the tile shows as done. */
-interface InFlightPrepare { region: Promise<PrepareStatus>; all: Promise<PrepareStatus> }
+interface InFlightPrepare { region: Promise<PrepareStatus>; all: Promise<PrepareStatus>; downloading: () => boolean }
 const inFlight = new Map<string, InFlightPrepare>();
 let memoryNoteShown = false;
 /** Snapshots a boot in this page has claimed (see claimSnapshotForBoot). */
@@ -688,6 +867,14 @@ export const inFlightPrepare = (name: string): Promise<PrepareStatus> | undefine
 export const inFlightRegions = (): { name: string; region: Promise<PrepareStatus> }[] =>
   [...inFlight].map(([name, f]) => ({ name, region: f.region }));
 
+/** R2-2 (review of S1): a Prepare of this page downloads — its region
+ * streams, or its warm-up runs rounds. One whose region is in and whose
+ * warm-up waits for a service worker downloads nothing: a game page's
+ * deferred registration (sw-client, busy = game-boot leanDownloadInFlight)
+ * is what it waits for, and must not wait for it in turn — that held the
+ * registration to its 30-minute cap when the boot was never served. */
+export const preparesDownloading = (): boolean => [...inFlight.values()].some((f) => f.downloading());
+
 /** The boot has passed the point where it waits for a prepare of this
  * snapshot: from here the game session's own prefetch worker owns the
  * region file, and a Prepare started later would only collide with it
@@ -699,7 +886,7 @@ export const claimSnapshotForBoot = (name: string): void => { claimedByBoot.add(
  * structured status only (CQ1: "stalled" was read off the error's wording). */
 function prepareOutcome(st: PrepareStatus): string {
   if (st.phase === "failed") return st.result === "busy" || st.result === "unavailable" ? st.result : "failed";
-  return st.runtime && !st.runtime.partial ? "done" : "partial";
+  return st.runtime && (!st.runtime.partial || heldButNotRevalidated(st.runtime)) ? "done" : "partial"; // N1: all held is done
 }
 
 /** "Prepare offline": the raw region into OPFS (prefetch worker) and the
@@ -739,9 +926,17 @@ export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean
   // `warm` would prune the runtime), listed from its game.json and
   // inventory.json. Without a gameId (a caller that predates D6) the runtime
   // alone, as before — the tile then reads the game's files as missing.
+  // S1: a first visit's service worker may still be installing (or, R2-2,
+  // this page's registration is still deferred) — waited for (no fixed
+  // cap), and said on the tile while the Prepare runs; R2-1: also when this
+  // Prepare joined the wait of an earlier one (a Retry).
+  const onWait = (waiting: boolean) => {
+    status = { ...status, awaitingWorker: waiting };
+    if (status.phase === "running" || status.phase === "warming") show(status);
+  };
   const warm = resolveRuntimeManifest().then(async (m) => {
     const data = opts.gameId ? await fetchGameDataUrls(opts.gameId, opts.langs ?? []) : [];
-    const reply = await warmRuntimeCache(m, data, 10 * 60 * 1000);
+    const reply = await warmRuntimeCache(m, data, 10 * 60 * 1000, { patient: true, onWait });
     // R3: the images the level texts embed are known only from the level
     // files — read from the cache the warm-up just filled (no download), and
     // cached by one data-only `warm-data` (never a chunk, never a prune).
@@ -781,14 +976,16 @@ export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean
     const runtime = await warm;
     status = { ...status, phase: "done", runtime };
     publish(entry.name, status);
-    console.info(`[game-cache] prepare ${entry.name}: region ${status.result}; runtime ${runtime ? `${runtime.cached}/${runtime.total} files cached${runtime.partial ? " — INCOMPLETE (the warm-up stopped making progress)" : ""}` : "not warmed"}`);
+    const short = !runtime?.partial ? "" : heldButNotRevalidated(runtime) ? " — all held, not revalidated (the connection failed)" // N1
+      : runtime.linkDown ? " — INCOMPLETE (the connection failed)" : " — INCOMPLETE (the warm-up stopped making progress)";
+    console.info(`[game-cache] prepare ${entry.name}: region ${status.result}; runtime ${runtime ? `${runtime.cached}/${runtime.total} files cached${short}` : "not warmed"}`);
     return status;
   })();
-  inFlight.set(entry.name, { region, all });
+  inFlight.set(entry.name, { region, all, downloading: () => status.phase === "running" || !status.awaitingWorker });
   // D3: every terminal outcome is said to the other tabs (a failure used to
   // say nothing, and their "Already being downloaded…" stayed for good).
   all.then((st) => endDownload(entry.name, prepareOutcome(st)), () => endDownload(entry.name, "failed"))
-    .finally(() => inFlight.delete(entry.name)).catch(() => {});
+    .finally(() => { inFlight.delete(entry.name); stopHearingWarmWait(onWait); }).catch(() => {});
   return all;
 }
 

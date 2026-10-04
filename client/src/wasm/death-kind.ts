@@ -63,6 +63,59 @@ const SNAPSHOT_DEATH = /^snapshot '.*' failed to load$/;
 export const isNetworkDeath = (d: DeathLike, snapshotFailure: string): boolean =>
   !!d && NETWORK_DETAIL.test(SNAPSHOT_DEATH.test(d.message) ? snapshotFailure : d.message);
 
+/** What a death says of its cause by its own evidence (D4 residuals, live
+ * run of f468f2c, and their review):
+ *  - "network": the link's (isNetworkDeath);
+ *  - "silent": nothing — a bare death (no message: the `error` event of a
+ *    worker whose script could not load), or a "snapshot '<name>' failed to
+ *    load" with no snapshot failure recorded for it;
+ *  - "own": a cause of its own — a messaged crash ("RuntimeError: memory
+ *    access out of bounds"), a heartbeat loss, a snapshot death whose
+ *    recorded failure is not the link's (SNAPSHOT_UNPAIRED, a SHA-256
+ *    mismatch, an allocation failure), a #52 verdict. */
+export type DeathReading = "network" | "silent" | "own";
+
+export function readDeath(d: NonNullable<DeathLike>, snapshotFailure: string): DeathReading {
+  if (isNetworkDeath(d, snapshotFailure)) return "network";
+  if (isRuntimeVerdict(d)) return "own";
+  return !d.message || (SNAPSHOT_DEATH.test(d.message) && !snapshotFailure) ? "silent" : "own";
+}
+
+/** D4(a) (live run of f468f2c): readDeath, remembered per death object from
+ * its first reading. The snapshot failure a "snapshot '<name>' failed to
+ * load" death is read through is reset at the next session's "starting
+ * Lean" — while the relay still reboots with that SAME death (it hands out
+ * one `lastDeath` object until the next death), so every later relay status
+ * of the reboot re-read it as a crash: "restarting the checker after a crash
+ * (snapshot 'nng4' failed to load)" flashed at link-back and again when the
+ * modules finished loading. The first reading has the evidence (qed64-boot
+ * reports the failure before the session dies with it). game-boot holds one
+ * reader per page. Null: no death. */
+export function deathReader(): (d: DeathLike, snapshotFailure: string) => DeathReading | null {
+  const readings = new WeakMap<object, DeathReading>();
+  return (d, snapshotFailure) => {
+    if (!d) return null;
+    let reading = readings.get(d);
+    if (reading === undefined) { reading = readDeath(d, snapshotFailure); readings.set(d, reading); }
+    return reading;
+  };
+}
+
+/** D4(b) (live run of f468f2c): the network reading of a reboot's death
+ * inside a network episode — from a death the link caused until the relay
+ * serves again (game-boot `networkEpisode`). A first visit's cut is a burst:
+ * the network-shaped bootFailed, then bare "crash" deaths of workers whose
+ * scripts could not load (no service worker yet) before the breaker halts;
+ * each such reboot read "restarting the checker after a crash (crash)".
+ * Inside an episode only a "silent" death (readDeath) is read as the link's
+ * too: the episode lasts until a session arms, so it covers the whole
+ * reboot after link-back — a death there with evidence of its own (a
+ * corrupt or unpaired region, an out-of-bounds crash after a network
+ * re-arm) is a crash, not "waiting for the connection" with the link up
+ * (review of D4(b)). `network`: the death is the link's by itself. */
+export const networkInEpisode = (reading: DeathReading | null, network: boolean, episode: boolean): boolean =>
+  network || (episode && reading === "silent");
+
 /** L4's word for a download the network cut: the held boot's banner, and
  * (D4) the reboot after a network-shaped death. */
 export const NETWORK_WAIT_LABEL = "waiting for the connection — the download restarts on its own";

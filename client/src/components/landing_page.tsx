@@ -98,14 +98,20 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
   }, [prep?.phase, prep?.result, snapshot?.state, inUse, !!remote])
   let cacheActions: React.ReactNode = null
   if (entry && (prep?.phase === 'running' || prep?.phase === 'warming')) {
+    // S1: on a first visit the warm-up waits for this site's service worker
+    // to finish installing (minutes on a slow link) — said, not hidden behind
+    // "caching the checker".
     const progressText = prep.phase === 'warming'
-      ? t("Caching the checker", { defaultValue: "Environment downloaded — caching the checker so this game plays offline…" })
+      ? (prep.awaitingWorker
+        ? t("Awaiting offline cache", { defaultValue: "Environment downloaded — waiting for the browser to finish installing this site's offline cache, then the checker is cached…" })
+        : t("Caching the checker", { defaultValue: "Environment downloaded — caching the checker so this game plays offline…" }))
       : t("Preparing… {{done}} / {{total}} MB", { done: mb(scaled(prep.bytes, prep.total)), total: mb(transfer) })
     cacheActions = <>
       <progress aria-label={progressText} value={prep.bytes} max={prep.total} />
       <div>{progressText}</div>
       <div className="note">
         {t("Prepare note", { defaultValue: "Keeps downloading while you browse this site; reloading the page cancels it; Prepare then starts over (bytes your browser already fetched are reused)." })}
+        {prep.phase === 'running' && prep.awaitingWorker ? ` ${t("Prepare awaiting offline cache note", { defaultValue: "The browser has yet to finish installing this site's offline cache; the checker is cached once it is ready." })}` : ''}
         {prep.memoryNote ? ` ${t("Prepare memory note", { defaultValue: "Preparing a game while another one is loaded needs extra memory on this device." })}` : ''}
       </div>
     </>
@@ -161,9 +167,13 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
     cacheActions = <>
       {why && <div className="note failed">{why}</div>}
       <div className="note">
-        {off
+        {/* N2: without a cached game.json its level files cannot be listed —
+            the count would read "1 of 2"; say plainly that they are missing. */}
+        {!off
+          ? t("Offline cache unavailable", { defaultValue: "This browser does not let the site keep the checker offline." })
+          : off.data.listed
           ? t("Offline cache incomplete", { defaultValue: "Cached so far: the checker {{chunks}} of {{chunkTotal}} files, this game's files {{data}} of {{dataTotal}}.", chunks: off.chunks.have, chunkTotal: off.chunks.total, data: off.data.have, dataTotal: off.data.total })
-          : t("Offline cache unavailable", { defaultValue: "This browser does not let the site keep the checker offline." })}
+          : t("Offline cache game files missing", { defaultValue: "Cached so far: the checker {{chunks}} of {{chunkTotal}} files; this game's own files are not cached yet.", chunks: off.chunks.have, chunkTotal: off.chunks.total })}
       </div>
       {off && <button onClick={prepare}>{t("Finish offline download", { defaultValue: "Finish offline download" })}</button>}
       <button onClick={remove}>{t("Remove download")}</button>

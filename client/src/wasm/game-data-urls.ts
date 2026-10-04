@@ -144,7 +144,11 @@ export const runtimeChunkUrls = (runtime: RuntimeManifest): string[] =>
  * runtime's chunks and the game's essential files (`essentialDataUrls`). */
 export interface OfflineCacheReport {
   chunks: { have: number; total: number };
-  data: { have: number; total: number };
+  /** `listed` (N2, live run of f468f2c): the cached game.json named the
+   * level files, so `total` is the real count. Without it only game.json
+   * and inventory.json are known — the tile read "this game's files 1 of 2"
+   * for a game of 81 files; it says they are not cached yet instead. */
+  data: { have: number; total: number; listed: boolean };
   /** Every chunk and every essential file is cached. */
   complete: boolean;
 }
@@ -174,7 +178,7 @@ export function offlineReportFrom(held: ReadonlySet<string>, chunkUrls: readonly
   const data = essentialDataUrls(gameId, game);
   const dataHave = data.filter((p) => held.has(p)).length;
   const complete = chunkPaths.length > 0 && chunksHave === chunkPaths.length && game !== null && dataHave === data.length;
-  return { chunks: { have: chunksHave, total: chunkPaths.length }, data: { have: dataHave, total: data.length }, complete };
+  return { chunks: { have: chunksHave, total: chunkPaths.length }, data: { have: dataHave, total: data.length, listed: game !== null }, complete };
 }
 
 /** Does this game play offline from the service worker's cache? Reads the

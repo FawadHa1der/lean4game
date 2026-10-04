@@ -44,9 +44,9 @@ import { preferencesAtom } from "../store/preferences-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
 import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing, publishNetworkHold } from "../store/boot-atoms";
 import { rememberGamedata } from "./gamedata-cache";
-import { NETWORK_WAIT_LABEL, isNetworkDeath, isRuntimeVerdict, haltedNote, rebootLabel, rebootNote } from "./death-kind";
+import { NETWORK_WAIT_LABEL, deathReader, isRuntimeVerdict, haltedNote, networkInEpisode, rebootLabel, rebootNote } from "./death-kind";
 import { MiB, devProfilesDir, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
-import { claimSnapshotForBoot, endDownload, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareStatusesAtom, reportDownload, runWhenOnline, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
+import { claimSnapshotForBoot, endDownload, heldButNotRevalidated, notifyCacheChanged, inFlightPrepare, inFlightRegions, preparesDownloading, prepareStatusesAtom, reportDownload, runWhenOnline, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
 import { embeddedImageUrls, fetchGameDataUrls } from "./game-data-urls";
 import { ensureServiceWorkerRegistration, releaseServiceWorkerRegistration, requestShellFill, whenServiceWorkerReady } from "./sw-client";
 
@@ -486,7 +486,9 @@ export function leanDownloadInFlight(): boolean {
   // the download within seconds: still busy (bounded by MAX_AUTO_REARMS).
   const halted = relayRef?.state.kind === "halted" && !autoRearmScheduled;
   const bootDownloading = bootPromise !== null && !everServed && !halted && !deployProblem;
-  return bootDownloading || inFlightRegions().length > 0;
+  // R2-2: a Prepare whose warm-up waits for a service worker downloads
+  // nothing (game-cache preparesDownloading).
+  return bootDownloading || preparesDownloading();
 }
 
 /** Offline reloads: the service worker (client/src/sw) caches the runtime
@@ -553,7 +555,10 @@ async function warmOfflineCache(): Promise<void> {
       // the runtime and the game's files are in this cache — the landing
       // page of this tab (navigated to in-app) and of other tabs re-probe.
       notifyCacheChanged(true);
-      if (outcome.partial) console.warn(`[game-boot] offline cache INCOMPLETE: ${outcome.cached}/${outcome.total} runtime + game-data files cached — ${outcome.linkDown ? "the connection failed" : "the warm-up stopped making progress"}; the next visit continues it`);
+      // N1 (live run of f468f2c): offline with every file held, this said
+      // "INCOMPLETE: 192/192 … the connection failed".
+      if (heldButNotRevalidated(outcome)) console.info(`[game-boot] offline cache: all ${outcome.total} runtime + game-data files held — the connection failed, so they were not revalidated`);
+      else if (outcome.partial) console.warn(`[game-boot] offline cache INCOMPLETE: ${outcome.cached}/${outcome.total} runtime + game-data files cached — ${outcome.linkDown ? "the connection failed" : "the warm-up stopped making progress"}; the next visit continues it`);
       else console.info(`[game-boot] offline cache: ${outcome.cached}/${outcome.total} runtime + game-data files cached, ${outcome.pruned} superseded pruned`);
       return;
     }
@@ -603,8 +608,13 @@ async function warmOfflineCache(): Promise<void> {
  * a failed SHA-256 check. A corrupt snapshot with the network up was held
  * under the "download was interrupted" card and re-armed three times (12
  * boots, 24 .snapz GETs) before the right card showed. */
+/* D4(a) (live run of f468f2c): each death's reading is remembered from its
+ * first one (death-kind.ts deathReader): lastSnapshotFailure is reset at the
+ * next session's "starting Lean" while the relay still reboots with the same
+ * death, and re-reading it then flashed the crash label. */
+const readDeathOnce = deathReader();
 const looksLikeNetworkDeath = (d: { reason: string; message: string } | null | undefined): boolean =>
-  isNetworkDeath(d, lastSnapshotFailure); // death-kind.ts (pure, unit-tested)
+  readDeathOnce(d, lastSnapshotFailure) === "network"; // death-kind.ts (pure, unit-tested)
 /** D4: the death a halt was classified as the link's doing by the probe
  * (classifyHalt — a bare "crash" whose text says nothing). By identity: the
  * relay hands out the same `lastDeath` object until the next death, so the
@@ -613,6 +623,18 @@ const looksLikeNetworkDeath = (d: { reason: string; message: string } | null | u
 let networkHaltDeath: object | null = null;
 const deathWasNetwork = (d: { reason: string; message: string } | null | undefined): boolean =>
   looksLikeNetworkDeath(d) || (!!d && d === networkHaltDeath);
+/** D4(b) (live run of f468f2c): a network episode runs from a death the link
+ * caused (deathWasNetwork) until the relay serves again, or a halt is
+ * classified as no link problem. Inside it, a reboot after a death that says
+ * nothing of its own (the bare "crash" of a worker whose script could not
+ * load) gets the network wording too (death-kind.ts networkInEpisode). */
+let networkEpisode = false;
+/** D4(b) review: the death that opened the last episode. The relay keeps
+ * handing out that `lastDeath` after it serves again (a serving relay's
+ * "booting" phase reaches the reboot branch with it), and it must not open
+ * the episode the serving status just ended — only a death not seen
+ * opening one does. */
+let episodeDeath: object | null = null;
 
 /* D1 (live 2026-09-22): on a FIRST visit the service worker's 37 MB precache
  * install takes minutes on a slow link (the registration even disappears
@@ -857,6 +879,8 @@ async function classifyHalt(st: RelayStatus, ui: StatusSink): Promise<void> {
     if (gen !== haltGen || !relayHalted) return;
   }
   networkHaltDeath = network && st.lastDeath ? st.lastDeath : null;
+  networkEpisode = network; // D4(b): a halt that is no link problem ends the episode
+  if (networkHaltDeath) episodeDeath = networkHaltDeath;
   if (network && autoRearms < MAX_AUTO_REARMS) {
     console.warn(`[game-boot] the checker halted after "${death || "a bare worker death"}" with the network unreachable — recovery is automatic`);
     scheduleNetworkRearm();
@@ -891,7 +915,7 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   }
   relayHalted = false;
   haltGen += 1; // a classification still running belongs to a halt that is over
-  if (st.relay === "serving") publishNetworkHold(null);
+  if (st.relay === "serving") { publishNetworkHold(null); networkEpisode = false; } // D4(b): the episode ends
   if (st.relay === "rebooting" || st.phase === "booting" || st.phase === "dead") {
     relayRebooting = true;
     // The relay's reboot reason (lsp-relay.ts 3b42714: "wedged" | "crash" |
@@ -899,9 +923,13 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
     // label for the whole reboot (relayRebootNote, read by the StatusSink).
     // D4: a death the link caused (a snapshot that "failed to load" on a
     // "Failed to fetch") reads as L4's wait for the connection, not as a
-    // crash (rebootLabel); the settle's hold takes over from there.
+    // crash (rebootLabel); the settle's hold takes over from there. D4(b):
+    // so does a bare death inside the network episode such a death opened
+    // (only a "silent" one — a death with evidence of its own is a crash).
     if (st.relay === "rebooting") relayRebootNote = rebootNote(st.rebootReason, st.lastDeath);
-    const label = relayRebootNote ?? rebootLabel(st, deathWasNetwork(st.lastDeath));
+    const byDeath = deathWasNetwork(st.lastDeath);
+    if (byDeath && st.lastDeath && st.lastDeath !== episodeDeath) { networkEpisode = true; episodeDeath = st.lastDeath; }
+    const label = relayRebootNote ?? rebootLabel(st, networkInEpisode(readDeathOnce(st.lastDeath, lastSnapshotFailure), byDeath, networkEpisode));
     publishCheckerActivity("busy", label, !bootFinishedOnce, true);
     publishBootStatus({ state: "busy", label });
     return;

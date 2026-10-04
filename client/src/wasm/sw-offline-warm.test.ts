@@ -16,6 +16,12 @@
 //    and the shell fill's step follows the same rule; R4: `revalidate:
 //    false` fetches only what the cache lacks, and the page sends it from
 //    the round after the first one that reached the host.
+//  - N1 (live run of f468f2c): offline with every file held, a link-down round
+//    ends the warm-up (no retry round, which could only revalidate);
+//  - N3: after a network-first fetch fails outright, held copies answer
+//    cache-first for LINK_MEMO_MS (not-held and no-store requests still go to
+//    the network; any HTTP answer ends it) — R2-4: held game content only
+//    (/data, /i18n); the unhashed shell files still ask the host.
 // Loads the REAL client/src/sw/sw.template.js in a vm sandbox (a fresh one
 // per precache list) with a fake Cache Storage and a scripted fetch.
 import assert from "node:assert/strict";
@@ -43,6 +49,12 @@ class FakeCache {
  * rejection (`link`: TypeError "Failed to fetch"; `abort`: AbortError). */
 type Answer = "ok" | "404" | "link" | "abort";
 
+/** The worker's clock: real time plus `skew` (N3's memo window). */
+let skew = 0;
+class SkewedDate extends Date {
+  static now(): number { return Date.now() + skew; }
+}
+
 function loadWorker(precache: string[] = []) {
   const cacheStorage = new Map<string, FakeCache>();
   const caches = {
@@ -68,7 +80,7 @@ function loadWorker(precache: string[] = []) {
   }
   const listeners = new Map<string, (e: unknown) => void>();
   const sandbox: Record<string, unknown> = {
-    console, URL, Response, Headers, ReadableStream, TransformStream, AbortController, DOMException, Promise, Map, Set, Array, JSON, Math, Error, TypeError, Date,
+    console, URL, Response, Headers, ReadableStream, TransformStream, AbortController, DOMException, Promise, Map, Set, Array, JSON, Math, Error, TypeError, Date: SkewedDate,
     Request: SWRequest, setTimeout, clearTimeout, caches, fetch,
   };
   sandbox.self = Object.assign(sandbox, {
@@ -95,7 +107,15 @@ function loadWorker(precache: string[] = []) {
    * the reply on its port). */
   const dispatch = (data: Record<string, unknown>, port: { postMessage(m: unknown): void }) =>
     listeners.get("message")!({ data, ports: [port], waitUntil: () => {} });
-  return { caches, cacheStorage, fetched, post, dispatch, setAnswer: (fn: (p: string) => Answer) => { answer = fn; } };
+  /** One page request through the worker's fetch handler (N3); resolves
+   * with its answer, rejects as the page's fetch would. */
+  const request = (p: string, init?: RequestInit): Promise<Response> => {
+    let answered: Promise<Response> | null = null;
+    listeners.get("fetch")!({ request: new SWRequest(p, init), respondWith: (r: Promise<Response>) => { answered = r; } });
+    assert.ok(answered, `the worker answers ${p}`);
+    return answered!;
+  };
+  return { caches, cacheStorage, fetched, post, dispatch, request, setAnswer: (fn: (p: string) => Answer) => { answer = fn; } };
 }
 
 let failures = 0;
@@ -178,6 +198,66 @@ await test("the warm-shell fill fails fast on a dead link (an incomplete shell o
   const r2 = await sw.post({ type: "warm-shell" });
   assert.equal(sw.fetched.length, 199);
   assert.deepEqual([r2.present, r2.complete, r2.linkDown], [202, true, false]);
+});
+
+await test("N3: offline, after the first network-first fetch fails outright, held copies answer cache-first for a few seconds; what is not held and no-store requests still try the network; any HTTP answer ends it", async () => {
+  skew = 0;
+  const sw = loadWorker();
+  await seed(sw, "l4g-runtime-v1", DATA.slice(0, 80));
+  sw.setAnswer(() => "link");
+  // A boot's reads after game.json: one at a time here (the worst case for
+  // the old path — each tried the network first).
+  for (const p of DATA.slice(0, 80)) assert.equal(await (await sw.request(p)).text(), `held ${p}`);
+  assert.deepEqual(sw.fetched, [DATA[0]], "only the first read tried the network");
+  // A file not held still goes to the network (and fails as before).
+  await assert.rejects(sw.request(DATA[200]!), TypeError);
+  // The L4 probe (no-store) is never answered from the cache.
+  await assert.rejects(sw.request(DATA[1]!, { cache: "no-store" }), TypeError);
+  assert.deepEqual(sw.fetched, [DATA[0], DATA[200], DATA[1]]);
+  // The window lapses: the network is tried again (and the memo renewed).
+  skew += 5001;
+  sw.fetched.length = 0;
+  await sw.request(DATA[2]!);
+  await sw.request(DATA[3]!);
+  assert.deepEqual(sw.fetched, [DATA[2]]);
+  // An HTTP answer (the link is back) ends the memo at once: network-first again.
+  sw.setAnswer(() => "ok");
+  sw.fetched.length = 0;
+  await sw.request(DATA[300]!); // not held: fetched, answered
+  assert.equal(await (await sw.request(DATA[4]!)).text(), `body of ${DATA[4]}`, "a fresh copy, not the held one");
+  assert.deepEqual(sw.fetched, [DATA[300], DATA[4]]);
+  // An HTTP error is no link failure: no memo.
+  sw.setAnswer(() => "404");
+  sw.fetched.length = 0;
+  await sw.request(DATA[5]!);
+  await sw.request(DATA[6]!);
+  assert.deepEqual(sw.fetched, [DATA[5], DATA[6]]);
+  skew = 0;
+});
+
+await test("R2-4 (review of N3): the memo covers game content only — inside it, held shell files (worker scripts, the snapshot index, /api/games, a locale) still ask the host", async () => {
+  skew = 0;
+  const shell = ["/workers/lean.worker.js", "/snapshots/index.json", "/api/games", "/locales/en/translation.json"];
+  const sw = loadWorker(shell);
+  await seed(sw, "l4g-shell-test", shell); // the previous deploy's copies
+  await seed(sw, "l4g-runtime-v1", [...DATA.slice(0, 3), "/i18n/g/o/RAG/en.json"]);
+  // One blip on a /data read (ERR_NETWORK_CHANGED) while a deploy has just
+  // landed: the host serves the new build again at once.
+  sw.setAnswer((p) => (p === DATA[0] ? "link" : "ok"));
+  assert.equal(await (await sw.request(DATA[0]!)).text(), `held ${DATA[0]}`);
+  assert.equal(await (await sw.request(DATA[1]!)).text(), `held ${DATA[1]}`, "game data: held, cache-first inside the memo");
+  assert.equal(await (await sw.request("/i18n/g/o/RAG/en.json")).text(), "held /i18n/g/o/RAG/en.json", "a game's i18n namespace too");
+  assert.deepEqual(sw.fetched, [DATA[0]]);
+  for (const p of shell) assert.equal(await (await sw.request(p)).text(), `body of ${p}`, `${p}: the new deploy's copy, not the held one`);
+  assert.deepEqual(sw.fetched, [DATA[0], ...shell], "every shell file asked the host");
+  // ...and their HTTP answers ended the memo: game data is network-first again.
+  assert.equal(await (await sw.request(DATA[2]!)).text(), `body of ${DATA[2]}`);
+  // Offline, a held shell file still answers from the cache after its fetch fails (as before N3).
+  sw.setAnswer(() => "link");
+  sw.fetched.length = 0;
+  await sw.request(DATA[0]!);
+  assert.equal(await (await sw.request("/workers/lean.worker.js")).text(), "body of /workers/lean.worker.js", "the copy the online request stored");
+  assert.deepEqual(sw.fetched, [DATA[0], "/workers/lean.worker.js"], "tried the network first even inside the memo");
 });
 
 // ---- the page's side ----
@@ -314,6 +394,29 @@ await test("R4: the page revalidates in the first round that reaches the host on
   assert.deepEqual(await run([slow(100), done], { revalidated: true }), [false, false]);
   const cut = { cached: 100, pruned: 0, total: 313, partial: true, bytes: 0, linkDown: true };
   assert.deepEqual(await run([cut, slow(120), done]), [true, true, false], "a round the link cut off did not revalidate");
+});
+
+await test("N1: a link-down round with every file held ends the warm-up (pure step); one with files missing still earns R2's retry", () => {
+  const r = (cached: number) => ({ cached, pruned: 0, total: 192, partial: true, bytes: 0, linkDown: true });
+  onLine = true;
+  assert.equal(gc.heldButNotRevalidated(r(192)), true);
+  assert.equal(gc.warmRoundStep(null, r(192), false), "stop", "all held: a retry could only revalidate");
+  assert.equal(gc.warmRoundStep(null, r(191), false), "retry", "R2 unchanged while something is missing");
+  assert.equal(gc.heldButNotRevalidated({ cached: 192, pruned: 0, total: 192, partial: false, bytes: 0 }), false, "a complete round is no link failure");
+  assert.equal(gc.heldButNotRevalidated({ cached: 0, pruned: 0, total: 0, partial: true, bytes: 0, linkDown: true }), false, "nothing named: nothing held");
+});
+
+await test("N1: offline with every file held while the browser says online — one `warm`, no retry round", async () => {
+  onLine = true;
+  const sw = loadWorker();
+  await seed(sw, "l4g-runtime-v1", [...CHUNKS10, ...DATA300, "/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json"]);
+  sw.setAnswer(() => "link");
+  const messages = activeWorker((data, port) => sw.dispatch(data, port));
+  const r = await gc.warmRuntimeCacheOutcome(manifest("n1", CHUNKS10) as never, DATA300, 30 * 60_000);
+  assert.ok(typeof r !== "string");
+  assert.equal(messages.length, 1, "no second round of failing fetches");
+  assert.deepEqual([r.cached, r.total, r.linkDown, r.partial], [313, 313, true, true]);
+  assert.ok(sw.fetched.length <= 7, `one lane-full of failing fetches at most (${sw.fetched.length})`);
 });
 
 if (failures) { console.log(`sw-offline-warm: ${failures} FAILED`); process.exit(1); }

@@ -5,7 +5,9 @@
 // (offlineReportFrom: every runtime chunk and the game's essential files in
 // the runtime cache) plus D8's decimal sizes. Review round R3: the images
 // game texts embed (`![alt](images/<file>)`) are listed — game.json's in the
-// list itself, a level file's read back from the runtime cache.
+// list itself, a level file's read back from the runtime cache. N2 (live run
+// of f468f2c): a report without a cached game.json says its total is not the
+// game's (`listed: false`).
 import assert from "node:assert/strict";
 
 const { gameDataUrls, levelUrls, inventoryDocUrls, i18nUrls, essentialDataUrls, fetchGameDataUrls, offlineReportFrom, runtimeChunkUrls, embeddedImageUrls, cachedLevelImageUrls } = await import("./game-data-urls");
@@ -133,11 +135,17 @@ await test("D1 offline verdict: every chunk and every essential file, or not rea
   assert.equal(chunks.length, 3);
   const all = new Set([...chunks, ...essentialDataUrls(id, game)]);
   const full = offlineReportFrom(all, chunks, id, game);
-  assert.deepEqual(full, { chunks: { have: 3, total: 3 }, data: { have: 5, total: 5 }, complete: true });
+  assert.deepEqual(full, { chunks: { have: 3, total: 3 }, data: { have: 5, total: 5, listed: true }, complete: true });
   // A Prepare from before D6: region + runtime, no game file.
   const noData = offlineReportFrom(new Set(chunks), chunks, id, null);
   assert.equal(noData.complete, false);
-  assert.deepEqual(noData.data, { have: 0, total: 2 }, "game.json + inventory.json missing (levels unknown without game.json)");
+  // N2 (live run of f468f2c): without a cached game.json the level files are
+  // unknown — the total is not the game's ("this game's files 0 of 2"), and
+  // the report says so (the tile then says the files are not cached yet).
+  assert.deepEqual(noData.data, { have: 0, total: 2, listed: false }, "game.json + inventory.json missing (levels unknown without game.json)");
+  const inventoryOnly = offlineReportFrom(new Set([...chunks, `/data/${id}/inventory.json`]), chunks, id, null);
+  assert.deepEqual([inventoryOnly.data.listed, inventoryOnly.complete], [false, false], "\"1 of 2\" was the live misreading");
+  assert.equal(offlineReportFrom(new Set(chunks), chunks, id, game).data.listed, true, "a cached game.json lists the levels, cached or not");
   // A warm-up that stopped short: one chunk missing.
   const short = new Set(all); short.delete(chunks[2]!);
   assert.deepEqual(offlineReportFrom(short, chunks, id, game).chunks, { have: 2, total: 3 });

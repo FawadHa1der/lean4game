@@ -37,11 +37,16 @@ let reRegistered = false;
 /** The game was served before the window's load event (a fast returning boot). */
 let served = false;
 
+/** Resolves at this page's first register() (ownServiceWorkerRegistration). */
+let registrationStarted: () => void = () => {};
+const firstRegistration = new Promise<void>((r) => { registrationStarted = r; });
+
 function register(why: string): Promise<ServiceWorkerRegistration | null> {
   registration ??= navigator.serviceWorker.register(SW_URL).then(
     (reg) => { console.info(`[sw] registered (${why})`); return reg; },
     (e) => { console.warn("[sw] registration failed:", e); return null; },
   );
+  registrationStarted();
   return registration;
 }
 
@@ -93,6 +98,19 @@ export function pendingServiceWorkerRegistration(): Promise<ServiceWorkerRegistr
   return registration;
 }
 
+/** R2-2 / R2-3 (review of S1): this page's own registration, once it has
+ * started — now, when it has; otherwise when (2)'s deferral starts it (a
+ * game page holds it back until its boot is served, or until no Lean
+ * download is in flight — at most BUSY_CAP_MS), or before the window's load
+ * when index.tsx's load handler does. No cap of its own and never forced: a
+ * Prepare's patient warm-up (game-cache) waits here instead of registering,
+ * so the install still never competes with the runtime/snapshot download.
+ * Null where nothing will register (no service worker; the dev server). */
+export function ownServiceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> | null {
+  if (!supported()) return null;
+  return registration ?? firstRegistration.then(() => registration);
+}
+
 /** (3) The offline warm-up found no worker to post to. Start the deferred
  * registration if it has not happened yet; if it happened and the
  * registration is gone (its install timed out → redundant → deleted),
@@ -106,7 +124,14 @@ export async function ensureServiceWorkerRegistration(): Promise<boolean> {
   if (now) return true;
   // Already registered again (possibly by another waiter, still settling):
   // that registration decides — its promise is the current `registration`.
-  if (reRegistered) return registration !== null && (await registration) !== null;
+  // S1: once it has settled, a registration gone again (the second install
+  // failed too) is final: false, so a waiter without a cap (a Prepare's
+  // warm-up, game-cache warmTarget) stops instead of polling a lost
+  // registration for ever.
+  if (reRegistered) {
+    if (!registration || !(await registration)) return false;
+    return !!(await navigator.serviceWorker.getRegistration().catch(() => undefined));
+  }
   reRegistered = true;
   console.warn(`[sw] the registration is gone${had ? " (the install did not complete)" : ""} — registering again`);
   registration = null;
@@ -120,7 +145,7 @@ export async function ensureServiceWorkerRegistration(): Promise<boolean> {
  * registration with it). While waiting, the registration is looked up every
  * 10 s; when it is gone it is registered again (once per page —
  * ensureServiceWorkerRegistration). False after `capMs`, or when no
- * registration can be had. */
+ * registration can be had (S1: also once the re-registration is gone too). */
 let readyWatch: Promise<boolean> | null = null;
 export function whenServiceWorkerReady(capMs = 30 * 60_000): Promise<boolean> {
   // One watcher per page: the warm-up and the shell fill both wait here, and

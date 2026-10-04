@@ -12,7 +12,12 @@
 //    hidden sender's word is kept HIDDEN_DOWNLOAD_TTL_MS (its timers may wake
 //    once a minute), visibility changes are said at once, pagehide ends the
 //    downloads; R3 — one entry per sender tab, and one sender's end leaves
-//    another's download; UX5 — a phase change is said at once.
+//    another's download; UX5 — a phase change is said at once;
+//  - F1 (live run of f468f2c): after pagehide the closing tab says no more
+//    progress (the visibilitychange that follows it brought the ended
+//    download back as a hidden ghost for 75 s) until a persisted pageshow;
+//    a receiver ignores progress of a (tab, id) it heard end, and shows a new
+//    download (a new id) of the same tab.
 // A fake clock (window timers + Date.now), a fake BroadcastChannel standing
 // in for a second tab, a fake prefetch Worker and a fake fetch.
 import assert from "node:assert/strict";
@@ -103,15 +108,25 @@ let reprobes = 0;
 gc.onRemoteCacheChange(() => { reprobes++; });
 const tab2 = new FakeBroadcastChannel("l4g-cache");
 /** What this tab said since the last call, each word's tab id checked and
- * dropped (R3: every word carries its sender's id). */
+ * dropped (R3: every word carries its sender's id), and its download id
+ * (F1) checked and dropped — kept in `saidIds`, in order. */
 let ownTab: unknown;
-const sent = () => tab2.received.splice(0).map(({ tab, ...m }) => {
+const saidIds: unknown[] = [];
+const sent = () => tab2.received.splice(0).map(({ tab, id, ...m }) => {
   if (!String(m.type).startsWith("prepare-")) return m;
   assert.equal(typeof tab, "string", "every download word names its tab");
   ownTab ??= tab;
   assert.equal(tab, ownTab, "one id per tab");
+  if (m.type === "prepare-progress") assert.equal(typeof id, "number", "F1: every progress word names its download");
+  saidIds.push(id);
   return m;
 });
+/** The page's document (R1/F1: its visibilitychange listener is registered
+ * once, by the first download reported while a document exists). */
+const docListeners = new Map<string, (() => void)[]>();
+const doc = { visibilityState: "visible", addEventListener: (type: string, fn: () => void) => { docListeners.set(type, [...(docListeners.get(type) ?? []), fn]); } };
+const fireDoc = (type: string) => { for (const fn of docListeners.get(type) ?? []) fn(); };
+const fireWin = (type: string, ev: unknown = {}) => { for (const fn of winListeners.get(type) ?? []) (fn as (e: unknown) => void)(ev); };
 
 let failures = 0;
 async function test(name: string, body: () => Promise<void> | void): Promise<void> {
@@ -299,15 +314,14 @@ await test("R1: a hidden sender's download survives a minute between its words (
 });
 
 await test("R1/UX5: a hidden tab's progress path says progress once a beat with its timers starved; visibility and phase changes are said at once; pagehide ends the downloads", async () => {
-  const docListeners = new Map<string, (() => void)[]>();
-  const doc = { visibilityState: "visible", addEventListener: (type: string, fn: () => void) => { docListeners.set(type, [...(docListeners.get(type) ?? []), fn]); } };
   Object.assign(globalThis, { document: doc });
+  doc.visibilityState = "visible";
   try {
     gc.reportDownload("rag", { phase: "running", bytes: 0, total: 100 });
     await flush();
     assert.deepEqual(sent(), [{ type: "prepare-progress", name: "rag", hidden: false, phase: "running", bytes: 0, total: 100 }]);
     doc.visibilityState = "hidden";
-    for (const fn of docListeners.get("visibilitychange") ?? []) fn();
+    fireDoc("visibilitychange");
     await flush();
     assert.deepEqual(sent(), [{ type: "prepare-progress", name: "rag", hidden: true, phase: "running", bytes: 0, total: 100 }], "said at once on hiding");
     // Throttled: no timer fires; the prefetch worker's progress (every 500 ms,
@@ -319,12 +333,15 @@ await test("R1/UX5: a hidden tab's progress path says progress once a beat with 
     gc.reportDownload("rag", { phase: "warming", bytes: 100, total: 100 });
     await flush();
     assert.deepEqual(sent().map((m) => m.phase), ["warming"], "UX5: a phase change is said at once, not at the next beat");
-    for (const fn of winListeners.get("pagehide") ?? []) fn();
+    fireWin("pagehide", { persisted: false });
     await flush();
     assert.deepEqual(sent(), [{ type: "prepare-ended", name: "rag", outcome: "closed" }], "a tab that goes away ends its downloads");
+    fireWin("pageshow", { persisted: true }); // back from the back/forward cache (F1: says again)
     gc.endDownload("rag", "done");
+    await flush();
     sent();
   } finally {
+    doc.visibilityState = "visible";
     delete (globalThis as { document?: unknown }).document;
   }
 });
@@ -346,6 +363,84 @@ await test("R3: two tabs reporting one snapshot — one's end leaves the other's
   assert.equal(store.get(gc.remoteDownloadsAtom).nng4, undefined);
   assert.equal(reprobes, 2, "each end re-probes");
   advance(10_000);
+});
+
+await test("F1: a closing tab's pagehide, then its visibilitychange (hidden) — the ended download is not said again; nor by a late progress report or the heartbeat; a persisted pageshow says it again under a new id", async () => {
+  Object.assign(globalThis, { document: doc });
+  doc.visibilityState = "visible";
+  try {
+    gc.reportDownload("nng4", { phase: "running", bytes: 10, total: 100 });
+    await flush();
+    assert.deepEqual(sent(), [{ type: "prepare-progress", name: "nng4", hidden: false, phase: "running", bytes: 10, total: 100 }]);
+    const first = saidIds[saidIds.length - 1];
+    fireWin("pagehide", { persisted: false });
+    doc.visibilityState = "hidden"; // the unload order: pagehide, then visibilitychange
+    fireDoc("visibilitychange");
+    await flush();
+    assert.deepEqual(sent(), [{ type: "prepare-ended", name: "nng4", outcome: "closed" }], "the end only — no hidden ghost after it");
+    assert.equal(saidIds[saidIds.length - 1], first, "the end names the download it ends");
+    now += 2000;
+    gc.reportDownload("nng4", { phase: "running", bytes: 20, total: 100 }); // the prefetch worker reports until the page dies
+    tab2.postMessage({ type: "prepare-query" });
+    advance(5000);
+    await flush();
+    assert.deepEqual(sent(), [], "nothing after pagehide: progress path, query answer and heartbeat stay silent");
+    // Restored from the back/forward cache: its downloads run again.
+    doc.visibilityState = "visible";
+    fireWin("pageshow", { persisted: true });
+    await flush();
+    assert.deepEqual(sent(), [{ type: "prepare-progress", name: "nng4", hidden: false, phase: "running", bytes: 20, total: 100 }]);
+    assert.notEqual(saidIds[saidIds.length - 1], first, "a new id: the other tabs heard the old one end");
+    gc.endDownload("nng4", "done");
+    await flush();
+    sent();
+  } finally {
+    doc.visibilityState = "visible";
+    delete (globalThis as { document?: unknown }).document;
+  }
+});
+
+await test("F1: a receiver ignores progress of a download it heard end (the closing tab's hidden ghost); a new download of the same tab shows", async () => {
+  tab2.postMessage({ type: "prepare-progress", name: "rag", tab: "C", id: 1, hidden: false, phase: "running", bytes: 40, total: 100 });
+  await flush();
+  assert.equal(store.get(gc.remoteDownloadsAtom).rag?.bytes, 40);
+  tab2.postMessage({ type: "prepare-ended", name: "rag", tab: "C", id: 1, outcome: "closed" });
+  tab2.postMessage({ type: "prepare-progress", name: "rag", tab: "C", id: 1, hidden: true, phase: "running", bytes: 40, total: 100 });
+  await flush();
+  assert.equal(store.get(gc.remoteDownloadsAtom).rag, undefined, "no ghost after the end");
+  assert.deepEqual(store.get(gc.remoteSendersAtom), {});
+  assert.equal(reprobes, 1, "the end re-probes once");
+  advance(gc.REMOTE_DOWNLOAD_TTL_MS + 1000);
+  assert.equal(reprobes, 1, "no expiry of a ghost later either");
+  // The same tab retries (or a reloaded tab's other download): a new id shows.
+  tab2.postMessage({ type: "prepare-progress", name: "rag", tab: "C", id: 2, hidden: false, phase: "running", bytes: 5, total: 100 });
+  await flush();
+  assert.equal(store.get(gc.remoteDownloadsAtom).rag?.bytes, 5, "a new download of the same tab is shown");
+  tab2.postMessage({ type: "prepare-ended", name: "rag", tab: "C", id: 2, outcome: "done" });
+  // A tab of a build before F1 (no ids): its words are taken as before.
+  tab2.postMessage({ type: "prepare-ended", name: "lag", tab: "O", outcome: "failed" });
+  tab2.postMessage({ type: "prepare-progress", name: "lag", tab: "O", hidden: false, phase: "running", bytes: 1, total: 9 });
+  await flush();
+  assert.equal(store.get(gc.remoteDownloadsAtom).lag?.bytes, 1);
+  tab2.postMessage({ type: "prepare-ended", name: "lag", tab: "O", outcome: "done" });
+  await flush();
+  advance(10_000);
+});
+
+await test("F1: this tab's downloads carry one id each — a retry after an end is a new download", async () => {
+  gc.reportDownload("logic", { phase: "running", bytes: 0, total: 10 });
+  gc.reportDownload("logic", { phase: "warming", bytes: 10, total: 10 });
+  gc.endDownload("logic", "partial");
+  gc.reportDownload("logic", { phase: "running", bytes: 0, total: 10 });
+  gc.endDownload("logic", "done");
+  await flush();
+  const words = sent();
+  assert.deepEqual(words.map((m) => m.type), ["prepare-progress", "prepare-progress", "prepare-ended", "prepare-progress", "prepare-ended"]);
+  const ids = saidIds.slice(-5);
+  assert.equal(ids[0], ids[1]);
+  assert.equal(ids[1], ids[2], "the end names the download it ends");
+  assert.notEqual(ids[3], ids[2], "the retry is a new download");
+  assert.equal(ids[3], ids[4]);
 });
 
 for (const c of FakeBroadcastChannel.all) c.close();
