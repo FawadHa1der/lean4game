@@ -2,6 +2,26 @@
 
 This is the source code for the Lean Game Server hosted at [adam.math.hhu.de](https://adam.math.hhu.de).
 
+## The in-browser (wasm64) build
+
+This fork runs the Lean server in the browser tab, on the QED64 wasm64 runtime.
+Building it from a clean clone needs no QED64 checkout: the runtime's
+browser-side code, worker scripts and pipeline scripts are the `qed64` npm
+package, a git dependency pinned by commit in `client/package.json`
+([wasm/KERNEL.md](wasm/KERNEL.md), "The qed64 dependency").
+
+```bash
+git clone -b wasm64-port https://github.com/FawadHa1der/lean4game && cd lean4game
+npm ci                              # also fetches qed64 at its pinned commit (an https tarball: no git, no SSH)
+scripts/stage-workers.sh            # the qed64 worker scripts -> client/public/workers
+npm --workspace client run build    # -> client/dist
+```
+
+To play locally, fetch the runtime and the game snapshots first
+(`scripts/fetch-artifacts.sh`, ~1.2 GB) and serve the build with
+`node scripts/serve-dist.mjs` — [wasm/KERNEL.md](wasm/KERNEL.md), "Rebuilding
+from a clone".
+
 ## Creating a Game
 
 Please follow the tutorial [Creating a Game](doc/create_game.md). In particular, the following steps may be of interest:

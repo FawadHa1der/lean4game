@@ -18,30 +18,117 @@ runtime `wasm64-303e5c765fc415ed`. The qed64 repo's
 `pipeline/toolchain/KERNEL-PIN` is the machine-readable pin, including the
 paired snapshot identities.
 
-## Substrate pin (the qed64 closure, vendored)
+## The qed64 dependency
 
 The browser-side substrate — boot/artifacts (`qed64-boot.ts`), the session
 adapter with its boot policy (`resident-session.ts`), the L3 relay
 (`lsp-relay.ts`: crash recovery, replay, the crash-loop breaker), the
 runtime client, snapshot loader and install profiles, and the four worker
 scripts (`lean.worker.js` plus the `lsp-frames.js` decoder and the
-`lsp-front-door.js` it `importScripts`, and the prefetch worker) — is a
-**vendored copy of the qed64 closure at one commit**, under
-`client/src/wasm/vendor/qed64/` with the pin in
-`client/src/wasm/vendor/QED64-PIN`. The pipeline scripts the from-source
-lane runs (chunk-runtime, artifact-paths, gen-exports, gate,
-bake-snapshot, node-runner, snapshot-probe, persistent-probe,
-pack/unpack/inspect with pack's `olean-imports.mjs`, verify-release; no
-third-party imports — plus, from `3b42714`, the four HARDENING #51
-module-semantics probes `tests/adversarial/kernel-probes/*.lean` the gate
-reads) are vendored by the same script into `wasm/vendor/qed64-pipeline/`;
-the sync refuses a pipeline whose relative imports do not resolve. The `qed64/...`
-import specifiers resolve to the closure (vite alias + tsconfig paths);
-`scripts/stage-workers.sh` copies the worker scripts from the same
-directory, so relay and worker are paired by construction. **No build,
-bake or test reads a qed64 checkout.**
+`lsp-front-door.js` it `importScripts`, and the prefetch worker) — and the
+pipeline scripts the from-source lane runs are the **`qed64` npm package**,
+a git dependency of the client pinned to one commit by its full SHA:
 
-Current pin: qed64 `76be299` (2026-10-03): `3e182ff` (below) plus the two
+```
+client/package.json   "qed64": "github:FawadHa1der/QED64#<40-hex commit>"
+```
+
+`package-lock.json` records the same commit (`node_modules/qed64` →
+`resolved: git+ssh://…#<sha>`). A git dependency has no integrity hash npm
+checks, so **the SHA is the only pin** — always the full 40 hex: a short
+one makes npm run `git ls-remote`, which needs git. `npm ci` fetches the
+commit as GitHub's codeload tarball over https (no git, no SSH: verified
+2026-10-04 with no git on `PATH` and an empty npm cache) and installs only
+the package's `files` allowlist — 41 files, ~460 kB: `embedding/closure.json`,
+the TypeScript closure of `qed64/embed`, the four workers, the pipeline
+scripts and the data files they read, `docs/EMBEDDING.md`, LICENSE, README.
+QED64's `package.json` has no script npm treats as "prepare me", so an
+install builds nothing and installs none of QED64's devDependencies. **No
+build, bake or test reads a qed64 checkout**: a clean clone builds with
+`npm ci`, `scripts/stage-workers.sh` and the client build (see "Rebuilding
+from a clone").
+
+The contract is the package's `docs/EMBEDDING.md` (§6 the package, §7 the
+library API, §10 lean4game's migration list) and `embedding/closure.json`
+(schema `qed64.closure/v1`). What each part of the game reads:
+
+- **code** imports only `qed64/embed`, the package's one library entry (its
+  exports map; the files behind it may move). Vite resolves the exports map
+  and transpiles the TypeScript; `client/tsconfig.json` names the entry in
+  `paths` because its `moduleResolution: "node"` does not read exports maps
+  (`"bundler"` would, but adds errors elsewhere); the Node unit tests load it
+  through `client/src/wasm/ts-resolve-hook.mjs`, which transpiles the
+  package's TypeScript (Node refuses to strip types under `node_modules`).
+- **workers**: `scripts/stage-workers.sh` copies each `closure.json`
+  `workers[]` entry's `path` to its `serveAs` under `client/public`, removes
+  any other file there (a worker a bump dropped), and `deploy-app.sh` checks
+  the deploy tree against the same list, so the bundled relay and the served
+  worker come from one commit by construction. Before it stages, it refuses
+  an install that is not the lockfile's pin (`node_modules` is not in git: a
+  pulled bump over an older install would build and deploy the old package)
+  and a `client/tsconfig.json` `paths` entry that is not the package's entry
+  file.
+- **pipeline**: `wasm/build-from-source.sh` copies the closure's `pipeline`
+  and `pipelineData` files into `wasm/out/pipeline` and runs them there
+  (below) — never inside `node_modules`.
+- **kernel floor**: `closure.json` `runtime.minKernelPatch` is the oldest
+  kernel patch level the workers drive. The game serves its OWN runtime
+  (built from `wasm/KERNEL-PIN`, whose `patch` line names its level and the
+  kernel commit that completed it), so `stage-workers.sh` — every build and
+  deploy — and the from-source preflight refuse a qed64 whose workers need a
+  newer kernel than ours; the preflight also refuses a pin whose history
+  lacks that commit (a pin moved back past its patch number).
+
+Current pin: qed64 `90aef68` (2026-10-04, branch `feature/embedding-api`,
+EMBEDDING contract v1, `EMBED_API_REVISION` `1.0.0-pre.2`; the package's
+LICENSE is MIT — its confirmation is pending on the QED64 side). The first
+pin as a package (before it: a vendored copy, below). The runtime and the
+snapshots did NOT change: the game still serves `wasm64-d77d34b97592d014`
+(kernel `992dc94`, patch 0032 — the closure's floor is exactly 0032), and
+QED64 tested this commit on its own runtime `wasm64-3ab1c6a9da03bc29`. What
+comes with it, and what the game now takes from it instead of its own copies:
+- **HARDENING #55 runtime lifetime locks**: the session holds the Web Lock
+  `qed64-wanted:<id>` while it wants its runtime and every Worker of that
+  runtime holds `qed64-alive:<id>`; a booting runtime waits (at most 6 s)
+  while runtimes alive but no longer wanted keep more than 12 Workers alive
+  — the renderer-OOM on reload with a runtime caught mid-boot.
+- **HARDENING #57 same-origin refusals** in the snapshot-index loader, the
+  profile loaders, the prefetch and Lean workers (`SNAPSHOT_URL_REFUSED`),
+  redirects included, and the boot-parameter rule (`validateBootOverrides`).
+  `boot-params.ts` judges `?snapshots=`/`?profiles=`/`?runtime=` with that
+  rule and keeps what the page adds: an empty or doubled value is refused
+  too, each refusal is named on the card and the landing notice, and
+  "Open without the override" is the way out. `games-api.ts` maps the
+  index loader's refusal to SEC1's coded one (`refusedSnapshotIndex`;
+  the package's `fetchSnapshotIndex` answers it with the `null` of a
+  missing index) and still refuses a runtime manifest naming a foreign
+  chunk, which the package's resolver does not look at.
+- the raw region cache (`prefetchRaw`, `isRawCached`, `removeRawRegion`,
+  `isCacheKeyOf`, `SNAPSHOT_CACHE_DIR`): single-flight per page and the Web
+  Lock `qed64-raw:<cacheKey>` across tabs. The boot's session and a
+  landing-page Prepare share one prefetch worker (the boot no longer waits
+  for a Prepare, and a Prepare is no longer refused for the bound game's
+  region); the stale-region sweep removes every file no served entry names.
+- `installArtifacts(ui, {overrides, profiles: "none", runtime, snapshots})`
+  and the exported resolvers (`resolveRuntimeManifest`,
+  `fetchSnapshotIndexFor`) behind the game's per-page memo; `runtimeUrls`
+  for the offline warm-up's chunk list (which no longer names the
+  manifests or indexes: the shell precache owns them) and `WORKER_URLS`
+  for the worker-script preflight.
+- `ResidentHost.files`: the gamedata JSON, written by the session on every
+  boot before the relay arms the loop (the game's `GameSession` subclass is
+  gone); `LspRelay.rearm()` for a halted relay (no synthetic didChange);
+  `error.data.qed64.kind` for the errors the relay invents.
+- structured progress (`stage`/`subject`/`step`/`error`; the banner's
+  words, `client/src/wasm/boot-labels.ts`) and the relay's `Death`
+  (`cause` — null: no evidence —, `exitCode`, `seq`; `death-kind.ts`,
+  where the label text and the boot's reported snapshot failure used to be
+  read).
+- a worker-set revision (`WORKER_DEP_MISMATCH` for mixed siblings), a
+  recoverable `UNSUPPORTED_REQUEST`, `capabilities().requests`; the
+  initial memory commit clamped to the largest reservation rung.
+
+Pin `76be299` (2026-10-03, the last vendored pin): `3e182ff` (below) plus the two
 **HARDENING #54 follow-ups**, again with no runtime change. `lean.worker.js`
 (`fetchChunk`) streams each 16 MiB runtime chunk and reports every 500 ms
 inside it. Before, at 300 kB/s the boot banner's runtime count stood still
@@ -51,7 +138,7 @@ count can step back once. `src/install/profiles.ts` (`inflateTransport`)
 does the same for the core pack's parts, which game sessions skip.
 
 Pin `3e182ff` (2026-10-03): `3b42714` (below) plus
-**HARDENING #54**, which touches two vendored files and no runtime. The
+**HARDENING #54**, which touches two closure files and no runtime. The
 prefetch worker (`snapshot-prefetch.worker.js`) reports raw-region progress
 every 500 ms while bytes arrive, where it used to report once per 64 MiB of
 inflated output. The boot (`qed64-boot.ts` `ensureRawSnapshotCached`) gives
@@ -59,8 +146,9 @@ up on the worker after `PREFETCH_SILENCE_MS` (3 min) without a message,
 re-armed by each message, where it used to give up a fixed 15 min after the
 start. That deadline cut the largest game regions (~280 MB gzip) short below
 ~2.5 Mbit/s, and the Lean worker then downloaded them again from zero. The
-game's own Prepare (`client/src/wasm/game-cache.ts` `prefetchRawSnapshot`)
-uses the same 3-minute silence rule.
+game's own Prepare (then `client/src/wasm/game-cache.ts`
+`prefetchRawSnapshot`, qed64's `prefetchRaw` since `90aef68`) uses the same
+3-minute silence rule.
 
 Pin `3b42714` (2026-10-02): the resident transport plus the
 **HARDENING #52 worker layers** (bumped from `32e5e62`, below). The runtime
@@ -68,9 +156,9 @@ and the snapshots did NOT change with this bump: the game still serves
 `wasm64-d77d34b97592d014` (kernel `992dc94`, series through 0032) and the
 snapshots baked for it. qed64's own commit `3b42714` also promotes a new
 runtime for qed64's site (kernel 0035b, `wasm64-3ab1c6a9da03bc29`); none of
-that is vendored — the closure takes no runtime, manifest or snapshot.
+that reaches the game — the closure takes no runtime, manifest or snapshot.
 
-What #52 adds (all inside the vendored `lean.worker.js`; `lsp-relay.ts`,
+What #52 adds (all inside `lean.worker.js`; `lsp-relay.ts`,
 `client.ts` carry the new fields):
 - **message-mode runtime mailbox** — at preRun the worker sets the glue's
   `waitAsyncPolyfilled` and wraps `checkMailbox`, so pthreads notify the
@@ -131,7 +219,7 @@ requests a death orphaned, and breaks crash loops (three deaths in two
 minutes → halted). What the game wires (`client/src/wasm/game-boot.ts`):
 `GameSession extends ResidentSession` (writes the gamedata JSON into the
 worker FS inside `start()`, so it is there on every boot and reboot before
-the relay arms the loop), a policy of `[<game snapshot>]` (the init region left the game session on 2026-09-08: no level header can be served by it) with a
+the relay arms the loop; since `90aef68` the session's own `files`), a policy of `[<game snapshot>]` (the init region left the game session on 2026-09-08: no level header can be served by it) with a
 2 GiB initial commit under a 3 GiB cap, `translation.attachServer(relay.clientPort)`,
 `pagehide → relay.unload()` (dispose + the synchronous kill), and the
 relay's status as the only source of ready / elaborating / halted for the
@@ -155,15 +243,42 @@ It used to be a live `file:` link into the qed64 checkout: every build
 compiled whatever that checkout held at that second, uncommitted edits
 included (a half-typed import broke the game build on 2026-09-02, and shim
 behaviour changed under a running test day), and the worker copy could
-silently drift from the shim.
+silently drift from the shim. From 2026-09-02 to 2026-10-04 it was a
+vendored copy (`client/src/wasm/vendor/qed64`, `wasm/vendor/qed64-pipeline`,
+pinned in `client/src/wasm/vendor/QED64-PIN` by `scripts/sync-qed64.sh`) —
+pinned, but a second copy of QED64's files in this repository; the package
+replaced it with no copy at all.
 
-Bump: `scripts/sync-qed64.sh <qed64-commit>` (extracts with `git archive`,
-never from a working tree), `scripts/stage-workers.sh`, rebuild, run
-cypress, commit the diff. The closure has no third-party imports; the sync
-script fails if a relative import does not resolve inside the vendored
-tree. A closure bump that changes the worker's runtime requirements (a
-kernel patch level) is a pairing bump: kernel pin + from-source lane +
-release, never the closure alone.
+Bump (one commit for `client/package.json` + `package-lock.json`):
+
+1. Pick the commit (below), and read its `docs/EMBEDDING.md` §12 and
+   `embedding/closure.json`: `runtime.minKernelPatch` against the `patch`
+   line of `wasm/KERNEL-PIN`, and `workerProtocol.deprecated` (a request
+   listed there leaves the worker one release later — move off it first).
+2. Edit the SHA in `client/package.json` (full 40 hex), then `npm install`
+   at the repo root: it rewrites `package-lock.json` and `node_modules/qed64`.
+   Check that the package holds only its `files` list and that npm ran no
+   QED64 script.
+3. `scripts/stage-workers.sh` and `npm --workspace client run build`. The
+   script refuses, before it stages anything: an install that is not the
+   lockfile's pin (npm's record in `node_modules/.package-lock.json`: a
+   pulled bump over an older install would otherwise build and deploy the
+   old package — run `npm ci`), a `client/tsconfig.json` `paths` entry for
+   `qed64/embed` that is not the package's `closure.json` `entry` (tsc
+   reads that file; Vite reads the exports map — if the entry moved, update
+   the `paths` entry), and a kernel floor above ours. It also removes a
+   staged worker the closure no longer names.
+4. The unit tests — `for t in client/src/wasm/*.test.ts
+   client/src/components/infoview/*.test.ts; do node --import
+   ./client/src/wasm/ts-resolve-hook.mjs "$t"; done` and `node --test
+   infra/worker.test.mjs` (`worker-liveness.test.ts` runs the new
+   `lean.worker.js`; `death-kind.test.ts` runs the new worker scripts'
+   deaths through the real relay) — then the browser smoke (a Mathlib game
+   and NNG4) and cypress.
+
+A bump whose workers need a newer kernel (a higher `minKernelPatch`) is a
+pairing bump: kernel pin + from-source lane + release, never the dependency
+alone.
 
 Bump only to a qed64 commit its owners have announced as having passed
 their test pyramid (`32e5e62` was: e2e 23/23, 323 ms switch, gauntlets
@@ -203,8 +318,8 @@ files), then rebuild the client.
 ## Served bundle since 2026-09-07: the resident pairing (kernel 0032)
 
 Built by `wasm/build-from-source.sh --verify-snapshots` from kernel pin
-`992dc94` (patch series through 0032) with the vendored qed64 `32e5e62`
-pipeline, for the resident-transport port of the closure (see the pin
+`992dc94` (patch series through 0032) with the qed64 `32e5e62` pipeline
+(then vendored), for the resident-transport port of the closure (see the pin
 section above). Bundle tag `artifacts-wasm64-d77d34b97592d014`
 (`wasm/artifacts/BUNDLE.json`; tarballs in
 `wasm/out/artifacts/artifacts-wasm64-d77d34b97592d014/`, uploaded by the
@@ -301,8 +416,9 @@ byte-identical to the previous pack); the profile index now lists only the
 
 ## Rebuilding from a clone
 
-What a clone contains: the client and server sources, the vendored
-substrate closure (pinned qed64 commit), the compiled gamedata for NNG4 and
+What a clone contains: the client and server sources, the qed64 pin
+(`client/package.json` + `package-lock.json`; `npm ci` fetches the package —
+no QED64 checkout, no git or SSH for it), the compiled gamedata for NNG4 and
 TestGame (`client/public/data`, tracked), the digest manifests of every
 served artifact, and the NNG4 port as a patch (`wasm/patches`). What it does
 not contain: the ~1.2 GB of served binaries — the Lean runtime chunks, the
@@ -313,10 +429,14 @@ artifact bundle named in `wasm/artifacts/BUNDLE.json`.
 git clone -b wasm64-port https://github.com/FawadHa1der/lean4game
 cd lean4game && npm ci
 scripts/fetch-artifacts.sh            # downloads + sha256-verifies the bundle into client/public
-scripts/stage-game-assets.sh          # worker scripts from the vendored closure (+ i18n/api staging)
+scripts/stage-game-assets.sh          # worker scripts from the qed64 package (+ i18n/api staging)
 npm --workspace client run build
 node scripts/serve-dist.mjs           # http://localhost:3006 with the COOP/COEP headers the worker needs
 ```
+
+The shell alone — what CI builds and deploys, the artifacts living in R2 —
+is `npm ci`, `scripts/stage-workers.sh`, `npm --workspace client run build`:
+nothing outside this repository and its lockfile.
 
 `fetch-artifacts.sh --from-dir <dir>` takes local tarballs instead (what
 `scripts/pack-artifacts.sh <tag>` produces under `wasm/out/artifacts/<tag>`);
@@ -339,8 +459,8 @@ running the game from the bundle never needs it:
 | --- | --- | --- | --- |
 | `wasm/kernel` | FawadHa1der/lean4, branch `qed64-wasm64` | `852d1b9` (= `wasm/KERNEL-PIN`, the game's own pin) | the patched Lean fork + `wasm64-build/` (Docker toolchain, build.sh, gate) |
 
-The pipeline scripts are vendored (above), so the former `wasm/qed64`
-submodule is gone. Check the kernel out explicitly when building from
+The pipeline scripts come with the qed64 package (above), so the former
+`wasm/qed64` submodule is gone. Check the kernel out explicitly when building from
 source (~700 MB):
 
 ```bash
@@ -369,12 +489,17 @@ runtime-bump path).
 | bake | `bake-snapshot.mjs` per selected game (reserve = the row's `reserveBytes`; no init snapshot — a game session loads its own region only); raw size checked against the row's `expectedRaw` when its `runtime` equals this run's pairing key — the build id, plus `+slim` when the per-game trees are slim (`SLIM_TREES=1`; a slim bake is ~60 % smaller, so a fat record is never asserted against it) — ±5 % stops the run, otherwise the value to paste is printed; raw > reserve only warns; superseded `.snapz` pruned; `--verify-snapshots` runs each game's catalog probe (`games-manifest.mjs --probe`) through `snapshot-probe.mjs --via-mem` | ~40 GB scratch |
 | bundle | stage into `client/public` (`stage-game-assets.sh`, `stage-snapshots.py` for the selected names), client build, `pack-artifacts.sh` | — |
 
-The pipeline scripts run from a copy of the vendored `wasm/vendor/qed64-pipeline`
-made at `wasm/out/pipeline` on every run (rsync; its `work/` — the bake
-workspace holding the raw `.snap` files a re-probe needs — is kept), because
-`bake-snapshot.mjs` hardcodes that workspace under its own root and nothing
-may be written under `wasm/vendor`. Setting `QED64_DIR` explicitly runs a
-qed64 checkout in place instead.
+The pipeline scripts run from a copy made at `wasm/out/pipeline` on every
+run: exactly the `pipeline` and `pipelineData` files the installed qed64
+package's `closure.json` lists (the trees they name are replaced; `work/` —
+the bake workspace holding the raw `.snap` files a re-probe needs — is
+kept), because `bake-snapshot.mjs` hardcodes that workspace under its own
+root, and the package's root is inside `node_modules` (which `npm ci`
+replaces wholesale; the package's relative `--work`/`--out` resolve there
+too). The preflight dies "run npm ci" when the package is missing, takes the
+qed64 commit from `package-lock.json`, and checks the kernel floor
+(`stage-workers.sh --check`). Setting `QED64_DIR` explicitly runs a qed64
+checkout in place instead.
 
 Inputs the script does not produce:
 
@@ -413,7 +538,7 @@ Known limits, on purpose visible in the script's output:
   the fresh nng4 snapshot; the resulting client booted in a browser
   (ready in 31 s cold, `rfl` completes level 1 in 0.8 s) and passed cypress
   24/24. A run at a lower Docker memory than the documented 10 GiB worked
-  on this machine; keep the requirement as the safe figure. Bumping the kernel pin (`wasm/KERNEL-PIN` + the submodule commit) implies a full rebake (snapshots pair to the runtime build id); bumping the qed64 pin is `scripts/sync-qed64.sh <commit>` (closure + pipeline together).
+  on this machine; keep the requirement as the safe figure. Bumping the kernel pin (`wasm/KERNEL-PIN` + the submodule commit) implies a full rebake (snapshots pair to the runtime build id); bumping the qed64 pin is the SHA in `client/package.json` + `npm install` (closure, workers and pipeline together; "The qed64 dependency").
 
 Rebuilding the binaries themselves (rather than fetching them) needs the
 shared pipeline: the kernel repo's `wasm64-build/build.sh` (Docker,

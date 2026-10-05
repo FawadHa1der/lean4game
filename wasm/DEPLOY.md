@@ -32,8 +32,8 @@ for the upload script.
    rclone remote (R2 API token scoped to the bucket, see the QED64 doc).
    ~1.2 GB the first time; later runs transfer only changed digest-named
    files.
-2. `scripts/deploy-app.sh` — stages the worker scripts from the vendored
-   closure into `client/public/workers/` (gitignored, generated;
+2. `scripts/deploy-app.sh` — stages the worker scripts the qed64 package's
+   `embedding/closure.json` names into `client/public/workers/` (gitignored, generated;
    `scripts/stage-workers.sh` — a clean checkout has none and a shell
    deployed without them hangs at "starting Lean"), builds the client (the vite `define` pins
    `__QED64_BUILD_ID__` to the shipped manifest's build id, so the shell asks
