@@ -1448,25 +1448,256 @@ Not changed: the vendored `qed64-boot.ts` `installArtifacts` still reads the
 raw parameters (tree-shaken out of the game bundle; the fix belongs
 upstream in QED64). Residual: see Open.
 
+## QED64 as a dependency (2026-10-04)
+
+**Why.** Until this branch the game carried a vendored copy of QED64
+(`client/src/wasm/vendor/qed64`, `wasm/vendor/qed64-pipeline`, pinned in
+`client/src/wasm/vendor/QED64-PIN` by `scripts/sync-qed64.sh`): a second
+copy of another project's files, kept in step by hand, which the game also
+reached into (`GameSession`'s private `request("write-files")`, regex
+rewrites of qed64's label prose, death reasons read off message text). The
+decision: lean4game depends on QED64 as an npm git dependency, uses only the
+parts it needs, duplicates nothing, and stays cloneable and buildable by
+anyone. The contract is QED64 `docs/EMBEDDING.md` v1 at `90aef68` (branch
+`feature/embedding-api`; ours are §6 the package, §7 the library API, §10
+migration and §12 changes since the draft) and its `embedding/closure.json`.
+The package carries an MIT LICENSE; its confirmation is pending on the
+QED64 side. Branch `qed64-dep`, from `b9292f8`; evidence under
+`lv-shots/qd-dep`, `lv-shots/qd-b11`.
+
+**What was deleted** (phase 1): the vendored copy — 11 files under
+`client/src/wasm/vendor/` (relay, boot, session, client, snapshot and
+profile modules, the four workers, `QED64-PIN`), 18 under
+`wasm/vendor/qed64-pipeline/` (the from-source pipeline scripts and kernel
+probes) — and `scripts/sync-qed64.sh`. In their place nothing is copied
+into git:
+- `client/package.json`: `"qed64": "github:FawadHa1der/QED64#<40-hex>"`,
+  the same SHA in `package-lock.json`. `npm ci` fetches it as an https
+  tarball (no git, no SSH, no QED64 checkout): 41 files, no dependencies, no
+  install script.
+- `qed64/embed` is the only import path (`client/tsconfig.json` maps it to
+  the package's entry file, which moduleResolution "node" cannot find
+  through the exports map; Vite resolves the map). `ts-resolve-hook.mjs`
+  transpiles the package's TypeScript for the node unit tests.
+- `scripts/stage-workers.sh` stages the closure's `workers[]` (`path` →
+  `serveAs`) into the gitignored `client/public/workers`; `deploy-app.sh`
+  checks the deploy tree against the same list.
+- `wasm/build-from-source.sh` copies the closure's `pipeline` and
+  `pipelineData` files into `wasm/out/pipeline` and runs them there.
+- `wasm/KERNEL-PIN` gained a machine-read `patch` line: the closure's
+  `runtime.minKernelPatch` (0032) is checked against it on every build. The
+  game still serves its OWN runtime (`wasm64-d77d34b97592d014`, kernel
+  `992dc94`) and the same snapshots; QED64 tested `90aef68` on its runtime
+  `wasm64-3ab1c6a9da03bc29`.
+
+**What the v1 API replaced** (phase 2, B11) — the game's own copies of
+what the package now exports (§7):
+
+| Was ours | Now |
+|---|---|
+| `GameSession extends ResidentSession`, writing the gamedata through the private `request("write-files")` | `ResidentHost.files`: the session writes them on every boot before the relay arms the loop |
+| `installGameArtifacts` (own profile-index read, own foreign-manifest drop) | `installArtifacts(ui, {overrides, profiles: "none", runtime, snapshots})` with the pairing check's manifest and index |
+| `resolveRuntimeManifest`, `fetchSnapshotIndexOnce` | memo wrappers over qed64's `resolveRuntimeManifest` and `loadSnapshotIndex` / `fetchSnapshotIndexFor`; the SEC1 coded refusals and the foreign-chunk check stay ours |
+| the boot-parameter rule (`DIR_OVERRIDE`, `RUNTIME_OVERRIDE`), `overrideOf`, `devSnapshotsDir`, `devProfilesDir` | qed64's `validateBootOverrides`, behind `bootOverrides()`; the page still refuses an empty or doubled value, names every refusal and offers "Open without the override" |
+| `refuseForeignSnapshotUrls`, `assertSameOriginSnapshot` | qed64's index loader refuses an index naming another site whole (HARDENING #57) |
+| `prefetchRawSnapshot`, `PREFETCH_SILENCE_MS`, `claimSnapshotForBoot` + the busy refusal | `prefetchRaw`: one prefetch worker per region in the page, the Web Lock `qed64-raw:<key>` across tabs; a Prepare started while the boot's session prefetches joins it (it was refused `busy`); the boot still waits for a running Prepare's region first (`inFlightPrepare`, PAR-2 below) |
+| `rawSnapshotCached`, `rawFileName`, `removeRawSnapshot` | `isRawCached`, `removeRawRegion` (the partial too), `isCacheKeyOf`, `snapshotCacheKey`, `SNAPSHOT_CACHE_DIR` (the sweep keeps its listed-name guard, PAR-3 below) |
+| `runtimeChunkUrls`, the warm-up's chunk loop, `WORKER_SCRIPTS` | `runtimeUrls(manifest).chunks`, `WORKER_URLS` |
+| `humanizeLabel` (regex rewrites of qed64's prose) | `boot-labels.ts stageLabel` from the structured `stage`/`step`/`error` |
+| `noteSnapshotFailure`/`lastSnapshotFailure`, `deathReader`, `isNetworkDeath` by text, `exitCodeOf`, `EXIT_CARD_RE` | the relay's `Death`: `cause` (null = no evidence; `WORKER_SCRIPT_LOAD_FAILED` = probe the link), `exitCode`, `seq` (identity); the halt's exit code, stall and stale page travel in the checker-activity atom |
+| relay-error text matching (`isOrphanedRequestError`, goals.tsx) | `error.data.qed64.kind` (`relayErrorKind`) |
+| `rearmCheckerIfHalted`'s synthetic didChange (and the guarded reload with no document) | `LspRelay.rearm()` |
+| the relay's internals (`state`, `lastDeath`, `lastText`) | `status()` — the projection §7 names (QD-API-3 below) |
+| `SWITCHING_RE`, `ROUTINE_BUSY` (dead, B5) | deleted |
+
+Behaviour changes:
+- B4: the offline warm-up no longer names the mutable runtime manifest or
+  the snapshot and profile indexes (the shell precache owns them; a RUNTIME
+  copy went stale behind it).
+- The stale-region sweep also removes a listed game's stale compressed
+  copies (`<key>` without `.raw`), not only its stale `.raw` and partials.
+  Names the page's index does not list are still never touched (PAR-3).
+- `?profiles=` follows qed64's rule: `profiles/<dir>`, no longer
+  `snapshots/<dir>`. A `?snapshots=<dir>` index that cannot be read is a
+  named failure on the card (it used to read as "no snapshot index").
+- The banner reads "loading the game environment" for the region read from
+  the browser's storage (it was the worker's "loading environment
+  snapshot"), and shows the session's own step "preparing 80 session files"
+  (the gamedata write, ~10 ms). Every other label is unchanged, the D4 and
+  #52 ones included.
+- New: a worker refusing a sibling script of another revision (a deploy
+  under a long-lived tab) reads as "this site was updated", with a reload
+  card if the relay halts on it (QD-API-2).
+
+**The editor-mode crash: fixed on the game side** (`client/src/wasm/change-throttle.ts`).
+The crash is qed64 HARDENING #55's open item, not a session replacement: the
+language client sends a full-text didChange before each of its per-keystroke
+requests (vscode-languageclient flushes its pending full-document changes
+before every request; the relay saw `didChange` then three `$/lean/rpc/call`
+per keystroke), each change restarts the elaboration of the whole Runner
+command while the cancelled ones' threads still run, the runtime's
+24-worker pthread pool grows (it never shrinks), and ~35–40 isolates fill the
+renderer's 4 GiB V8 cage. The translation now hands the checker at most one
+full-text change per 300 ms: the first at once (typewriter mode sends one
+per Execute: no added latency), the newest at the window's end, and every
+message the client sent after a held change queued behind it, in order (a
+document switch or a game switch's suspend sends the held change first).
+Probes on the same NNG4 level (Multiplication 1, editor mode, CDP worker
+census; `lv-shots/qd-b11/edcrash*`):
+
+| Build | Run | Crash | Peak workers | Pool | Changes reaching the checker |
+|---|---|---|---|---|---|
+| 4083fb4 (:3006, control) | select-all, Backspace, `rw [add_zero]` at 10 ms/char | yes, +13.2 s | 37 | 33 | 7 |
+| qed64-dep (:3007) | the same, 3 runs | no | 28 / 27 / 27 | 26 / 24 / 25 | 2 each |
+| qed64-dep (:3007) | End, Enter, the line at 10 ms/char, 2 runs | no | 30 / 27 | 28 / 25 | 2 each |
+| qed64-dep (:3007) | select-all line at 150 ms/char | no | 27 | 24 (30 before) | 8 (13 before) |
+
+Every run's last forwarded text carries the typed line. The pool can still
+grow a little (28) on a burst; the cap on live dedicated threads is QED64's
+to add (#55's remedies).
+
+**NEW-3: fixed.** The flash was the replacement worker's own status
+(`booting`) arriving after "starting Lean": the relay's status still read
+"rebooting after a network death", so the reboot label went back to
+"waiting for the connection". The rule (`death-kind.ts rebootLabel`,
+`linkConfirmed`): once the reboot's settle is over (the hold found the link
+back, or there was nothing to hold for), that death's reboot is "starting",
+which the session's own stages speak over — keyed on `Death.seq`. Local
+reproduction behind a pacing proxy that cuts every connection for 20 s at
+40 MB of the region, the service worker controlling the page
+(`qed64/work/qd-b11-new3.mjs`, `lv-shots/qd-b11/new3-*`): 4083fb4 shows
+"waiting for the connection" 0.01 s after "starting Lean" at link-back;
+qed64-dep shows none, recovers by itself, proves the level, and never says
+"after a crash" (D4 on the new cause reading). A crash injected afterwards
+reads "restarting the checker after a crash (probe-injected crash)" on both.
+
+**NEW-2: fixed.** Every word of a download on the `l4g-cache` channel now
+carries the transfer size, and the tile shows another tab's download from
+the word alone (it no longer waits for its own index entry). Probe
+(`qed64/work/qd-b11-new2.mjs`, `lv-shots/qd-b11/new2b-*`): one tab says a
+running nng4 download on the channel; a second landing tab opens with its
+index and manifests held back 5 s. qed64-dep shows "Being downloaded in
+another tab… 18 / 154 MB" 0.01 s after its tiles render, 5 s before its
+index arrives; 4083fb4 shows it only after the index (+5.0 s).
+
+**Review of phases 1 and 2** (adversarially verified findings; all fixed
+in the worktree except where said):
+
+| Finding | What happened | Now |
+|---|---|---|
+| PAR-2 | The boot no longer waited for a running Prepare of its own game: its session joined the Prepare's prefetch, and every caller of a flight gets the one result — a single transient failure of that download (ERR_NETWORK_CHANGED, a proxy reset) failed the session's snapshot load too, with no retry, and the Lean worker streamed and inflated the region itself for the whole session (the ~4.6 GB-heavier path), committing no `.raw`. The runtime's chunks also downloaded beside the region. | The boot waits for the Prepare's region again (`inFlightPrepare`, its bytes on the banner, before `installArtifacts`); a region that failed is then fetched by the session's own prefetch afresh (the failed flight is closed). |
+| PAR-3 | The sweep removed every cache file no entry of the PAGE's index named: a tab that outlived a deploy (the service worker keeps the previous shell for it) deleted the region of a game the new deploy added, Prepared in a newer tab, and a developer's unpromoted bakes under other names (`nng4.dev.*`). | The listed-name guard is back: only a listed name's non-live keys go. The listed names are cut from qed64's own keys (`snapshotCacheKey`), so the sanitisation is qed64's; an unknown key shape names nothing. |
+| PAR-4 | A worker that said hello, then failed its lazy import of `lsp-front-door.js` (the link dropped with no service worker controlling the page, or a 404) died as qed64's `crash`: "restarting the checker after a crash (Uncaught NetworkError …)", also inside a network episode, and the halt detoured as a crash. | `readDeath` reads a `crash` whose message names a failed `importScripts` / `NetworkError` as "silent" — probe the link, like a worker script that never loaded; the probe's preflight tells a deploy's 404 from the link. (The old text rule read it as the network, a deploy's 404 included.) |
+| QD-API-1 | The session's wait for another tab's writer (qed64 `onBusy: "wait"`) is capped at `PREFETCH_SILENCE_MS` (3 min) from the lock request and not re-armed by that tab's progress; a slower cross-tab download (RAG, 282 MB, at 1 MB/s) leaves the Lean worker streaming the region beside it. Not a regression (b9292f8 streamed at once). | Comment corrected (game-boot). Not fixable through `ResidentHost` (it passes no `busyWaitMs`): upstream (Open). |
+| QD-API-2 | `WORKER_DEP_MISMATCH` (§7.7: a deploy mixed the worker scripts' revisions under a running tab) read as our crash, the label's 80-character cut dropping its "reload". | A stale-page verdict (`death-kind isStalePageDeath`, on the code): the reboot reads "this site was updated — restarting the checker; reload the page to use the new version"; a halt on it shows "This site was updated — reload to continue" with Reload only (no restart, no network probe) in the typewriter and in editor mode (`t()`: `Site updated headline`, `Site updated note`). |
+| QD-API-3 | game-boot read relay members v1 does not name (`state`, `lastDeath`, `lastText`, `deaths`, `pending`); a rename would throw in the network re-arm with no build error (the client build runs no tsc). | `status().relay` / `status().lastDeath`; `headerText: ""` (the game's policy reads no header); `deaths`/`pending` only in the harness hook, guarded (-1, not a throw). `clientPort` and `unload()` stay (no alternative; upstream). |
+| PKG-1 | Nothing compared `node_modules/qed64` with the lockfile pin: a pulled qed64 bump over an older install built, staged and deployed the old package (`deploy-app.sh` skips `npm ci` when `client/node_modules` exists), and the from-source preflight printed the lockfile's SHA as if checked. | `stage-workers.sh` (every build and deploy, `--check` in the preflight) refuses unless npm's record of the install (`node_modules/.package-lock.json`) names the pinned commit: "node_modules/qed64 is 90aef68…, package-lock.json pins 37e38bf… — run npm ci". The preflight prints both SHAs. |
+| PKG-2 | The four new modules were untracked; `git commit -a` would leave a branch whose clean clone does not build. | Commit them by name (the proposed commit split does), with `worker-liveness.test.ts`. |
+| PKG-4 | Staging never removed a worker a bump dropped or renamed; it shipped and was precached as critical. | `stage-workers.sh` removes every file in `client/public/workers` the closure does not name. |
+| PKG-7 | The `patch` line was never checked against the kernel: a pin moved back to a pre-0032 kernel with `patch 0032` left passed every check. | `patch 0032 992dc94…` names the kernel commit that completed the patch (commit subjects do not reliably carry the number); the from-source preflight refuses a pin whose history lacks it. |
+| PKG-8 | `client/tsconfig.json` hard-codes the package's entry file; a move (or a nested install) would leave tsc on a stale or missing file while Vite bundles the new one. | `stage-workers.sh` refuses a `paths` target that is not `closure.json` `entry`. |
+| PKG-9 | The served `lean.worker.js` comment still describes lean4game's vendoring (QED64's text). | Reported upstream; `vendor-liveness.test.ts` is now `worker-liveness.test.ts`. |
+
+Tests of the fixes: `death-kind.test.ts` runs both new death readings on
+the real worker scripts — `lean.worker.js` with a REVISION-2 front door,
+and with a failed front-door import, under the real `LeanSession` and
+`LspRelay`; `game-cache-prefetch.test.ts` has the PAR-2 wait-then-fresh-
+flight and the cross-deploy sweep; the script checks were run against
+scratch copies (a stale lockfile pin, a missing install record, a dropped
+worker, a moved entry, a pin moved back to `852d1b9`).
+
+Live checks of the fixes on the final build (`index-DXlNGBJg.js`, sw
+`5243270bf22f`, workers = qed64 `90aef68`; `:3007`; `lv-shots/qd-fix`):
+- smoke, fresh profile: NNG4 boot 6.4 s, RAG 8.4 s, both levels proved
+  (`smoke/`);
+- PAR-3 (`qed64/work/qd-fix-par3-crossdeploy.mjs`, the review's
+  reproduction: tab A on the old index — one index request, an in-page
+  route — boots after tab B committed `lag`'s region): both
+  `lag.f84d616679d0ceb0.snapz.raw` and `nng4.dev.0123456789abcdef.snapz.raw`
+  kept, no sweep line (the phase-2 build removed both, `par3/`);
+- QD-API-2 (`qed64/work/qd-fix-api2-mismatch.mjs` through a proxy that
+  serves the next front door with REVISION "2"): the reboot reads "this site
+  was updated — restarting the checker; reload the page to use the new
+  version" from 0.5 s through its whole boot (bytes and modules kept), and
+  the relay serves again at 5.8 s; three mixed front doors in a row halt it
+  and the pane shows "This site was updated — reload to continue", the note
+  and Reload only (`api2/p2-halted.png`). But see Open: the page's language
+  client did not connect after that first death.
+
+**Regression results** on the final build: _placeholder — to be filled in
+by the regression run._
+
+Phase 2's runs on its build (`index-Cj_pD5M7.js`, sw `1f5cf5b445e9`,
+workers = qed64 `90aef68`):
+- smoke, fresh profile: NNG4 boot 7.4 s, RAG 8.3 s, both levels proved
+  (`lv-shots/qd-b11/smoke2`);
+- D2 on the structured progress (`qed64/work/qd-b11-d2boot.mjs`, 5 MB/s):
+  a game tab's first boot shows in a landing tab as "Being downloaded in
+  another tab… N / 154 MB" while its region streams, the line ends once the
+  boot moves on, and a reload (the region read from storage) shows nothing;
+- the editor burst again: no crash, 27 workers, 2 changes.
+
 ## Open
 
-- **Editor mode: the tab crashes after select-all + Backspace, then typing
-  a line (found during SEC1, older than it).**
-  - Reproduces on the live 4083fb4, on TestGame, and in branded Chrome.
-  - Chromium reports a V8 out-of-memory about 1 s later, at only ~48–80 MB
-    of JS heap. That points at address-space exhaustion, not a JS leak;
-    compare qed64 HARDENING #55 (pool growth).
-  - It does not happen when idling in editor mode, when typing at the end
-    of the text, or when the line comes 15 s after the delete.
-  - Evidence: `lv-shots/sec1-regress/editor*.log`, `editor-key-*/`. Needs
-    its own investigation.
-- **NEW-2 (minor):** a landing tab opened while another tab downloads shows
-  "Being downloaded in another tab" only after its index and manifest
-  fetches finish behind the download (~4.2 s at 1.5 MB/s). The
-  BroadcastChannel state is already there 0.2 s after the click.
-- **NEW-3 (cosmetic):** "waiting for the connection" flashes (< 0.1 s) after
-  link-back when the service worker controls the page. It sits between
-  "starting Lean" and "verifying", during the re-arm reboot.
+- **Editor mode crash: closed on the game side** (the change throttle,
+  "QED64 as a dependency" above). Residual, QED64's: a burst can still grow the pthread
+  pool a little past 24 (28 seen), and the pool never shrinks; #55's
+  remedies (a cap on live dedicated threads, smaller isolates).
+- **NEW-2: closed**, **NEW-3: closed** ("QED64 as a dependency" above).
+- **qed64 v1 (report upstream): a 30 ms "waiting for another tab to finish
+  preparing the game environment" on every region download.** qed64's
+  `prefetchRaw` with `onBusy: "wait"` calls `onBusyWait` when the region's
+  Web Lock is not granted within two microtasks; `navigator.locks` grants
+  even a free lock a task later, so its snapshot load says the wait on
+  every first download, then the bytes (seen at link-back in
+  `lv-shots/qd-b11/new3-3007-presw`). The banner shows qed64's step as
+  given.
+- **qed64 v1 (report upstream): `failureKindOf` reads WebKit's fetch
+  failure ("Load failed") and a bare `ERR_INTERNET_DISCONNECTED` as
+  `other`, not `network`** (the game's old text rule had both). Moot today
+  (WebKit has no Memory64; Chromium says "Failed to fetch"), but the game
+  now reads the link only through that table.
+- **qed64 v1 (report upstream), from the review of the adoption:**
+  - QD-API-1: make `onBusy: "wait"` silence-based (re-armed while the lock
+    holder reports progress — a BroadcastChannel heartbeat, or the
+    `.raw.partial` growing), or let a host pass `busyWaitMs` through
+    `ResidentHost` / the policy. Until then a cross-tab download slower
+    than 3 min leaves the second tab's Lean worker streaming the region;
+    the game's D2 report on the tile is the only signal.
+  - QD-API-3: name in §7 what an embedder of `LspRelay` cannot do without —
+    `clientPort`, `unload()`, and `lastText` (or pass the header to the
+    session factory); the game reads `status()` for the rest.
+  - QD-API-2: export the `WORKER_DEP_MISMATCH` code (§7.7 names it; the game
+    spells it).
+  - PAR-4: `deathCause` could tag a failed lazy sibling import (the front
+    door) as `WORKER_SCRIPT_LOAD_FAILED`, as it does a missing
+    lsp-frames.js; the game reads the crash's message meanwhile.
+  - PKG-9: `public/workers/lean.worker.js` (~line 61) still says lean4game
+    vendors a fixed closure through `sync-qed64.sh`; it stages the closure
+    from the package.
+- **A death on the language client's own `initialize` leaves the client
+  in "starting" (found by the QD-API-2 live check).** A mixed deploy hits
+  the FIRST worker of a page on its first LSP frame — the client's
+  `initialize` (lean.worker.js loads the front door then). The relay
+  orphans it (`failInFlight`), the translation answers it -32097 (N1), the
+  console shows "QED64: the Lean checker died (WORKER_DEP_MISMATCH)" and
+  "Client is not running and can't be stopped. It's current state is:
+  starting", and the client never connects to the healed relay (serving,
+  phase `starting`, no document for 600 s): the pane reads "Connecting to
+  the checker…", then after 90 s that reloading is safe — not the stale-page
+  card, which shows on a halt only. A reboot worker's mismatch does not do
+  this (the client's `initialize` was answered long before). Not established
+  whether other deaths in that first half-second do the same; the D4/NEW-3
+  cuts, later in the boot, recovered. Candidates: show the stale-page card
+  once a stale-page death was seen and the client is not running, or answer
+  an orphaned `initialize` from the replacement session's replay.
+- **Sweep residual (pre-existing, PAR-3's other half):** a tab that
+  outlived a deploy still sweeps against its old index, so a game the new
+  deploy RE-BAKED (a new key of a listed name) loses its new region to the
+  old tab's first boot, and downloads it again. No data is damaged; telling
+  a newer key from an older one needs a deploy marker in the index.
+- **Not done:** B3 (the panel-widget path) and B12 (the bump script that
+  respects `workerProtocol.deprecated`).
 - **SEC1 residual: a region poisoned before the fix stays (R3).** A browser
   that opened a crafted `?snapshots=` link while 4083fb4 was live may hold an
   attacker region under the real live key (e.g. `nng4.db264c5f3eb7c69c`).
