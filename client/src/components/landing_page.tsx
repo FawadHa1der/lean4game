@@ -22,7 +22,7 @@ import { completedLevelCountsAtom } from '../store/progress-atoms';
 import { gameTilesAtom } from '../store/tiles-atoms';
 import { fallbackSnapshotName, gameIdOf, tileSnapshotStates, type ApiGame, type TileSnapshotState } from '../wasm/games-api';
 import { bootParams, isSec1Refusal, openWithoutOverrides } from '../wasm/boot-params';
-import { onRemoteCacheChange, prepareGame, prepareStatusesAtom, queryRemoteDownloads, remoteDownloadsAtom, removeRawSnapshot, storageSummary } from '../wasm/game-cache';
+import { onRemoteCacheChange, prepareGame, prepareStatusesAtom, queryRemoteDownloads, remoteDownloadsAtom, removeDownload, storageSummary } from '../wasm/game-cache';
 import { tenthsGB, wholeMB } from '../wasm/sizes';
 import { boundEnvironmentAtom } from '../wasm/game-boot';
 import { bootStatusAtom } from '../store/boot-atoms';
@@ -60,16 +60,16 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
   React.useEffect(() => { if (prep?.phase === 'warming' || prep?.phase === 'done') onCacheChanged() }, [prep?.phase])
   const entry = snapshot?.entry
   const mb = wholeMB // D8: decimal MB, as the docs and the catalog count
-  // The game loaded in this tab: its session's own prefetch worker owns the
-  // region file (a Prepare would find it busy and fail), and removing its
-  // region would make the next crash-reboot download it again mid-play —
-  // neither action is offered while it is bound.
+  // The game loaded in this tab: its session manages the region (a Prepare
+  // could only join the session's own prefetch), and removing its region
+  // would make the next crash-reboot download it again mid-play — neither
+  // action is offered while it is bound.
   const inUse = boundEnv?.snapshot === snapshotName
   // Progress in the units the availability row promised (the transfer size:
   // gzip on the wire); the prefetch worker reports inflated offsets, which
   // are scaled here (the bar itself keeps the raw value/max).
   const transfer = entry ? (entry.transfer ?? entry.bytes) : 0
-  const scaled = (bytes: number, total: number) => total > 0 ? Math.min(transfer, Math.round((bytes / total) * transfer)) : 0
+  const scaled = (bytes: number, total: number, to = transfer) => total > 0 ? Math.min(to, Math.round((bytes / total) * to)) : 0
   // Keyboard focus across the cell's button swaps: Prepare unmounts on
   // click (progress replaces it) and Remove is replaced by a fresh Prepare
   // node, so the browser dropped focus to <body>. A keyboard activation
@@ -87,7 +87,7 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
   const remove = async (ev: React.MouseEvent) => {
     ev.stopPropagation()
     keepFocus.current = ev.detail === 0
-    if (entry) { await removeRawSnapshot(entry); onCacheChanged() }
+    if (entry) { await removeDownload(entry); onCacheChanged() }
   }
   React.useEffect(() => {
     const cell = cellRef.current
@@ -120,14 +120,19 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
     cacheActions = <div className="note">{t("In use by this tab", { defaultValue: "Loaded in this tab — its download is managed by the game." })}</div>
   } else if (opfs === false) {
     cacheActions = null // no offline storage: the page-level note says so once
-  } else if (entry && remote) {
+  } else if (remote) {
     // D2: another tab is downloading this environment — its progress, and no
     // Prepare (it could only meet a busy file). The heartbeat stops when that
     // tab ends (any outcome, or it closes) or goes silent for 6 s (75 s for a
     // hidden tab, whose timers the browser throttles); the tile re-probes then.
+    // NEW-2: from the word alone, which carries the transfer size — this
+    // tab's own index and manifest (the tile's `entry`) arrive only after
+    // fetches that run behind the download. A sender of an older build says
+    // no size: then the entry's, or the region's own count.
+    const remoteTransfer = remote.transfer ?? (entry ? transfer : remote.total)
     const remoteText = remote.phase === 'warming'
       ? t("Being cached in another tab", { defaultValue: "Environment downloaded in another tab — caching the checker there…" })
-      : t("Being downloaded in another tab… {{done}} / {{total}} MB", { defaultValue: "Being downloaded in another tab… {{done}} / {{total}} MB", done: mb(scaled(remote.bytes, remote.total)), total: mb(transfer) })
+      : t("Being downloaded in another tab… {{done}} / {{total}} MB", { defaultValue: "Being downloaded in another tab… {{done}} / {{total}} MB", done: mb(scaled(remote.bytes, remote.total, remoteTransfer)), total: mb(remoteTransfer) })
     cacheActions = <>
       <progress aria-label={remoteText} value={remote.bytes} max={remote.total} />
       <div>{remoteText}</div>
@@ -136,7 +141,7 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
     // The worker's exit status in the user's words; a Retry only where one
     // can succeed (a bare error, or a file another tab held).
     const failure = prep?.phase !== 'failed' ? null
-      : prep.result === 'busy' ? t("Prepare busy", { defaultValue: "Already being downloaded — by the game loaded in this tab or by another tab." })
+      : prep.result === 'busy' ? t("Prepare busy", { defaultValue: "Already being downloaded in another tab." })
       : prep.result === 'unavailable' ? t("Offline storage unavailable", { defaultValue: "This browser mode cannot keep games offline; each visit downloads the game again." })
       : t("Preparation failed: {{error}}", { error: prep.error ?? prep.result })
     const retryable = prep?.phase === 'failed' && prep.result !== 'unavailable'
@@ -151,10 +156,10 @@ function Tile({tileWithName, snapshot, done, opfs, onCacheChanged}: {tileWithNam
     // does not play offline yet. The counts are read from the cache itself,
     // so they hold after a reload; this tab's own Prepare adds why it stopped.
     // "Finish offline download" is Prepare again: the region step answers
-    // `already-cached` at once and the warm-up fetches what is missing.
+    // `cached` at once and the warm-up fetches what is missing.
     const off = snapshot.offline
     const why = prep?.phase === 'failed'
-        ? (prep.result === 'busy' ? t("Prepare busy", { defaultValue: "Already being downloaded — by the game loaded in this tab or by another tab." }) : t("Preparation failed: {{error}}", { error: prep.error ?? prep.result }))
+        ? (prep.result === 'busy' ? t("Prepare busy", { defaultValue: "Already being downloaded in another tab." }) : t("Preparation failed: {{error}}", { error: prep.error ?? prep.result }))
       : prep?.phase !== 'done' ? null
       : prep.runtime === null ? t("Offline cache not ready", { defaultValue: "The browser's offline cache did not answer — try again in a moment." })
       // UX3: a warm-up the link cut off (the worker's `linkDown`) is not a

@@ -6,20 +6,25 @@
  * snapshot), the QED64 L3 relay supervises the session, and GameTranslation
  * reproduces the relay's message rewriting in front of it.
  *
- * The substrate is the qed64 closure vendored at one commit
- * (client/src/wasm/vendor/qed64, scripts/sync-qed64.sh — no live dependency):
- *  - artifacts/profiles/snapshot machinery: qed64/frontend/src/qed64-boot
- *  - session adapter + boot policy:         qed64/frontend/src/resident-session
- *  - the relay (crash recovery, replay):    qed64/frontend/src/lsp-relay
- *  - the worker itself:                     /workers/lean.worker.js (+ lsp-frames.js,
- *                                           lsp-front-door.js, snapshot-prefetch.worker.js)
+ * The substrate is the qed64 npm package, a git dependency pinned to one
+ * commit (client/package.json; wasm/KERNEL.md "The qed64 dependency"), read
+ * only through its library entry `qed64/embed` (the package's
+ * docs/EMBEDDING.md §7) and the worker scripts its embedding/closure.json
+ * names (staged by scripts/stage-workers.sh):
+ *  - artifacts and snapshots:            installArtifacts, qed64's resolvers,
+ *                                        the raw region cache (prefetchRaw …)
+ *  - session adapter + boot policy:      ResidentSession (+ its session files)
+ *  - the relay (crash recovery, replay): LspRelay
+ *  - the worker itself:                  /workers/lean.worker.js (+ lsp-frames.js,
+ *                                        lsp-front-door.js, snapshot-prefetch.worker.js)
  *
  * Game-specific responsibilities here:
- *  0. the artifacts: installGameArtifacts — the runtime manifest and the
- *     snapshot index, NO library pack (the vendored installArtifacts installs
- *     the core profile pack, 120 MB on the wire / 389 MB in OPFS, which a
- *     game never reads: its snapshot is a complete environment and the
- *     kernel serves headers from cached environments only);
+ *  0. the artifacts: installArtifacts with NO library pack (`profiles:
+ *     "none"`; the editor's default installs the core profile pack, 120 MB
+ *     on the wire / 389 MB in OPFS, which a game never reads: its snapshot
+ *     is a complete environment and the kernel serves headers from cached
+ *     environments only) and the runtime manifest and snapshot index the
+ *     pairing check already resolved;
  *  1. the boot policy: the game's snapshot, named by the catalog (/api/games,
  *     see games-api.ts) and checked against the served index and the runtime
  *     build BEFORE any artifact byte moves; its baked environment covers
@@ -29,26 +34,25 @@
  *     memory commit is sized from the index's region bytes;
  *  2. place `.lake/gamedata/*.json` into the worker FS on EVERY session —
  *     GameServer's Runner reads level data from the cwd at proof-check time
- *     (GameSession.start, which the relay runs on each boot and reboot);
+ *     (the session's `files`, which ResidentSession writes on each boot and
+ *     reboot before the relay arms the loop);
  *  3. map the relay's status to the page's atoms (banner, input gating,
  *     readiness, boot failure).
  */
-import type { Qed64Artifacts, StatusSink } from "qed64/frontend/src/qed64-boot";
-import { fetchProfileIndex, type ProfileIndex } from "qed64/src/install/profiles";
-import { LspRelay, type RelayStatus, type RestartOptions } from "qed64/frontend/src/lsp-relay";
-import { ResidentSession, type ResidentHost, type ResidentPolicy } from "qed64/frontend/src/resident-session";
-import type { SnapshotEntry, SnapshotIndex } from "qed64/src/runtime/snapshots";
+import { LspRelay, ResidentSession, WORKER_URLS, installArtifacts, isRawCached, type ProgressInfo, type RelayStatus, type ResidentPolicy, type SessionFile } from "qed64/embed";
+import type { Qed64Artifacts, SnapshotEntry, SnapshotIndex, StatusSink } from "qed64/embed";
 import { atom, getDefaultStore } from "jotai";
 import { difficultyAtom, progressAtom } from "../store/progress-atoms";
 import { preferencesAtom } from "../store/preferences-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
 import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing, publishNetworkHold } from "../store/boot-atoms";
 import { rememberGamedata } from "./gamedata-cache";
-import { NETWORK_WAIT_LABEL, STARTING_LABEL, deathReader, isRuntimeVerdict, haltedNote, networkInEpisode, rebootLabel, rebootNote } from "./death-kind";
-import { MiB, devProfilesDir, devSnapshotsDir, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, rawSnapshotCached, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
-import { claimSnapshotForBoot, endDownload, heldButNotRevalidated, notifyCacheChanged, inFlightPrepare, inFlightRegions, preparesDownloading, prepareStatusesAtom, reportDownload, runWhenOnline, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
+import { NETWORK_WAIT_LABEL, STARTING_LABEL, deathWords, haltFacts, haltedNote, isNetworkDeath, isRuntimeVerdict, isStalePageDeath, networkInEpisode, readDeath, rebootLabel, rebootNote, type DeathLike } from "./death-kind";
+import { stageLabel } from "./boot-labels";
+import { MiB, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
+import { endDownload, heldButNotRevalidated, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareRunning, preparesDownloading, prepareStatusesAtom, reportDownload, runWhenOnline, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
 import { embeddedImageUrls, fetchGameDataUrls } from "./game-data-urls";
-import { SEC1_REFUSAL_RE, assertBootParams, assertSameOriginSnapshot, isSameOrigin, refuseForeignManifestUrls, refuseForeignSnapshotUrls } from "./boot-params";
+import { assertBootParams, bootOverrides } from "./boot-params";
 import { ensureServiceWorkerRegistration, releaseServiceWorkerRegistration, requestShellFill, whenServiceWorkerReady } from "./sw-client";
 
 export interface GameDataBundle {
@@ -116,7 +120,9 @@ export const boundEnvironmentAtom = atom<BoundEnvironment | null>(null);
  * inflated into OPFS needs no object, so the HEAD is skipped for it and an
  * offline reload keeps working. The thrown message is the reason only: the
  * boot's catch prefixes "Lean failed to start: " and the level pane shows
- * it as the failure card. */
+ * it as the failure card. SEC1: qed64's loader refused the index whole if
+ * any url left this origin (fetchSnapshotIndexOnce), so the HEAD stays on
+ * this site. */
 async function checkSnapshotPairing(snapshot: string): Promise<{ entry: SnapshotEntry; index: SnapshotIndex; buildId: string }> {
   const [buildId, index] = await Promise.all([resolveRuntimeBuildId(), fetchSnapshotIndexOnce()]);
   const unpublished = (why: string) => new Error(`the environment "${snapshot}" is not published for this build (${why})`);
@@ -124,10 +130,7 @@ async function checkSnapshotPairing(snapshot: string): Promise<{ entry: Snapshot
   const entry = findSnapshotEntry(index, snapshot);
   if (!entry) throw unpublished(`no entry in the snapshot index; this shell runs ${buildId}`);
   if (entry.runtime !== buildId) throw unpublished(`baked for ${entry.runtime ?? "an unknown runtime"}, this shell runs ${buildId}`);
-  // SEC1: the index was refused whole if any url left this origin
-  // (fetchSnapshotIndexOnce); asserted again where the url meets fetch.
-  assertSameOriginSnapshot(entry.name, entry.url);
-  if (!(await rawSnapshotCached(entry))) {
+  if (!(await isRawCached(entry))) {
     const head = await fetch(entry.url, { method: "HEAD" }).catch(() => null);
     // A static host answers 404 for a missing object; a single-page fallback
     // (scripts/serve-dist.mjs, the vite dev server) answers 200 with the
@@ -141,58 +144,6 @@ async function checkSnapshotPairing(snapshot: string): Promise<{ entry: Snapshot
     if (!head.ok) console.warn(`[game-boot] HEAD ${entry.url}: HTTP ${head.status} — not treated as missing; the download will report`);
   }
   return { entry, index, buildId };
-}
-
-/** The game's artifacts, in the vendored `Qed64Artifacts` shape, WITHOUT
- * the core profile pack the editor's installArtifacts (qed64-boot.ts) puts
- * in: a game session never imports from oleans — the game snapshot is one
- * complete environment and the kernel's header resolver (FileWorker.lean →
- * lookupPrebuiltEnv) serves headers only from cached environments on
- * Emscripten — so the pack was 120 MB of first-visit wire and 389 MB of
- * OPFS for nothing. With `installed` empty the session boots the worker
- * with leanPath "" and no packs (resident-session.ts start: LEAN_PATH is
- * joined from the installed ids; lean.worker.js mountPacks over [] is a
- * no-op and mkdirp("") creates nothing; Lean parses LEAN_PATH "" as one
- * empty entry, which nothing consults because headers never reach findOLean
- * here). The runtime manifest is the ONE resolver's choice
- * (resolveRuntimeManifest — the same manifest the pairing check read), the
- * snapshot index the same memoised fetch (with the `?snapshots=` dev
- * re-rooting), and the profile index is kept in the shape only: a missing
- * one is not fatal for a game (an empty profile list; ensureProfile then
- * answers "not published", which no game path asks). */
-async function installGameArtifacts(ui: StatusSink): Promise<Qed64Artifacts> {
-  ui.busy("fetching manifests");
-  const [runtime, snapshots] = await Promise.all([resolveRuntimeManifest(), fetchSnapshotIndexOnce()]);
-  // SEC1: this is where the urls leave for the vendored session, its
-  // prefetch worker and the Lean worker — both resolvers refused foreign
-  // urls already; re-asserted at the hand-off (two loops over memoised data).
-  refuseForeignManifestUrls(runtime);
-  if (snapshots) refuseForeignSnapshotUrls(snapshots);
-  // Mirrors qed64-boot.ts installArtifacts (3b42714): the dev-only
-  // `?profiles=<dir>` override re-roots the profile index to public/<dir>
-  // (an unpromoted profile set). A game installs no pack, so only the index
-  // read is re-rooted; the vendored ensureProfile keeps its own (identity)
-  // re-root because installArtifacts never runs on the game path — no game
-  // path asks for a pack (GameSession never passes `packs`). SEC1: the
-  // override as boot-params accepted it (a refused one threw at the boot's
-  // gate and again here, before any fetch).
-  const devProfiles = devProfilesDir();
-  const indexUrl = devProfiles ? `/${devProfiles}/index.json` : "/profiles/index.json";
-  const empty = (): ProfileIndex => ({ schema: "qed64.profile-index/v1", runtime: { buildId: runtime.buildId, leanVersion: runtime.leanVersion }, profiles: [] });
-  let index: ProfileIndex = await fetchProfileIndex(indexUrl).catch((e) => {
-    console.warn(`[game-boot] profile index unavailable at ${indexUrl} (${(e as Error).message}); a game needs no library pack`);
-    return empty();
-  });
-  // SEC1: a profile manifest on another origin is never something to
-  // install from; the game reads no pack, so such an index is dropped (the
-  // same non-fatal empty list as a missing one) instead of being kept in
-  // the shape the vendored ensureProfile would fetch from.
-  const foreign = (Array.isArray(index.profiles) ? index.profiles : []).find((p) => !isSameOrigin(p?.manifest));
-  if (foreign) {
-    console.warn(`[game-boot] profile index at ${indexUrl} refused: profile "${foreign.id}" names a manifest on another origin; a game needs no library pack`);
-    index = empty();
-  }
-  return { runtime, index, installed: new Map(), snapshots };
 }
 
 /** Worker cwd is /workspace (lean.worker.js boots there); Runner reads
@@ -218,7 +169,9 @@ async function mirrorPrepare<T>(ui: StatusSink, snapshot: string | null, label: 
   const render = () => {
     if (!live()) return; // a cancelled game switch: the banner belongs to the bound game again
     const st: PrepareStatus | undefined = snapshot ? store.get(prepareStatusesAtom)[snapshot] : undefined;
-    if (st?.phase === "running") ui.progress(label, { phase: "snapshot", loaded: st.bytes, total: st.total, unit: "bytes" });
+    // The target's region streaming: the same structured step as a boot's own
+    // prefetch, so the banner words it the same ("preparing the game environment").
+    if (st?.phase === "running") ui.progress(label, { phase: "snapshot", loaded: st.bytes, total: st.total, unit: "bytes", stage: "snapshot", step: "download", subject: snapshot ?? undefined });
     else ui.busy(label);
   };
   const unsub = store.sub(prepareStatusesAtom, render);
@@ -260,23 +213,6 @@ export async function fetchGameData(): Promise<GameDataBundle> {
   return { gameName: game.name, levels, rawFiles };
 }
 
-/** The relay's session for this game: the resident adapter plus the gamedata
- * files GameServer reads at check time. `start()` is what the relay awaits
- * before it replays the document and arms the loop, so the files are in the
- * worker FS before the first elaboration — on the first boot and on every
- * crash reboot alike. `request` is LeanSession-private; this adapter is a
- * trusted peer the same way qed64's own memory meter is. */
-class GameSession extends ResidentSession {
-  constructor(host: ResidentHost, private readonly files: { path: string; text: string }[], opts: RestartOptions = {}) {
-    super(host, opts);
-  }
-  async start(): Promise<void> {
-    await super.start();
-    await (this.lean as unknown as { request(type: string, payload: Record<string, unknown>): Promise<unknown> })
-      .request("write-files", { input: { files: this.files } });
-  }
-}
-
 /** The game's boot policy, from data. Snapshots: the game's baked environment
  * ALONE — it covers every level header in-process, and the kernel's resolver
  * can never pick the Init-only env for a level header, so the init snapshot
@@ -285,7 +221,7 @@ class GameSession extends ResidentSession {
  * fallback if it fails (the memory formula sums whichever list the session
  * loads, so that flip is one line). Memory: the region bytes come from the
  * served index (gameMemoryPolicy: +10 %, 256 MiB steps, ≥1 GiB; cap ≥3 GiB
- * and ≥ initial + 1 GiB — the vendored session filters that cap against the
+ * and ≥ initial + 1 GiB — qed64's session filters that cap against the
  * device's reservation rungs, see games-api.ts). The cap keeps the
  * reservation a dead-but-unreclaimed page holds across reloads small (the
  * reload-then-switch-storm renderer crash). */
@@ -337,43 +273,20 @@ function ensureTranslation(): GameTranslation {
 }
 
 
-/** Post-boot, routine checker chatter (per-edit elaboration, import probes)
- * must not resurrect the boot banner — only real boot/restart stages do. */
-const ROUTINE_BUSY = /elaborating|checking the new imports|imports changed/i;
-
-/** qed64's labels carry their own size notes ("(1.4 GiB — one-time)",
- * "(3.3 GiB unpacked — cached …)"); the banner shows byte progress in MB
- * itself, so three unit systems met on one line. Strip the notes and say
- * "game environment" where qed64 says the snapshot's internal name — ANY
- * name ("preparing the stg4 environment", "loading the nng4 environment",
- * "nng4 snapshot failed: …", the death message "snapshot 'nng4' failed to
- * load"), so no per-game data flows into the label layer; init/core/mathlib
- * read as "game" too, as before. The generic words are excluded so the
- * worker's own "Loading environment snapshot" / "Loading the environment
- * into Lean" stay untouched. (No pack label occurs on the game path any
- * more — installGameArtifacts installs none — but the rule is harmless.) */
-function humanizeLabel(label: string): string {
-  // Per-module progress reports the module name ("Mathlib.Tactic.Attr.Register").
-  if (/^[A-Z][\w']*(\.[\w']+)+$/.test(label.trim())) return "loading the game's modules";
-  const out = label
-    .replace(/\s*\([^)]*(GiB|MiB|MB|KB)[^)]*\)/g, "")
-    .replace(/(^|\s)(the )?(?!(?:the|environment|loading|game)\b)([\w-]+)( environment| snapshot)\b/i, (m, pre, the, _name, what) =>
-      `${pre}${the ?? ""}game${what}`)
-    .replace(/\bsnapshot '[\w-]+'/gi, "the game snapshot")
-    .trim();
-  // qed64 capitalises some stage names ("Mounting verified library packs");
-  // they read as mid-sentence here ("Lean is starting — mounting …").
-  return /^[A-Z][a-z]/.test(out) && !/^(Lean|Mathlib|Init)\b/.test(out) ? out[0].toLowerCase() + out.slice(1) : out;
-}
 let bootFinishedOnce = false;
-/** The relay, once constructed (re-arm from the pane; status facts). */
+/** The relay, once constructed (re-arm from the pane; status facts). Its
+ * facts are read through `status()` — the projection docs/EMBEDDING.md §7
+ * names (`relay` is the state's kind, `lastDeath` the relay's own object) —
+ * never its `state`/`lastDeath` fields, which are internal and may change in
+ * any qed64 commit (QD-API-3, review of phase 2). Beyond `status()` and
+ * `rearm()` the game uses `clientPort` and `unload()`, which a relay cannot
+ * be used without; v1 does not name them either (asked upstream). */
 let relayRef: LspRelay | null = null;
 /** The relay is replacing its session (crash reboot): the input gate must
- * stay closed even while the replacement's boot stages publish labels the
- * SWITCHING_RE would not recognise. */
+ * stay closed while the replacement's boot stages publish their labels. */
 let relayRebooting = false;
 /** HARDENING #52: the label of the reboot in progress after a "wedged" or
- * "exit" death (death-kind.ts rebootNote). The replacement session's boot
+ * "exit" death, or a stale page's (QD-API-2) (death-kind.ts rebootNote). The replacement session's boot
  * stages arrive through the StatusSink and used to overwrite the reboot's
  * own label within milliseconds ("starting Lean", "loading the game
  * environment"); while this is set they show it instead (byte progress
@@ -399,74 +312,55 @@ let relayKey = "";
  * are dropped while it is set; any non-halted relay status clears it. */
 let relayHalted = false;
 
-/** The underlying reason of the last snapshot failure. The vendored session
- * dies with the same "snapshot '<name>' failed to load" for a cut download,
- * a corrupt region, an unpaired snapshot and an allocation failure alike; the
- * real error only reaches this side as qed64-boot's progress label
- * "<name> snapshot failed: <error>". Recorded BEFORE the halted gate, reset
- * at each session's "starting Lean". Read by looksLikeNetworkDeath. */
-let lastSnapshotFailure = "";
-function noteSnapshotFailure(rawLabel: string): void {
-  const m = /snapshot failed: (.*)$/.exec(rawLabel);
-  if (m) lastSnapshotFailure = m[1];
-  // (not while halted: a session the breaker left behind may still publish
-  // "starting Lean", and the halted classification must keep its evidence)
-  else if (!relayHalted && /^starting Lean$/i.test(rawLabel.trim())) lastSnapshotFailure = "";
-}
-
 /** D2 (live 2026-10-03): the bound game's region streaming in through this
- * boot (the vendored prefetch's `snapshot` progress, after
- * claimSnapshotForBoot) is reported to the other tabs like a Prepare
- * (game-cache reportDownload): their tile shows "Being downloaded in another
- * tab…" instead of a Prepare that could only meet a busy file. The first
- * event of any other stage ends it. Not while a game switch mirrors another
- * snapshot's Prepare onto this banner (those bytes are not this region's). */
-let bootRegionClaimed = false;
+ * boot (qed64's prefetch of it — stage `snapshot`, the bytes of a download
+ * or of an inflate, never the read of a cached region) is reported to the
+ * other tabs like a Prepare (game-cache reportDownload): their tile shows
+ * "Being downloaded in another tab…" instead of a Prepare that could only
+ * meet the region's lock. The first event of any other step ends it. Not
+ * while a Prepare of this tab runs the same prefetch (the boot waits for its
+ * region, or the Prepare joined the session's: the Prepare reports it), nor
+ * while a game switch mirrors another snapshot's Prepare onto this banner
+ * (those bytes are not this region's). */
 let bootRegionReported = false;
-function noteBootRegion(info?: { phase?: string; loaded?: number; total?: number }): void {
-  if (!bootRegionClaimed || !boundEntry || switchPending) return;
-  if (info?.phase === "snapshot" && !everServed) {
+function noteBootRegion(info?: ProgressInfo): void {
+  if (!boundEntry || switchPending) return;
+  const streaming = info?.stage === "snapshot" && info.subject === boundEntry.name && (info.step === "download" || info.step === "inflate") && typeof info.loaded === "number";
+  if (streaming && !everServed && !prepareRunning(boundEntry.name)) {
     bootRegionReported = true;
-    reportDownload(boundEntry.name, { phase: "running", bytes: info.loaded ?? 0, total: info.total || boundEntry.bytes });
+    reportDownload(boundEntry.name, { phase: "running", bytes: info.loaded!, total: info.total || boundEntry.bytes, transfer: boundEntry.transfer ?? boundEntry.bytes });
   } else if (bootRegionReported) {
     bootRegionReported = false;
     endDownload(boundEntry.name, "ended");
   }
 }
 
+/** The boot's StatusSink. The banner's words for qed64's steps come from
+ * their structured stage (boot-labels stageLabel); the idle labels are the
+ * game's own ("Lean ready", "Lean failed to start: <reason>" — a SEC1
+ * refusal's reason verbatim, its code included, which the level pane reads). */
 const consoleSink: StatusSink = {
-  busy: (rawLabel) => {
-    noteSnapshotFailure(rawLabel);
-    noteBootRegion();
+  busy: (rawLabel, info) => {
+    noteBootRegion(info);
     if (relayHalted) { console.info(`[game-boot] (halted, not shown) ⏳ ${rawLabel}`); return; }
     sinkSpoke = true;
-    const label = (relayRebooting && relayRebootNote) || humanizeLabel(rawLabel);
+    const label = (relayRebooting && relayRebootNote) || stageLabel(rawLabel, info);
     console.info(`[game-boot] ⏳ ${rawLabel}`);
     publishCheckerActivity("busy", label, !bootFinishedOnce, relayRebooting || !bootFinishedOnce);
-    if (!bootFinishedOnce || !ROUTINE_BUSY.test(label)) {
-      publishBootStatus({ state: "busy", label });
-    }
+    publishBootStatus({ state: "busy", label });
   },
   progress: (rawLabel, info) => {
-    noteSnapshotFailure(rawLabel);
     noteBootRegion(info);
     if (relayHalted) return;
     sinkSpoke = true;
-    const label = (relayRebooting && relayRebootNote) || humanizeLabel(rawLabel);
+    const label = (relayRebooting && relayRebootNote) || stageLabel(rawLabel, info);
     console.debug(`[game-boot] … ${rawLabel}`, info ?? "");
     publishCheckerActivity("busy", label, !bootFinishedOnce, relayRebooting || !bootFinishedOnce);
-    if (!bootFinishedOnce || !ROUTINE_BUSY.test(label)) {
-      publishBootStatus({ state: "busy", label, loaded: info?.loaded, total: info?.total, unit: info?.unit });
-    }
+    publishBootStatus({ state: "busy", label, loaded: info?.loaded, total: info?.total, unit: info?.unit });
   },
-  idle: (rawLabel) => {
+  idle: (label) => {
     noteBootRegion();
-    // SEC1: a refusal's reason goes on the card verbatim — humanizeLabel
-    // would rewrite "same-origin environment" to "game environment" and
-    // strip a "(… MB …)"-shaped part of the quoted, attacker-chosen value
-    // together with the code the level pane recognises the refusal by.
-    const label = SEC1_REFUSAL_RE.test(rawLabel) ? rawLabel : humanizeLabel(rawLabel);
-    console.info(`[game-boot] ✔ ${rawLabel}`);
+    console.info(`[game-boot] ✔ ${label}`);
     publishCheckerActivity("ready", label);
     publishBootStatus({ state: "ready", label });
   },
@@ -489,11 +383,9 @@ const consoleSink: StatusSink = {
 let everServed = false;
 function markServed(ui: StatusSink): void {
   // A served boot restores the full automatic-recovery budget: a long-lived
-  // tab that survived three flaps gets a fourth recovery, and the one guarded
-  // reload of the no-document re-arm is available again.
+  // tab that survived three flaps gets a fourth recovery.
   autoRearms = 0;
   deployProblem = "";
-  try { sessionStorage.removeItem("l4g-network-reload"); } catch { /* storage blocked */ }
   if (everServed) return;
   everServed = true;
   bootFinishedOnce = true;
@@ -522,7 +414,7 @@ export function leanDownloadInFlight(): boolean {
   // shell fill would otherwise wait for the life of the page.
   // A halt whose automatic network re-arm is already scheduled will resume
   // the download within seconds: still busy (bounded by MAX_AUTO_REARMS).
-  const halted = relayRef?.state.kind === "halted" && !autoRearmScheduled;
+  const halted = relayRef?.status().relay === "halted" && !autoRearmScheduled;
   const bootDownloading = bootPromise !== null && !everServed && !halted && !deployProblem;
   // R2-2: a Prepare whose warm-up waits for a service worker downloads
   // nothing (game-cache preparesDownloading).
@@ -627,64 +519,67 @@ async function warmOfflineCache(): Promise<void> {
 }
 
 /* ---- L4: network-aware recovery -------------------------------------------
- * The vendored relay counts every failed boot as a death and reboots after
+ * qed64's relay counts every failed boot as a death and reboots after
  * the injected settle; three deaths in two minutes halt it for good. A
  * download cut by an outage is such a death ("snapshot 'nng4' failed to
  * load", RUNTIME_FETCH_FAILED, "Failed to fetch"), so a 20 s outage burned
  * all three attempts in its first 10 s and the page stayed dead after the
- * network came back. Two game-side measures, no vendored change:
+ * network came back. Two game-side measures, no qed64 change:
  *  1. the settle holds the reboot until a cheap same-origin probe succeeds
  *     (2, 4, 8, 15, 15 … s backoff, and at once on the `online` event);
  *  2. a relay that halted anyway for a network-shaped death is re-armed
  *     automatically once the probe succeeds (at most MAX_AUTO_REARMS times
  *     per page — a snapshot that "fails to load" with the network up is not
  *     retried for ever). */
-/* Classified by the UNDERLYING error text, never by the generic death: the
- * session throws "snapshot '<name>' failed to load" for every snapshot
- * failure (cut download, corrupt region, SNAPSHOT_UNPAIRED, allocation) and
- * RUNTIME_FETCH_FAILED is also the worker's code for "chunk N: HTTP 404" and
- * a failed SHA-256 check. A corrupt snapshot with the network up was held
- * under the "download was interrupted" card and re-armed three times (12
- * boots, 24 .snapz GETs) before the right card showed. */
-/* D4(a) (live run of f468f2c): each death's reading is remembered from its
- * first one (death-kind.ts deathReader): lastSnapshotFailure is reset at the
- * next session's "starting Lean" while the relay still reboots with the same
- * death, and re-reading it then flashed the crash label. */
-const readDeathOnce = deathReader();
-const looksLikeNetworkDeath = (d: { reason: string; message: string } | null | undefined): boolean =>
-  readDeathOnce(d, lastSnapshotFailure) === "network"; // death-kind.ts (pure, unit-tested)
-/** D4: the death a halt was classified as the link's doing by the probe
- * (classifyHalt — a bare "crash" whose text says nothing). By identity: the
- * relay hands out the same `lastDeath` object until the next death, so the
- * re-arm's reboot (which carries that death on) is labelled as the link's,
- * and a later death is not. */
-let networkHaltDeath: object | null = null;
-const deathWasNetwork = (d: { reason: string; message: string } | null | undefined): boolean =>
-  looksLikeNetworkDeath(d) || (!!d && d === networkHaltDeath);
+/* Classified by the death's CAUSE (death-kind.ts readDeath), never by the
+ * generic death: the session throws "snapshot '<name>' failed to load" for
+ * every snapshot failure (cut download, corrupt region, SNAPSHOT_UNPAIRED,
+ * allocation) and RUNTIME_FETCH_FAILED is also the worker's code for "chunk
+ * N: HTTP 404" and a failed SHA-256 check — qed64 classifies each throw
+ * (docs/EMBEDDING.md §7.2) and the cause rides on the death. A corrupt
+ * snapshot with the network up was held under the "download was
+ * interrupted" card and re-armed three times (12 boots, 24 .snapz GETs)
+ * before the right card showed. (D4(a): the reading used to be remembered
+ * per death from the label of the failure reported before it, which the
+ * next session's first stage reset; the cause is the death's own.) */
+/** D4: the death (its `seq`) a halt was classified as the link's doing by
+ * the probe (classifyHalt — a death whose cause says nothing). The relay
+ * keeps that death as `lastDeath` through the re-arm's reboot, so that
+ * reboot is labelled as the link's, and a later death is not. */
+let networkHaltSeq: number | null = null;
+const deathWasNetwork = (d: DeathLike): boolean =>
+  isNetworkDeath(d) || (!!d && d.seq === networkHaltSeq);
 /** D4(b) (live run of f468f2c): a network episode runs from a death the link
  * caused (deathWasNetwork) until the relay serves again, or a halt is
  * classified as no link problem. Inside it, a reboot after a death that says
- * nothing of its own (the bare "crash" of a worker whose script could not
- * load) gets the network wording too (death-kind.ts networkInEpisode). */
+ * nothing of its own (a worker whose script could not load) gets the
+ * network wording too (death-kind.ts networkInEpisode). */
 let networkEpisode = false;
-/** D4(b) review: the death that opened the last episode. The relay keeps
- * handing out that `lastDeath` after it serves again (a serving relay's
- * "booting" phase reaches the reboot branch with it), and it must not open
- * the episode the serving status just ended — only a death not seen
- * opening one does. */
-let episodeDeath: object | null = null;
+/** D4(b) review: the death (`seq`) that opened the last episode. The relay
+ * keeps handing out that `lastDeath` after it serves again (a serving
+ * relay's "booting" phase reaches the reboot branch with it), and it must
+ * not open the episode the serving status just ended — only a death not
+ * seen opening one does. */
+let episodeSeq: number | null = null;
+/** NEW-3 (live run of 4083fb4): the death (`seq`) whose reboot's settle is
+ * over — the hold found the link back, or there was nothing to hold for.
+ * That reboot no longer waits for the connection: its statuses read
+ * "starting" (death-kind.ts rebootLabel `linkConfirmed`), which the
+ * session's own stages then speak over. */
+let linkConfirmedSeq: number | null = null;
 
 /* D1 (live 2026-09-22): on a FIRST visit the service worker's 37 MB precache
  * install takes minutes on a slow link (the registration even disappears
  * when the install times out), so nothing serves /workers/lean.worker.js,
- * lsp-frames.js and lsp-front-door.js during a cut — and the vendored
+ * lsp-frames.js and lsp-front-door.js during a cut — and qed64's
  * session constructs its Worker in the relay's synchronous reboot, BEFORE
  * the injected settle runs (lsp-relay.ts reboot → makeSession → new
  * LeanSession → `new Worker(url)`). A worker whose script fails to load
- * fires a bare `error` event: reason "crash", NO message. Three of those
- * arrive within milliseconds, the breaker trips before any settle can hold,
- * and the halted death carries nothing looksLikeNetworkDeath can read. So:
- *  - networkSuspected: a death that is not network-shaped by its text is
+ * fires an `error` event before its hello: reason "crash", cause
+ * WORKER_SCRIPT_LOAD_FAILED — it looks the same offline as on a 404. Three
+ * of those arrive within milliseconds, the breaker trips before any settle
+ * can hold, and the halted death says nothing of the link. So:
+ *  - networkSuspected: a death that is not the link's by its cause is
  *    still checked against the link when the bound game's raw region is not
  *    in OPFS yet (a cached game is never held — its reboot needs no network
  *    and a real crash must reach the card); the same cheap same-origin
@@ -696,9 +591,8 @@ let episodeDeath: object | null = null;
  *    is let to reboot (awaitLink): a failed fetch is the link (hold again),
  *    a 404/HTML answer is a deploy problem (no re-arm: the card names it).
  * None of it relies on the service worker. The corrupt / unpaired snapshot
- * deaths carry their messages and the region is in OPFS by then: card. */
-const WORKER_SCRIPTS = ["/workers/lean.worker.js", "/workers/lsp-frames.js", "/workers/lsp-front-door.js", "/workers/snapshot-prefetch.worker.js"];
-/** The bound game's index entry (rawSnapshotCached needs the cache key). */
+ * deaths carry their causes and the region is in OPFS by then: card. */
+/** The bound game's index entry (isRawCached needs the cache key). */
 let boundEntry: SnapshotEntry | null = null;
 /** A worker script the deployment does not serve (404 / HTML page), found
  * by a preflight: the halted card's text when the death itself has none,
@@ -706,14 +600,15 @@ let boundEntry: SnapshotEntry | null = null;
 let deployProblem = "";
 
 type Preflight = { ok: true } | { ok: false; kind: "link" | "deploy"; detail: string };
-/** HEAD every worker script: generated into public/workers from the vendored
- * closure (gitignored), a shell deployed without them (the first CI-built
+/** HEAD every worker script: generated into public/workers from the qed64
+ * package (gitignored), a shell deployed without them (the first CI-built
  * deploy, 2026-09-07) hangs at "starting Lean" with no error — `new
  * Worker(404)` never answers. A static host answers 404; a single-page
  * fallback answers 200 with the app's HTML — neither is a worker script; a
  * fetch that fails outright is the link, not the deploy. */
 async function preflightWorkerScripts(): Promise<Preflight> {
-  for (const script of WORKER_SCRIPTS) {
+  // qed64's list of the scripts a page spawns or a worker imports (§7.5).
+  for (const script of WORKER_URLS) {
     const r = await fetch(script, { method: "HEAD", cache: "no-cache" }).catch(() => null);
     if (!r) return { ok: false, kind: "link", detail: `${script} is unreachable` };
     // Missing ONLY on 404/410 or a 2xx single-page-fallback HTML answer (the
@@ -736,14 +631,15 @@ async function preflightWorkerScripts(): Promise<Preflight> {
  * registration lost to an install timeout) fetches them from the network on
  * every reboot — such a reboot during a cut is three bare deaths, the link's
  * doing. A deploy problem is not the link. */
-async function networkSuspected(death: { reason: string; message: string } | null | undefined): Promise<boolean> {
+async function networkSuspected(death: DeathLike): Promise<boolean> {
   // HARDENING #52: a liveness verdict ("wedged") or a FileWorker exit
   // ("exit") is decided inside a worker that loaded and ran — never the
-  // link's doing, never held, never probed (death-kind.ts).
-  if (isRuntimeVerdict(death)) return false;
-  if (looksLikeNetworkDeath(death)) return true;
+  // link's doing, never held, never probed (death-kind.ts). Nor is a stale
+  // page (QD-API-2): its worker loaded every script, of two versions.
+  if (isRuntimeVerdict(death) || isStalePageDeath(death)) return false;
+  if (isNetworkDeath(death)) return true;
   if (deployProblem || !boundEntry) return false;
-  if (await rawSnapshotCached(boundEntry)) {
+  if (await isRawCached(boundEntry)) {
     const pf = await preflightWorkerScripts();
     return !pf.ok && pf.kind === "link";
   }
@@ -831,12 +727,13 @@ async function networkAwareSettle(): Promise<void> {
   // permanent "starts on its own" after the re-arm budget was spent) and
   // pile up probe loops. The halt's recovery is classifyHalt's.
   if (relayHalted) return;
-  const death = relayRef?.lastDeath;
-  if (!(await networkSuspected(death))) return;
+  const death = relayRef?.status().lastDeath;
   // D1(c): the settle cannot fail the relay's boot (it runs outside the
   // relay's try), so a deploy problem found here is left to the reboot,
   // whose worker dies with it; classifyHalt then names it on the card.
-  await holdForNetwork(death?.message || death?.reason || "offline");
+  if (await networkSuspected(death)) await holdForNetwork(death?.message || death?.reason || "offline");
+  // NEW-3: the reboot goes on now — not waiting for the link any more.
+  if (death) linkConfirmedSeq = death.seq;
 }
 
 const MAX_AUTO_REARMS = 3;
@@ -856,7 +753,7 @@ function scheduleNetworkRearm(): void {
     await new Promise((r) => window.setTimeout(r, [3000, 15000, 30000][autoRearms] ?? 30000));
     const verdict = await awaitLink(() => {});
     autoRearmScheduled = false;
-    if (relayRef?.state.kind !== "halted") return;
+    if (relayRef?.status().relay !== "halted") return;
     if (verdict === "deploy") {
       // The link is back but the deployment cannot serve a worker: a re-arm
       // would only die three more times. The normal card, naming the script.
@@ -871,16 +768,10 @@ function scheduleNetworkRearm(): void {
     publishNetworkHold(null);
     autoRearms += 1;
     console.warn(`[game-boot] the network is reachable again — re-arming the halted checker (automatic attempt ${autoRearms}/${MAX_AUTO_REARMS})`);
-    if (rearmCheckerIfHalted()) return;
-    // No document to replay (the world map): one guarded reload. When the
-    // guard refuses, nothing else is scheduled — drop the hold so the normal
-    // failure card (Reload + "Restart the checker") shows, not a card that
-    // says recovery is automatic.
-    try {
-      if (sessionStorage.getItem("l4g-network-reload") === "1") { publishNetworkHold(null); return; }
-      sessionStorage.setItem("l4g-network-reload", "1");
-    } catch { publishNetworkHold(null); return; }
-    window.location.reload();
+    // qed64's rearm() needs no document (the world map has none open): the
+    // page used to replay one as a didChange and, with none to replay,
+    // reloaded itself once.
+    rearmCheckerIfHalted();
   })();
 }
 
@@ -891,7 +782,7 @@ function scheduleNetworkRearm(): void {
  * editor-mode "Crashed!" wrapper every few seconds). */
 function publishHaltedFailure(label: string, ui: StatusSink = consoleSink): void {
   ui.idle(label);
-  publishCheckerActivity("ready", humanizeLabel(label.replace(/^Lean failed to start: /, "")), false, false, true);
+  publishCheckerActivity("ready", label.replace(/^Lean failed to start: /, ""), false, false, true);
 }
 
 let haltGen = 0;
@@ -906,19 +797,20 @@ async function classifyHalt(st: RelayStatus, ui: StatusSink): Promise<void> {
   const death = st.lastDeath ? `${st.lastDeath.message || st.lastDeath.reason}` : "";
   // HARDENING #52: an "exit" (the content makes Lean exit on every replay)
   // or a repeated "wedged" is a crash — straight to the card, no
-  // "checking the connection" detour and no network re-arm.
+  // "checking the connection" detour and no network re-arm. QD-API-2: so is
+  // a stale page (WORKER_DEP_MISMATCH) — its card asks for a reload.
   const runtimeNote = haltedNote(st.lastDeath);
-  const reason = runtimeNote || st.lastDeath?.message || deployProblem || death || "the checker crashed repeatedly while starting";
-  let network = looksLikeNetworkDeath(st.lastDeath);
+  const reason = runtimeNote || (st.lastDeath?.message ? deathWords(st.lastDeath) : "") || deployProblem || death || "the checker crashed repeatedly while starting";
+  let network = isNetworkDeath(st.lastDeath);
   if (!network && !runtimeNote && autoRearms < MAX_AUTO_REARMS) {
     publishCheckerActivity("ready", "checking the connection", false, false, true);
     publishBootStatus({ state: "busy", label: "checking the connection" });
     network = await networkSuspected(st.lastDeath);
     if (gen !== haltGen || !relayHalted) return;
   }
-  networkHaltDeath = network && st.lastDeath ? st.lastDeath : null;
+  networkHaltSeq = network && st.lastDeath ? st.lastDeath.seq : null;
   networkEpisode = network; // D4(b): a halt that is no link problem ends the episode
-  if (networkHaltDeath) episodeDeath = networkHaltDeath;
+  if (networkHaltSeq !== null) episodeSeq = networkHaltSeq;
   if (network && autoRearms < MAX_AUTO_REARMS) {
     console.warn(`[game-boot] the checker halted after "${death || "a bare worker death"}" with the network unreachable — recovery is automatic`);
     scheduleNetworkRearm();
@@ -929,12 +821,14 @@ async function classifyHalt(st: RelayStatus, ui: StatusSink): Promise<void> {
   // replay). Not the boot-failure card ("Lean could not start … Reloading the
   // page retries" — it would replay the same text and die again, with the
   // input disabled by bootFailed): the level pane's exit / stall card, which
-  // offers removing the offending line.
+  // offers removing the offending line. A stale page's halt (QD-API-2) takes
+  // the same path to its own card, served or not.
   if (!everServed && !runtimeNote) {
     publishHaltedFailure(`Lean failed to start: ${reason}`, ui);
   } else {
     const label = runtimeNote ?? `the checker halted after repeated crashes${death ? ` (${death.slice(0, 80)})` : ""}`;
-    publishCheckerActivity("ready", label, false, false, true);
+    // The card's facts (an exit's code, a repeated stall, a stale page) as data.
+    publishCheckerActivity("ready", label, false, false, haltFacts(st.lastDeath));
     publishBootStatus({ state: "ready", label });
   }
 }
@@ -959,17 +853,21 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   if (st.relay === "rebooting" || st.phase === "booting" || st.phase === "dead") {
     relayRebooting = true;
     // The relay's reboot reason (lsp-relay.ts 3b42714: "wedged" | "crash" |
-    // "heartbeat" | "bootFailed") and the death: a #52 death keeps its own
-    // label for the whole reboot (relayRebootNote, read by the StatusSink).
+    // "heartbeat" | "bootFailed") and the death: a #52 death (and a stale
+    // page's, QD-API-2) keeps its own label for the whole reboot
+    // (relayRebootNote, read by the StatusSink).
     // D4: a death the link caused (a snapshot that "failed to load" on a
     // "Failed to fetch") reads as L4's wait for the connection, not as a
     // crash (rebootLabel); the settle's hold takes over from there. D4(b):
     // so does a bare death inside the network episode such a death opened
     // (only a "silent" one — a death with evidence of its own is a crash).
+    // NEW-3: not once this reboot's settle confirmed the link (its new
+    // worker's statuses arrive while the session's own stages speak).
     if (st.relay === "rebooting") relayRebootNote = rebootNote(st.rebootReason, st.lastDeath);
     const byDeath = deathWasNetwork(st.lastDeath);
-    if (byDeath && st.lastDeath && st.lastDeath !== episodeDeath) { networkEpisode = true; episodeDeath = st.lastDeath; }
-    const label = relayRebootNote ?? rebootLabel(st, networkInEpisode(readDeathOnce(st.lastDeath, lastSnapshotFailure), byDeath, networkEpisode));
+    if (byDeath && st.lastDeath && st.lastDeath.seq !== episodeSeq) { networkEpisode = true; episodeSeq = st.lastDeath.seq; }
+    const reading = st.lastDeath ? readDeath(st.lastDeath) : null;
+    const label = relayRebootNote ?? rebootLabel(st, networkInEpisode(reading, byDeath, networkEpisode), !!st.lastDeath && st.lastDeath.seq === linkConfirmedSeq);
     if (label === STARTING_LABEL && sinkSpoke) return; // the session's own stage says more
     publishCheckerActivity("busy", label, !bootFinishedOnce, true);
     publishBootStatus({ state: "busy", label });
@@ -1011,20 +909,14 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   }
 }
 
-/** Re-arm a halted relay: it leaves `halted` only on a document change, so
- * replay the document it holds as a full-text change at the same version
- * (the editor's next real change is still newer). Returns false when there
- * is nothing to re-arm. Used by the level pane's "Restart the checker" and
- * on a level switch while halted (a new level is a new document). */
+/** Re-arm a halted relay (qed64's LspRelay.rearm(): what a document change
+ * does while halted, without one — the page used to replay the document as
+ * a synthetic full-text change). False when the relay is not halted (or not
+ * there yet). Used by the level pane's "Restart the checker", on a level
+ * switch while halted (a new level is a new document) and by the network
+ * re-arm. */
 export function rearmCheckerIfHalted(): boolean {
-  const relay = relayRef;
-  if (!relay || relay.state.kind !== "halted" || !relay.doc) return false;
-  relay.fromClient({
-    jsonrpc: "2.0",
-    method: "textDocument/didChange",
-    params: { textDocument: { uri: relay.doc.uri, version: relay.doc.version }, contentChanges: [{ text: relay.lastText }] },
-  });
-  return true;
+  return relayRef?.rearm() ?? false;
 }
 
 export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRuntime> {
@@ -1064,7 +956,7 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
       void (async () => {
         if (regions.length) {
           const target = await resolveSnapshotName(here);
-          const label = regions.some((r) => r.name === target) ? `preparing the ${target} environment` : "finishing the download you started before switching games";
+          const label = regions.some((r) => r.name === target) ? "preparing the game environment" : "finishing the download you started before switching games";
           await mirrorPrepare(ui, target, label, Promise.allSettled(regions.map((r) => r.region)), live);
         }
         if (!live()) return; // cancelled: the player returned to the bound game
@@ -1109,16 +1001,16 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     boundEntry = entry;
     const store = getDefaultStore();
     store.set(boundEnvironmentAtom, { gameId: boundGameId!, snapshot, bytes: entry.bytes, transfer: entry.transfer ?? entry.bytes });
-    // One sweep per page of raw regions a rebake superseded (the served
-    // index is the truth about each name's live key); never a boot blocker.
-    // Not under the `?snapshots=<dir>` dev re-rooting: that index's keys are
-    // an unpromoted bake's, and the sweep would take the promoted regions
-    // for stale (and the next plain visit the unpromoted ones). SEC1:
-    // devSnapshotsDir is boot-params' once-per-page reading — the same one
-    // the index fetch went by, even if the address changed since.
+    // One sweep per page of the regions no served entry names (a rebake
+    // superseded them; the served index is the truth about each name's live
+    // key); never a boot blocker. Not under the `?snapshots=<dir>` dev
+    // re-rooting: that index's keys are an unpromoted bake's, and the sweep
+    // would take the promoted regions for stale (and the next plain visit
+    // the unpromoted ones). SEC1: boot-params' once-per-page reading — the
+    // same one the index fetch went by, even if the address changed since.
     if (!sweptOnce) {
       sweptOnce = true;
-      const dev = devSnapshotsDir();
+      const dev = bootOverrides().snapshots;
       if (dev) console.info(`[game-boot] stale region sweep skipped: unpromoted index ?snapshots=${dev}`);
       else try {
         const removed = await sweepStaleSnapshots(index);
@@ -1154,29 +1046,45 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
       console.warn(`[game-boot] ${pf.detail} before the boot — holding for the connection`);
       if ((await holdForNetwork(pf.detail)) === "deploy") throw new Error(deployProblem);
     }
-    // A landing-page Prepare of THIS environment still running: wait for it
-    // (its bytes show on the banner) rather than spawn a second prefetch
-    // worker, which would find the file busy and leave the Lean worker to
-    // stream the region itself — the heavy path.
+    // A landing-page Prepare of THIS environment still running: wait for its
+    // region (its bytes show on the banner) before the session starts. Not
+    // joined from the session: qed64's prefetch is single-flight in the page
+    // (docs/EMBEDDING.md §7.4) and every caller of a flight gets its one
+    // result, so a Prepare whose download failed (one ERR_NETWORK_CHANGED, a
+    // proxy reset) failed the session's snapshot load with it — no retry,
+    // and the Lean worker streamed and inflated the region itself for the
+    // whole session, the ~4.6 GB-heavier path the prefetch exists to avoid
+    // (PAR-2, review of phase 2). After the wait that flight is closed: a
+    // region still missing is fetched by the session's own prefetch afresh.
+    // And the runtime's chunks are fetched after the region again, not
+    // beside it.
+    // A Prepare of this region in ANOTHER tab is waited for by the session's
+    // snapshot load, under the region's Web Lock (qed64 `onBusy: "wait"`) —
+    // for at most PREFETCH_SILENCE_MS (3 min) from the lock request, not
+    // re-armed by that tab's progress; after it the Lean worker streams the
+    // region while the other tab still downloads it (QD-API-1; the wait's
+    // length is QED64's to make silence-based — ResidentHost passes no
+    // busyWaitMs).
     const pending = inFlightPrepare(snapshot);
-    if (pending) await mirrorPrepare(ui, snapshot, `preparing the ${snapshot} environment`, pending);
-    // From here the session's own prefetch worker owns the region file: a
-    // Prepare of this snapshot started later would only collide with it.
-    claimSnapshotForBoot(snapshot);
-    bootRegionClaimed = true;
-    const artifacts = await installGameArtifacts(ui);
+    if (pending) await mirrorPrepare(ui, snapshot, "preparing the game environment", pending);
+    // The artifacts: the runtime manifest and the index the pairing check
+    // resolved (memoised — no second fetch), no library pack.
+    const artifacts = await installArtifacts(ui, { overrides: bootOverrides(), profiles: "none", runtime: await resolveRuntimeManifest(), snapshots: index });
     warmedArtifacts = artifacts;
 
-    const files = bundle.rawFiles.map((f) => ({ path: `${WORKER_GAMEDATA_DIR}/${f.name}`, text: f.text }));
+    // `.lake/gamedata/*.json`, written by the session on EVERY boot (first
+    // and reboots) before the relay arms the loop (qed64 §7.3).
+    const files: SessionFile[] = bundle.rawFiles.map((f) => ({ path: `${WORKER_GAMEDATA_DIR}/${f.name}`, text: f.text }));
     const policy = gamePolicy(snapshot, index);
     // The relay constructs and boots its first session synchronously, so
     // everything the session needs exists by now (artifacts, bundle, the
-    // configured translation). `headerText` is the document the session will
-    // serve — the relay's last full text on a reboot; the game's policy does
-    // not read it (every header is covered by the game snapshot).
-    let relay!: LspRelay;
-    relay = new LspRelay(
-      (opts) => new GameSession({ artifacts, ui, policy, headerText: relay?.lastText ?? "" }, files, opts ?? {}),
+    // configured translation). `headerText` is the document a session will
+    // serve, and only a policy reads it (ResidentPolicy.snapshotsFor /
+    // initialBytesFor): the game's reads none — its snapshot covers every
+    // level header — so every session gets "", not the relay's last text
+    // through `lastText`, a member the v1 contract does not name (QD-API-3).
+    const relay = new LspRelay(
+      (opts) => new ResidentSession({ artifacts, ui, policy, headerText: "", files }, opts ?? {}),
       { status: (st) => publishRelayStatus(st, ui) },
       networkAwareSettle, // L4: 1.5 s, then held while the network is away
     );
@@ -1185,12 +1093,16 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     // document, and the relay leaves `halted` only on a change — re-arm it.
     translation.onDidOpen = () => { rearmCheckerIfHalted(); };
     // Diagnostics hooks for harnesses: the relay's own datum, plus the shape
-    // the pump-era probes read (phase/version/stats).
+    // the pump-era probes read (phase/version/stats). UNSTABLE: `deaths` and
+    // `pending` are the relay's internals (not in the v1 contract), read for
+    // the probes only — never by the game; a qed64 bump that renames them
+    // turns these counts into -1, not a throw.
     (globalThis as { qed64GameRelay?: unknown }).qed64GameRelay = { relay, status: () => relay.status() };
     (globalThis as { qed64GameShim?: unknown }).qed64GameShim = {
       status: () => {
         const st = relay.status();
-        return { phase: st.phase, version: st.version, stats: { recentDeaths: relay.deaths.length, pendingRequests: relay.pending.size, queued: 0 } };
+        const internals = relay as unknown as { deaths?: { length: number }; pending?: { size: number } };
+        return { phase: st.phase, version: st.version, stats: { recentDeaths: internals.deaths?.length ?? -1, pendingRequests: internals.pending?.size ?? -1, queued: 0 } };
       },
     };
     // Release the wasm heap the moment the page goes away: dispose + the

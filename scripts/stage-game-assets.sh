@@ -2,8 +2,8 @@
 # Stage everything the wasm build serves statically into client/public/:
 # every catalog game's compiled gamedata + translations (wasm/catalog.json,
 # read through scripts/games-manifest.mjs — never name a game here) and the
-# worker scripts from the vendored, commit-pinned qed64 closure
-# (client/src/wasm/vendor, scripts/sync-qed64.sh). Snapshots are staged with
+# worker scripts of the SHA-pinned qed64 package (scripts/stage-workers.sh,
+# from its embedding/closure.json). Snapshots are staged with
 # scripts/stage-snapshots.py; the runtime chunks and the core profile pack are
 # digest-pinned build outputs the bundle lane copies (wasm/build-from-source.sh).
 # See wasm/KERNEL.md and wasm/PORTING.md.
@@ -54,7 +54,7 @@ done < <(node "$MANIFEST" --list)
 # listed, snapshot, tile, settings}; unlisted games stay reachable by URL)
 node "$MANIFEST" --api
 
-# Worker scripts come from the vendored, commit-pinned qed64 closure
-# (scripts/sync-qed64.sh), never from a live qed64 checkout — they must pair
-# with the vendored watchdog shim.
+# Worker scripts come from the installed qed64 package (the SHA in
+# client/package.json), never from a live qed64 checkout — they must pair
+# with the `qed64/embed` code the bundle was built from.
 "$HERE/scripts/stage-workers.sh"

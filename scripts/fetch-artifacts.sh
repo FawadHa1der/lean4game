@@ -12,7 +12,7 @@
 # Downloads go to wasm/out/fetch/<tag>/ and are reused when their digest
 # already matches. Extraction refuses a tarball whose sha256 differs from
 # BUNDLE.json. After this, `scripts/stage-game-assets.sh` (workers from the
-# vendored closure) and `npm --workspace client run build` give a runnable
+# qed64 package) and `npm --workspace client run build` give a runnable
 # client/dist; `node scripts/serve-dist.mjs` serves it with the COOP/COEP
 # headers the wasm worker needs.
 set -euo pipefail

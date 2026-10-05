@@ -18,8 +18,11 @@
 //    download back as a hidden ghost for 75 s) until a persisted pageshow;
 //    a receiver ignores progress of a (tab, id) it heard end, and shows a new
 //    download (a new id) of the same tab.
-// A fake clock (window timers + Date.now), a fake BroadcastChannel standing
-// in for a second tab, a fake prefetch Worker and a fake fetch.
+//  - NEW-2 (live run of 4083fb4): every word of a download carries its
+//    transfer size, so a tab whose own index has not arrived yet can show it.
+// A fake clock (window and global timers + Date.now), a fake
+// BroadcastChannel standing in for a second tab, a fake prefetch Worker and
+// a fake fetch.
 import assert from "node:assert/strict";
 
 type Timer = { at: number; fn: () => void };
@@ -80,6 +83,9 @@ const manifest = { buildId: "b1", leanVersion: "4", files: { "lean.js": { bytes:
 const json = (v: unknown) => new Response(JSON.stringify(v), { status: 200, headers: { "content-type": "application/json" } });
 Object.assign(globalThis, {
   window: fakeWindow,
+  // qed64's prefetchRaw keeps its silence timer on the global clock.
+  setTimeout: fakeWindow.setTimeout,
+  clearTimeout: fakeWindow.clearTimeout,
   Worker: FakeWorker,
   BroadcastChannel: FakeBroadcastChannel,
   // The page's Location (SEC1: the same-origin checks resolve against it).
@@ -99,6 +105,7 @@ Object.defineProperty(globalThis, "navigator", {
 });
 
 const gc = await import("./game-cache");
+const { PREFETCH_SILENCE_MS } = await import("qed64/embed");
 const { getDefaultStore } = await import("jotai");
 const store = getDefaultStore();
 const flush = async () => { for (let i = 0; i < 5; i++) await new Promise<void>((r) => setImmediate(r)); };
@@ -245,11 +252,11 @@ await test("D2/D3: a Prepare heartbeats while it runs and says how it ended — 
   const entry = { name: "knights", url: "/snapshots/knights.x.snapz", bytes: 1000, digest: "sha256:" + "cd".repeat(32) } as Parameters<typeof gc.prepareGame>[0];
   const all = gc.prepareGame(entry, { gameId: "g/x/Knights", langs: ["de"] });
   await flush();
-  assert.deepEqual(sent(), [{ type: "prepare-progress", name: "knights", hidden: false, phase: "running", bytes: 0, total: 1000 }]);
+  assert.deepEqual(sent(), [{ type: "prepare-progress", name: "knights", hidden: false, phase: "running", bytes: 0, total: 1000, transfer: 1000 }]);
   const w = FakeWorker.all[0]!;
   w.say({ status: "progress", bytes: 400, total: 1000 });
   advance(1000); await flush();
-  assert.deepEqual(sent(), [{ type: "prepare-progress", name: "knights", hidden: false, phase: "running", bytes: 400, total: 1000 }]);
+  assert.deepEqual(sent(), [{ type: "prepare-progress", name: "knights", hidden: false, phase: "running", bytes: 400, total: 1000, transfer: 1000 }]);
   w.say({ status: "error", error: "HTTP 503" });
   const st = await all;
   await flush();
@@ -263,7 +270,7 @@ await test("D3: a stalled Prepare says `failed` (CQ1: from the status, not its w
   const entry = { name: "logic", url: "/snapshots/logic.x.snapz", bytes: 1000, digest: "sha256:" + "ef".repeat(32) } as Parameters<typeof gc.prepareGame>[0];
   const all = gc.prepareGame(entry);
   await flush(); sent();
-  advance(gc.PREFETCH_SILENCE_MS);
+  advance(PREFETCH_SILENCE_MS);
   assert.match((await all).error ?? "", /stalled/);
   await flush();
   assert.deepEqual(sent().filter((m) => m.type === "prepare-ended"), [{ type: "prepare-ended", name: "logic", outcome: "failed" }]);
@@ -442,6 +449,28 @@ await test("F1: this tab's downloads carry one id each — a retry after an end 
   assert.equal(ids[1], ids[2], "the end names the download it ends");
   assert.notEqual(ids[3], ids[2], "the retry is a new download");
   assert.equal(ids[3], ids[4]);
+});
+
+await test("NEW-2: a Prepare's words carry the transfer size; a receiver keeps it (its tile needs no index of its own to show the download)", async () => {
+  const entry = { name: "rag", url: "/snapshots/rag.x.snapz", bytes: 1_400_000_000, transfer: 282_000_000, digest: "sha256:" + "12".repeat(32) } as Parameters<typeof gc.prepareGame>[0];
+  const all = gc.prepareGame(entry);
+  await flush();
+  assert.deepEqual(sent().map((m) => m.transfer), [282_000_000], "the sender says the size the tile promises");
+  FakeWorker.all[FakeWorker.all.length - 1]!.say({ status: "error", error: "HTTP 500" });
+  await all;
+  await flush(); sent();
+  tab2.postMessage({ type: "prepare-progress", name: "rag", tab: "N", id: 1, hidden: false, phase: "running", bytes: 700_000_000, total: 1_400_000_000, transfer: 282_000_000 });
+  await flush();
+  assert.equal(store.get(gc.remoteDownloadsAtom).rag?.transfer, 282_000_000);
+  // A sender of an older build says none; a malformed size is not kept.
+  tab2.postMessage({ type: "prepare-progress", name: "lag", tab: "O", id: 1, hidden: false, phase: "running", bytes: 1, total: 9 });
+  tab2.postMessage({ type: "prepare-progress", name: "ntg", tab: "O", id: 2, hidden: false, phase: "running", bytes: 1, total: 9, transfer: "lots" });
+  await flush();
+  assert.equal("transfer" in store.get(gc.remoteDownloadsAtom).lag!, false);
+  assert.equal("transfer" in store.get(gc.remoteDownloadsAtom).ntg!, false);
+  for (const [name, tab, id] of [["rag", "N", 1], ["lag", "O", 1], ["ntg", "O", 2]] as const) tab2.postMessage({ type: "prepare-ended", name, tab, id, outcome: "done" });
+  await flush();
+  advance(10_000);
 });
 
 for (const c of FakeBroadcastChannel.all) c.close();

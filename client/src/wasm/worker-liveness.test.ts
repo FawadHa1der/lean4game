@@ -1,7 +1,9 @@
-// Run: node --import ./client/src/wasm/ts-resolve-hook.mjs client/src/wasm/vendor-liveness.test.ts
-// HARDENING #52 as VENDORED (client/src/wasm/vendor/qed64 @ 3b42714): a port
-// of qed64's tests/unit/liveness.test.ts (vitest) to node:assert, loading the
-// REAL vendored lean.worker.js in vm sandboxes. It pins what the game relies
+// Run: node --import ./client/src/wasm/ts-resolve-hook.mjs client/src/wasm/worker-liveness.test.ts
+// HARDENING #52 (qed64 ≥ 3b42714) as the game ships it: a port of qed64's
+// tests/unit/liveness.test.ts (vitest) to node:assert, loading the REAL
+// lean.worker.js of the pinned qed64 package (node_modules/qed64/public/
+// workers, what scripts/stage-workers.sh serves) in vm sandboxes, so a bump of
+// the dependency re-runs it against the new worker. It pins what the game relies
 // on: an idle session is never probed; a frozen Lean side dies "wedged" within
 // probeAfter + wedgeAfter + grace (≤ 30 s); a busy one that answers is never
 // declared dead; a FileWorker exit (proxied `_proc_exit` / `exitOnMainThread`,
@@ -10,14 +12,15 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import vm from "node:vm";
 
 type Msg = { jsonrpc?: string; id?: number | string; method?: string; params?: unknown; error?: unknown; result?: unknown };
 type Posted = { type?: string; kind?: string; reason?: string; code?: number | null; message?: string };
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const workers = path.join(here, "vendor/qed64/public/workers");
+// Resolved like the build resolves it (the package's own exports map), not by
+// a guessed node_modules path: npm may hoist the workspace's dependency.
+const workers = path.join(path.dirname(createRequire(import.meta.url).resolve("qed64/package.json")), "public/workers");
 
 function loadWorker() {
   const posted: Posted[] = [];
@@ -130,7 +133,7 @@ it("a FileWorker exit through the proxied-function table is died 'exit' with its
     assert.throws(() => table[index](5));
     const d = deaths(posted);
     assert.deepEqual(d.map((x) => [x.reason, x.code]), [["exit", 5]]);
-    assert.equal(d[0].message, "lean --worker exited with code 5"); // the text death-kind.ts exitCodeOf parses
+    assert.equal(d[0].message, "lean --worker exited with code 5"); // the relay's Death carries the code as `exitCode` too
   }
 });
 it("an ExitStatus thrown through the mailbox kick is died 'exit'; an unwind is benign; anything else is a crash", () => {
@@ -182,4 +185,4 @@ it("locates the mailbox word through the glue's own waiting_async offset (204 on
   sandbox.__emscripten_thread_mailbox_await = new Function("pthread_ptr", "var waitingAsync=pthread_ptr+204;return waitingAsync");
   assert.equal(h.locateRuntimeMailbox(), 8192);
 });
-console.log(`vendor-liveness: ${n}/${n} passed`);
+console.log(`worker-liveness: ${n}/${n} passed`);

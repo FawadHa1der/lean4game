@@ -42,12 +42,13 @@ type Timer = { at: number; fn: () => void };
 let now = 0;
 let nextId = 1;
 const timers = new Map<number, Timer>();
+const setTimer = (fn: () => void, ms: number): number => { const id = nextId++; timers.set(id, { at: now + (ms || 0), fn }); return id; };
+const clearTimer = (id: number): void => { timers.delete(id); };
 Object.assign(globalThis, {
-  window: {
-    setTimeout: (fn: () => void, ms: number): number => { const id = nextId++; timers.set(id, { at: now + ms, fn }); return id; },
-    clearTimeout: (id: number): void => { timers.delete(id); },
-    addEventListener: (): void => {},
-  },
+  window: { setTimeout: setTimer, clearTimeout: clearTimer, addEventListener: (): void => {} },
+  // qed64's prefetchRaw keeps its silence timer on the global clock.
+  setTimeout: setTimer,
+  clearTimeout: clearTimer,
 });
 Date.now = () => now;
 const flush = async () => { for (let i = 0; i < 20; i++) await new Promise<void>((r) => setImmediate(r)); };
@@ -245,7 +246,7 @@ await test("R2-1: a Retry after the region failed joins the first Prepare's wait
   FakeWorker.all[0]!.say({ status: "error", error: "the network connection was lost" }); // a dropped link
   await run(1000);
   assert.equal(statusOf("hhg")?.phase, "failed");
-  assert.equal(gc.inFlightPrepare("hhg"), undefined, "the failed Prepare is over; its warm-up waits on");
+  assert.equal(gc.prepareRunning("hhg"), false, "the failed Prepare is over; its warm-up waits on");
   let settled: Settled | null = null;
   void gc.prepareGame(entryOf("hhg"), { gameId: "g/x/HHG", langs: [] }).then((st) => { settled = st; }); // Retry
   await flush();

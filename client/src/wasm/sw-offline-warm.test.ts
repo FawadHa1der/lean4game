@@ -22,6 +22,10 @@
 //    cache-first for LINK_MEMO_MS (not-held and no-store requests still go to
 //    the network; any HTTP answer ends it) — R2-4: held game content only
 //    (/data, /i18n); the unhashed shell files still ask the host.
+//  - B4 (qed64 embedding review): the page's warm-up names the runtime's
+//    chunks (qed64's runtimeUrls) and the game's data — never the mutable
+//    runtime manifest or the snapshot / profile indexes, which the shell
+//    precache owns (a RUNTIME-cache copy went stale behind it).
 // Loads the REAL client/src/sw/sw.template.js in a vm sandbox (a fresh one
 // per precache list) with a fake Cache Storage and a scripted fetch.
 import assert from "node:assert/strict";
@@ -332,7 +336,7 @@ await test("R2: one transient fetch failure (runtime held, 300 game files, onlin
   const r = await gc.warmRuntimeCacheOutcome(manifest("r2a", CHUNKS10) as never, DATA300, 30 * 60_000);
   assert.ok(typeof r !== "string");
   assert.equal(messages.length, 2, "the cut-short round, then one more");
-  assert.deepEqual([r.partial, r.linkDown, r.cached, r.total], [false, false, 313, 313]);
+  assert.deepEqual([r.partial, r.linkDown, r.cached, r.total], [false, false, 310, 310]);
   const held = await (await sw.caches.open("l4g-runtime-v1")).keys();
   assert.equal(held.filter((q) => q.url.includes("/data/")).length, 300, "every game file cached");
 });
@@ -389,11 +393,11 @@ await test("R4: the page revalidates in the first round that reaches the host on
     await gc.warmRuntimeCacheOutcome(manifest(`r4-${Math.random()}`, CHUNKS10) as never, DATA300, 30 * 60_000, opts);
     return messages.map((m) => m.revalidate);
   };
-  const slow = (cached: number) => ({ cached, pruned: 0, total: 313, partial: true, bytes: 8_000_000 });
-  const done = { cached: 313, pruned: 0, total: 313, partial: false, bytes: 0 };
+  const slow = (cached: number) => ({ cached, pruned: 0, total: 310, partial: true, bytes: 8_000_000 });
+  const done = { cached: 310, pruned: 0, total: 310, partial: false, bytes: 0 };
   assert.deepEqual(await run([slow(100), slow(101), slow(102), done]), [true, false, false, false]);
   assert.deepEqual(await run([slow(100), done], { revalidated: true }), [false, false]);
-  const cut = { cached: 100, pruned: 0, total: 313, partial: true, bytes: 0, linkDown: true };
+  const cut = { cached: 100, pruned: 0, total: 310, partial: true, bytes: 0, linkDown: true };
   assert.deepEqual(await run([cut, slow(120), done]), [true, true, false], "a round the link cut off did not revalidate");
 });
 
@@ -410,13 +414,13 @@ await test("N1: a link-down round with every file held ends the warm-up (pure st
 await test("N1: offline with every file held while the browser says online — one `warm`, no retry round", async () => {
   onLine = true;
   const sw = loadWorker();
-  await seed(sw, "l4g-runtime-v1", [...CHUNKS10, ...DATA300, "/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json"]);
+  await seed(sw, "l4g-runtime-v1", [...CHUNKS10, ...DATA300]);
   sw.setAnswer(() => "link");
   const messages = activeWorker((data, port) => sw.dispatch(data, port));
   const r = await gc.warmRuntimeCacheOutcome(manifest("n1", CHUNKS10) as never, DATA300, 30 * 60_000);
   assert.ok(typeof r !== "string");
   assert.equal(messages.length, 1, "no second round of failing fetches");
-  assert.deepEqual([r.cached, r.total, r.linkDown, r.partial], [313, 313, true, true]);
+  assert.deepEqual([r.cached, r.total, r.linkDown, r.partial], [310, 310, true, true]);
   assert.ok(sw.fetched.length <= 7, `one lane-full of failing fetches at most (${sw.fetched.length})`);
 });
 
@@ -436,6 +440,23 @@ await test("SEC1 page: the warm-up and the early data warm-up send the service w
   messages.length = 0;
   await gc.warmDataEarly(["https://evil.example/a.json", "\\\\evil.example/b.json", DATA[1]!]);
   assert.deepEqual(messages.map((m) => [m.type, m.urls]), [["warm-data", [DATA[1]!]]]);
+});
+
+await test("B4: the warm-up names the game's data and the runtime's chunks — no manifest, no snapshot or profile index (the shell precache owns them)", async () => {
+  onLine = true;
+  const messages = activeWorker((data, port) => {
+    const urls = data.urls as string[];
+    port.postMessage({ type: "warmed", cached: urls.length, pruned: 0, total: urls.length, partial: false, bytes: 0, linkDown: false });
+  });
+  const m = { buildId: "b4", leanVersion: "4", files: {
+    "lean.js": { bytes: 1, sha256: "", chunks: [{ url: "/runtime/chunks/lean.js.aa.part-000", bytes: 1, sha256: "" }] },
+    "lean.wasm": { bytes: 2, sha256: "", chunks: CHUNKS10.slice(0, 2).map((url) => ({ url, bytes: 1, sha256: "" })) },
+  } };
+  await gc.warmRuntimeCacheOutcome(m as never, [DATA[0]!, DATA[1]!], 60_000);
+  assert.deepEqual(messages[0]!.urls, [DATA[0], DATA[1], "/runtime/chunks/lean.js.aa.part-000", CHUNKS10[0], CHUNKS10[1]], "the data first (N5), then lean.js and lean.wasm's chunks");
+  for (const u of ["/runtime/runtime-manifest.json", "/runtime/runtime-manifest.b4.json", "/snapshots/index.json", "/profiles/index.json"]) {
+    assert.ok(!(messages[0]!.urls as string[]).includes(u), u);
+  }
 });
 
 if (failures) { console.log(`sw-offline-warm: ${failures} FAILED`); process.exit(1); }

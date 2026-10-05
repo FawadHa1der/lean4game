@@ -1,20 +1,35 @@
 // Run: node --import ./client/src/wasm/ts-resolve-hook.mjs client/src/wasm/game-cache-prefetch.test.ts
-// QED64 HARDENING #54, page side: prefetchRawSnapshot abandons the prefetch
-// worker after PREFETCH_SILENCE_MS WITHOUT A MESSAGE, not a fixed time after
-// the start (a 15-minute deadline cut the largest regions short below
-// ~2.5 Mbit/s). A fake clock, a fake Worker and a fake OPFS directory.
+// A landing-page Prepare's region on qed64's raw region cache (prefetchRaw,
+// docs/EMBEDDING.md §7.4), with a fake clock, a fake prefetch Worker, a fake
+// OPFS and a fake Web Lock manager:
+//  - single flight in the page: the boot's session (qed64's snapshot load,
+//    `onBusy: "wait"`) and a Prepare of the same region share ONE prefetch
+//    worker, whichever started first — a Prepare after the boot's claim used
+//    to be refused `busy`;
+//  - PAR-2 (review of phase 2): the boot of a game whose Prepare runs waits
+//    for the Prepare's region (inFlightPrepare) before its session starts; a
+//    Prepare whose download failed leaves the session's own prefetch to start
+//    a fresh worker — joined, every caller got the one failure and the Lean
+//    worker streamed the region itself;
+//  - across tabs: another tab's writer holds the region's lock — the Prepare
+//    is `busy` at once (the tile says so) and spawns nothing;
+//  - HARDENING #54: a prefetch silent for PREFETCH_SILENCE_MS after its last
+//    message fails `silent` with the stall in words, its partial removed;
+//  - a region already in OPFS is `cached` at once; no OPFS is `unavailable`;
+//  - SEC1: an entry url on another origin never reaches a prefetch worker;
+//  - the stale-region sweep (PAR-3: only the names the page's index lists)
+//    and "Remove download", on qed64's cache helpers.
 import assert from "node:assert/strict";
 
 type Timer = { at: number; fn: () => void };
 let now = 0;
 let nextId = 1;
 const timers = new Map<number, Timer>();
-const fakeWindow = {
-  setTimeout: (fn: () => void, ms: number): number => { const id = nextId++; timers.set(id, { at: now + ms, fn }); return id; },
-  clearTimeout: (id: number): void => { timers.delete(id); },
-};
-/** Advance the fake clock, firing due timers in order. */
-function advance(ms: number): void {
+const setTimer = (fn: () => void, ms: number): number => { const id = nextId++; timers.set(id, { at: now + (ms || 0), fn }); return id; };
+const clearTimer = (id: number): void => { timers.delete(id); };
+const flush = async () => { for (let i = 0; i < 20; i++) await new Promise<void>((r) => setImmediate(r)); };
+/** Advance the fake clock, firing due timers in order (promise chains run between). */
+async function advance(ms: number): Promise<void> {
   const end = now + ms;
   for (;;) {
     let due: [number, Timer] | null = null;
@@ -23,9 +38,11 @@ function advance(ms: number): void {
     timers.delete(due[0]);
     now = due[1].at;
     due[1].fn();
+    await flush();
   }
   now = end;
 }
+Date.now = () => now;
 
 class FakeWorker {
   static all: FakeWorker[] = [];
@@ -37,107 +54,218 @@ class FakeWorker {
   constructor(url: string) { this.url = url; FakeWorker.all.push(this); }
   postMessage(m: unknown): void { this.posted.push(m); }
   terminate(): void { this.terminated = true; }
-  /** A message from the worker (dropped once terminated, as a real one is). */
   say(data: unknown): void { if (!this.terminated) this.onmessage?.({ data }); }
 }
 
+/** OPFS: a region file exists once `cached` holds its size; removals recorded. */
+const cached = new Map<string, number>();
 const removed: string[] = [];
-const dir = { removeEntry: async (name: string) => { removed.push(name); } };
-// The page's Location: SEC1's same-origin check resolves entry urls against it.
-Object.assign(globalThis, { window: fakeWindow, Worker: FakeWorker, location: new URL("https://l4g.test/") });
+const dir = {
+  getFileHandle: async (name: string) => {
+    if (!cached.has(name)) throw new DOMException("missing", "NotFoundError");
+    return { getFile: async () => ({ size: cached.get(name)! }) };
+  },
+  removeEntry: async (name: string) => { removed.push(name); },
+};
+/** Web Locks held by another tab. */
+const heldElsewhere = new Set<string>();
+const locks = {
+  request: async (name: string, opts: { ifAvailable?: boolean }, cb: (lock: unknown) => Promise<unknown>) => {
+    if (heldElsewhere.has(name)) {
+      if (opts.ifAvailable) return cb(null);
+      throw new DOMException("aborted", "AbortError"); // these tests never let a waiter through
+    }
+    return cb({ name });
+  },
+};
+let opfs = true;
+Object.assign(globalThis, {
+  window: { setTimeout: setTimer, clearTimeout: clearTimer, addEventListener: () => {} },
+  setTimeout: setTimer, // qed64's prefetchRaw keeps its silence timer on the global clock
+  clearTimeout: clearTimer,
+  Worker: FakeWorker,
+  BroadcastChannel: undefined,
+  location: new URL("https://l4g.test/"),
+  // The warm-up's manifest (no service worker here: the warm-up ends at once).
+  fetch: async () => new Response(JSON.stringify({ buildId: "b1", leanVersion: "4", files: {} }), { status: 200, headers: { "content-type": "application/json" } }),
+});
 Object.defineProperty(globalThis, "navigator", {
   configurable: true,
-  value: { storage: { getDirectory: async () => ({ getDirectoryHandle: async () => dir }) } },
+  get: () => ({ locks, storage: { getDirectory: async () => { if (!opfs) throw new DOMException("no OPFS", "SecurityError"); return { getDirectoryHandle: async () => dir }; } } }),
 });
 
-const { prefetchRawSnapshot, rawFileName, PREFETCH_SILENCE_MS } = await import("./game-cache");
-const entry = { name: "nng4", url: "/snapshots/nng4.db264c5f3eb7c69c.snapz", bytes: 569269949, digest: "sha256:" + "ab".repeat(32) } as Parameters<typeof prefetchRawSnapshot>[0];
-const flush = () => new Promise<void>((r) => setImmediate(r));
-type Outcome = Awaited<ReturnType<typeof prefetchRawSnapshot>>;
-const track = (p: Promise<Outcome>) => { const s: { v?: Outcome } = {}; void p.then((v) => { s.v = v; }); return s; };
+const gc = await import("./game-cache");
+const { PREFETCH_SILENCE_MS, prefetchRaw, snapshotCacheKey } = await import("qed64/embed");
+const { getDefaultStore } = await import("jotai");
+const store = getDefaultStore();
+const entryOf = (name: string, url = `/snapshots/${name}.abababababababab.snapz`) =>
+  ({ name, url, bytes: 569_269_949, transfer: 154_373_030, digest: "sha256:" + "ab".repeat(32), imports: [] as string[] });
+const statusOf = (name: string) => store.get(gc.prepareStatusesAtom)[name];
+
 let failures = 0;
 async function test(name: string, body: () => Promise<void>): Promise<void> {
-  timers.clear(); removed.length = 0; FakeWorker.all.length = 0; now = 0;
-  try { await body(); console.log(`ok - ${name}`); } catch (e) { failures++; console.log(`not ok - ${name}\n  ${String((e as Error)?.stack ?? e).split("\n").slice(0, 3).join("\n  ")}`); }
+  timers.clear(); FakeWorker.all.length = 0; cached.clear(); removed.length = 0; heldElsewhere.clear(); opfs = true; now = 0;
+  try { await body(); console.log(`ok - ${name}`); } catch (e) { failures++; console.log(`not ok - ${name}\n  ${String((e as Error)?.stack ?? e).split("\n").slice(0, 4).join("\n  ")}`); }
 }
 
 assert.equal(PREFETCH_SILENCE_MS, 3 * 60 * 1000);
 
-await test("a slow download that keeps reporting outlives the old 15-minute deadline", async () => {
-  const seen: number[] = [];
-  const s = track(prefetchRawSnapshot(entry, (bytes) => seen.push(bytes)));
+await test("single flight: a second caller of the region a Prepare streams (qed64's snapshot load, `wait`) joins its prefetch worker — one download, both see its bytes", async () => {
+  const entry = entryOf("nng4");
+  const all = gc.prepareGame(entry);
+  await flush();
+  assert.equal(FakeWorker.all.length, 1);
+  assert.deepEqual(FakeWorker.all[0]!.posted[0], { url: entry.url, cacheKey: snapshotCacheKey(entry), rawBytes: entry.bytes });
+  // qed64's snapshot load (loadSnapshotByName → prefetchRaw "wait"); the
+  // game's boot waits for the Prepare's region before its session gets here
+  // (PAR-2, below), but the registry is what keeps any second caller to one download.
+  const seenByBoot: number[] = [];
+  const boot = prefetchRaw(entry, { onBusy: "wait", onProgress: (p) => seenByBoot.push(p.loaded) });
+  await flush();
+  assert.equal(FakeWorker.all.length, 1, "no second prefetch worker");
+  FakeWorker.all[0]!.say({ status: "progress", bytes: 200_000_000, total: entry.bytes });
+  assert.deepEqual(seenByBoot, [200_000_000], "the boot's banner shows the Prepare's bytes");
+  assert.deepEqual([statusOf("nng4")?.phase, statusOf("nng4")?.bytes], ["running", 200_000_000]);
+  FakeWorker.all[0]!.say({ status: "done", bytes: entry.bytes });
+  assert.equal((await boot).status, "done");
+  const st = await all;
+  assert.deepEqual([st.phase, st.result], ["done", "done"]);
+});
+
+await test("single flight, the other way round: a Prepare while the boot's session prefetches joins it — never refused `busy`", async () => {
+  const entry = entryOf("rag");
+  const boot = prefetchRaw(entry, { onBusy: "wait" });
+  await flush();
+  assert.equal(FakeWorker.all.length, 1);
+  const all = gc.prepareGame(entry);
+  await flush();
+  assert.equal(FakeWorker.all.length, 1, "joined, not a second worker");
+  assert.equal(statusOf("rag")?.phase, "running");
+  FakeWorker.all[0]!.say({ status: "progress", bytes: 5, total: entry.bytes });
+  assert.equal(statusOf("rag")?.bytes, 5);
+  FakeWorker.all[0]!.say({ status: "done", bytes: entry.bytes });
+  assert.equal((await boot).status, "done");
+  const st = await all;
+  assert.deepEqual([st.phase, st.result], ["done", "done"]);
+});
+
+await test("PAR-2: the boot waits for a running Prepare's region; when that download fails, the session's prefetch starts afresh — no shared failure, no Lean-worker stream", async () => {
+  const entry = entryOf("nng4");
+  assert.equal(gc.inFlightPrepare("nng4"), null, "no Prepare: nothing to wait for");
+  const all = gc.prepareGame(entry);
+  await flush();
+  const pending = gc.inFlightPrepare("nng4");
+  assert.ok(pending, "the boot finds the running Prepare");
+  assert.equal(FakeWorker.all.length, 1);
+  // One transient failure mid-download (ERR_NETWORK_CHANGED, a proxy reset).
+  FakeWorker.all[0]!.say({ status: "error", error: "network error" });
+  const region = await pending;
+  assert.deepEqual([region.phase, region.result], ["failed", "error"]);
+  await all;
+  await flush();
+  assert.equal(gc.inFlightPrepare("nng4"), null, "the Prepare is over");
+  // The session's snapshot load (qed64 loadSnapshotByName → prefetchRaw "wait"), after the wait.
+  const boot = prefetchRaw(entry, { onBusy: "wait" });
+  await flush();
+  assert.equal(FakeWorker.all.length, 2, "a fresh prefetch worker — the failed flight is closed");
+  FakeWorker.all[1]!.say({ status: "done", bytes: entry.bytes });
+  assert.equal((await boot).status, "done", "the region lands in OPFS; the Lean worker reads it");
+});
+
+await test("PAR-2: the wait is for the region only — a Prepare whose region is committed (its warm-up still running) is no wait", async () => {
+  const entry = entryOf("rag");
+  const all = gc.prepareGame(entry);
+  await flush();
+  FakeWorker.all[0]!.say({ status: "done", bytes: entry.bytes });
+  const region = await gc.inFlightPrepare("rag");
+  assert.deepEqual([region?.phase, region?.result], ["warming", "done"]);
+  await all;
+});
+
+await test("another tab writes the region (its lock): the Prepare is `busy` at once and spawns nothing", async () => {
+  const entry = entryOf("knights");
+  heldElsewhere.add(`qed64-raw:${snapshotCacheKey(entry)}`);
+  const st = await gc.prepareGame(entry);
+  assert.deepEqual([st.phase, st.result], ["failed", "busy"]);
+  assert.equal(FakeWorker.all.length, 0);
+});
+
+await test("HARDENING #54: silent PREFETCH_SILENCE_MS after the LAST message — failed `silent`, the stall in words, the partial removed", async () => {
+  const entry = entryOf("logic");
+  const all = gc.prepareGame(entry);
+  await flush();
   const w = FakeWorker.all[0]!;
-  assert.deepEqual(w.posted[0], { url: entry.url, cacheKey: "nng4.abababababababab.snapz", rawBytes: entry.bytes });
-  // One message every 170 s (just inside the window) for 57 minutes.
-  for (let i = 1; i <= 20; i++) { advance(170_000); w.say({ status: "progress", bytes: i * 64 * 1048576, total: entry.bytes }); }
-  await flush();
-  assert.equal(s.v, undefined, "still running");
-  assert.equal(w.terminated, false);
-  assert.equal(seen.length, 20);
-  w.say({ status: "done" });
-  await flush();
-  assert.deepEqual(s.v, { result: "done", error: undefined });
+  // A slow download that keeps reporting outlives any fixed deadline.
+  for (let i = 1; i <= 20; i++) { await advance(170_000); w.say({ status: "progress", bytes: i * 64 * 1048576, total: entry.bytes }); }
+  assert.equal(statusOf("logic")?.phase, "running", "57 minutes in, still running");
+  await advance(PREFETCH_SILENCE_MS - 1);
+  assert.equal(statusOf("logic")?.phase, "running", "one millisecond short of the window");
+  await advance(1);
+  const st = await all;
+  assert.deepEqual([st.phase, st.result, st.error], ["failed", "silent", "the download stalled (no data for 3 minutes)"]);
   assert.equal(w.terminated, true);
-  assert.equal(timers.size, 0, "no timer left armed");
-  assert.deepEqual(removed, []);
+  assert.deepEqual(removed, [`${snapshotCacheKey(entry)}.raw.partial`]);
 });
 
-await test("silence after progress: abandoned PREFETCH_SILENCE_MS after the LAST message, partial removed", async () => {
-  const s = track(prefetchRawSnapshot(entry));
-  const w = FakeWorker.all[0]!;
-  advance(100_000); w.say({ status: "progress", bytes: 1, total: entry.bytes });
-  advance(PREFETCH_SILENCE_MS - 1);
-  await flush();
-  assert.equal(s.v, undefined, "one millisecond short of the window");
-  advance(1);
-  await flush(); await flush();
-  assert.equal(s.v?.result, "error");
-  assert.match(s.v?.error ?? "", /stalled \(no data for 3 minutes\)/);
-  assert.equal(w.terminated, true);
-  assert.deepEqual(removed, [`${rawFileName(entry)}.partial`]);
+await test("a region already in OPFS: `cached` at once, no worker; no OPFS: `unavailable`", async () => {
+  const entry = entryOf("ntg");
+  cached.set(`${snapshotCacheKey(entry)}.raw`, entry.bytes);
+  const st = await gc.prepareGame(entry);
+  assert.deepEqual([st.phase, st.result], ["done", "cached"]);
+  assert.equal(FakeWorker.all.length, 0);
+  opfs = false;
+  const none = await gc.prepareGame(entryOf("robo"));
+  assert.deepEqual([none.phase, none.result], ["failed", "unavailable"]);
 });
 
-await test("no message at all: abandoned PREFETCH_SILENCE_MS after the start", async () => {
-  const s = track(prefetchRawSnapshot(entry));
-  advance(PREFETCH_SILENCE_MS);
-  await flush(); await flush();
-  assert.equal(s.v?.result, "error");
-  assert.equal(FakeWorker.all[0]!.terminated, true);
-});
-
-await test("a message after the outcome re-arms nothing and removes nothing", async () => {
-  const s = track(prefetchRawSnapshot(entry));
-  const w = FakeWorker.all[0]!;
-  w.say({ status: "busy", error: "held by the Lean worker" });
+await test("a worker error fails the Prepare with its words", async () => {
+  const all = gc.prepareGame(entryOf("hhg"));
   await flush();
-  assert.deepEqual(s.v, { result: "busy", error: "held by the Lean worker" });
-  // A real worker's queued message can still be dispatched once; deliver it
-  // past the terminated guard.
-  w.onmessage?.({ data: { status: "progress", bytes: 5, total: entry.bytes } });
-  assert.equal(timers.size, 0);
-  advance(60 * 60 * 1000);
-  await flush();
-  assert.deepEqual(removed, []);
-});
-
-await test("worker error and terminal statuses settle once", async () => {
-  const s = track(prefetchRawSnapshot(entry));
-  const w = FakeWorker.all[0]!;
-  w.onerror?.({ message: "boom" });
-  w.onmessage?.({ data: { status: "done" } });
-  await flush();
-  assert.deepEqual(s.v, { result: "error", error: "boom" });
-  assert.equal(timers.size, 0);
+  FakeWorker.all[0]!.say({ status: "error", error: "HTTP 503" });
+  const st = await all;
+  assert.deepEqual([st.phase, st.result, st.error], ["failed", "error", "HTTP 503"]);
 });
 
 await test("SEC1: an entry url on another origin never reaches a prefetch worker (nothing is fetched, nothing committed under its key)", async () => {
+  let n = 0;
   for (const url of ["https://cdn.attacker.example/r.snapz", "//cdn.attacker.example/r.snapz", "\\\\cdn.attacker.example/r.snapz", "data:application/octet-stream;base64,AA=="]) {
-    const s = track(prefetchRawSnapshot({ ...entry, url }));
-    await flush();
+    const st = await gc.prepareGame(entryOf(`evil${n++}`, url));
     assert.equal(FakeWorker.all.length, 0, `${url}: no worker spawned`);
-    assert.equal(s.v?.result, "error", url);
-    assert.match(s.v?.error ?? "", /SNAPSHOT_INDEX_FOREIGN_URL/);
-    assert.equal(timers.size, 0);
+    assert.deepEqual([st.phase, st.result], ["failed", "error"], url);
+    assert.match(st.error ?? "", /is not this site/, url);
+  }
+});
+
+await test("the stale-region sweep removes the stale keys of the names the page's index lists (qed64 isCacheKeyOf), nothing of an unlisted name; Remove download takes the region and its partial", async () => {
+  const live = entryOf("nng4");
+  const rebaked = { ...entryOf("rag"), digest: "sha256:" + "cd".repeat(32) };
+  const sized = { ...entryOf("logic"), digest: undefined }; // keyed by its sizes
+  const index = { schema: "qed64.snapshot-index/v1", snapshots: [live, rebaked, sized] };
+  const key = snapshotCacheKey(live), ragKey = snapshotCacheKey(rebaked);
+  assert.equal(snapshotCacheKey(sized), "logic.569269949.154373030.snapz");
+  const files = [
+    `${key}.raw`, `${key}.raw.partial`, key, // the live region, a prefetch's partial of it, the Lean worker's compressed copy
+    `${ragKey}.raw`,                          // rag's live region
+    "rag.abababababababab.snapz.raw", "rag.abababababababab.snapz.raw.partial", "rag.abababababababab.snapz", // rag before its rebake
+    "logic.569269949.154373030.snapz.raw",    // logic's live (size-keyed) region
+    "logic.1.2.snapz.raw",                    // logic at other sizes
+    // PAR-3 — names this page's index does not list are never touched:
+    "lag.f84d616679d0ceb0.snapz.raw",         // a game a NEWER deploy added, Prepared in a newer tab
+    "nng4.dev.0123456789abcdef.snapz.raw",    // a developer's unpromoted bake next to nng4
+    "knights.1234.5678.snapz.raw",            // a game the catalog no longer serves (size-keyed)
+    "notes.txt",                              // not a cache file at all
+  ];
+  const sweepDir = { ...dir, keys: async function* () { yield* files; } };
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: { locks, storage: { getDirectory: async () => ({ getDirectoryHandle: async () => sweepDir }) } } });
+  try {
+    const gone = await gc.sweepStaleSnapshots(index);
+    assert.deepEqual(gone.sort(), ["logic.1.2.snapz.raw", "rag.abababababababab.snapz", "rag.abababababababab.snapz.raw", "rag.abababababababab.snapz.raw.partial"]);
+    assert.deepEqual(removed.sort(), gone);
+    removed.length = 0;
+    assert.equal(await gc.removeDownload(live), true);
+    assert.deepEqual(removed, [`${key}.raw`, `${key}.raw.partial`], "the region and its partial — not the compressed copy");
+  } finally {
+    Object.defineProperty(globalThis, "navigator", { configurable: true, get: () => ({ locks, storage: { getDirectory: async () => { if (!opfs) throw new DOMException("no OPFS", "SecurityError"); return { getDirectoryHandle: async () => dir }; } } }) });
   }
 });
 

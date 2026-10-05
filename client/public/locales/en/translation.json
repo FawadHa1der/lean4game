@@ -96,7 +96,7 @@
   "Prepare memory note": "Preparing a game while another one is loaded needs extra memory on this device.",
   "Prepare awaiting offline cache note": "The browser has yet to finish installing this site's offline cache; the checker is cached once it is ready.",
   "Preparation failed: {{error}}": "Preparation failed: {{error}}",
-  "Prepare busy": "Already being downloaded — by the game loaded in this tab or by another tab.",
+  "Prepare busy": "Already being downloaded in another tab.",
   "Caching the checker": "Environment downloaded — caching the checker so this game plays offline…",
   "Awaiting offline cache": "Environment downloaded — waiting for the browser to finish installing this site's offline cache, then the checker is cached…",
   "In use by this tab": "Loaded in this tab — its download is managed by the game.",
@@ -117,6 +117,8 @@
   "Boot param refused note": "A development override in this page's address may only name a directory on this site; nothing was downloaded for it. Remove the parameter from the address to play.",
   "Foreign artifact refused note": "This site's published files point to another site; nothing was downloaded from it. Reloading will not help until the published files are fixed.",
   "Open without the override": "Open without the override",
+  "Site updated headline": "This site was updated — reload to continue",
+  "Site updated note": "A new version of this site was published while this page was open, and the checker cannot mix the two versions. Reloading the page loads the new version; your progress is saved in this browser.",
   "Progress": "Progress",
   "{{done}} of {{total}} levels done": "{{done}} of {{total}} levels done",
   "Wasm notice": {

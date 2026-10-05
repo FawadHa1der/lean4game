@@ -14,9 +14,9 @@
 #
 # Classes (all under client/public/): runtime/ (Lean runtime chunks +
 # manifest), profiles/ (core library pack), snapshots/ (environment
-# snapshots + index). Gamedata (data/) and the worker scripts are in git /
-# vendored and are NOT part of the bundle. Tarballs are plain (the members
-# are already compressed) and built from a sorted file list.
+# snapshots + index). Gamedata (data/) is in git and the worker scripts come
+# from the qed64 npm package; neither is part of the bundle. Tarballs are
+# plain (the members are already compressed) and built from a sorted file list.
 set -euo pipefail
 TAG="${1:?tag, e.g. artifacts-2026-09-02}"; shift
 MATHLIB=""

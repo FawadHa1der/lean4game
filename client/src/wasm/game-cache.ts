@@ -5,29 +5,28 @@
  * both from the landing page without booting Lean.
  *
  * Shared by the landing page (Prepare / Remove download / the storage
- * meter) and the boot (game-boot.ts: await an in-flight prepare, sweep stale
- * regions, warm the runtime cache once the checker is up). Only page-side
- * composition of vendored pieces lives here: the prefetch worker
- * (public/workers/snapshot-prefetch.worker.js) and the service worker's
- * `warm` message (client/src/sw) are the contracts.
+ * meter) and the boot (game-boot.ts: sweep stale regions, warm the runtime
+ * cache once the checker is up). Only page-side composition of qed64's
+ * pieces lives here: its raw region cache (`prefetchRaw` and the helpers of
+ * docs/EMBEDDING.md §7.4: one prefetch worker per region in this page, the
+ * Web Lock `qed64-raw:<key>` across tabs) and the service worker's `warm`
+ * message (client/src/sw) are the contracts.
  */
 import { atom, getDefaultStore } from "jotai";
-import { snapshotCacheKey, type SnapshotEntry, type SnapshotIndex } from "./vendor/qed64/src/runtime/snapshots";
-import type { RuntimeManifest } from "./vendor/qed64/src/runtime/client";
+import { PREFETCH_SILENCE_MS, SNAPSHOT_CACHE_DIR, isCacheKeyOf, prefetchRaw, removeRawRegion, runtimeUrls, snapshotCacheKey, type PrefetchRawResult, type SnapshotEntry, type SnapshotIndex } from "qed64/embed";
+import type { RuntimeManifest } from "qed64/embed";
 import { resolveRuntimeManifest } from "./games-api";
 import { LINK_RETRY_MS, ensureServiceWorkerRegistration, ownServiceWorkerRegistration, pendingServiceWorkerRegistration, retryAfterLinkFailure, type RoundStep } from "./sw-client";
 import { cachedLevelImageUrls, fetchGameDataUrls } from "./game-data-urls";
-import { SNAPSHOT_INDEX_FOREIGN_URL, isSameOrigin } from "./boot-params";
+import { isSameOrigin } from "./boot-params";
 
-const SNAPSHOT_DIR = "qed64-snapshots";
-const PREFETCH_WORKER = "/workers/snapshot-prefetch.worker.js";
-
-/** The OPFS snapshot directory, or null where OPFS is unavailable (Firefox
- * private mode throws on getDirectory) or the directory does not exist yet. */
-async function snapshotsDir(create = false): Promise<FileSystemDirectoryHandle | null> {
+/** qed64's snapshot cache directory in OPFS, or null where OPFS is
+ * unavailable (Firefox private mode throws on getDirectory) or the directory
+ * does not exist yet. */
+async function snapshotCacheDir(): Promise<FileSystemDirectoryHandle | null> {
   try {
     const root = await navigator.storage.getDirectory();
-    return await root.getDirectoryHandle(SNAPSHOT_DIR, { create });
+    return await root.getDirectoryHandle(SNAPSHOT_CACHE_DIR);
   } catch {
     return null;
   }
@@ -51,7 +50,7 @@ function channel(): BroadcastChannel | null {
     cacheChannel = typeof BroadcastChannel === "function" ? new BroadcastChannel(CACHE_CHANNEL) : null;
   } catch { cacheChannel = null; }
   if (cacheChannel) cacheChannel.onmessage = (e) => {
-    const m = e.data as { type?: string; name?: unknown; tab?: unknown; id?: unknown; hidden?: unknown; phase?: unknown; bytes?: unknown; total?: unknown; outcome?: unknown } | null;
+    const m = e.data as { type?: string; name?: unknown; tab?: unknown; id?: unknown; hidden?: unknown; phase?: unknown; bytes?: unknown; total?: unknown; transfer?: unknown; outcome?: unknown } | null;
     const tab = typeof m?.tab === "string" ? m.tab : "";
     switch (m?.type) {
       case "cache-changed":
@@ -64,6 +63,7 @@ function channel(): BroadcastChannel | null {
           phase: m.phase === "warming" ? "warming" : "running",
           bytes: typeof m.bytes === "number" ? m.bytes : 0,
           total: typeof m.total === "number" ? m.total : 0,
+          ...(typeof m.transfer === "number" && m.transfer > 0 ? { transfer: m.transfer } : {}),
         }, m.hidden === true);
         return;
       case "prepare-ended":
@@ -165,8 +165,14 @@ export function onRemoteCacheChange(cb: () => void): () => void {
 
 /** One running download as the tiles show it: `bytes`/`total` are the
  * prefetch worker's INFLATED offsets (the tile scales them to the transfer
- * size), `warming` — the region is committed, the runtime warm-up runs. */
-export interface DownloadProgress { phase: "running" | "warming"; bytes: number; total: number }
+ * size), `warming` — the region is committed, the runtime warm-up runs.
+ * `transfer` (NEW-2, live run of 4083fb4): the bytes the download moves on
+ * the wire (the index entry's transfer size), said with every word — a tab
+ * opened while another one downloads has the word 0.2 s after it opens, but
+ * its own index (the tile's transfer size) only after its manifest and index
+ * fetches, which run behind the download (~4 s at 1.5 MB/s); the tile showed
+ * nothing until then. A sender of a build before NEW-2 says none. */
+export interface DownloadProgress { phase: "running" | "warming"; bytes: number; total: number; transfer?: number }
 /** A download another tab reported: when it was last heard of, and how long
  * its silence is borne (`ttl`: R1 — longer for a sender in a hidden tab). */
 export interface RemoteDownload extends DownloadProgress { at: number; ttl: number }
@@ -362,52 +368,57 @@ export function queryRemoteDownloads(): void {
   }, QUERY_ANSWER_MS);
 }
 
-/** The raw-region file name of an index entry (`<cacheKey>.raw`). */
-export const rawFileName = (entry: SnapshotEntry): string => `${snapshotCacheKey(entry)}.raw`;
-
-/** "Remove download": delete this game's inflated region — that one file,
- * nothing else (the Lean worker's compressed entry, if any, the packs and
- * the runtime cache are untouched). True when a file was removed. */
-export async function removeRawSnapshot(entry: SnapshotEntry): Promise<boolean> {
-  const dir = await snapshotsDir();
-  if (!dir) return false;
-  try {
-    await dir.removeEntry(rawFileName(entry));
-    notifyCacheChanged(); // L12
-    return true;
-  } catch {
-    return false; // absent, or OPFS refused — the tile re-probes either way
-  }
+/** "Remove download": delete this game's inflated region (and a partial of
+ * it) — qed64's removeRawRegion, nothing else (the Lean worker's compressed
+ * copy, if any, and the runtime cache are untouched) — and tell the other
+ * tabs (L12). True when a file was removed. */
+export async function removeDownload(entry: SnapshotEntry): Promise<boolean> {
+  const removed = await removeRawRegion(entry);
+  if (removed) notifyCacheChanged(); // L12
+  return removed; // absent, or OPFS refused — the tile re-probes either way
 }
 
-/** Sweep stale raw regions: `qed64-snapshots/<name>.<key>.snapz.raw` files
- * of a name the served index knows whose key is not that name's live key (a
- * rebake changed the digest; the old 1.4 GB region would otherwise sit in
- * every returning user's OPFS for ever), and the `.partial` staging files of
- * such stale keys (a reload, a crash or the prefetch bail strands one; the
- * worker only ever discards the partial of the key it is asked for, so
- * nothing else would). The match is the exact key shape snapshotCacheKey
- * produces after the listed name (`.<16 hex>` or `.<bytes>.<transfer>`), so
- * an unlisted name that merely starts with a listed one ("nng4.dev" next to
- * "nng4") is left alone, as is the live key's own partial (an in-flight
- * prepare or the session's own prefetch holds it) and everything outside
- * this directory. Never call it against an unpromoted (`?snapshots=<dir>`)
- * index: its keys differ from the served ones by design (game-boot skips
- * the sweep then). Returns the removed file names. */
+/** A cache key's tail after the snapshot's (sanitised) name: qed64's
+ * snapshotCacheKey is `<name>.<16 hex of the digest>.snapz`, or
+ * `<name>.<bytes>.<transfer>.snapz` for an entry without a digest; the files
+ * are the key itself (the Lean worker's compressed copy), `<key>.raw`, and
+ * either one's `.partial`. */
+const KEY_TAIL = /^(?:[0-9a-f]{16}|\d+\.\d+)\.snapz(?:\.raw)?(?:\.partial)?$/;
+const KEY_SUFFIX = /\.(?:[0-9a-f]{16}|\d+\.\d+)\.snapz$/;
+
+/** Sweep the stale bakes from qed64's snapshot cache: every file of a name
+ * the served index LISTS whose key is not that entry's live one (qed64's
+ * isCacheKeyOf: the entry's compressed copy, its raw region, or either one's
+ * partial) — a rebake changed the digest and the old 1.4 GB region would
+ * otherwise sit in every returning user's OPFS for ever; a reload, a crash or
+ * a prefetch bail strands a `.partial` of a key that is not live any more
+ * (the workers only ever discard the partial of the key they are asked for).
+ * A live key's files are kept, its partial too (an in-flight prepare or the
+ * session's own prefetch holds it).
+ * A name the index does not list is never touched (PAR-3, review of phase 2):
+ * the index is this PAGE's — a tab that outlives a deploy (the service worker
+ * keeps the previous shell for exactly that) sweeps against the old one, and
+ * a game the new deploy added, Prepared in a newer tab, is unlisted there; so
+ * is a developer's unpromoted bake under another name (`nng4.dev.*` next to
+ * `nng4`). The listed names come from the live keys themselves (the key with
+ * its tail cut off), so the sanitisation is qed64's; a key shape this does
+ * not know names nothing, and nothing of that name is removed. Never call it
+ * against an unpromoted (`?snapshots=<dir>`) index: its keys differ from the
+ * served ones by design (game-boot skips the sweep then). Returns the
+ * removed file names. */
 export async function sweepStaleSnapshots(index: SnapshotIndex): Promise<string[]> {
-  const dir = await snapshotsDir();
+  const dir = await snapshotCacheDir();
   if (!dir) return [];
-  const live = new Set(index.snapshots.map(rawFileName));
-  // The same sanitisation snapshotCacheKey applies to a name.
-  const listed = index.snapshots.map((e) => e.name.replace(/[^A-Za-z0-9._-]/g, "_"));
-  const KEY_TAIL = /^(?:[0-9a-f]{16}|\d+\.\d+)\.snapz\.raw$/;
-  const ofListedName = (base: string) => listed.some((n) => base.startsWith(`${n}.`) && KEY_TAIL.test(base.slice(n.length + 1)));
+  const listed = index.snapshots.flatMap((e) => {
+    const key = snapshotCacheKey(e);
+    return KEY_SUFFIX.test(key) ? [key.replace(KEY_SUFFIX, "")] : [];
+  });
+  const ofListedName = (name: string) => listed.some((n) => name.startsWith(`${n}.`) && KEY_TAIL.test(name.slice(n.length + 1)));
   const removed: string[] = [];
   // FileSystemDirectoryHandle's async iterator is not in this tsconfig's lib.
   const names = (dir as unknown as { keys(): AsyncIterable<string> }).keys();
   for await (const name of names) {
-    const base = name.endsWith(".partial") ? name.slice(0, -".partial".length) : name;
-    if (!base.endsWith(".snapz.raw") || live.has(base) || !ofListedName(base)) continue;
+    if (isCacheKeyOf(name, index) || !ofListedName(name)) continue;
     try {
       await dir.removeEntry(name);
       removed.push(name);
@@ -417,65 +428,6 @@ export async function sweepStaleSnapshots(index: SnapshotIndex): Promise<string[
   }
   if (removed.length) notifyCacheChanged(); // L12
   return removed;
-}
-
-/** What the prefetch worker reports on exit. */
-export type PrefetchResult = "done" | "already-cached" | "error" | "unavailable" | "busy";
-
-/** A prefetch worker that has reported nothing for this long is abandoned.
- * Silence, not a deadline from the start: a fixed 15 minutes cut the largest
- * regions (~280 MB gzip) short below ~2.5 Mbit/s and threw the partial away
- * (QED64 HARDENING #54; the vendored boot, qed64-boot.ts, uses the same
- * timeout). The worker reports every 500 ms while bytes arrive, so only a
- * dead connection or a wedged worker is ever this quiet. */
-export const PREFETCH_SILENCE_MS = 3 * 60 * 1000;
-
-/** Fill the raw region cache for one snapshot in the disposable prefetch
- * worker (download + gunzip on a heap that dies on completion — a Lean
- * worker doing this itself stays ~4.6 GB heavier for its whole life),
- * exactly as the vendored boot does before it loads a snapshot. Resolves
- * with the worker's terminal status; `busy` means another writer (the Lean
- * worker of a session in this page) holds the file. */
-export function prefetchRawSnapshot(entry: SnapshotEntry, onProgress?: (bytes: number, total: number) => void): Promise<{ result: PrefetchResult; error?: string }> {
-  // SEC1: the worker fetches `entry.url` and commits the bytes under the key
-  // the entry names — never for a url on another origin (the index is
-  // refused whole for one already; this is the last door before the fetch).
-  if (!isSameOrigin(entry.url)) {
-    return Promise.resolve({ result: "error", error: `refused: the snapshot url points to another origin (${SNAPSHOT_INDEX_FOREIGN_URL})` });
-  }
-  return new Promise((resolve) => {
-    const w = new Worker(PREFETCH_WORKER);
-    let settled = false;
-    let bail = 0;
-    const finish = (result: PrefetchResult, error?: string) => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(bail);
-      w.terminate();
-      resolve({ result, error });
-    };
-    // Re-armed by every message; a late one after finish() must not re-arm
-    // (its timer would delete a partial another writer may own by then).
-    const arm = () => {
-      if (settled) return;
-      window.clearTimeout(bail);
-      bail = window.setTimeout(() => {
-        finish("error", `the download stalled (no data for ${PREFETCH_SILENCE_MS / 60_000} minutes)`);
-        // terminate() skips the worker's own cleanup: the partial (up to the
-        // region's full size) would sit in OPFS until a retry of this key.
-        void snapshotsDir().then((d) => d?.removeEntry(`${rawFileName(entry)}.partial`)).catch(() => {});
-      }, PREFETCH_SILENCE_MS);
-    };
-    arm();
-    w.postMessage({ url: entry.url, cacheKey: snapshotCacheKey(entry), rawBytes: entry.bytes });
-    w.onmessage = (e) => {
-      const m = e.data as { status?: string; bytes?: number; total?: number; error?: string };
-      if (m.status === "progress") { arm(); onProgress?.(m.bytes ?? 0, m.total ?? entry.bytes); return; }
-      const status = m.status as PrefetchResult | undefined;
-      finish(status === "done" || status === "already-cached" || status === "busy" || status === "unavailable" ? status : "error", m.error);
-    };
-    w.onerror = (e) => finish("error", e.message);
-  });
 }
 
 /** `partial`: the worker stopped at its per-message budget (a message event
@@ -736,9 +688,11 @@ export function warmRuntimeCacheOutcome(runtime: RuntimeManifest, extraUrls: rea
     // N5: the game data first — the worker works through the list in order
     // (bounded concurrency): the small files an offline inventory opens are
     // cached in seconds, not after 147 MB of runtime chunks.
-    const urls: string[] = [...new Set(extraUrls)];
-    for (const u of ["/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json"]) if (!urls.includes(u)) urls.push(u);
-    for (const f of Object.values(runtime.files)) for (const c of f.chunks) if (!urls.includes(c.url)) urls.push(c.url);
+    // B4: the runtime's chunks (qed64's runtimeUrls), NOT its manifests nor
+    // the snapshot and profile indexes: those are in the shell precache
+    // (scripts/build-sw.mjs) — a copy warmed into the RUNTIME cache went
+    // stale behind the shell's own and outlived the shell's pruning.
+    const urls: string[] = [...new Set([...extraUrls, ...runtimeUrls(runtime).chunks])];
     // SEC1: the service worker fetches and caches exactly what it is sent —
     // same-origin urls only (resolveRuntimeManifest refused a manifest with
     // a foreign chunk already; the worker filters again on its side).
@@ -827,8 +781,9 @@ export interface PrepareStatus {
   phase: "running" | "warming" | "done" | "failed";
   bytes: number;
   total: number;
-  /** The prefetch worker's exit status once it exited. */
-  result?: PrefetchResult;
+  /** The region's outcome once it settled (qed64's prefetchRaw status). */
+  result?: PrefetchRawResult["status"];
+  /** Why it failed, in words (the tile shows it). */
   error?: string;
   /** Runtime files the service worker holds after the warm-up (null: no
    * service worker answered — the boot's own warm-up retries). */
@@ -863,20 +818,21 @@ function clearFailedPrepares(stale: (name: string) => boolean = () => true): voi
 }
 
 /** A prepare in flight: `region` settles when the raw region is committed
- * to OPFS (or failed) — what a boot must wait for; `all` when the runtime
- * warm-up has settled too — what the tile shows as done. */
+ * to OPFS (or failed) — what a game switch waits for before its reload;
+ * `all` when the runtime warm-up has settled too — what the tile shows as
+ * done. */
 interface InFlightPrepare { region: Promise<PrepareStatus>; all: Promise<PrepareStatus>; downloading: () => boolean }
 const inFlight = new Map<string, InFlightPrepare>();
 let memoryNoteShown = false;
-/** Snapshots a boot in this page has claimed (see claimSnapshotForBoot). */
-const claimedByBoot = new Set<string>();
 
-/** The region promise of this snapshot's running prepare, if any: the boot
- * awaits it before installing artifacts (a second prefetch worker would
- * report `busy` and the Lean worker would stream the region itself — the
- * heavy path). The runtime warm-up is not waited for: the service worker
- * finishes it on its own, and the boot's own warm-up joins it. */
-export const inFlightPrepare = (name: string): Promise<PrepareStatus> | undefined => inFlight.get(name)?.region;
+/** A Prepare of this snapshot runs in this page (its region or its
+ * warm-up): its words to the other tabs (D2) are the Prepare's. */
+export const prepareRunning = (name: string): boolean => inFlight.has(name);
+
+/** The region of this snapshot's running Prepare (settles once it is
+ * committed, or failed), or null: what the boot of the same game waits for
+ * before its session starts (game-boot PAR-2). */
+export const inFlightPrepare = (name: string): Promise<PrepareStatus> | null => inFlight.get(name)?.region ?? null;
 
 /** Every running prepare's region promise (the game-switch reload waits for
  * all of them: a reload kills the workers and discards their partials). */
@@ -891,13 +847,6 @@ export const inFlightRegions = (): { name: string; region: Promise<PrepareStatus
  * registration to its 30-minute cap when the boot was never served. */
 export const preparesDownloading = (): boolean => [...inFlight.values()].some((f) => f.downloading());
 
-/** The boot has passed the point where it waits for a prepare of this
- * snapshot: from here the game session's own prefetch worker owns the
- * region file, and a Prepare started later would only collide with it
- * (`busy`, and the Lean worker streaming the region itself). prepareGame
- * refuses such a snapshot; the tile hides the button for the bound game. */
-export const claimSnapshotForBoot = (name: string): void => { claimedByBoot.add(name); };
-
 /** The terminal outcome a Prepare reports to the other tabs (D3), from the
  * structured status only (CQ1: "stalled" was read off the error's wording). */
 function prepareOutcome(st: PrepareStatus): string {
@@ -905,36 +854,38 @@ function prepareOutcome(st: PrepareStatus): string {
   return st.runtime && (!st.runtime.partial || heldButNotRevalidated(st.runtime)) ? "done" : "partial"; // N1: all held is done
 }
 
-/** "Prepare offline": the raw region into OPFS (prefetch worker) and the
- * runtime chunks plus the game's own files (D6: `gameId` — game.json, every
- * level file, inventory.json and its docs, the i18n namespaces of `langs`
- * and English) into the service worker's cache, concurrently, without
- * booting Lean. Idempotent per snapshot while running. The worker lives in
- * this document, so navigating within the app keeps it going; a full page
- * reload kills it (the prefetch worker discards the partial on its next
- * run). `sessionBound`: a game session is loaded in this page — allowed
- * (the inflate runs in its own worker), but a small device is told once.
- * A region already in OPFS settles at once (`already-cached`): the landing
- * tile's "Finish offline download" is this call. */
+/** "Prepare offline": the raw region into OPFS (qed64's prefetchRaw) and
+ * the runtime chunks plus the game's own files (D6: `gameId` — game.json,
+ * every level file, inventory.json and its docs, the i18n namespaces of
+ * `langs` and English) into the service worker's cache, concurrently,
+ * without booting Lean. Idempotent per snapshot while running. The region's
+ * prefetch is single-flight in this page: a boot of this game while the
+ * Prepare runs (the player opens the tile's game) waits for the Prepare's
+ * region before its session starts (inFlightPrepare) — a region that failed
+ * is then fetched afresh by the session's own prefetch, not streamed by the
+ * Lean worker — and a Prepare started while the boot's session prefetches
+ * joins that prefetch worker (it used to be refused `busy`). Across tabs the
+ * writer holds the region's Web Lock; another tab's writer makes the region
+ * `busy` here at once (the tile then says so). The worker lives in this
+ * document, so navigating within the app keeps it going; a full page reload
+ * kills it (the partial is discarded on the next run). `sessionBound`: a game
+ * session is loaded in this page — allowed (the inflate runs in its own
+ * worker), but a small device is told once. A region already in OPFS settles
+ * at once (`cached`): the landing tile's "Finish offline download" is this
+ * call. */
 export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean; gameId?: string; langs?: readonly string[] } = {}): Promise<PrepareStatus> {
   const existing = inFlight.get(entry.name);
   if (existing) return existing.all;
-  if (claimedByBoot.has(entry.name)) {
-    const refused: PrepareStatus = { phase: "failed", bytes: 0, total: entry.bytes, result: "busy" };
-    publish(entry.name, refused);
-    endDownload(entry.name, "busy"); // D3
-    console.warn(`[game-cache] prepare ${entry.name}: refused — the game loaded in this page owns its region`);
-    return Promise.resolve(refused);
-  }
   const deviceGb = (navigator as { deviceMemory?: number }).deviceMemory;
   const memoryNote = !!opts.sessionBound && typeof deviceGb === "number" && deviceGb < 8 && !memoryNoteShown;
   if (memoryNote) memoryNoteShown = true;
   let status: PrepareStatus = { phase: "running", bytes: 0, total: entry.bytes, memoryNote };
   // D2: every state change is this tab's word to the others (the heartbeat
   // sends the latest once a second).
+  const transfer = entry.transfer ?? entry.bytes;
   const show = (st: PrepareStatus) => {
     publish(entry.name, st);
-    if (st.phase === "running" || st.phase === "warming") reportDownload(entry.name, { phase: st.phase, bytes: st.bytes, total: st.total });
+    if (st.phase === "running" || st.phase === "warming") reportDownload(entry.name, { phase: st.phase, bytes: st.bytes, total: st.total, transfer });
   };
   show(status);
   // D6: the game's files ride in the SAME message as the runtime list (the
@@ -968,12 +919,18 @@ export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean
     return null;
   });
   const region = (async (): Promise<PrepareStatus> => {
-    const { result, error } = await prefetchRawSnapshot(entry, (bytes, total) => {
-      status = { ...status, bytes, total };
-      show(status);
+    const r = await prefetchRaw(entry, {
+      onProgress: ({ loaded, total }) => {
+        status = { ...status, bytes: loaded, total };
+        show(status);
+      },
     });
-    const ok = result === "done" || result === "already-cached";
-    status = ok ? { ...status, phase: "warming", bytes: entry.bytes, result } : { ...status, phase: "failed", result, error };
+    const ok = r.status === "done" || r.status === "cached";
+    // HARDENING #54: `silent` — the prefetch reported nothing for
+    // PREFETCH_SILENCE_MS (it reports every 500 ms while bytes arrive), so
+    // only a dead connection or a wedged worker; its partial is gone.
+    const error = r.status === "silent" ? `the download stalled (no data for ${PREFETCH_SILENCE_MS / 60_000} minutes)` : r.error?.message;
+    status = ok ? { ...status, phase: "warming", bytes: entry.bytes, result: r.status } : { ...status, phase: "failed", result: r.status, error };
     show(status);
     if (ok) notifyCacheChanged(); // L12: the region is committed — other tabs re-probe
     return status;
@@ -1024,7 +981,7 @@ export async function storageSummary(): Promise<{ usage: number; quota: number }
   const usage = estimate.usage ?? 0;
   const quota = estimate.quota ?? 0;
   let regions = 0;
-  const dir = await snapshotsDir();
+  const dir = await snapshotCacheDir();
   if (dir) {
     try {
       // FileSystemDirectoryHandle's async iterator is not in this tsconfig's lib.

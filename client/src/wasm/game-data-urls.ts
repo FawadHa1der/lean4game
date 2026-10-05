@@ -15,7 +15,7 @@
  * runtime cache holds every runtime chunk and the game's own files —
  * `offlineCacheReport`, which the landing tile reads before it says "Ready".
  */
-import type { RuntimeManifest } from "./vendor/qed64/src/runtime/client";
+import { runtimeUrls, type RuntimeManifest } from "qed64/embed";
 
 /** The service worker's runtime cache (client/src/sw/sw.template.js
  * `RUNTIME`): the runtime chunks, the manifests and every game file it warmed
@@ -135,11 +135,6 @@ export async function cachedLevelImageUrls(gameId: string, urls: readonly string
   } catch { return []; }
 }
 
-/** The runtime chunks a runtime manifest names (what the warm-up caches and
- * the tile checks). */
-export const runtimeChunkUrls = (runtime: RuntimeManifest): string[] =>
-  [...new Set(Object.values(runtime.files).flatMap((f) => f.chunks.map((c) => c.url)))];
-
 /** What the service worker's runtime cache holds for one game: the current
  * runtime's chunks and the game's essential files (`essentialDataUrls`). */
 export interface OfflineCacheReport {
@@ -197,5 +192,6 @@ export async function offlineCacheReport(gameId: string, runtime: RuntimeManifes
       game = hit ? await hit.json() : null;
     } catch { game = null; }
   }
-  return offlineReportFrom(paths, runtimeChunkUrls(runtime), gameId, game);
+  // The chunks the warm-up caches (game-cache warmRuntimeCacheOutcome): qed64's runtimeUrls.
+  return offlineReportFrom(paths, runtimeUrls(runtime).chunks, gameId, game);
 }

@@ -18,8 +18,12 @@
     ],
     "strict": true,
     "baseUrl": ".",
+    // `qed64/embed` is the qed64 package's exports-map entry, which
+    // moduleResolution "node" does not read (Vite does). "bundler" would, but
+    // it changes how other packages resolve and adds errors of its own; so the
+    // one entry is spelled out, at the workspace's hoisted node_modules.
     "paths": {
-      "qed64/*": ["src/wasm/vendor/qed64/*"]
+      "qed64/embed": ["../node_modules/qed64/frontend/src/embed/index.ts"]
     },
   },
   "include": [

@@ -1,23 +1,27 @@
 // Run: node --import ./client/src/wasm/ts-resolve-hook.mjs client/src/wasm/boot-params.test.ts
 // SEC1 (review of 4083fb4): the dev overrides `?snapshots=` / `?profiles=`
-// / `?runtime=` are judged by ONE rule (boot-params.ts, QED64's draft §4)
-// before anything fetches with them, and an index or manifest naming
-// another origin is refused whole. The vectors are the review's: every
+// / `?runtime=` are judged by ONE rule (qed64's validateBootOverrides,
+// docs/EMBEDDING.md §4, with this page's stricter empty and doubled cases —
+// boot-params.ts) before anything fetches with them, and an index or
+// manifest naming another origin is refused whole. The vectors are the review's: every
 // spelling a browser resolves to https://evil.example/…/index.json once the
 // index fetch splices the value into `/${dir}/index.json` — raw, percent-
 // encoded (URLSearchParams decodes), backslash (a slash in special schemes),
 // a tab (the URL parser strips it) — plus the path traversals, the length
 // bound, an empty and a doubled value; and the legitimate dev uses that must
-// keep working (`staging`, `snapshots-0031`, `snapshots/widgets8`). The
-// integration half runs the REAL games-api.ts against a fake fetch that
+// keep working (`staging`, `snapshots-0031`, `snapshots/widgets8`;
+// `profiles/<dir>` for profiles — qed64's rule). The integration half runs
+// the REAL games-api.ts (over qed64's loaders) against a fake fetch that
 // records every URL: a refused value fetches NOTHING (no fallback to the
-// served index), an accepted one fetches exactly its same-origin index.
+// served index), an accepted one fetches exactly its same-origin index, an
+// index naming another origin is refused with SEC1's code, and a dev index
+// that cannot be read is a named failure.
 import assert from "node:assert/strict";
 
 const SITE = "https://lean4game.example";
 const PAGE = `${SITE}/#/g/hhu-adam/NNG4/world/Tutorial/level/1`;
 const bp = await import("./boot-params");
-const { parseBootParams, isSameOrigin, isSec1Refusal, refuseForeignSnapshotUrls, refuseForeignManifestUrls, SEC1_REFUSAL_RE, DIR_OVERRIDE } = bp;
+const { parseBootParams, isSameOrigin, isSec1Refusal, refuseForeignManifestUrls, SEC1_REFUSAL_RE } = bp;
 
 let failures = 0;
 async function test(name: string, body: () => void | Promise<void>): Promise<void> {
@@ -55,6 +59,8 @@ const REFUSED: [string, string, boolean][] = [
   ["", "", true],
 ];
 const ACCEPTED = ["snapshots/widgets8", "snapshots-0031", "staging", "a".repeat(64), "snapshots/" + "b".repeat(64), "nng4.dev_2-x"];
+/** ?profiles=: the same, under the promoted profiles directory's own name. */
+const ACCEPTED_PROFILES = ACCEPTED.map((v) => v.replace(/^snapshots\//, "profiles/"));
 
 await test("the review's vectors: each decoded the way the browser does, and each refused for ?snapshots and ?profiles", () => {
   for (const [raw, decoded, hole] of REFUSED) {
@@ -73,11 +79,15 @@ await test("the review's vectors: each decoded the way the browser does, and eac
 });
 
 await test("the legitimate dev uses are accepted (staging, snapshots-0031, snapshots/widgets8, the 64-character bound)", () => {
-  for (const v of ACCEPTED) {
-    const p = parseBootParams(`?snapshots=${v}&profiles=${v}`, PAGE);
-    assert.deepEqual([p.snapshots, p.profiles, p.refused.length], [v, v, 0], v);
+  ACCEPTED.forEach((v, i) => {
+    const pv = ACCEPTED_PROFILES[i]!;
+    const p = parseBootParams(`?snapshots=${v}&profiles=${pv}`, PAGE);
+    assert.deepEqual([p.snapshots, p.profiles, p.refused.length], [v, pv, 0], v);
     assert.equal(new URL(`/${v}/index.json`, PAGE).origin, SITE);
-  }
+  });
+  // qed64's rule: a profile directory nests under `profiles/`, not `snapshots/`.
+  assert.deepEqual(parseBootParams("?profiles=snapshots/widgets8", PAGE).refusedNames, ["profiles"]);
+  assert.deepEqual(parseBootParams("?snapshots=profiles/widgets8", PAGE).refusedNames, ["snapshots"]);
   assert.deepEqual(parseBootParams("", PAGE), { snapshots: null, profiles: null, runtime: null, refused: [], refusedNames: [] }, "no override: nothing set, nothing refused");
   assert.deepEqual(parseBootParams("?other=1&snapshot=x", PAGE).refused, [], "other parameters are not this rule's business");
 });
@@ -85,7 +95,7 @@ await test("the legitimate dev uses are accepted (staging, snapshots-0031, snaps
 await test("the rule's second half: a value the pattern admits must still resolve to the page's origin", () => {
   // No ASCII value the pattern admits leaves the origin; the check stands
   // behind it (a widened pattern, a page on an opaque origin).
-  assert.equal(DIR_OVERRIDE.test("staging"), true);
+  assert.equal(parseBootParams("?snapshots=staging", PAGE).snapshots, "staging");
   assert.equal(parseBootParams("?snapshots=staging", "file:///Users/x/index.html").refusedNames[0], "snapshots", "an opaque page origin admits nothing");
   assert.equal(parseBootParams("?snapshots=staging", "not a url").refusedNames[0], "snapshots", "an unparsable page URL admits nothing");
   assert.equal(isSameOrigin("/staging/index.json", PAGE), true);
@@ -128,18 +138,17 @@ await test("the card's text: the value quoted with escapes and bounded (attacker
   assert.equal(isSec1Refusal(new Error("Failed to fetch")), false);
 });
 
-await test("overrideOf / assertBootParams read the page once per document and THROW a refusal (never null for a refused value)", () => {
+await test("bootOverrides / assertBootParams read the page once per document and THROW a refusal (never null for a refused value)", () => {
   (globalThis as { location?: unknown }).location = new URL(`${SITE}/?snapshots=//evil.example/x&runtime=wasm64-d77d34b97592d014#/g/a/b`);
-  assert.throws(() => bp.overrideOf("snapshots"), (e: unknown) => isSec1Refusal(e) && (e as { code: string }).code === "BOOT_PARAM_REFUSED");
-  assert.equal(bp.overrideOf("runtime"), "wasm64-d77d34b97592d014");
-  assert.equal(bp.overrideOf("profiles"), null);
+  assert.throws(() => bp.bootOverrides(), (e: unknown) => isSec1Refusal(e) && (e as { code: string }).code === "BOOT_PARAM_REFUSED" && /\?snapshots=/.test((e as Error).message));
   assert.throws(() => bp.assertBootParams(), /refused \?snapshots=/);
+  assert.deepEqual(bp.bootParams().runtime, "wasm64-d77d34b97592d014", "the accepted one is still read (and reported)");
   // A replaceState on the same document changes `search`, not the verdict.
   const sameDoc = (globalThis as unknown as { location: URL }).location;
   sameDoc.search = "";
-  assert.throws(() => bp.overrideOf("snapshots"), /refused/, "the first reading holds for the document");
-  (globalThis as { location?: unknown }).location = new URL(`${SITE}/?snapshots=staging`);
-  assert.equal(bp.overrideOf("snapshots"), "staging", "a new document reads again");
+  assert.throws(() => bp.bootOverrides(), /refused/, "the first reading holds for the document");
+  (globalThis as { location?: unknown }).location = new URL(`${SITE}/?snapshots=staging&runtime=wasm64-d77d34b97592d014`);
+  assert.deepEqual(bp.bootOverrides(), { snapshots: "staging", profiles: null, runtime: "wasm64-d77d34b97592d014" }, "a new document reads again, in qed64's shape");
   bp.assertBootParams();
 });
 
@@ -169,14 +178,6 @@ const LIVE_DIGEST = "sha256:" + "ab".repeat(32);
 const entry = (name: string, url: string) => ({ name, url, digest: LIVE_DIGEST, bytes: 10, imports: [], runtime: "wasm64-d77d34b97592d014" });
 const index = (...snapshots: ReturnType<typeof entry>[]) => ({ schema: "qed64.snapshot-index/v1", snapshots });
 
-await test("a snapshot index with ANY entry on another origin is refused whole, with a coded error", () => {
-  refuseForeignSnapshotUrls(index(entry("nng4", "/snapshots/nng4.db264c5f3eb7c69c.snapz"), entry("rag", `${SITE}/snapshots/rag.a7a0c2f7f57b3ce2.snapz`)), PAGE);
-  for (const bad of ["https://cdn.attacker.example/r.snapz", "//cdn.attacker.example/r.snapz", "\\\\cdn.attacker.example/r.snapz", "data:application/octet-stream;base64,AA==", "http://lean4game.example/snapshots/x.snapz"]) {
-    assert.throws(() => refuseForeignSnapshotUrls(index(entry("nng4", "/snapshots/nng4.db264c5f3eb7c69c.snapz"), entry("rag", bad)), PAGE),
-      (e: unknown) => isSec1Refusal(e) && (e as { code: string }).code === "SNAPSHOT_INDEX_FOREIGN_URL" && /entry "rag" points to/.test((e as Error).message), bad);
-  }
-});
-
 await test("a runtime manifest with a chunk on another origin is refused, with a coded error", () => {
   const m = (url: unknown) => ({ buildId: "b", leanVersion: "4", files: { "lean.js": { bytes: 1, sha256: "", chunks: [{ url: "/runtime/chunks/lean.js.aa.part-000", bytes: 1, sha256: "" }] }, "lean.wasm": { bytes: 1, sha256: "", chunks: [{ url, bytes: 1, sha256: "" }] } } });
   refuseForeignManifestUrls(m("/runtime/chunks/lean.wasm.bb.part-000") as never, PAGE);
@@ -187,14 +188,14 @@ await test("a runtime manifest with a chunk on another origin is refused, with a
 
 /* ---- the real games-api.ts against a recording fetch ------------------- */
 let seen: string[] = [];
-let served: { index?: unknown; manifest?: unknown } = {};
+let served: { index?: unknown; manifest?: unknown; status?: number } = {};
 const json = (v: unknown) => new Response(JSON.stringify(v), { status: 200, headers: { "content-type": "application/json" } });
 (globalThis as { fetch: unknown }).fetch = async (input: string) => {
   const u = new URL(String(input), (globalThis as unknown as { location: URL }).location.href);
   seen.push(u.origin === SITE ? u.pathname : `${u.href} [CROSS-ORIGIN]`);
   if (u.origin !== SITE) return json(index(entry("nng4", "https://cdn.attacker.example/r.snapz")));
   if (u.pathname.startsWith("/runtime/runtime-manifest")) return json(served.manifest ?? { buildId: "wasm64-d77d34b97592d014", leanVersion: "4", files: { "lean.js": { bytes: 1, sha256: "", chunks: [] }, "lean.wasm": { bytes: 1, sha256: "", chunks: [] } } });
-  if (u.pathname.endsWith("/index.json")) return json(served.index ?? index(entry("nng4", "/snapshots/nng4.db264c5f3eb7c69c.snapz")));
+  if (u.pathname.endsWith("/index.json")) return served.status ? new Response("", { status: served.status }) : json(served.index ?? index(entry("nng4", "/snapshots/nng4.db264c5f3eb7c69c.snapz")));
   return new Response("<html>", { status: 200, headers: { "content-type": "text/html" } });
 };
 let n = 0;
@@ -208,7 +209,7 @@ await test("games-api: a refused ?snapshots= fetches NOTHING — no attacker ind
   for (const [raw] of REFUSED) {
     const g = await api(`?snapshots=${raw}`);
     await assert.rejects(g.fetchSnapshotIndexOnce(), (e: unknown) => isSec1Refusal(e), raw);
-    assert.throws(() => g.devSnapshotsDir(), /refused \?snapshots=/, raw);
+    await assert.rejects(g.resolveRuntimeManifest(), /refused \?snapshots=/, `${raw}: no artifact at all for a page carrying a refusal`);
     assert.deepEqual(seen, [], `?snapshots=${raw} fetched ${seen.join(", ")}`);
   }
 });
@@ -218,15 +219,32 @@ await test("games-api: an accepted ?snapshots=staging reads /staging/index.json 
   const idx = await g.fetchSnapshotIndexOnce();
   assert.deepEqual(seen, ["/staging/index.json"]);
   assert.equal(idx!.snapshots[0]!.url, "/staging/nng4.db264c5f3eb7c69c.snapz");
-  assert.equal(g.devSnapshotsDir(), "staging", "the sweep stands down");
+  assert.equal(bp.bootOverrides().snapshots, "staging", "the sweep stands down");
   const plain = await api("");
   await plain.fetchSnapshotIndexOnce();
   assert.deepEqual(seen, ["/snapshots/index.json"]);
-  assert.equal(plain.devSnapshotsDir(), null);
+  assert.equal(bp.bootOverrides().snapshots, null);
+});
+
+await test("games-api: a dev index that cannot be read is a named failure (qed64 §4), the served one unreadable is null and asked again", async () => {
+  try {
+    served.status = 404;
+    await assert.rejects((await api("?snapshots=staging")).fetchSnapshotIndexOnce(), /\?snapshots=staging: \/staging\/index\.json: HTTP 404/);
+    const plain = await api("");
+    assert.equal(await plain.fetchSnapshotIndexOnce(), null);
+    served.status = undefined;
+    assert.ok(await plain.fetchSnapshotIndexOnce(), "not memoised: the next call reads it");
+    assert.deepEqual(seen, ["/snapshots/index.json", "/snapshots/index.json"]);
+  } finally { served = {}; }
 });
 
 await test("games-api: an index (default or dev) naming another origin is refused whole — the re-root does not launder an absolute url", async () => {
   try {
+    // qed64's loader refuses it (HARDENING #57); the page reports SEC1's coded refusal, not "unreadable".
+    for (const bad of ["https://cdn.attacker.example/r.snapz", "//cdn.attacker.example/r.snapz", "\\\\cdn.attacker.example/r.snapz", "data:application/octet-stream;base64,AA==", "http://lean4game.example/snapshots/x.snapz"]) {
+      served.index = index(entry("nng4", "/snapshots/nng4.db264c5f3eb7c69c.snapz"), entry("rag", bad));
+      await assert.rejects((await api("")).fetchSnapshotIndexOnce(), (e: unknown) => isSec1Refusal(e) && (e as { code: string }).code === "SNAPSHOT_INDEX_FOREIGN_URL" && /entry "rag" points off this site/.test((e as Error).message), bad);
+    }
     served.index = index(entry("nng4", "/snapshots/nng4.db264c5f3eb7c69c.snapz"), entry("rag", "https://cdn.attacker.example/snapshots/rag.snapz"));
     const g = await api("");
     await assert.rejects(g.fetchSnapshotIndexOnce(), (e: unknown) => isSec1Refusal(e) && (e as { code: string }).code === "SNAPSHOT_INDEX_FOREIGN_URL");
@@ -262,9 +280,12 @@ await test("games-api: the landing tiles of a page with ANY refused override fet
 });
 
 await test("games-api: ?profiles= goes through the same rule", async () => {
-  assert.equal((await api("?profiles=staging")).devProfilesDir(), "staging");
+  await api("?profiles=staging");
+  assert.equal(bp.bootOverrides().profiles, "staging");
   const g = await api("?profiles=/evil.example/p");
-  assert.throws(() => g.devProfilesDir(), /refused \?profiles="\/evil\.example\/p" \(BOOT_PARAM_REFUSED\)/);
+  assert.throws(() => bp.bootOverrides(), /refused \?profiles="\/evil\.example\/p" \(BOOT_PARAM_REFUSED\)/);
+  await assert.rejects(g.resolveRuntimeManifest(), /refused \?profiles=/);
+  assert.deepEqual(seen, []);
 });
 
 if (failures) { console.log(`boot-params: ${failures} FAILED`); process.exit(1); }

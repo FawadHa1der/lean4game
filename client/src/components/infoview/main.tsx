@@ -49,7 +49,6 @@ import { crashedAtom, haltedStepAtom, interimDiagsAtom, lockEditorModeAtom, proo
 import { inventoryAtom } from '../../store/inventory-atoms';
 import { mobileAtom } from '../../store/preferences-atoms';
 import { deletedChatAtom, helpAtom, selectedStepAtom } from '../../store/chat-atoms';
-import { EXIT_CARD_RE } from '../../wasm/death-kind';
 import { BOOT_PARAM_REFUSED, SEC1_REFUSAL_RE, openWithoutOverrides } from '../../wasm/boot-params';
 import { wholeMB } from '../../wasm/sizes';
 
@@ -219,6 +218,19 @@ function networkHoldCopy(): { headline: React.ReactNode; detail: React.ReactNode
   }
 }
 
+/** QD-API-2: the site was updated under this page — a worker of the new
+ * deploy refused to run beside a script of the old one (death-kind
+ * isStalePageDeath), and the relay halted on it. Not a crash and not the
+ * link: only a reload helps (it loads the new version), so the card offers
+ * Reload and no "Restart the checker". Shared by the typewriter's card and
+ * editor mode's. */
+function stalePageCopy(t: ReturnType<typeof useTranslation>['t']): { headline: React.ReactNode; detail: React.ReactNode } {
+  return {
+    headline: <>{t("Site updated headline", { defaultValue: "This site was updated — reload to continue" })}</>,
+    detail: <>{t("Site updated note", { defaultValue: "A new version of this site was published while this page was open, and the checker cannot mix the two versions. Reloading the page loads the new version; your progress is saved in this browser." })}</>,
+  }
+}
+
 /** A boot failure card's action (typewriter and editor mode): Reload — but
  * SEC1-R2: for a refused address override a reload keeps the query and
  * refuses again, and no in-app link drops it, so the card opens the same
@@ -238,16 +250,17 @@ function BootFailureAction({ reason }: { reason?: string }) {
  * and classifyHalt publishes "Lean failed to start" AND schedules the
  * automatic re-arm: "could not start … Reload" read as final for the whole
  * offline window while recovery was already on its way. */
-function EditorBootFailureCard({ reason, hold }: { reason: string; hold: boolean }) {
+function EditorBootFailureCard({ reason, hold, stale = false }: { reason: string; hold: boolean; stale?: boolean }) {
   const { t } = useTranslation()
   const { headline, detail } = hold
     ? networkHoldCopy()
+    : stale ? stalePageCopy(t)
     : { headline: <>Lean could not start in your browser</>, detail: bootFailureDetail(reason, t) }
   return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
     {hold && <CircularProgress size={40} style={{ position: 'static', margin: 0 }} />}
     <div style={{ color: '#333', fontSize: '0.95rem', textAlign: 'center', maxWidth: '30rem' }}>{headline}</div>
     <div style={{ color: '#666', fontSize: '0.85rem', textAlign: 'center', maxWidth: '30rem' }}>{detail}</div>
-    <BootFailureAction reason={hold ? undefined : reason} />
+    <BootFailureAction reason={hold || stale ? undefined : reason} />
   </div>
 }
 
@@ -285,6 +298,8 @@ export function Main() {
   // SEC1-R1: a failure under a network hold is the hold's card (the
   // typewriter's LevelLoadingIndicator checks the hold first, too).
   const [networkHold] = useAtom(networkHoldAtom)
+  // QD-API-2: a relay halted on a stale page — the reload card, here too.
+  const stalePage = activity.halted && activity.stalePage && !networkHold
 
   React.useEffect(() => {
     if (!uri || !worldId || !levelId) {
@@ -445,7 +460,7 @@ export function Main() {
             {proof?.completed ? t("Level completed! 🎉") : t("Level completed with warnings 🎭")}
           </div>
         }
-        {bootFailure !== undefined ? <EditorBootFailureCard reason={bootFailure} hold={networkHold !== null} /> : <Infos />}
+        {bootFailure !== undefined || stalePage ? <EditorBootFailureCard reason={bootFailure ?? ""} hold={networkHold !== null} stale={stalePage} /> : <Infos />}
       </div>
       {hintsToShow && (
         <Hints hints={hintsToShow}
@@ -811,10 +826,13 @@ function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: (
   // HARDENING #52: a relay halted by FileWorker exits (the card names the
   // exit code) or by repeated liveness stalls is terminal like a boot
   // failure until the player restarts it — no spinner, no running clock.
-  const haltedLabel = activity.halted && !networkHold ? activity.label : ''
-  const exitCode = EXIT_CARD_RE.exec(haltedLabel)?.[1]
-  const stalledRepeatedly = /stalled repeatedly/.test(haltedLabel)
-  const runtimeHalt = exitCode !== undefined || stalledRepeatedly
+  // The halt's facts, not its label (death-kind haltFacts).
+  const haltedHere = activity.halted && !networkHold
+  const exitCode = haltedHere && activity.exitCode !== null ? activity.exitCode : undefined
+  const stalledRepeatedly = haltedHere && activity.stalled
+  // QD-API-2: a halt on a stale page is terminal too — until the reload.
+  const stalePage = haltedHere && activity.stalePage
+  const runtimeHalt = exitCode !== undefined || stalledRepeatedly || stalePage
   React.useEffect(() => {
     if (bootFailure !== undefined || runtimeHalt) return
     const id = setInterval(() => setElapsed(Math.max(0, Math.round((Date.now() - since) / 1000))), 1000)
@@ -856,6 +874,8 @@ function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: (
     headline = <>Lean could not start in your browser</>
     // L10 neutral wording; SEC1 refusals say what to change (bootFailureDetail).
     detail = bootFailureDetail(bootFailure, t)
+  } else if (stalePage) {
+    ({ headline, detail } = stalePageCopy(t))
   } else if (activity.halted && exitCode !== undefined) {
     // HARDENING #52 "exit": the FileWorker exited on every replay of this
     // level's text — a crash the content causes (the breaker's faithful
@@ -934,11 +954,11 @@ function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: (
     {bootFailure === undefined && !runtimeHalt && <div style={{ color: '#888', fontSize: '0.8rem' }}>{secs(elapsed)} elapsed</div>}
     {idle && waited >= 15 && onRetry &&
       <Button className="btn" onClick={onRetry}>Retry now</Button>}
-    {(bootFailure !== undefined || networkHold) &&
-      <BootFailureAction reason={networkHold ? undefined : bootFailure} />}
+    {(bootFailure !== undefined || networkHold || stalePage) &&
+      <BootFailureAction reason={networkHold || stalePage ? undefined : bootFailure} />}
     {activity.halted && !networkHold && exitCode !== undefined && haltedStep === null && removeLastLine &&
       <Button className="btn" onClick={removeLastLine.remove}>Remove the last line (<code>{removeLastLine.text.length > 40 ? `${removeLastLine.text.slice(0, 40)}…` : removeLastLine.text}</code>)</Button>}
-    {activity.halted && !networkHold &&
+    {activity.halted && !networkHold && !stalePage &&
       <Button className="btn" onClick={() => { if (!rearmCheckerIfHalted()) window.location.reload(); else onRetry?.() }}>Restart the checker</Button>}
   </div>
 }

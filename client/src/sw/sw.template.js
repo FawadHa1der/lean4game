@@ -214,7 +214,7 @@ async function cacheFirst(req, cacheName) {
  * (the page's L4 probe is `no-store`). R2-4 (review of N3): only game
  * content — the unhashed shell files stay strictly network-first: a deploy
  * plus one blip used to hand a new page the old worker scripts (no longer
- * paired with the vendored shim) and the old snapshot index ("not
+ * paired with the bundled qed64 shim) and the old snapshot index ("not
  * published for this build"). The staleness is bounded: a held game file is
  * served without asking the host at most LINK_MEMO_MS after the host could
  * not be reached at all, and any HTTP answer in between ends the memo. Lost

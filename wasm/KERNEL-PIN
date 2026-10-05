@@ -1,7 +1,18 @@
 992dc94b2de491878cca61aca382ed31286f3a86  qed64-wasm64 @ FawadHa1der/lean4 (wasm/kernel submodule; runtime source pin)
+patch 0032 992dc94b2de491878cca61aca382ed31286f3a86
 # Patch series through 0032 (resident header resolver, one environment
 # registry, generated exports) — the pin qed64 serves as runtime
 # wasm64-5dcdda005a7c5ae0. Bumped 2026-09-07 from 852d1b9 for the resident
 # transport port (the pump transport the game used was removed upstream).
 # A stage1 rebuild from a new pin REQUIRES rebaking every game snapshot
 # (init/testgame/nng4) against it: wasm/build-from-source.sh does all lanes.
+# The `patch` line is that series' last patch and the kernel commit that
+# completed it, machine-read: the qed64 package's workers state the oldest
+# kernel patch they drive (embedding/closure.json runtime.minKernelPatch), and
+# scripts/stage-workers.sh (every build and deploy) and the from-source
+# preflight refuse workers that need a newer kernel than this one. The
+# preflight also checks the number against the kernel: that commit must be
+# an ancestor of (or equal to) the pinned SHA above — a pin moved back past
+# its patch fails there, not in a browser. Bump both with the pin (the
+# kernel's commit subjects do not reliably carry the number: 0031, 0033 and
+# 0034 do not).

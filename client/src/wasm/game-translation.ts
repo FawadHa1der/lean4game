@@ -5,11 +5,11 @@
  * In stock lean4game the client speaks LSP over a websocket to a node relay,
  * which rewrites every message before handing it to a stock `lake serve`
  * process inside the game directory. In the wasm64 build there is no relay
- * and no process: the editor's LSP client talks over a MessagePort to the
- * QED64 watchdog shim in front of the in-tab wasm worker. This class is the
- * relay's rewriting, verbatim, as a MessagePort middleman:
+ * process: the editor's LSP client talks over a MessagePort to qed64's LSP
+ * relay (LspRelay, in this page) in front of the in-tab wasm worker. This
+ * class is upstream's rewriting, verbatim, as a MessagePort middleman:
  *
- *   lean4monaco client ⟷ [GameTranslation] ⟷ WatchdogShim.clientPort ⟷ worker
+ *   lean4monaco client ⟷ [GameTranslation] ⟷ LspRelay.clientPort ⟷ worker
  *
  * Client→server:
  *  - initialize: capture difficulty/inventory from initializationOptions and
@@ -26,6 +26,7 @@
  *    back, range semanticTokens disabled, full semanticTokens rebased.
  */
 import { levelUri, parseLevelUri } from "./level-uri";
+import { CHANGE_THROTTLE_MS, ChangeThrottle, type ThrottleClock } from "./change-throttle";
 
 type JsonRpc = {
   jsonrpc: "2.0";
@@ -52,6 +53,10 @@ export interface GameTranslationConfig {
    * relay's approach — goes stale and forces reconnects upstream). */
   difficulty?: () => number;
   inventory?: () => string[];
+  /** The full-text didChange throttle's window (ChangeThrottle; 0: none). */
+  changeThrottleMs?: number;
+  /** The throttle's clock (tests). */
+  clock?: ThrottleClock;
 }
 
 export const PROOF_START_LINE = 2;
@@ -65,11 +70,19 @@ export const PENDING_RESPONSE_REJECTED = -32097;
  * the lifecycle requests, whose callers must see the failure. Every other
  * orphaned request is answered `result: null` — see toClient. */
 export const ORPHAN_ERROR_METHODS: ReadonlySet<string> = new Set(["initialize", "shutdown"]);
-/** N1: an error answer the relay invents for a request orphaned by a checker
- * death or a halt (vendored lsp-relay.ts failInFlight / halted refusal). */
-export function isOrphanedRequestError(error: any): boolean {
-  const msg = typeof error?.message === "string" ? error.message : "";
-  return msg.startsWith("QED64: the Lean checker died") || msg.includes("checker halted");
+/** The kind of an error answer qed64's relay invented, or null for any
+ * other error (the checker's own answer, the translation's): its
+ * `error.data.qed64.kind` (docs/EMBEDDING.md §7.2) — "orphaned": a checker
+ * death orphaned the request (failInFlight); "halted": the crash-loop
+ * breaker refuses every request until the document changes; "restart": a
+ * deliberate session replacement orphaned it. Structured: the relay is
+ * bundled with this page from the same qed64 commit, so every error it
+ * invents carries the field (its `QED64:` message prefix is for readers
+ * without one); the text used to be matched here and in goals.tsx. */
+export type RelayErrorKind = "orphaned" | "halted" | "restart";
+export function relayErrorKind(error: unknown): RelayErrorKind | null {
+  const kind = (error as { data?: { qed64?: { kind?: unknown } } } | null | undefined)?.data?.qed64?.kind;
+  return kind === "orphaned" || kind === "halted" || kind === "restart" ? kind : null;
 }
 /** L6: the error a request about an unknown level's document is answered
  * with (goals.tsx reads it: not a crash, not retried). */
@@ -150,10 +163,14 @@ export class GameTranslation {
   private serverPort: MessagePort | null = null;
   /** Client traffic that arrived before the wasm side finished booting. */
   private pendingToServer: JsonRpc[] = [];
+  /** The editor-mode crash: at most one full-text change per window reaches
+   * the checker (change-throttle.ts). Last step before the server port. */
+  private readonly throttle: ChangeThrottle;
 
   constructor(config: GameTranslationConfig) {
     this.config = config;
     this.workerUri = config.workerUri ?? DEFAULT_WORKER_URI;
+    this.throttle = new ChangeThrottle((m) => this.serverPort?.postMessage(m), config.changeThrottleMs ?? CHANGE_THROTTLE_MS, config.clock);
     const channel = new MessageChannel();
     this.clientPort = channel.port2;
     this.innerSide = channel.port1;
@@ -202,6 +219,9 @@ export class GameTranslation {
    * answered "No RPC method 'Game.getProofState'" until the reload. Client
    * traffic is held back untranslated, server traffic is no longer relayed. */
   suspend(): void {
+    // A change the throttle holds was sent before the switch began (the
+    // player's text, which a cancelled switch resumes on): it goes now.
+    this.throttle.flush();
     this.suspended = true;
     // Before the server attached the buffer already holds the boot's early
     // traffic (initialize, …) — that must survive a resume.
@@ -254,7 +274,7 @@ export class GameTranslation {
         this.inFlightMethods.set(out.id, out.method);
         if (this.inFlightMethods.size > 1024) this.inFlightMethods.delete(this.inFlightMethods.keys().next().value!);
       }
-      this.serverPort!.postMessage(out);
+      this.throttle.push(out);
     }
   }
 
@@ -374,7 +394,8 @@ export class GameTranslation {
       const method = this.inFlightMethods.get(message.id);
       this.inFlightMethods.delete(message.id);
       // N1: a network cut kills the checker; the relay answers every orphaned
-      // request (codeAction, inlayHint, semanticTokens/full, …) with -32603,
+      // request (codeAction, inlayHint, semanticTokens/full, …) with -32603
+      // (relayErrorKind: "orphaned", or "halted" while the breaker holds),
       // which the language client rethrows → 3–4 uncaught page errors per cut
       // ("the Lean checker died (bootFailed)", "checker halted …"). Upstream's
       // websocket drop rejects them inside vscode-jsonrpc (-32097), so no
@@ -388,7 +409,7 @@ export class GameTranslation {
       // keep an error, as -32097. $/lean/rpc/* answers stay untouched — the
       // infoview's session recovery keys on their -32900. An unknown method
       // (never seen going out) is left alone too.
-      if (method !== undefined && !method.startsWith("$/lean/rpc/") && message.error && isOrphanedRequestError(message.error)) {
+      if (method !== undefined && !method.startsWith("$/lean/rpc/") && relayErrorKind(message.error) !== null) {
         message = ORPHAN_ERROR_METHODS.has(method)
           ? { ...message, error: { ...message.error, code: PENDING_RESPONSE_REJECTED } }
           : { jsonrpc: message.jsonrpc ?? "2.0", id: message.id, result: null };
@@ -398,7 +419,7 @@ export class GameTranslation {
       // A kind-2 entry (LeanFileProgressKind.fatalError — a refused or
       // unresolvable header) is a verdict, not work in flight: it never
       // drains, so counting it would pin "processing" for good (qed64
-      // HARDENING #46; the vendored shim applies the same reading).
+      // HARDENING #46; qed64's shim applies the same reading).
       const ranges = message.params?.processing;
       this.onProcessing(Array.isArray(ranges) && ranges.some((r: { kind?: number } | null) => r?.kind !== 2));
     }

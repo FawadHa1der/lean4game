@@ -19,23 +19,31 @@
  * module on this origin. `?profiles` went cross-origin the same way;
  * `?runtime` kept its same-origin prefix but could path-traverse.
  *
- * The rule (QED64's draft §4): a directory override must match
- * DIR_OVERRIDE (one directory name, optionally under `snapshots/`) AND
- * `/<dir>/index.json` must resolve to this page's origin; a runtime override
- * must be a build id (RUNTIME_OVERRIDE). Anything else is REFUSED, loudly:
- * the boot fails with the reason on the failure card and the landing page
- * says so — never a silent fallback to the default (a dev who typed a wrong
- * value must not test the served bake believing it is theirs). The values
- * are read from URLSearchParams once (decoded once — nothing decodes them
- * again) and a refused value is never handed to anything that fetches.
+ * The rule is qed64's own (docs/EMBEDDING.md §4, `validateBootOverrides`):
+ * a directory override is one directory name, optionally under the promoted
+ * directory's name (`snapshots/…`, `profiles/…`), that resolves on this
+ * page's origin; a runtime override is a build id. This page is stricter in
+ * three ways the rule leaves to it: an EMPTY value is refused (qed64 reads it
+ * as "unset" — a silent fallback to the served set), a parameter given TWICE
+ * is refused (qed64 takes the first), and every parameter is judged on its
+ * own, so the landing notice and the card name each refusal. Anything
+ * refused is refused loudly: the boot fails with the reason on the failure
+ * card and the landing page says so — never a silent fallback to the default
+ * (a dev who typed a wrong value must not test the served bake believing it
+ * is theirs). The values are read from URLSearchParams once (decoded once —
+ * nothing decodes them again) and a refused value is never handed to
+ * anything that fetches.
  *
  * And the second line of defence: every URL an index or a manifest names
- * must resolve to this origin before it reaches fetch, HEAD, a worker or the
- * service worker (refuseForeignSnapshotUrls / refuseForeignManifestUrls /
- * isSameOrigin), the default index and manifest included.
+ * must resolve to this origin before it reaches fetch, a worker or the
+ * service worker. qed64's loaders refuse a snapshot index (redirects and
+ * entries included), a profile index, manifest or part, and the prefetch and
+ * Lean workers refuse a region URL, all off this site (HARDENING #57); its
+ * runtime-manifest resolver does not look at the chunk URLs, so
+ * refuseForeignManifestUrls does, and isSameOrigin guards what this page
+ * sends the service worker.
  */
-import type { SnapshotIndex } from "./vendor/qed64/src/runtime/snapshots";
-import type { RuntimeManifest } from "./vendor/qed64/src/runtime/client";
+import { BootParamError, validateBootOverrides, type BootOverrides, type RuntimeManifest } from "qed64/embed";
 
 export type BootParamName = "snapshots" | "profiles" | "runtime";
 const BOOT_PARAM_NAMES: readonly BootParamName[] = ["snapshots", "profiles", "runtime"];
@@ -50,15 +58,6 @@ export type Sec1Code = typeof BOOT_PARAM_REFUSED | typeof SNAPSHOT_INDEX_FOREIGN
 /** The level pane's (and the landing page's) test for a SEC1 refusal in a
  * failure label: the code, or no match. */
 export const SEC1_REFUSAL_RE = /\((BOOT_PARAM_REFUSED|SNAPSHOT_INDEX_FOREIGN_URL|RUNTIME_MANIFEST_FOREIGN_URL)\)/;
-
-/** One directory name (letters, digits, `.`, `_`, `-`; not starting with a
- * dot or a dash, at most 64 characters), optionally under `snapshots/` —
- * what an unpromoted bake's directory in public/ looks like (`staging`,
- * `snapshots-0031`, `snapshots/widgets8`). No other slash, no backslash, no
- * colon, no `%`, no whitespace, no `..` segment. */
-export const DIR_OVERRIDE = /^(?:snapshots\/)?[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
-/** A runtime build id as runtime-manifest.<buildId>.json names it. */
-export const RUNTIME_OVERRIDE = /^wasm64-[0-9a-f]{16}$/;
 
 /** A refusal: the error the boot throws (its message is the failure card's
  * reason) and the landing page shows. */
@@ -82,7 +81,7 @@ const shown = (v: string): string => JSON.stringify(v.length > 80 ? `${v.slice(0
 
 const WHY: Record<BootParamName, string> = {
   snapshots: "only a same-origin environment directory is allowed (one directory name of letters, digits, '.', '_' or '-', optionally under snapshots/)",
-  profiles: "only a same-origin profile directory is allowed (one directory name of letters, digits, '.', '_' or '-', optionally under snapshots/)",
+  profiles: "only a same-origin profile directory is allowed (one directory name of letters, digits, '.', '_' or '-', optionally under profiles/)",
   runtime: "only a runtime build id is allowed (wasm64- and 16 hexadecimal digits)",
 };
 
@@ -111,8 +110,8 @@ function originOf(url: unknown, href: string): string {
 }
 
 /** The checked overrides. A refused one is null here and listed in
- * `refused`; every reader of an override goes through `overrideOf`, which
- * throws its refusal instead of returning anything. */
+ * `refused`; every reader of an override goes through `bootOverrides`, which
+ * throws a refusal instead of returning anything. */
 export interface BootParams {
   snapshots: string | null;
   profiles: string | null;
@@ -123,25 +122,29 @@ export interface BootParams {
 
 /** The rule, pure: `search` is `location.search`, `href` the page URL the
  * directory overrides must stay on. Absent = null. Present but empty, given
- * twice, or not matching = refused (an empty `?snapshots=` used to mean "no
- * override": a silent fallback, now a loud refusal like any other value the
- * rule does not accept). */
+ * twice, or refused by qed64's validateBootOverrides = refused (an empty
+ * `?snapshots=` used to mean "no override": a silent fallback, now a loud
+ * refusal like any other value the rule does not accept). */
 export function parseBootParams(search: string, href: string): BootParams {
   const q = new URLSearchParams(search);
   const out: BootParams = { snapshots: null, profiles: null, runtime: null, refused: [], refusedNames: [] };
   const refuse = (name: BootParamName, r: Sec1Refusal) => { out.refused.push(r); out.refusedNames.push(name); };
+  // An unparsable page URL has no origin to stay on: "null", which no
+  // directory resolves to (an opaque page origin — file:, data: — is "null" too).
+  let origin = "null";
+  try { origin = new URL(href).origin; } catch { /* every directory override is refused */ }
   for (const name of BOOT_PARAM_NAMES) {
     const all = q.getAll(name);
     if (all.length === 0) continue;
     if (all.length > 1) { refuse(name, refusedParam(name, all.join("&"), `given ${all.length} times; at most one value is allowed`)); continue; }
     const value = all[0]!;
-    if (name === "runtime") {
-      if (RUNTIME_OVERRIDE.test(value)) out.runtime = value;
-      else refuse(name, refusedParam(name, value));
-      continue;
+    if (value === "") { refuse(name, refusedParam(name, value)); continue; }
+    try {
+      out[name] = validateBootOverrides({ [name]: value }, origin)[name];
+    } catch (e) {
+      if (!(e instanceof BootParamError)) throw e;
+      refuse(name, refusedParam(name, value));
     }
-    if (DIR_OVERRIDE.test(value) && isSameOrigin(`/${value}/index.json`, href)) out[name] = value;
-    else refuse(name, refusedParam(name, value));
   }
   return out;
 }
@@ -159,20 +162,20 @@ export function bootParams(): BootParams {
   return memo.params;
 }
 
-/** One override for a reader that is about to use it: the accepted value
- * (null: none given), or the refusal THROWN — never a fallback. */
-export function overrideOf(name: BootParamName): string | null {
+/** The page's overrides in qed64's shape, for the readers that fetch with
+ * them (qed64's resolvers and installArtifacts, the sweep's stand-down) —
+ * or the first refusal THROWN, never a fallback: a page carrying a refused
+ * override fetches no artifact for any of them. */
+export function bootOverrides(): BootOverrides {
   const p = bootParams();
-  const i = p.refusedNames.indexOf(name);
-  if (i >= 0) throw p.refused[i]!;
-  return p[name];
+  if (p.refused.length) throw p.refused[0]!;
+  return { snapshots: p.snapshots, profiles: p.profiles, runtime: p.runtime };
 }
 
 /** The boot's gate: throws the first refusal (any override), so a page
  * carrying one boots nothing at all. */
 export function assertBootParams(): void {
-  const p = bootParams();
-  if (p.refused.length) throw p.refused[0]!;
+  bootOverrides();
 }
 
 /** SEC1-R2: the page's address without its dev overrides — the way out a
@@ -199,16 +202,17 @@ export function openWithoutOverrides(loc: Pick<Location, "href" | "assign" | "re
   else loc.assign(next);
 }
 
-/** Refuse the WHOLE snapshot index when any entry url (after the dev
- * re-root) leaves this origin — one foreign entry means the index is not
- * this site's, and a partial index would still bind the others' keys. */
-export function refuseForeignSnapshotUrls(index: SnapshotIndex, href: string = globalThis.location?.href): void {
-  for (const e of index.snapshots) {
-    if (!isSameOrigin(e.url, href)) {
-      throw new Sec1Refusal(SNAPSHOT_INDEX_FOREIGN_URL,
-        `the snapshot index was refused (${SNAPSHOT_INDEX_FOREIGN_URL}): its entry ${shown(String(e.name))} points to ${originOf(e.url, href)}, not this site — only same-origin snapshot URLs are allowed`);
-    }
-  }
+/** The qed64 index loader's refusal as the SEC1 one. `loadSnapshotIndex`
+ * refuses an index, a redirect or an entry off this site WHOLE before it
+ * returns (HARDENING #57: one foreign entry means the index is not this
+ * site's, and a partial index would still bind the others' keys), with code
+ * SNAPSHOT_URL_REFUSED — which the package's `fetchSnapshotIndex` answers
+ * with the same null as a missing index ("unreadable", retried). The card
+ * and the landing notice need the coded refusal instead. Its message names
+ * the attacker's entry: bounded like any shown value. */
+export function refusedSnapshotIndex(detail: string): Sec1Refusal {
+  return new Sec1Refusal(SNAPSHOT_INDEX_FOREIGN_URL,
+    `the snapshot index was refused (${SNAPSHOT_INDEX_FOREIGN_URL}): ${detail.length > 160 ? `${detail.slice(0, 160)}…` : detail} — only same-origin snapshot URLs are allowed`);
 }
 
 /** Refuse a runtime manifest whose chunk urls leave this origin (the Lean
@@ -222,14 +226,5 @@ export function refuseForeignManifestUrls(manifest: RuntimeManifest, href: strin
           `the runtime manifest was refused (${RUNTIME_MANIFEST_FOREIGN_URL}): ${file} chunk ${i} points to ${originOf(c?.url, href)}, not this site — only same-origin runtime URLs are allowed`);
       }
     });
-  }
-}
-
-/** One URL about to be fetched (a snapshot's HEAD or prefetch): the same
- * rule, as a throw. */
-export function assertSameOriginSnapshot(name: string, url: string, href: string = globalThis.location?.href): void {
-  if (!isSameOrigin(url, href)) {
-    throw new Sec1Refusal(SNAPSHOT_INDEX_FOREIGN_URL,
-      `refused to fetch the snapshot ${shown(name)} (${SNAPSHOT_INDEX_FOREIGN_URL}): it points to ${originOf(url, href)}, not this site`);
   }
 }

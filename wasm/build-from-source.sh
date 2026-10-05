@@ -54,12 +54,14 @@
 #                build's stage0 lean; a release import passes the native
 #                stage1 lean of the same source)
 #   LEAN_VERSION version string for the manifests (default: asked of LEAN_BIN)
-#   QED64_DIR    pipeline scripts. Unset (default): the vendored
-#                wasm/vendor/qed64-pipeline (scripts/sync-qed64.sh) is rsynced
-#                to wasm/out/pipeline on every run and run from THERE, so the
+#   QED64_DIR    pipeline scripts. Unset (default): the `pipeline` and
+#                `pipelineData` files the installed qed64 package's
+#                embedding/closure.json lists (the SHA pinned in
+#                client/package.json; `npm ci` installs it) are copied to
+#                wasm/out/pipeline on every run and run from THERE, so the
 #                bake workspace bake-snapshot.mjs hardcodes under its own root
 #                (work/snapshot/<name>.snap — the re-probe material) lands in
-#                the gitignored wasm/out and never under wasm/vendor. Set it
+#                the gitignored wasm/out and never under node_modules. Set it
 #                to run a qed64 checkout (or any pipeline dir) in place.
 #   SLIM_TREES   1 (default): per-game olean trees omit the Mathlib pack's
 #                *.olean.private facets — the importer tolerates missing
@@ -124,13 +126,20 @@ while [ $# -gt 0 ]; do
 done
 
 KERNEL_DIR="${KERNEL_DIR:-$G/wasm/kernel}"
-# Pipeline scripts: the vendored copy is never run in place (bake-snapshot.mjs
-# hardcodes its workspace under its own root), so main syncs it to
-# wasm/out/pipeline and every lane runs from there. An explicit QED64_DIR (a
-# qed64 checkout, or any pipeline dir) is used as is.
+# Pipeline scripts: the qed64 package's, resolved the way the bundler resolves
+# `qed64/embed` (from client/, wherever npm put it). They are never run in
+# place (bake-snapshot.mjs hardcodes its workspace under its own root, which is
+# inside node_modules — and npm ci would delete it), so main copies the
+# closure's pipeline + pipelineData to wasm/out/pipeline and every lane runs
+# from there. An explicit QED64_DIR (a qed64 checkout, or any pipeline dir) is
+# used as is.
+QED64_PKG="$(node -p "require('path').dirname(require.resolve('qed64/package.json', { paths: [process.argv[1]] }))" "$G/client" 2>/dev/null || true)"
 QED64_SRC=""
-if [ -z "${QED64_DIR:-}" ]; then QED64_SRC="$G/wasm/vendor/qed64-pipeline"; QED64_DIR="$G/wasm/out/pipeline"; fi
-case "$QED64_DIR/" in "$G/wasm/vendor/"*) echo "QED64_DIR=$QED64_DIR is inside wasm/vendor — the bake workspace must not land there; unset it (a copy is made under wasm/out/pipeline) or point it at a qed64 checkout" >&2; exit 2 ;; esac
+if [ -z "${QED64_DIR:-}" ]; then
+  [ -n "$QED64_PKG" ] || { echo "the qed64 package is not installed — run npm ci in $G (or set QED64_DIR to a qed64 checkout)" >&2; exit 2; }
+  QED64_SRC="$QED64_PKG"; QED64_DIR="$G/wasm/out/pipeline"
+fi
+case "$QED64_DIR/" in */node_modules/*) echo "QED64_DIR=$QED64_DIR is inside node_modules — the bake workspace must not land there; unset it (a copy is made under wasm/out/pipeline) or point it at a qed64 checkout" >&2; exit 2 ;; esac
 BUILD_DIR="${BUILD_DIR:-$G/wasm/out/kernel-build}"
 S1="$BUILD_DIR/build/stage1"; S0="$BUILD_DIR/build/stage0/bin"
 OUT="$G/wasm/out"; TREES="$OUT/trees"; LOGS="$OUT/logs"; PKGS="$OUT/pkgs"
@@ -159,7 +168,9 @@ lean_version() {
   echo "${LEAN_VERSION:-4.33.0-pre}"
 }
 PIN="$(grep -Eo '^[0-9a-f]{40}' "$G/wasm/KERNEL-PIN" 2>/dev/null | head -1 || true)"   # the game's own kernel pin (= wasm/kernel submodule commit)
-QPIN="$(grep -Eo '[0-9a-f]{40}' "$G/client/src/wasm/vendor/QED64-PIN" 2>/dev/null | head -1 || true)"
+# The qed64 commit the lockfile pins (a git dependency's only pin; its
+# `resolved` ends in #<sha>), wherever npm placed the package.
+QPIN="$(node -p 'Object.entries(require(process.argv[1]).packages ?? {}).find(([k]) => k.endsWith("node_modules/qed64"))?.[1].resolved?.split("#")[1] ?? ""' "$G/package-lock.json" 2>/dev/null || true)"
 PUB="$G/client/public"
 mkdir -p "$LOGS" "$OUT"
 
@@ -242,7 +253,10 @@ lane_preflight() {
   note "repo $G"; note "kernel $KERNEL_DIR"; note "qed64 $QED64_DIR${QED64_SRC:+ (copy of $QED64_SRC)}"; note "build $BUILD_DIR"
   [ -f "$KERNEL_DIR/wasm64-build/build.sh" ] || die "kernel source missing — run: git submodule update --init --checkout wasm/kernel   (or set KERNEL_DIR)"
   local qsrc="${QED64_SRC:-$QED64_DIR}"
-  [ -f "$qsrc/pipeline/snapshot/bake-snapshot.mjs" ] || die "pipeline scripts missing at $qsrc — run scripts/sync-qed64.sh <qed64-commit> (or set QED64_DIR to a qed64 checkout)"
+  [ -f "$qsrc/pipeline/snapshot/bake-snapshot.mjs" ] || die "pipeline scripts missing at $qsrc — run npm ci (or set QED64_DIR to a qed64 checkout)"
+  [[ "$QPIN" =~ ^[0-9a-f]{40}$ ]] || die "package-lock.json pins no qed64 commit — run npm install"
+  # The workers the bundle lane stages must drive the runtime this lane builds.
+  "$G/scripts/stage-workers.sh" --check >/dev/null || die "the qed64 workers do not fit wasm/KERNEL-PIN (scripts/stage-workers.sh --check says why)"
   [ -n "$PIN" ] || die "no kernel pin in $G/wasm/KERNEL-PIN"
   local khead; khead="$(git -C "$KERNEL_DIR" rev-parse HEAD)"
   [ "$khead" = "$PIN" ] || die "kernel checkout is $khead but KERNEL-PIN is $PIN — checkout the pin (git -C $KERNEL_DIR checkout $PIN)"
@@ -254,8 +268,21 @@ lane_preflight() {
     elif [ "$PLAN" = 1 ]; then note "generated-exports pin: a real run needs --verify-snapshots AND the bake lane (the snapshot probes are its acceptance test)"
     else die "this pin generates its exports list (0032+): run with --verify-snapshots AND the bake lane, the snapshot probes are its acceptance test"; fi
   fi
-  if [ -d "$QED64_DIR/.git" ]; then local qhead; qhead="$(git -C "$QED64_DIR" rev-parse HEAD)"; [ "$qhead" = "$QPIN" ] || warn "qed64 checkout is at ${qhead:0:12}, the vendored pin is ${QPIN:0:12}"; fi
-  note "kernel pin $PIN (clean)"
+  # The `patch` line's number is hand-kept: it must be the pinned kernel's.
+  # Its commit (the one that completed that patch) must be in the pin's
+  # history — a pin moved back past it (to a kernel without the patch the
+  # workers need) would otherwise pass the floor check above on a stale
+  # number and ship workers the runtime cannot drive.
+  local kpatch kpatch_commit
+  read -r kpatch kpatch_commit < <(sed -nE 's/^patch ([0-9]{4}) ([0-9a-f]{40})$/\1 \2/p' "$G/wasm/KERNEL-PIN" | head -1) || true
+  [ -n "${kpatch_commit:-}" ] || die "wasm/KERNEL-PIN's patch line names no kernel commit ('patch NNNN <sha>': the commit that completed that patch)"
+  git -C "$KERNEL_DIR" merge-base --is-ancestor "$kpatch_commit" HEAD 2>/dev/null \
+    || die "wasm/KERNEL-PIN says patch $kpatch (completed by ${kpatch_commit:0:12}), but the pinned kernel ${PIN:0:12} does not contain that commit — fix the patch line or the pin"
+  if [ -d "$QED64_DIR/.git" ]; then local qhead; qhead="$(git -C "$QED64_DIR" rev-parse HEAD)"; [ "$qhead" = "$QPIN" ] || warn "qed64 checkout is at ${qhead:0:12}, package-lock.json pins ${QPIN:0:12}"; fi
+  # What npm installed (its record of it; stage-workers.sh --check above
+  # refused a mismatch, so a copy of node_modules/qed64 is the pin).
+  local qinst; qinst="$(node -p 'Object.entries(require(process.argv[1]).packages ?? {}).find(([k]) => k.endsWith("node_modules/qed64"))?.[1].resolved?.split("#")[1] ?? ""' "$G/node_modules/.package-lock.json" 2>/dev/null || true)"
+  note "kernel pin $PIN (clean), patch $kpatch (${kpatch_commit:0:12} in its history); qed64 ${QPIN:0:12} (package-lock.json; installed ${qinst:0:12})"
   node "$G/scripts/games-manifest.mjs" --check || die "wasm/catalog.json failed its check"
   note "games: $SELECTED_NAMES$([ "$FULL_RUN" = 1 ] && echo '   (full run: staging wiped, every game rebaked)' || echo "   (--games: the other games' staged snapshots are kept)")   slim trees: $SLIM_TREES"
   local nv; nv="$(node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1 || echo 0)"; [ "${nv:-0}" -ge 24 ] || die "Node >= 24 required (Memory64), found $(node -v 2>/dev/null || echo none)"
@@ -598,8 +625,22 @@ STG="$OUT/staging"
 [ "$PLAN" = 1 ] && say "PLAN MODE — printing steps only (cwd shown per command)"
 # The pipeline runs from a copy under wasm/out (gitignored): its work/ — the
 # bake workspace with the raw .snap files a re-probe needs — is kept across
-# runs and never lands under wasm/vendor (scripts/sync-qed64.sh replaces that tree).
-if [ -n "$QED64_SRC" ]; then run pipeline "$G" -- rsync -a --delete --exclude=/work/ "$QED64_SRC/" "$QED64_DIR/"; fi
+# runs and never lands under node_modules (npm ci replaces that tree). The copy
+# is exactly the closure's pipeline + pipelineData (closure.json; the pipeline
+# reads the data files at the same relative paths), and the trees it names are
+# replaced whole, so a file a bump dropped does not linger.
+if [ -n "$QED64_SRC" ]; then
+  # A listed path stays a relative path inside the copy, never into work/ (the
+  # loop below removes each listed top-level tree).
+  node -e '
+    const c = require(process.argv[1] + "/embedding/closure.json"), files = [...c.pipeline, ...c.pipelineData];
+    const bad = files.find((f) => !/^[A-Za-z0-9_][A-Za-z0-9._-]*(\/[A-Za-z0-9_][A-Za-z0-9._-]*)+$/.test(f) || f.startsWith("work/"));
+    if (bad) throw new Error(`closure.json lists ${JSON.stringify(bad)}: not a plain relative path`);
+    console.log(files.join("\n"));
+  ' "$QED64_SRC" > "$OUT/pipeline.files" || die "the qed64 closure's pipeline list was refused"
+  for top in $(cut -d/ -f1 "$OUT/pipeline.files" | sort -u); do run pipeline "$G" -- rm -rf "$QED64_DIR/$top"; done
+  run pipeline "$G" -- rsync -a --files-from="$OUT/pipeline.files" "$QED64_SRC/" "$QED64_DIR/"
+fi
 for lane in preflight runtime core trees compat games bake bundle; do
   lane_on "$lane" || continue
   "lane_$lane"

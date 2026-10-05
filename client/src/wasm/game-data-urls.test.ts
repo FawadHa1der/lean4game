@@ -10,8 +10,10 @@
 // game's (`listed: false`).
 import assert from "node:assert/strict";
 
-const { gameDataUrls, levelUrls, inventoryDocUrls, i18nUrls, essentialDataUrls, fetchGameDataUrls, offlineReportFrom, runtimeChunkUrls, embeddedImageUrls, cachedLevelImageUrls } = await import("./game-data-urls");
+const { gameDataUrls, levelUrls, inventoryDocUrls, i18nUrls, essentialDataUrls, fetchGameDataUrls, offlineReportFrom, offlineCacheReport, embeddedImageUrls, cachedLevelImageUrls } = await import("./game-data-urls");
 const { wholeMB, tenthsGB } = await import("./sizes");
+// The chunk list the warm-up caches and the verdict counts: qed64's own.
+const { runtimeUrls } = await import("qed64/embed");
 
 const id = "g/test/Tiny";
 const game = { name: "Tiny", worldSize: { Intro: 2, Final: 1, Empty: 0 } };
@@ -128,10 +130,10 @@ const runtime = {
     "lean.js": { bytes: 2, sha256: "", chunks: [{ url: "/runtime/chunks/lean.js.aa.part-000", bytes: 1, sha256: "" }] },
     "lean.wasm": { bytes: 2, sha256: "", chunks: [{ url: "/runtime/chunks/lean.wasm.bb.part-000", bytes: 1, sha256: "" }, { url: "/runtime/chunks/lean.wasm.bb.part-001", bytes: 1, sha256: "" }] },
   },
-} as Parameters<typeof runtimeChunkUrls>[0];
+} as Parameters<typeof runtimeUrls>[0];
 
 await test("D1 offline verdict: every chunk and every essential file, or not ready", () => {
-  const chunks = runtimeChunkUrls(runtime);
+  const chunks = runtimeUrls(runtime).chunks;
   assert.equal(chunks.length, 3);
   const all = new Set([...chunks, ...essentialDataUrls(id, game)]);
   const full = offlineReportFrom(all, chunks, id, game);
@@ -155,6 +157,23 @@ await test("D1 offline verdict: every chunk and every essential file, or not rea
   assert.equal(offlineReportFrom(lvl, chunks, id, game).complete, false);
   // A manifest with no chunks can never read as complete.
   assert.equal(offlineReportFrom(all, [], id, game).complete, false);
+});
+
+await test("D1 offline verdict from the cache itself: the current runtime's chunks are qed64's runtimeUrls (never its manifests), the game's files from the cached game.json", async () => {
+  const chunks = runtimeUrls(runtime).chunks;
+  const held = new Set([...chunks.slice(0, 2), "/runtime/runtime-manifest.json", `/runtime/runtime-manifest.${runtime.buildId}.json`, ...essentialDataUrls(id, game)]);
+  (globalThis as { caches?: unknown }).caches = {
+    has: async () => true,
+    open: async () => ({ match: async (u: string) => (u === `/data/${id}/game.json` ? new Response(JSON.stringify(game)) : undefined) }),
+  };
+  try {
+    const r = await offlineCacheReport(id, runtime, held);
+    assert.deepEqual(r?.chunks, { have: 2, total: 3 }, "three chunks, two held; the held manifests are not chunks");
+    assert.equal(r?.data.listed, true);
+    assert.equal(r?.complete, false);
+    held.add(chunks[2]!);
+    assert.equal((await offlineCacheReport(id, runtime, held))?.complete, true);
+  } finally { delete (globalThis as { caches?: unknown }).caches; }
 });
 
 await test("D8: decimal MB / GB", () => {

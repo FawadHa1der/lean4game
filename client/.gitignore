@@ -4,5 +4,5 @@
 public/runtime/chunks/
 public/profiles/*.part-*
 public/snapshots/*.snapz
-# worker scripts are staged from the vendored qed64 closure (stage-game-assets.sh)
+# worker scripts are staged from the qed64 package (scripts/stage-workers.sh)
 public/workers/

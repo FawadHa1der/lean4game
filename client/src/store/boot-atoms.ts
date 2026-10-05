@@ -61,6 +61,14 @@ export interface CheckerActivity {
    * the document changes (or the page re-arms it) — a permanent idle, not a
    * transient one the pane should keep retrying. */
   halted: boolean;
+  /** HARDENING #52, while halted: the FileWorker's exit code when exits
+   * halted it (the card's headline names it; null otherwise, also for an
+   * exit that reported none), and whether repeated liveness stalls did. */
+  exitCode: number | null;
+  stalled: boolean;
+  /** QD-API-2, while halted: the site was updated under this page (a worker
+   * refused a sibling of another revision) — the card asks for a reload. */
+  stalePage: boolean;
 }
 
 export const checkerActivityAtom = atom<CheckerActivity>({
@@ -68,27 +76,34 @@ export const checkerActivityAtom = atom<CheckerActivity>({
   switching: false,
   label: "",
   halted: false,
+  exitCode: null,
+  stalled: false,
+  stalePage: false,
 });
 
-const SWITCHING_RE =
-  /starting the Lean|checking the new imports|imports changed|restarting the checker|preparing the header|preparing the .* environment|loading the .* environment|environment snapshot|downloading|unpacking|installing|Mounting|Verifying|starting Lean/i;
+/** What halted the relay (death-kind haltFacts), for a halted status. */
+export type HaltFacts = Pick<CheckerActivity, "exitCode" | "stalled" | "stalePage">;
 
 /** `booting`: the first boot has not finished — every stage is a switch then
  * (the stage labels vary: module names, "Starting the Emscripten runtime",
- * … — matching them one by one left the gate flickering between stages). */
-export function publishCheckerActivity(state: "busy" | "ready", label: string, booting = false, switching?: boolean, halted = false): void {
+ * … — matching them one by one left the gate flickering between stages).
+ * `switching` is the relay's fact when given (a session is being replaced).
+ * `halted`: true, or the halt's facts. */
+export function publishCheckerActivity(state: "busy" | "ready", label: string, booting = false, switching?: boolean, halted: boolean | HaltFacts = false): void {
+  const facts: HaltFacts = typeof halted === "object" ? halted : { exitCode: null, stalled: false, stalePage: false };
   const next: CheckerActivity = {
     busy: state === "busy",
-    // `switching` is the relay's fact when given (a session is being
-    // replaced); the label regex covers the boot-stage labels the StatusSink
-    // still emits on a first boot.
-    switching: state === "busy" && (switching ?? (booting || SWITCHING_RE.test(label))),
+    switching: state === "busy" && (switching ?? booting),
     label,
-    halted,
+    halted: halted !== false,
+    exitCode: halted !== false ? facts.exitCode : null,
+    stalled: halted !== false && facts.stalled,
+    stalePage: halted !== false && facts.stalePage,
   };
   const store = getDefaultStore();
   const cur = store.get(checkerActivityAtom);
-  if (cur.busy === next.busy && cur.switching === next.switching && cur.label === next.label && cur.halted === next.halted) return;
+  if (cur.busy === next.busy && cur.switching === next.switching && cur.label === next.label && cur.halted === next.halted
+      && cur.exitCode === next.exitCode && cur.stalled === next.stalled && cur.stalePage === next.stalePage) return;
   store.set(checkerActivityAtom, next);
 }
 

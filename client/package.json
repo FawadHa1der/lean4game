@@ -24,6 +24,7 @@
     "jotai-tanstack-query": "^0.11.0",
     "lean4monaco": "^1.1.9",
     "monaco-editor-wrapper": "^5.3.1",
+    "qed64": "github:FawadHa1der/QED64#90aef683fd7f341588889a05ee5157607bbaab92",
     "react": "^18.2.0",
     "react-country-flag": "^3.1.0",
     "react-dom": "^18.2.0",

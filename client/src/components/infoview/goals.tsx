@@ -13,6 +13,7 @@ import { useAppendTypewriterInput } from './context';
 import { InteractiveGoal, InteractiveGoals, InteractiveGoalsWithHints, InteractiveHypothesisBundle, ProofState } from './rpc_api';
 import { RpcSessionAtPos } from '@leanprover/infoview/*';
 import { isDocumentProcessing } from '../../store/boot-atoms'
+import { UNKNOWN_LEVEL_ERROR, relayErrorKind } from '../../wasm/game-translation'
 import { DocumentPosition } from '../../../../node_modules/vscode-lean4/lean4-infoview/src/infoview/util';
 import { DiagnosticSeverity } from 'vscode-languageserver-protocol';
 import { useTranslation } from 'react-i18next';
@@ -455,11 +456,12 @@ rpcSess.call('Game.getProofState',
     console.warn(error)
     return
   }
-  // The in-tab checker rejects requests that straddle a document switch
-  // ("QED64: the Lean checker switched documents; please retry") — e.g. a
-  // level's initial load right after rapid level navigation. Typewriter mode
-  // has no other trigger to reload, so the pane would sit on "Loading the
-  // level…" for good; retry a few times instead of declaring a crash.
+  // The in-tab checker's relay answers a request it cannot serve with an
+  // error of its own (relayErrorKind: `error.data.qed64.kind`, qed64
+  // docs/EMBEDDING.md §7.2) — e.g. a level's initial load that straddled a
+  // checker death right after rapid level navigation. Typewriter mode has no
+  // other trigger to reload, so the pane would sit on "Loading the level…"
+  // for good; retry a few times instead of declaring a crash.
   // RpcNeedsReconnect (-32900): the relay answered a request a death
   // orphaned and is rebooting. The infoview marks THIS rpc session failed
   // on that code (every later call on it throws the same error without
@@ -470,20 +472,20 @@ rpcSess.call('Game.getProofState',
     console.warn(`${error?.message ?? error} — the checker is restarting; the pane retries with a fresh session`)
     return
   }
-  // L5: a HALTED relay refuses every request ("QED64: checker halted after
-  // repeated crashes…"). That is not a crash of the player's proof and no
-  // retry can succeed until the relay is re-armed: four retries and then
-  // setCrashed(true) replaced the boot-failure card (with its Reload) by the
-  // editor-mode "Crashed! Go to editor mode and fix your proof!" wrapper.
+  // L5: a HALTED relay refuses every request (kind "halted"). That is not a
+  // crash of the player's proof and no retry can succeed until the relay is
+  // re-armed: four retries and then setCrashed(true) replaced the
+  // boot-failure card (with its Reload) by the editor-mode "Crashed! Go to
+  // editor mode and fix your proof!" wrapper.
   // Leave `proof` undefined — the pane keeps the card. L6: same for a level
   // the loaded game does not contain (answered by the translation layer).
-  if (/checker halted|this level does not exist in the loaded game/i.test(String(error?.message ?? error))) {
+  if (relayErrorKind(error) === 'halted' || String(error?.message ?? error).startsWith(UNKNOWN_LEVEL_ERROR)) {
     console.warn(`${error?.message ?? error} — not a crash; the pane keeps its status card`)
     return
   }
-  // "QED64: …" (-32603) is answered on a session that stays valid (a request
-  // straddled a reboot, or the level's first load raced a switch): retry.
-  if (/^QED64:|switched documents|please retry/i.test(String(error?.message ?? error)) && attempt < 4) {
+  // Any other relay answer (-32603: "orphaned" by a death, "restart") is
+  // given on a session that stays valid (a request straddled a reboot): retry.
+  if (relayErrorKind(error) !== null && attempt < 4) {
     console.warn(`${error} — retrying (${attempt + 1}/4)`)
     setTimeout(() => loadGoals(rpcSess, uri, worldId, levelId, setProof, setCrashed, attempt + 1), 800 * (attempt + 1))
     return

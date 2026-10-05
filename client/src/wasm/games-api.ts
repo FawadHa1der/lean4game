@@ -15,14 +15,13 @@
  * outside React (getDefaultStore). The landing page's tile atom wraps
  * `fetchGamesCatalog` so both share one request.
  */
-// Relative path rather than the `qed64/*` alias so Node's type-stripping
-// runner (ts-resolve-hook.mjs) can import this module for the unit checks;
-// tsc and vite resolve both spellings to the same vendored file.
-import { fetchSnapshotIndex, snapshotCacheKey, type SnapshotEntry, type SnapshotIndex } from "./vendor/qed64/src/runtime/snapshots";
-import type { RuntimeManifest } from "./vendor/qed64/src/runtime/client";
+// The package entry, also under Node's type-stripping runner: ts-resolve-hook.mjs
+// transpiles qed64's TypeScript, which Node refuses to strip under node_modules.
+import { fetchSnapshotIndexFor, isRawCached, loadSnapshotIndex, resolveRuntimeManifest as resolveManifestFor, type SnapshotEntry, type SnapshotIndex } from "qed64/embed";
+import type { RuntimeManifest } from "qed64/embed";
 import type { GameInfo, GameTileWithName } from "../store/api";
 import { offlineCacheReport, runtimeCachePaths, type OfflineCacheReport } from "./game-data-urls";
-import { assertBootParams, overrideOf, refuseForeignManifestUrls, refuseForeignSnapshotUrls } from "./boot-params";
+import { assertBootParams, bootOverrides, refuseForeignManifestUrls, refusedSnapshotIndex } from "./boot-params";
 import { wholeMB } from "./sizes";
 
 export const MiB = 1048576;
@@ -111,30 +110,22 @@ export function gameKnownCheck(gameId: string): Promise<boolean> {
 declare const __QED64_BUILD_ID__: string;
 
 let manifestPromise: Promise<RuntimeManifest> | null = null;
-/** The manifest of the runtime this shell boots — the ONE resolver (the
- * pairing check, the landing tiles, the boot's artifact install and the
- * Prepare warm-up all read it), making the SAME choice the vendored
- * installArtifacts (qed64-boot.ts) makes: the immutable copy pinned to the
- * build the shell was built against, else the `?runtime=` dev override,
- * else the mutable manifest. Kept identical so the pairing check and the
- * boot can never disagree about which runtime runs. A failure is not
- * memoised, so a later caller retries. SEC1: the override only as
- * boot-params accepts it (a build id; a refused value throws — no fetch, no
- * fallback to the served runtime), and a manifest naming a chunk on another
- * origin is refused whole before the Lean worker or the service worker sees
- * a single url of it. */
+/** The manifest of the runtime this shell boots — the ONE resolution per
+ * page (the pairing check, the landing tiles, the boot's artifact install
+ * and the Prepare warm-up all read it), by qed64's own resolver
+ * (docs/EMBEDDING.md §7.6): the immutable copy pinned to the build the shell
+ * was built against, else the `?runtime=` dev override, else the mutable
+ * manifest — so the pairing check and the boot can never disagree about
+ * which runtime runs. A failure is not memoised, so a later caller retries.
+ * SEC1: the overrides only as boot-params accepts them (a refused value
+ * throws — no fetch, no fallback to the served runtime), and a manifest
+ * naming a chunk on another origin is refused whole before the Lean worker
+ * or the service worker sees a single url of it (qed64's resolver does not
+ * look at the chunks). */
 export function resolveRuntimeManifest(): Promise<RuntimeManifest> {
   manifestPromise ??= (async () => {
-    const devRuntime = overrideOf("runtime");
-    let manifestResponse: Response | null = null;
-    if (typeof __QED64_BUILD_ID__ === "string") {
-      const pinned = await fetch(`/runtime/runtime-manifest.${__QED64_BUILD_ID__}.json`);
-      if (pinned.ok && (pinned.headers.get("content-type") ?? "").includes("json")) manifestResponse = pinned;
-    }
-    if (devRuntime) manifestResponse = await fetch(`/runtime/runtime-manifest.${devRuntime}.json`, { cache: "no-cache" });
-    if (!manifestResponse) manifestResponse = await fetch("/runtime/runtime-manifest.json", { cache: "no-cache" });
-    if (!manifestResponse.ok) throw new Error(`runtime manifest: HTTP ${manifestResponse.status}`);
-    const manifest = (await manifestResponse.json()) as RuntimeManifest;
+    const pinnedBuildId = typeof __QED64_BUILD_ID__ === "string" ? __QED64_BUILD_ID__ : null;
+    const manifest = await resolveManifestFor(bootOverrides(), { pinnedBuildId });
     if (typeof manifest.buildId !== "string" || !manifest.buildId) throw new Error("runtime manifest: no buildId");
     refuseForeignManifestUrls(manifest);
     return manifest;
@@ -146,42 +137,37 @@ export function resolveRuntimeManifest(): Promise<RuntimeManifest> {
 /** The build id of the runtime this shell boots (see resolveRuntimeManifest). */
 export const resolveRuntimeBuildId = (): Promise<string> => resolveRuntimeManifest().then((m) => m.buildId);
 
-/** The `?snapshots=<dir>` dev re-rooting, if active: an unpromoted bake
- * served from public/<dir> whose index the page reads instead of the
- * promoted one. Its keys differ from the served bake's by design (content-
- * addressed), so anything that treats the index's keys as "the live ones"
- * (the stale-region sweep) must stand down while it is active. SEC1: only a
- * same-origin directory boot-params accepts; a refused value THROWS (it is
- * never spliced into a URL, and never read as "no override"). */
-export const devSnapshotsDir = (): string | null => overrideOf("snapshots");
-/** The dev-only `?profiles=<dir>` override (qed64-boot.ts installArtifacts,
- * 3b42714): an unpromoted profile set served from public/<dir>; null in
- * production. Read by installGameArtifacts for the profile index. SEC1: as
- * devSnapshotsDir — accepted by boot-params, or thrown. */
-export const devProfilesDir = (): string | null => overrideOf("profiles");
+/** qed64's index loader refused an index, a redirect or an entry off this
+ * site (`loadSnapshotIndex` throws it; `fetchSnapshotIndexFor` carries it as
+ * its cause). */
+const refusedOffSite = (e: unknown): boolean => {
+  const err = e as { code?: unknown; cause?: { code?: unknown } } | null;
+  return err?.code === "SNAPSHOT_URL_REFUSED" || err?.cause?.code === "SNAPSHOT_URL_REFUSED";
+};
 
 let indexPromise: Promise<SnapshotIndex | null> | null = null;
-/** The served snapshot index, fetched once per page, honouring the
- * `?snapshots=<dir>` dev re-rooting exactly as the vendored boot does (an
- * unpromoted bake served from public/<dir>; the index's urls name the
- * promoted dir). `null` (unreadable) is not memoised. SEC1: a refused
- * override throws before any fetch; and an index (the default one too) with
- * an entry url on another origin after the re-root is refused WHOLE with a
- * coded error (refuseForeignSnapshotUrls) — the re-root rewrites only
- * `/snapshots/…`, so an absolute url survived it and reached the HEAD, the
- * prefetch worker and the Lean worker, and the region landed in OPFS under
- * the live key the index itself named. A refusal is not memoised either. */
+/** The served snapshot index, fetched once per page by qed64's loaders. With
+ * `?snapshots=<dir>` (an unpromoted bake served from public/<dir>, whose urls
+ * name the promoted dir) `fetchSnapshotIndexFor` re-roots the entries, and an
+ * index that was asked for and cannot be read is a named failure
+ * (docs/EMBEDDING.md §4), thrown — never a silent "no snapshots". The served
+ * index unreadable is `null`, not memoised. SEC1: a refused override throws
+ * before any fetch; and an index (the default one too) naming another origin
+ * is refused whole by the loader — answered here with the coded refusal
+ * (refusedSnapshotIndex), not the "unreadable" null: the re-root rewrites only
+ * `/snapshots/…`, so an absolute url used to survive it and reach the HEAD,
+ * the prefetch worker and the Lean worker, and the region landed in OPFS
+ * under the live key the index itself named. A refusal is not memoised either. */
 export function fetchSnapshotIndexOnce(): Promise<SnapshotIndex | null> {
   indexPromise ??= (async () => {
-    const devSnapshots = devSnapshotsDir();
-    const idx = devSnapshots
-      ? await fetchSnapshotIndex(`/${devSnapshots}/index.json`).then((i) => i && {
-          ...i,
-          snapshots: i.snapshots.map((e) => ({ ...e, url: e.url.replace(/^\/snapshots\//, `/${devSnapshots}/`) })),
-        })
-      : await fetchSnapshotIndex();
-    if (idx) refuseForeignSnapshotUrls(idx);
-    return idx;
+    const overrides = bootOverrides();
+    try {
+      return overrides.snapshots ? await fetchSnapshotIndexFor(overrides) : await loadSnapshotIndex();
+    } catch (e) {
+      if (refusedOffSite(e)) throw refusedSnapshotIndex(String((e as Error)?.message ?? e));
+      if (overrides.snapshots) throw e;
+      return null;
+    }
   })();
   indexPromise.then((idx) => { if (!idx) indexPromise = null; }, () => { indexPromise = null; });
   return indexPromise;
@@ -195,21 +181,6 @@ export const findSnapshotEntry = (index: SnapshotIndex | null, name: string): Sn
  * tile said "≈269 MB" for RAG's 282.0 MB, MiB labelled MB). */
 export const snapshotTransferMB = (entry: SnapshotEntry): number => wholeMB(entry.transfer ?? entry.bytes);
 
-/** Is the inflated region already in OPFS? The same check the vendored boot
- * makes before spawning the prefetch worker (`qed64-snapshots/<key>.raw`
- * with exactly the index's raw size). No OPFS, a private window that throws
- * on `getDirectory`, or no such file all read as "not cached". */
-export async function rawSnapshotCached(entry: SnapshotEntry): Promise<boolean> {
-  try {
-    const root = await navigator.storage.getDirectory();
-    const dir = await root.getDirectoryHandle("qed64-snapshots");
-    const f = await (await dir.getFileHandle(`${snapshotCacheKey(entry)}.raw`)).getFile();
-    return f.size === entry.bytes;
-  } catch {
-    return false;
-  }
-}
-
 /** ready: plays offline — the region is in OPFS AND the service worker
  * holds the runtime and the game's files (D1); partial: the region is in
  * OPFS but the rest is not (yet) cached — the game boots online only;
@@ -222,7 +193,8 @@ export type SnapshotState = "ready" | "partial" | "download" | "unavailable";
  * tileSnapshotStates). */
 export async function snapshotStateFor(entry: SnapshotEntry | undefined, buildId: string): Promise<SnapshotState> {
   if (!entry || entry.runtime !== buildId) return "unavailable";
-  return (await rawSnapshotCached(entry)) ? "ready" : "download";
+  // qed64's probe of `<cacheKey>.raw` at the index's raw size (null: no OPFS here).
+  return (await isRawCached(entry)) ? "ready" : "download";
 }
 
 /** One landing-page tile's truth. */
