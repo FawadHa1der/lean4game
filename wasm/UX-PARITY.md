@@ -1865,6 +1865,32 @@ names the pin. What changed for the game:
     - A `decide` deep enough to overflow a worker's JS stack (open below).
     - `?snapshots=…` placed after the `#` routes to the world map.
 
+### Bump to QED64 `5c327c2` (2026-10-06)
+
+QED64 `e4cffcc`, which `ResidentSession` inherits: the edit coalescer holds
+full-text changes while the runtime has few free preallocated Workers, and
+caps requests in flight (QED64 HARDENING #59 addendum;
+`ResidentHost.editBackPressure`, `?edithold=` on QED64's own page). It fixes
+the slow-typing crash: an edit per keystroke over work that ignores
+cancellation grew the pthread pool until V8 ran out of memory. No API change
+for lean4game.
+
+Also `client/package.json` gets a `prebuild` that runs
+`scripts/stage-workers.sh`. After a pin bump, a plain client build had kept
+the previous `lean.worker.js` in `client/public/workers`.
+
+Targeted re-test on the bumped build (`index-C3-6zpek.js`, sw
+`416052e4330f`, :3007; evidence `lv-shots/qr-bp`):
+
+| Check | `84d594e` | `5c327c2` |
+|---|---|---|
+| Ten-game smoke | 10/10 | 10/10 (boot 6.2–7.3 s) |
+| Editor bursts (select-all + line, End + Enter + line, 10 ms/char) | no crash, ≤ 29 workers, pool 25–27 | no crash ×4, 27 workers, pool 24 |
+| 150 ms/char above a 4 s `IO.sleep` line | survived, pool 30 | survived, pool 24 |
+| 150 ms/char above an overflowing `decide` line | tab crashed (pool 75, 77 workers) | tab survives, pool 24; the checker still restarts 3 times (the kernel's stack-overflow bug, below) |
+| Editor-mode proof | pass | pass |
+| Cypress | 24/24 | 24/24 |
+
 ## Open
 
 - **A deep `decide` kills the checker with a JS stack overflow (runtime or

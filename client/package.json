@@ -24,7 +24,7 @@
     "jotai-tanstack-query": "^0.11.0",
     "lean4monaco": "^1.1.9",
     "monaco-editor-wrapper": "^5.3.1",
-    "qed64": "github:FawadHa1der/QED64#84d594e3dc8e75d0a327b6b8999423d8a205c525",
+    "qed64": "github:FawadHa1der/QED64#5c327c216aa31bf3880041b3e3a3b26fcb6d5a45",
     "react": "^18.2.0",
     "react-country-flag": "^3.1.0",
     "react-dom": "^18.2.0",
@@ -56,6 +56,7 @@
   },
   "scripts": {
     "dev": "cross-env NODE_ENV=development vite --host",
+    "prebuild": "bash ../scripts/stage-workers.sh",
     "build": "cross-env NODE_ENV=production vite build && node ../scripts/build-sw.mjs",
     "translate": "npx i18next-scanner --config i18next-scanner.config.cjs"
   }
