@@ -79,7 +79,48 @@ library API, §10 lean4game's migration list) and `embedding/closure.json`
   newer kernel than ours; the preflight also refuses a pin whose history
   lacks that commit (a pin moved back past its patch number).
 
-Current pin: qed64 `90aef68` (2026-10-04, branch `feature/embedding-api`,
+Current pin: qed64 `84d594e` (2026-10-05, branch `feature/embedding-api`;
+`EMBED_API_REVISION` still `1.0.0-pre.2`): the branch review after
+`90aef68` (36 findings), the items lean4game's adoption reported upstream,
+and HARDENING #59 (QED64's `docs/EMBEDDING.md` §12 lists every change). No
+runtime, manifest or snapshot change: the closure's kernel floor is still
+0032 and the game serves `wasm64-d77d34b97592d014` as before. What the bump
+changes for the game (wasm/UX-PARITY.md "Bump to QED64 `84d594e`"):
+- **edit coalescing in `ResidentSession`** (§7.8, `ResidentHost.editCoalesceMs`,
+  default 300 ms): full-text didChanges reach the worker at most once per
+  window, the newest last, other frames queued behind a held change, a held
+  change never crossing a document — the editor-mode crash's fix (HARDENING
+  #59), for every embedder. The game's own throttle
+  (`client/src/wasm/change-throttle.ts`, its measured prototype) is deleted.
+  Two things the throttle did that the coalescer does not: a didOpen or a
+  ranged change flushes a held change but opens no window (the first
+  full-text change after a level's open goes at once), and a queued
+  semantic-tokens or completion request a newer change supersedes is
+  answered `ContentModified` (-32801) — UX-PARITY says what the game does
+  with that answer (R3-1: a completion's becomes `result: null`).
+- **the raw cache**: `busy` is the Web Lock's own answer (asked with
+  `ifAvailable` first), `onBusy`/`busyWaitMs`/`onBusyWait` are per caller,
+  the lock request is withdrawn when the last waiting caller leaves, and no
+  worker is spawned after a last abort. The game's Prepare keeps the
+  default `"return"` (the tile's busy message), the session's load `"wait"`.
+- **causes on every boot failure**: a pack install (`profile`), the host's
+  `files()`, `beforeArm` and a refused arm (`files`) carry a `FailureCause`
+  classified at the step; `status().memory.initialBytes` is the commit
+  actually made; `ResidentSession`'s v1 members are ECMAScript-private.
+- **workers**: a lazily loaded `lsp-front-door.js` that fails to load is
+  `WORKER_DEP_MISSING` (classified `WORKER_SCRIPT_LOAD_FAILED`; later frames
+  dropped, never an uncaught throw) — the game's PAR-4 message rule is
+  gone; the prefetch worker refuses a message without a positive `rawBytes`
+  (its compressed-only mode is removed; the game always passes the index
+  entry's `bytes`).
+- **the relay**: each orphaned request is answered once, and a `restart()`
+  issued while those answers go out is refused (the game calls `rearm()`,
+  not `restart()`).
+- tsc under `client/tsconfig.json` (`target: es5`) reports the package's
+  `#` members as `TS18028` (10, in `resident-session.ts`); the Vite build
+  does not run tsc and bundles them.
+
+Pin `90aef68` (2026-10-04, branch `feature/embedding-api`,
 EMBEDDING contract v1, `EMBED_API_REVISION` `1.0.0-pre.2`; the package's
 LICENSE is MIT — its confirmation is pending on the QED64 side). The first
 pin as a package (before it: a vendored copy, below). The runtime and the
