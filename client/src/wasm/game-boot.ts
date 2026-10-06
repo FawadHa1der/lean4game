@@ -45,9 +45,9 @@ import { atom, getDefaultStore } from "jotai";
 import { difficultyAtom, progressAtom } from "../store/progress-atoms";
 import { preferencesAtom } from "../store/preferences-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
-import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing, publishNetworkHold } from "../store/boot-atoms";
+import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing, publishLanguageClientRestart, publishNetworkHold } from "../store/boot-atoms";
 import { rememberGamedata } from "./gamedata-cache";
-import { NETWORK_WAIT_LABEL, STARTING_LABEL, deathWords, haltFacts, haltedNote, isNetworkDeath, isRuntimeVerdict, isStalePageDeath, networkInEpisode, readDeath, rebootLabel, rebootNote, type DeathLike } from "./death-kind";
+import { NETWORK_WAIT_LABEL, STALE_INITIALIZE_LABEL, STARTING_LABEL, deathWords, haltFacts, haltedNote, isNetworkDeath, isRuntimeVerdict, isStalePageDeath, networkInEpisode, readDeath, rebootLabel, rebootNote, staleInitialize, type DeathLike } from "./death-kind";
 import { stageLabel } from "./boot-labels";
 import { MiB, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
 import { endDownload, heldButNotRevalidated, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareRunning, preparesDownloading, prepareStatusesAtom, reportDownload, runWhenOnline, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
@@ -312,6 +312,47 @@ let relayKey = "";
  * are dropped while it is set; any non-halted relay status clears it. */
 let relayHalted = false;
 
+/** QD-API-2's residual (death-kind.ts staleInitialize): a stale-page death
+ * took the language client's own `initialize` with it. The relay heals, the
+ * client never connects, and only a reload helps — so the stale-page card
+ * is published here, regardless of the relay's state, and kept over every
+ * later relay status and boot stage (publishRelayStatus and the StatusSink
+ * return early while this is set) until the reload. Set by the
+ * translation's onOrphanedRequest (bootGameRuntime). */
+let stalePageLatched = false;
+function latchStalePage(d: DeathLike): void {
+  if (stalePageLatched) return;
+  stalePageLatched = true;
+  relayRebooting = false;
+  relayRebootNote = null;
+  haltGen += 1; // a halt classification still running belongs to a card this one replaces
+  console.warn(`[game-boot] the site was updated under this page: the checker refused the new worker scripts on the editor's first request (${d?.message || d?.reason}) and the editor's connection is lost — reload the page`);
+  publishNetworkHold(null);
+  publishCheckerActivity("ready", STALE_INITIALIZE_LABEL, false, false, haltFacts(d));
+  publishBootStatus({ state: "ready", label: STALE_INITIALIZE_LABEL });
+}
+
+/** QB-2 (review of the bump to 84d594e; QD-API-2's other residual): ANY
+ * relay-invented answer to the language client's own `initialize` — a death
+ * of the page's first worker at its first LSP frame (the link dropping
+ * before the lazy front door loaded, WORKER_DEP_MISSING; a bare crash) or
+ * the breaker refusing it — fails the client's start() for good:
+ * vscode-languageclient's doInitialize calls stop() on a Starting client
+ * ("Client is not running and can't be stopped") and the client never asks
+ * again. The relay heals on its own (its replacement replays the
+ * initialize; a re-arm boots one) and then serves a client that is not
+ * there: the pane read "Connecting to the checker…" for 600 s in the
+ * QD-API-2 live check, with the banner "ready". So the loss is remembered
+ * here, and when the relay next reports `serving` the language client is
+ * restarted through the page (boot-atoms languageClientRestartAtom; app.tsx
+ * owns the LeanMonaco instance): lean4monaco's LeanClient.restart() stops
+ * nothing when the client is not running and starts a fresh one, whose
+ * fresh `initialize` the serving worker answers from its table. A stale
+ * page's death keeps its latch instead (latchStalePage: a reload is the
+ * advice there; a restart would connect a stale page). Null while nothing
+ * is lost, else what took the initialize (the restart's reason). */
+let initializeLost: string | null = null;
+
 /** D2 (live 2026-10-03): the bound game's region streaming in through this
  * boot (qed64's prefetch of it — stage `snapshot`, the bytes of a download
  * or of an inflate, never the read of a cached region) is reported to the
@@ -342,7 +383,7 @@ function noteBootRegion(info?: ProgressInfo): void {
 const consoleSink: StatusSink = {
   busy: (rawLabel, info) => {
     noteBootRegion(info);
-    if (relayHalted) { console.info(`[game-boot] (halted, not shown) ⏳ ${rawLabel}`); return; }
+    if (relayHalted || stalePageLatched) { console.info(`[game-boot] (${relayHalted ? "halted" : "stale page"}, not shown) ⏳ ${rawLabel}`); return; }
     sinkSpoke = true;
     const label = (relayRebooting && relayRebootNote) || stageLabel(rawLabel, info);
     console.info(`[game-boot] ⏳ ${rawLabel}`);
@@ -351,7 +392,7 @@ const consoleSink: StatusSink = {
   },
   progress: (rawLabel, info) => {
     noteBootRegion(info);
-    if (relayHalted) return;
+    if (relayHalted || stalePageLatched) return;
     sinkSpoke = true;
     const label = (relayRebooting && relayRebootNote) || stageLabel(rawLabel, info);
     console.debug(`[game-boot] … ${rawLabel}`, info ?? "");
@@ -360,6 +401,7 @@ const consoleSink: StatusSink = {
   },
   idle: (label) => {
     noteBootRegion();
+    if (stalePageLatched) { console.info(`[game-boot] (stale page, not shown) ✔ ${label}`); return; }
     console.info(`[game-boot] ✔ ${label}`);
     publishCheckerActivity("ready", label);
     publishBootStatus({ state: "ready", label });
@@ -414,7 +456,9 @@ export function leanDownloadInFlight(): boolean {
   // shell fill would otherwise wait for the life of the page.
   // A halt whose automatic network re-arm is already scheduled will resume
   // the download within seconds: still busy (bounded by MAX_AUTO_REARMS).
-  const halted = relayRef?.status().relay === "halted" && !autoRearmScheduled;
+  // A latched stale page is a halt for this purpose: the relay may serve
+  // again, but the page is waiting for its reload, not for a download.
+  const halted = (relayRef?.status().relay === "halted" && !autoRearmScheduled) || stalePageLatched;
   const bootDownloading = bootPromise !== null && !everServed && !halted && !deployProblem;
   // R2-2: a Prepare whose warm-up waits for a service worker downloads
   // nothing (game-cache preparesDownloading).
@@ -674,7 +718,8 @@ async function holdForNetwork(why: string): Promise<"ok" | "deploy"> {
     console.warn(`[game-boot] the network is unreachable after "${why}" — holding the restart until it returns`);
     // A halted relay's card and recovery belong to classifyHalt /
     // scheduleNetworkRearm: a hold found while halted publishes nothing.
-    if (relayHalted) return;
+    // Nor does one found under the latched stale-page card.
+    if (relayHalted || stalePageLatched) return;
     publishNetworkHold({ since: t0, halted: false });
     publishCheckerActivity("busy", NETWORK_WAIT_LABEL, !bootFinishedOnce, true);
     publishBootStatus({ state: "busy", label: NETWORK_WAIT_LABEL });
@@ -725,8 +770,9 @@ async function networkAwareSettle(): Promise<void> {
   // the breaker already killed — the relay only goes on to start() it. Its
   // hold would put the network card back over classifyHalt's verdict (a
   // permanent "starts on its own" after the re-arm budget was spent) and
-  // pile up probe loops. The halt's recovery is classifyHalt's.
-  if (relayHalted) return;
+  // pile up probe loops. The halt's recovery is classifyHalt's. A latched
+  // stale page has nothing to hold for either: its card asks for the reload.
+  if (relayHalted || stalePageLatched) return;
   const death = relayRef?.status().lastDeath;
   // D1(c): the settle cannot fail the relay's boot (it runs outside the
   // relay's try), so a deploy problem found here is left to the reboot,
@@ -838,6 +884,9 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   // banner shows THAT wait, and the outgoing game's relay (still serving,
   // its document closing) must not blank it with a "ready" in between.
   if (switchPending) return;
+  // QD-API-2's residual: the stale-page card stays whatever the relay does
+  // next (it serves again; the client never connects) — until the reload.
+  if (stalePageLatched) return;
   if (st.relay === "halted") {
     relayRebooting = false;
     relayRebootNote = null;
@@ -876,6 +925,13 @@ function publishRelayStatus(st: RelayStatus, ui: StatusSink): void {
   // serving
   relayRebooting = false;
   relayRebootNote = null;
+  // QB-2: the language client lost its initialize to a death (or a halt)
+  // this serving relay has recovered from; it reconnects only if restarted.
+  if (initializeLost !== null) {
+    const why = initializeLost;
+    initializeLost = null;
+    publishLanguageClientRestart(`the checker serves again after the editor's initialize request was lost (${why})`);
+  }
   switch (st.phase) {
     case "ready":
       markServed(ui);
@@ -1059,12 +1115,15 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     // And the runtime's chunks are fetched after the region again, not
     // beside it.
     // A Prepare of this region in ANOTHER tab is waited for by the session's
-    // snapshot load, under the region's Web Lock (qed64 `onBusy: "wait"`) —
-    // for at most PREFETCH_SILENCE_MS (3 min) from the lock request, not
-    // re-armed by that tab's progress; after it the Lean worker streams the
-    // region while the other tab still downloads it (QD-API-1; the wait's
-    // length is QED64's to make silence-based — ResidentHost passes no
-    // busyWaitMs).
+    // snapshot load, under the region's Web Lock (qed64 `onBusy: "wait"`;
+    // since 84d594e the lock is asked with `ifAvailable` first, so the wait
+    // is said only when another tab really holds it) — for at most
+    // PREFETCH_SILENCE_MS (3 min) from the lock request, not re-armed by
+    // that tab's progress; after it the Lean worker streams the region while
+    // the other tab still downloads it (QD-API-1: `busyWaitMs` is per caller
+    // now, but the session's own prefetch call passes none and ResidentHost
+    // offers no way to — the wait's length stays QED64's to make
+    // silence-based).
     const pending = inFlightPrepare(snapshot);
     if (pending) await mirrorPrepare(ui, snapshot, "preparing the game environment", pending);
     // The artifacts: the runtime manifest and the index the pairing check
@@ -1092,6 +1151,19 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     // A level switch while the relay is halted: the new level is a new
     // document, and the relay leaves `halted` only on a change — re-arm it.
     translation.onDidOpen = () => { rearmCheckerIfHalted(); };
+    // QD-API-2's residual: a stale-page death that orphans the client's own
+    // `initialize` (death-kind.ts staleInitialize). The relay's last death
+    // is that death when this fires: the relay records it before it answers
+    // the orphaned requests, and those answers reach this layer a task later.
+    translation.onOrphanedRequest = (method, kind) => {
+      if (method !== "initialize") return;
+      const death = relay.status().lastDeath;
+      if (staleInitialize(method, kind, death)) { latchStalePage(death); return; }
+      // QB-2: any other answer the relay invented for the initialize — the
+      // client is stranded; restarted once the relay serves again.
+      initializeLost = `${kind}: ${death?.message || death?.reason || "no death recorded"}`;
+      console.warn(`[game-boot] the editor's initialize request was lost to the checker (${initializeLost}) — the language client is restarted once the checker serves again`);
+    };
     // Diagnostics hooks for harnesses: the relay's own datum, plus the shape
     // the pump-era probes read (phase/version/stats). UNSTABLE: `deaths` and
     // `pending` are the relay's internals (not in the v1 contract), read for

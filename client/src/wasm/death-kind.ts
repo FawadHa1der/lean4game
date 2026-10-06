@@ -23,6 +23,7 @@
  * liveness probe or proxied an exit had loaded).
  */
 import { WORKER_SCRIPT_LOAD_FAILED, type Death } from "qed64/embed";
+import type { RelayErrorKind } from "./game-translation";
 
 export type DeathLike = (Pick<Death, "reason" | "message"> & Partial<Pick<Death, "seq" | "session" | "exitCode" | "cause">>) | null | undefined;
 
@@ -53,6 +54,28 @@ export const isStalePageDeath = (d: DeathLike): boolean =>
 /** While the replacement of a stale page's worker boots (sticky, like the #52
  * notes: every boot stage shows it). */
 export const STALE_PAGE_LABEL = "this site was updated — restarting the checker; reload the page to use the new version";
+
+/** QD-API-2's residual (the live check of the adoption, 2026-10-04): a
+ * stale-page death on the page's FIRST worker arrives at its first LSP frame
+ * — the language client's own `initialize` (lean.worker.js loads the front
+ * door then) — and orphans that request. The relay heals (its replacement
+ * replays the initialize and serves again), but the client's start() has
+ * failed and it stays "starting" for good ("Client is not running and can't
+ * be stopped"): the pane read "Connecting to the checker…" for ever, and the
+ * stale-page card showed on a halt only. A reboot worker's mismatch does not
+ * do this (the client's initialize was answered long before). So the card is
+ * published, and kept, the moment a relay-invented answer (the translation's
+ * onOrphanedRequest) takes the client's `initialize` while the relay's last
+ * death is a stale page's — only a reload helps either way. Any OTHER death
+ * (or a halt) taking the initialize strands the client the same way with
+ * nothing to reload for: game-boot restarts the language client once the
+ * relay serves again (QB-2, `initializeLost`). */
+export const staleInitialize = (method: string, kind: RelayErrorKind | null, d: DeathLike): boolean =>
+  method === "initialize" && kind !== null && isStalePageDeath(d);
+
+/** The label of that card (its facts travel as haltFacts: the pane keys on
+ * `stalePage`, never on the label). */
+export const STALE_INITIALIZE_LABEL = "this site was updated while the page was loading; reload the page to use the new version";
 
 /** While a "wedged" death's replacement boots (every boot stage shows it). */
 export const STALLED_LABEL = "the checker stalled and is restarting — your proof is kept";
@@ -89,35 +112,35 @@ export function rebootNote(rebootReason: string | null | undefined, d: DeathLike
  * run of f468f2c, and their review):
  *  - "network": the link's (cause kind `network`);
  *  - "silent": nothing — no cause (a bare worker `error` event after the
- *    worker said hello), or a worker script that did not load: a worker that
- *    never said hello or could not import lsp-frames.js
- *    (WORKER_SCRIPT_LOAD_FAILED), or one that said hello and then could not
- *    import its lazily loaded sibling (SIBLING_LOAD_FAILED) — that looks the
- *    same offline as on a 404, so it means "probe the link", not "our crash";
+ *    worker said hello), or a worker script that did not load
+ *    (WORKER_SCRIPT_LOAD_FAILED): a worker that never said hello, one that
+ *    could not import lsp-frames.js, or one that said hello and then could
+ *    not import its lazily loaded sibling lsp-front-door.js
+ *    (WORKER_DEP_MISSING, below) — that looks the same offline as on a 404,
+ *    so it means "probe the link", not "our crash";
  *  - "own": a cause of its own — a messaged crash ("RuntimeError: memory
  *    access out of bounds"), a heartbeat loss, a snapshot death whose cause
  *    is not the link (SNAPSHOT_UNPAIRED, a SHA-256 mismatch, an allocation
  *    failure, a 404), a #52 verdict, a stale page (WORKER_DEP_MISMATCH). */
 export type DeathReading = "network" | "silent" | "own";
 
-/** PAR-4 (review of phase 2): lean.worker.js imports lsp-front-door.js on its
- * first LSP frame, after its hello, with no handler of its own; a failed
- * import is an uncaught error naming it — Chromium: "Uncaught NetworkError:
- * Failed to execute 'importScripts' on 'WorkerGlobalScope': The script at
- * '…/lsp-front-door.js' failed to load." — on a page no service worker
- * controls when the link drops between the worker's load and that frame,
- * and on a deploy that lacks the file. qed64 classifies that death as the
- * checker's own crash (code `crash`: only a death before the hello and a
- * missing lsp-frames.js are WORKER_SCRIPT_LOAD_FAILED), so the game reads
- * the message of a `crash`: the link is probed, and the probe's preflight
- * tells a deploy's missing script from the link. */
-const SIBLING_LOAD_FAILED = /\bimportScripts\b|\bNetworkError\b/;
-
+/** PAR-4 (review of phase 2), closed upstream in qed64 84d594e (§7.7):
+ * lean.worker.js imports lsp-front-door.js on its first LSP frame, after its
+ * hello. A load that fails there — on a page no service worker controls when
+ * the link drops between the two loads, or on a deploy that lacks the file —
+ * used to be the handler's uncaught error, which qed64 read as our crash
+ * (code `crash`, Chromium's "Uncaught NetworkError: Failed to execute
+ * 'importScripts' …") and this module read back by its message. The worker
+ * now posts it as WORKER_DEP_MISSING, drops every later frame and never
+ * throws, and qed64's deathCause classifies that code as
+ * WORKER_SCRIPT_LOAD_FAILED — the eager import's reading, so no message rule
+ * is needed: the link is probed, and the probe's preflight tells a deploy's
+ * missing script from the link (death-kind.test.ts runs it on the real
+ * worker scripts). */
 export function readDeath(d: NonNullable<DeathLike>): DeathReading {
   if (isRuntimeVerdict(d) || isStalePageDeath(d)) return "own";
   const cause = d.cause;
   if (!cause || cause.code === WORKER_SCRIPT_LOAD_FAILED) return "silent";
-  if (cause.code === "crash" && SIBLING_LOAD_FAILED.test(cause.message || d.message)) return "silent";
   return cause.kind === "network" ? "network" : "own";
 }
 

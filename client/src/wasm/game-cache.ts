@@ -919,6 +919,14 @@ export function prepareGame(entry: SnapshotEntry, opts: { sessionBound?: boolean
     return null;
   });
   const region = (async (): Promise<PrepareStatus> => {
+    // `onBusy` stays at its default "return" (per caller since qed64
+    // 84d594e, which also asks the lock with `ifAvailable` first: `busy` is
+    // another tab's writer, never a guess from how soon a free lock is
+    // granted): that tab's own progress is on the tile already, from its
+    // heartbeat (D2 remoteDownloadsAtom), and the `busy` refusal is the
+    // state D3/L12 drop when that download ends. A "wait" here would show
+    // a "running" Prepare with no bytes of its own for up to 3 min and
+    // then say `busy` anyway.
     const r = await prefetchRaw(entry, {
       onProgress: ({ loaded, total }) => {
         status = { ...status, bytes: loaded, total };

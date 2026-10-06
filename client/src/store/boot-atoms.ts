@@ -132,3 +132,17 @@ export function publishNetworkHold(hold: NetworkHold | null): void {
   if (cur === hold || (cur && hold && cur.halted === hold.halted)) return;
   store.set(networkHoldAtom, hold);
 }
+
+/** QB-2 (game-boot `initializeLost`): the page's language client lost its
+ * own `initialize` to a checker death or halt, and the relay serves again
+ * without it — the client stays "starting"/"stopped" for good unless it is
+ * restarted. game-boot bumps `seq` when that relay reports serving; app.tsx,
+ * which owns the LeanMonaco instance, restarts the client on it (the action
+ * of the editor's "Restart Lean" and of the level pane's 20 s self-heal:
+ * lean4monaco LeanClient.restart()). `why` is for the console. seq 0: never. */
+export interface LanguageClientRestart { seq: number; why: string }
+export const languageClientRestartAtom = atom<LanguageClientRestart>({ seq: 0, why: "" });
+export function publishLanguageClientRestart(why: string): void {
+  const store = getDefaultStore();
+  store.set(languageClientRestartAtom, { seq: store.get(languageClientRestartAtom).seq + 1, why });
+}

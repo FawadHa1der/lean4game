@@ -22,18 +22,21 @@
 // facts (exit code, repeated stall, stale page) reach the level pane's atom
 // as data.
 // Review of phase 2: PAR-4 — a worker that said hello and then could not
-// import its lazily loaded sibling (lsp-front-door.js) reads "silent" (probe
-// the link), not as our crash; QD-API-2 — WORKER_DEP_MISMATCH (a deploy mixed
-// the worker scripts' revisions) is a stale page: its own reboot label and
-// halted card (reload), never probed as the link. Both also on the REAL
-// worker scripts (the last block).
+// import its lazily loaded sibling (lsp-front-door.js) posts
+// WORKER_DEP_MISSING (qed64 84d594e; it was the handler's uncaught throw,
+// read as our crash) and reads "silent" (probe the link); QD-API-2 —
+// WORKER_DEP_MISMATCH (a deploy mixed the worker scripts' revisions) is a
+// stale page: its own reboot label and halted card (reload), never probed as
+// the link. Both also on the REAL worker scripts (the last block).
+// QD-API-2's residual: a stale-page death that orphans the client's own
+// `initialize` is the card without a halt (staleInitialize).
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import vm from "node:vm";
 import { LeanSession, LspRelay, WORKER_SCRIPT_LOAD_FAILED, deathCause, failureCauseOf, type FailureCause, type JsonRpcMessage, type RelaySession, type RelayStatus, type WorkerStatus } from "qed64/embed";
-import { NETWORK_WAIT_LABEL, STALE_PAGE_LABEL, STALLED_LABEL, STARTING_LABEL, WORKER_DEP_MISMATCH, deathWords, haltFacts, haltedNote, isNetworkDeath, isRuntimeVerdict, isStalePageDeath, networkInEpisode, readDeath, rebootLabel, rebootNote } from "./death-kind.ts";
+import { NETWORK_WAIT_LABEL, STALE_INITIALIZE_LABEL, STALE_PAGE_LABEL, STALLED_LABEL, STARTING_LABEL, WORKER_DEP_MISMATCH, deathWords, haltFacts, haltedNote, isNetworkDeath, isRuntimeVerdict, isStalePageDeath, networkInEpisode, readDeath, rebootLabel, rebootNote, staleInitialize } from "./death-kind.ts";
 
 type D = { reason: string; message: string; seq: number; session: string; exitCode?: number; cause?: FailureCause };
 let seq = 0;
@@ -64,8 +67,8 @@ const snapFirefoxCut = bootFailed("snapshot 'nng4' failed to load", coded("Netwo
 const snapUnpaired = bootFailed("snapshot 'nng4' failed to load", coded("snapshot 'nng4' was baked for runtime wasm64-aaaaaaaaaaaaaaaa, this runtime is wasm64-bbbbbbbbbbbbbbbb", "SNAPSHOT_UNPAIRED"), snapAt);
 const snapCorrupt = bootFailed("snapshot 'nng4' failed to load", coded("SHA-256 verification failed for nng4", "SNAPSHOT_FAILED"), snapAt);
 const snapOom = bootFailed("snapshot 'nng4' failed to load", coded("could not allocate 1.4 GiB for the region", "SNAPSHOT_FAILED"), snapAt);
-// PAR-4: the uncaught error of a lazy sibling import after the hello (Chromium's words).
-const frontDoorLoad = workerDied("crash", "Uncaught NetworkError: Failed to execute 'importScripts' on 'WorkerGlobalScope': The script at 'https://l4g.test/workers/lsp-front-door.js' failed to load.", { bare: false, beforeHello: false });
+// PAR-4: the lazy sibling import failed after the hello — the worker's structured death (qed64 84d594e).
+const frontDoorMissing = workerDied("WORKER_DEP_MISSING", "lean.worker.js needs lsp-front-door.js served beside it: Failed to execute 'importScripts' on 'WorkerGlobalScope': The script at 'https://l4g.test/workers/lsp-front-door.js' failed to load.", { errorCode: "WORKER_DEP_MISSING" });
 // QD-API-2: the worker's error reply refusing a sibling of another revision.
 const depMismatchMessage = "lsp-front-door.js is revision \"2\", lean.worker.js needs 1 (a deploy mixed versions; reload)";
 const depMismatch = workerDied(WORKER_DEP_MISMATCH, depMismatchMessage, { errorCode: WORKER_DEP_MISMATCH });
@@ -137,14 +140,16 @@ assert.equal(readDeath(scriptLoad), "silent", "WORKER_SCRIPT_LOAD_FAILED: probe 
 assert.equal(scriptLoad.cause?.code, WORKER_SCRIPT_LOAD_FAILED);
 assert.equal(readDeath(depMissing), "silent", "a sibling script that did not load is no crash of ours either");
 assert.equal(readDeath({ reason: "crash", message: "Worker crashed: x", cause: undefined }), "silent");
-// PAR-4: qed64 calls the failed lazy import our crash (code `crash`); its
-// message names the import — offline and on a 404 alike: probe the link.
-assert.deepEqual([frontDoorLoad.cause?.kind, frontDoorLoad.cause?.code], ["other", "crash"], "qed64's own reading of it");
-assert.equal(readDeath(frontDoorLoad), "silent");
-assert.equal(readDeath(workerDied("crash", "Uncaught NetworkError: A network error occurred.", { bare: false, beforeHello: false })), "silent", "Firefox's words for a failed importScripts");
-assert.equal(isNetworkDeath(frontDoorLoad), false, "no evidence of the link by itself — the probe decides");
-assert.equal(readDeath(workerDied("heartbeat", "no heartbeat; NetworkError", {})), "own", "only a `crash` is read by its message");
-assert.equal(rebootLabel(rebooting0("crash", frontDoorLoad), networkInEpisode(readDeath(frontDoorLoad), false, true)), NETWORK_WAIT_LABEL, "inside a network episode: the link's wording, not \"after a crash (Uncaught NetworkError …)\"");
+// PAR-4 (closed upstream): the failed lazy import is WORKER_DEP_MISSING, which
+// qed64 classifies as WORKER_SCRIPT_LOAD_FAILED — offline and on a 404 alike:
+// probe the link. No death is read by its message any more (the old rule read
+// a `crash` naming importScripts / NetworkError as "silent").
+assert.deepEqual([frontDoorMissing.cause?.kind, frontDoorMissing.cause?.code], ["other", WORKER_SCRIPT_LOAD_FAILED], "qed64's own reading of it");
+assert.equal(readDeath(frontDoorMissing), "silent");
+assert.equal(isNetworkDeath(frontDoorMissing), false, "no evidence of the link by itself — the probe decides");
+assert.equal(readDeath(workerDied("crash", "Uncaught NetworkError: Failed to execute 'importScripts' on 'WorkerGlobalScope': The script at 'https://l4g.test/workers/lsp-front-door.js' failed to load.", { bare: false, beforeHello: false })), "own", "a messaged crash is the checker's own, whatever the message says (the worker no longer throws for a failed import)");
+assert.equal(readDeath(workerDied("heartbeat", "no heartbeat; NetworkError", {})), "own");
+assert.equal(rebootLabel(rebooting0("crash", frontDoorMissing), networkInEpisode(readDeath(frontDoorMissing), false, true)), NETWORK_WAIT_LABEL, "inside a network episode: the link's wording, not \"after a crash (…)\"");
 // QD-API-2: a stale page — its own verdict, never the link's, never a crash label
 assert.deepEqual([depMismatch.reason, depMismatch.cause?.kind, depMismatch.cause?.code], [WORKER_DEP_MISMATCH, "other", WORKER_DEP_MISMATCH], "qed64's classification of the error reply");
 assert.equal(isStalePageDeath(depMismatch), true);
@@ -161,6 +166,18 @@ assert.equal(rebootNote("user", depMismatch), null, "lastDeath outlives its rebo
 assert.match(STALE_PAGE_LABEL, /reload the page/);
 assert.match(haltedNote(depMismatch)!, /^this site was updated while the page was open, so the checker stopped; reload the page$/);
 assert.deepEqual(haltFacts(depMismatch), { exitCode: null, stalled: false, stalePage: true });
+// QD-API-2's residual: the client's own `initialize` taken by a stale-page
+// death — the card without a halt. Keyed on the method, the relay's word
+// (a kind) and the death; never on a request of another method, the
+// checker's own answer, or another death.
+assert.equal(staleInitialize("initialize", "orphaned", depMismatch), true);
+assert.equal(staleInitialize("initialize", "halted", depMismatch), true, "refused by a halt on it: the same card the halt shows");
+assert.equal(staleInitialize("textDocument/hover", "orphaned", depMismatch), false, "another request orphaned: the reboot's label says it");
+assert.equal(staleInitialize("initialize", null, depMismatch), false, "the checker's own answer is no orphaning");
+assert.equal(staleInitialize("initialize", "orphaned", oobCrash), false, "a crash orphaning the initialize is not a stale page");
+assert.equal(staleInitialize("initialize", "orphaned", frontDoorMissing), false, "nor a missing sibling (the link or a deploy)");
+assert.equal(staleInitialize("initialize", "orphaned", null), false);
+assert.match(STALE_INITIALIZE_LABEL, /reload the page/);
 assert.equal(isNetworkDeath(snapCut), true);
 assert.equal(isNetworkDeath(snapUnpaired), false);
 assert.equal(isNetworkDeath(bare), false);
@@ -301,6 +318,9 @@ assert.equal(deathWords(null), "");
   assert.deepEqual([activity().halted, activity().exitCode, activity().stalled], [true, null, true]);
   publishCheckerActivity("ready", haltedNote(depMismatch)!, false, false, haltFacts(depMismatch));
   assert.deepEqual([activity().halted, activity().exitCode, activity().stalled, activity().stalePage], [true, null, false, true], "QD-API-2: the reload card's fact");
+  // The latched card (game-boot latchStalePage) publishes the same facts under its own label: the pane keys on `stalePage`.
+  publishCheckerActivity("ready", STALE_INITIALIZE_LABEL, false, false, haltFacts(depMismatch));
+  assert.deepEqual([activity().halted, activity().stalePage, activity().label], [true, true, STALE_INITIALIZE_LABEL], "QD-API-2's residual: the card without a halt");
   publishCheckerActivity("ready", "Lean exited with code 3 while replaying this level", false, false, true);
   assert.deepEqual([activity().halted, activity().exitCode, activity().stalled], [true, null, false], "a plain halt names no code, whatever its label says");
   publishCheckerActivity("ready", "ready");
@@ -409,15 +429,17 @@ assert.equal(deathWords(null), "");
   assert.equal(readDeath(dm), "own");
   assert.equal(rebootLabel(newer, networkInEpisode(readDeath(dm), isNetworkDeath(dm), true)), STALE_PAGE_LABEL);
   assert.deepEqual(haltFacts(dm), { exitCode: null, stalled: false, stalePage: true });
-  // PAR-4: the link drops (or the deploy lacks the file) before the first frame.
+  // PAR-4 (closed upstream): the link drops (or the deploy lacks the file)
+  // before the first frame — the worker's own structured death, never the
+  // handler's uncaught throw (which the shim would report as `crash`).
   const failed = await firstFrameDeath((name) => {
     if (name !== "lsp-front-door.js") return read(name);
     throw new DOMException("Failed to execute 'importScripts' on 'WorkerGlobalScope': The script at 'https://l4g.test/workers/lsp-front-door.js' failed to load.", "NetworkError");
   });
   const fl = failed.lastDeath!;
-  assert.deepEqual([fl.reason, fl.cause?.code], ["crash", "crash"]);
-  assert.match(fl.message, /^Uncaught NetworkError: Failed to execute 'importScripts'/);
-  assert.equal(readDeath(fl), "silent", "probe the link — not \"restarting the checker after a crash (Uncaught NetworkError …)\" inside an episode");
+  assert.deepEqual([fl.reason, fl.cause?.code, failed.rebootReason], ["WORKER_DEP_MISSING", WORKER_SCRIPT_LOAD_FAILED, "crash"]);
+  assert.match(fl.message, /lean\.worker\.js needs lsp-front-door\.js served beside it: .*failed to load/);
+  assert.equal(readDeath(fl), "silent", "probe the link — like a worker script that never loaded, not \"after a crash\" inside an episode");
   assert.equal(isStalePageDeath(fl), false);
   delete (globalThis as { Worker?: unknown }).Worker;
 }

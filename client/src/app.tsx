@@ -16,6 +16,7 @@ import { LeanMonaco } from 'lean4monaco';
 import { preferencesAtom } from './store/preferences-atoms';
 import { gameIdAtom } from './store/location-atoms';
 import { bootGameRuntime } from './wasm/game-boot';
+import { languageClientRestartAtom } from './store/boot-atoms';
 import { BootBanner } from './components/boot_banner';
 
 // Start the in-tab Lean runtime immediately: the multi-hundred-MB artifact
@@ -50,6 +51,28 @@ function App({ children }: { children?: React.ReactNode }) {
   useEffect(() => {
     i18n.changeLanguage(preferences.language)
   }, [preferences.language])
+
+  // QB-2 (game-boot): the language client lost its `initialize` to a checker
+  // death and the healed relay now serves a client that never connected.
+  // Restart it — what the editor's "Restart Lean" does (lean4monaco
+  // LeanClient.restart(): a client whose start failed is not running, so
+  // nothing is stopped; a fresh client sends a fresh initialize). Not when a
+  // client is running already: the pane's own 20 s self-heal, or the
+  // player's restart, got there first. Each publication acts once (the
+  // instance may change identity later; that is no reason to restart again).
+  const [clientRestart] = useAtom(languageClientRestartAtom)
+  const handledRestart = useRef(0)
+  useEffect(() => {
+    if (clientRestart.seq === 0 || clientRestart.seq === handledRestart.current || !leanMonaco) return
+    handledRestart.current = clientRestart.seq
+    const clients = (leanMonaco.clientProvider?.getClients?.() ?? []) as Array<{ isRunning?: () => boolean }>
+    if (clients.some((c) => c.isRunning?.())) {
+      console.info(`[lean4game] Lean client already running — no restart (${clientRestart.why})`)
+      return
+    }
+    console.warn(`[lean4game] restarting the Lean client: ${clientRestart.why}`)
+    leanMonaco.restart()
+  }, [clientRestart, leanMonaco])
 
   // You need to start one `LeanMonaco` instance once in your application using a `useEffect`
   useEffect(() => {

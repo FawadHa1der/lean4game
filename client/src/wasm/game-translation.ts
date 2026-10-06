@@ -26,7 +26,6 @@
  *    back, range semanticTokens disabled, full semanticTokens rebased.
  */
 import { levelUri, parseLevelUri } from "./level-uri";
-import { CHANGE_THROTTLE_MS, ChangeThrottle, type ThrottleClock } from "./change-throttle";
 
 type JsonRpc = {
   jsonrpc: "2.0";
@@ -53,10 +52,6 @@ export interface GameTranslationConfig {
    * relay's approach — goes stale and forces reconnects upstream). */
   difficulty?: () => number;
   inventory?: () => string[];
-  /** The full-text didChange throttle's window (ChangeThrottle; 0: none). */
-  changeThrottleMs?: number;
-  /** The throttle's clock (tests). */
-  clock?: ThrottleClock;
 }
 
 export const PROOF_START_LINE = 2;
@@ -83,6 +78,17 @@ export type RelayErrorKind = "orphaned" | "halted" | "restart";
 export function relayErrorKind(error: unknown): RelayErrorKind | null {
   const kind = (error as { data?: { qed64?: { kind?: unknown } } } | null | undefined)?.data?.qed64?.kind;
   return kind === "orphaned" || kind === "halted" || kind === "restart" ? kind : null;
+}
+/** R3-1 (review of the bump to qed64 84d594e): the answer the session's edit
+ * coalescer invents (EMBEDDING §7.8) for a queued completion or
+ * semantic-tokens request whose change a newer full-text change replaced
+ * before it reached the checker — ContentModified (-32801) with
+ * `error.data.qed64.kind: "superseded"`. Not a relay-invented answer (no
+ * death, no halt behind it: relayErrorKind is null, onOrphanedRequest stays
+ * quiet); toClient says what becomes of it. The front door's own -32801
+ * refusals carry no kind and stay the checker's answers. */
+export function isSupersededAnswer(error: unknown): boolean {
+  return (error as { data?: { qed64?: { kind?: unknown } } } | null | undefined)?.data?.qed64?.kind === "superseded";
 }
 /** L6: the error a request about an unknown level's document is answered
  * with (goals.tsx reads it: not a crash, not retried). */
@@ -163,14 +169,10 @@ export class GameTranslation {
   private serverPort: MessagePort | null = null;
   /** Client traffic that arrived before the wasm side finished booting. */
   private pendingToServer: JsonRpc[] = [];
-  /** The editor-mode crash: at most one full-text change per window reaches
-   * the checker (change-throttle.ts). Last step before the server port. */
-  private readonly throttle: ChangeThrottle;
 
   constructor(config: GameTranslationConfig) {
     this.config = config;
     this.workerUri = config.workerUri ?? DEFAULT_WORKER_URI;
-    this.throttle = new ChangeThrottle((m) => this.serverPort?.postMessage(m), config.changeThrottleMs ?? CHANGE_THROTTLE_MS, config.clock);
     const channel = new MessageChannel();
     this.clientPort = channel.port2;
     this.innerSide = channel.port1;
@@ -219,9 +221,6 @@ export class GameTranslation {
    * answered "No RPC method 'Game.getProofState'" until the reload. Client
    * traffic is held back untranslated, server traffic is no longer relayed. */
   suspend(): void {
-    // A change the throttle holds was sent before the switch began (the
-    // player's text, which a cancelled switch resumes on): it goes now.
-    this.throttle.flush();
     this.suspended = true;
     // Before the server attached the buffer already holds the boot's early
     // traffic (initialize, …) — that must survive a resume.
@@ -274,7 +273,13 @@ export class GameTranslation {
         this.inFlightMethods.set(out.id, out.method);
         if (this.inFlightMethods.size > 1024) this.inFlightMethods.delete(this.inFlightMethods.keys().next().value!);
       }
-      this.throttle.push(out);
+      // Straight to the relay. The editor-mode crash's mitigation — at most
+      // one full-text change per window reaches the checker, every other
+      // frame queued behind a held change, a held change never crossing a
+      // document — is qed64's ResidentSession's since 84d594e (EMBEDDING
+      // §7.8, `editCoalesceMs`, for every embedder); the page's own throttle
+      // (change-throttle.ts, until then) was its measured prototype.
+      this.serverPort?.postMessage(out);
     }
   }
 
@@ -387,12 +392,22 @@ export class GameTranslation {
   /** Fired with the TRANSLATED didOpen (a level switch): the host re-arms a
    * halted relay from it, since the relay only leaves `halted` on a change. */
   onDidOpen: ((translated: JsonRpc) => void) | null = null;
+  /** Fired when a request this layer forwarded is answered by the relay
+   * itself rather than the checker (relayErrorKind: a death orphaned it, the
+   * breaker refuses it, a restart replaced its session), before N1 rewrites
+   * the answer below. The host reads the death behind it: QD-API-2's
+   * residual — a stale-page death that takes the client's own `initialize`
+   * leaves the language client "starting" for good while the relay heals
+   * (death-kind.ts staleInitialize). */
+  onOrphanedRequest: ((method: string, kind: RelayErrorKind) => void) | null = null;
 
   /** relay: server → client rewrites. */
   private toClient(message: JsonRpc): JsonRpc {
     if (message.id !== undefined && message.method === undefined) {
       const method = this.inFlightMethods.get(message.id);
       this.inFlightMethods.delete(message.id);
+      const kind = method === undefined ? null : relayErrorKind(message.error);
+      if (method !== undefined && kind !== null) this.onOrphanedRequest?.(method, kind);
       // N1: a network cut kills the checker; the relay answers every orphaned
       // request (codeAction, inlayHint, semanticTokens/full, …) with -32603
       // (relayErrorKind: "orphaned", or "halted" while the breaker holds),
@@ -409,10 +424,26 @@ export class GameTranslation {
       // keep an error, as -32097. $/lean/rpc/* answers stay untouched — the
       // infoview's session recovery keys on their -32900. An unknown method
       // (never seen going out) is left alone too.
-      if (method !== undefined && !method.startsWith("$/lean/rpc/") && relayErrorKind(message.error) !== null) {
+      if (method !== undefined && !method.startsWith("$/lean/rpc/") && kind !== null) {
         message = ORPHAN_ERROR_METHODS.has(method)
           ? { ...message, error: { ...message.error, code: PENDING_RESPONSE_REJECTED } }
           : { jsonrpc: message.jsonrpc ?? "2.0", id: message.id, result: null };
+      } else if (method === "textDocument/completion" && isSupersededAnswer(message.error)) {
+        // R3-1: the edit coalescer's `superseded` answer (-32801) is an
+        // error response too, and lean4monaco's messageStrategy logs every
+        // one — the page's throttle never answered a request, so no such
+        // line was ever printed in editor mode before the bump. On a
+        // completion, vscode-languageclient's handleFailedRequest makes the
+        // feature's default of a ContentModified (null: the next keystroke
+        // re-triggers it), so the answer is `result: null` here, as N1's for
+        // an orphaned one — the same outcome, no console line. The
+        // semantic-tokens requests (the coalescer's other superseded set)
+        // keep their -32801: on them handleFailedRequest throws the
+        // CancellationError the provider needs to refetch (a `null` would
+        // leave the highlighting stale), so one console line per superseded
+        // tokens request remains — QED64's documented cost; UX-PARITY
+        // ("Bump to 84d594e") has the measurement.
+        message = { jsonrpc: message.jsonrpc ?? "2.0", id: message.id, result: null };
       }
     }
     if (message.method === "$/lean/fileProgress" && this.onProcessing) {
