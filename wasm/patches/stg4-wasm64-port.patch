@@ -1,0 +1,77 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: wasm64 port <wasm64@localhost>
+Date: Thu, 08 Oct 2026 16:05:42 -0400
+Subject: [PATCH] wasm64 port: Mathlib v4.34.0 module names and push_neg
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Game/Metadata.lean: `import Mathlib.Data.Set.Lattice` -> the five modules
+  it re-exports (`Mathlib.Data.Set.Lattice.{Bounded,Disjoint,Image,Indexed,
+  Order}`). Mathlib v4.34.0 keeps the old name only as a deprecated_module
+  shim, which warns when Game/Metadata.lean is compiled (the module that
+  imports it; levels importing the metadata do not repeat it); the
+  environment is unchanged.
+- Game/CustomTactic/PushNeg.lean (new, imported from Metadata): the macro
+  Mathlib's own deprecation message recommends, so the taught `push_neg`
+  (= `push Not` in Mathlib v4.34.0) no longer logs "`push_neg` has been
+  deprecated. Prefer using `push Not` instead." — a warning that made every
+  level solved with it (Complement 4 teaches it; Combo 1, FamCombo 1, 2, 5
+  and 7 use it) finish "with warnings" instead of completing. Behaviour is
+  identical; the inventory's locked-tactic check is atom-based and still
+  sees `push_neg`.
+
+No level or world removed; nothing a player types changes.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ Game/CustomTactic/PushNeg.lean | 17 +++++++++++++++++
+ Game/Metadata.lean             |  8 +++++++-
+ 2 files changed, 24 insertions(+), 1 deletion(-)
+ create mode 100644 Game/CustomTactic/PushNeg.lean
+
+diff --git a/Game/CustomTactic/PushNeg.lean b/Game/CustomTactic/PushNeg.lean
+new file mode 100644
+index 0000000..0470e8c
+--- /dev/null
++++ b/Game/CustomTactic/PushNeg.lean
+@@ -0,0 +1,17 @@
++import Mathlib.Tactic.Push
++
++/-!
++# `push_neg` without the deprecation warning (wasm64 port)
++
++Mathlib v4.34.0 implements `push_neg` as `push Not`, and its `push_neg` elaborator
++unconditionally logs "`push_neg` has been deprecated. Prefer using `push Not` instead." — a
++warning a player would see in every level that uses `push_neg` (taught in Complement level 4),
++which makes the level finish "with warnings" instead of completing it. Mathlib's own deprecation
++text recommends exactly this macro for projects that keep `push_neg`; `priority := high` makes
++it win over Mathlib's parser so no choice node (and no warning) is produced. Behaviour is
++identical: `push_neg`, `push_neg at h`, `push_neg at *`, `push_neg +distrib`.
++-/
++
++open Lean.Parser.Tactic in
++macro (priority := high) "push_neg" cfg:optConfig loc:(location)? : tactic =>
++  `(tactic| push $cfg:optConfig Not $[$loc]?)
+diff --git a/Game/Metadata.lean b/Game/Metadata.lean
+index 82dd74f..6385d2f 100644
+--- a/Game/Metadata.lean
++++ b/Game/Metadata.lean
+@@ -2,7 +2,13 @@ import GameServer
+ import Mathlib.Tactic.Common
+ import Mathlib.Tactic.Have
+ import Mathlib.Data.Set.Basic
+-import Mathlib.Data.Set.Lattice
++import Game.CustomTactic.PushNeg -- wasm64 port: `push_neg` as `push Not`, without Mathlib's deprecation warning
++-- wasm64 port: Mathlib v4.34.0 keeps Mathlib.Data.Set.Lattice only as a deprecated shim for these five modules
++import Mathlib.Data.Set.Lattice.Bounded
++import Mathlib.Data.Set.Lattice.Disjoint
++import Mathlib.Data.Set.Lattice.Image
++import Mathlib.Data.Set.Lattice.Indexed
++import Mathlib.Data.Set.Lattice.Order
+ 
+ attribute [default_instance] Set.instSingletonSet
+ 
+-- 
+2.50.1
+

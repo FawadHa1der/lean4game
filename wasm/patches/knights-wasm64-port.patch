@@ -1,29 +1,43 @@
-From a1b6fba5e2554ee80ecb85fba066ebc34664f4d5 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: wasm64 port <wasm64@localhost>
-Date: Fri, 11 Sep 2026 10:18:17 -0400
-Subject: [PATCH] wasm64 port: Lean 4.33.0-pre / Mathlib de3a9cf
+Date: Tue, 06 Oct 2026 13:49:39 -0400
+Subject: [PATCH] wasm64 port: Lean 4.34.0 / Mathlib v4.34.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 
 - Game.lean: Languages "English" -> "en" (ISO code the client can match).
 - MathlibTheorems: drop the vestigial `import Mathlib.Tactic.Polyrith`
   (not in the essential Mathlib pack; polyrith needs an external Sage
   oracle and no level, hint or doc uses it).
+- MathlibTheorems: `import Mathlib.Data.Real.Basic` ->
+  `import Mathlib.Basic.Real.Basic` (Mathlib v4.34.0 keeps the old name only
+  as a deprecated_module shim for this module, which would warn).
 - LevelLemmas/settheory, settheory_knightsknavesfoundation: keep the
   `[DecidableEq _]` binder on the `variable` line -- the newer parser ends
   a command at a column-0 token, which orphaned the binder and lost every
   Finset `Inter`/`Insert` instance in these files.
+- LevelLemmas/settheory_KnightsAndKnaves, settheory_KnightsAndKnaves3:
+  `set_option backward.isDefEq.respectTransparency false in` before the two
+  `inductive ... deriving DecidableEq, Fintype` enums (under Lean 4.34's
+  stricter defeq check the derived Fintype instance's `rewrite` fails;
+  Mathlib sets the same option at its own call sites).
 - SetTheory_Knights_Knaves L09: remove `simp at diff` from the model proof
   (no progress on this Mathlib; the following steps reach the same state).
 
 No level or world removed; nothing a player types changes.
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  Game.lean                                               | 2 +-
  Game/LevelLemmas/settheory.lean                         | 3 +--
+ Game/LevelLemmas/settheory_KnightsAndKnaves.lean        | 3 +++
+ Game/LevelLemmas/settheory_KnightsAndKnaves3.lean       | 3 +++
  Game/LevelLemmas/settheory_knightsknavesfoundation.lean | 3 +--
  Game/Levels/SetTheory_Knights_Knaves/L09_same.lean      | 2 +-
- Game/MathlibTheorems.lean                               | 2 +-
- 5 files changed, 5 insertions(+), 7 deletions(-)
+ Game/MathlibTheorems.lean                               | 4 ++--
+ 7 files changed, 12 insertions(+), 8 deletions(-)
 
 diff --git a/Game.lean b/Game.lean
 index f594cfd..543338b 100644
@@ -52,6 +66,34 @@ index 72ab43d..e4f39b5 100644
  
  theorem disjoint_finset
  {left right : Finset K}
+diff --git a/Game/LevelLemmas/settheory_KnightsAndKnaves.lean b/Game/LevelLemmas/settheory_KnightsAndKnaves.lean
+index 360d3a5..c1f5e33 100644
+--- a/Game/LevelLemmas/settheory_KnightsAndKnaves.lean
++++ b/Game/LevelLemmas/settheory_KnightsAndKnaves.lean
+@@ -6,6 +6,9 @@ import Mathlib.Data.Fintype.Card
+ import Mathlib.Tactic.DeriveFintype
+ import Game.LevelLemmas.settheory_knightsknavesfoundation
+ 
++-- wasm64 port: under Lean 4.34's stricter defeq check `deriving Fintype` on this enum fails
++-- (`rewrite` in the derived instance); Mathlib sets the same option at its own call sites.
++set_option backward.isDefEq.respectTransparency false in
+ inductive Inhabitant
+ | A
+ | B
+diff --git a/Game/LevelLemmas/settheory_KnightsAndKnaves3.lean b/Game/LevelLemmas/settheory_KnightsAndKnaves3.lean
+index 32b2d49..b60fac4 100644
+--- a/Game/LevelLemmas/settheory_KnightsAndKnaves3.lean
++++ b/Game/LevelLemmas/settheory_KnightsAndKnaves3.lean
+@@ -6,6 +6,9 @@ import Mathlib.Data.Fintype.Card
+ import Mathlib.Tactic.DeriveFintype
+ import Game.LevelLemmas.settheory_knightsknavesfoundation
+ 
++-- wasm64 port: under Lean 4.34's stricter defeq check `deriving Fintype` on this enum fails
++-- (`rewrite` in the derived instance); Mathlib sets the same option at its own call sites.
++set_option backward.isDefEq.respectTransparency false in
+ inductive Inhabitant'
+ | A
+ | B
 diff --git a/Game/LevelLemmas/settheory_knightsknavesfoundation.lean b/Game/LevelLemmas/settheory_knightsknavesfoundation.lean
 index bbad27a..8313fae 100644
 --- a/Game/LevelLemmas/settheory_knightsknavesfoundation.lean
@@ -80,11 +122,15 @@ index 8e862c6..60ec51c 100644
    Hint
    "
 diff --git a/Game/MathlibTheorems.lean b/Game/MathlibTheorems.lean
-index 706219b..b4e5843 100644
+index 706219b..b8cf874 100644
 --- a/Game/MathlibTheorems.lean
 +++ b/Game/MathlibTheorems.lean
-@@ -7,7 +7,7 @@ import Mathlib.Tactic.FieldSimp
- import Mathlib.Data.Real.Basic
+@@ -4,10 +4,10 @@ import GameServer.Commands
+ import Mathlib.Tactic.Have
+ import Mathlib.Tactic.ApplyAt
+ import Mathlib.Tactic.FieldSimp
+-import Mathlib.Data.Real.Basic
++import Mathlib.Basic.Real.Basic  -- wasm64 port: Mathlib v4.34.0 keeps Mathlib.Data.Real.Basic only as a deprecated shim for this module
  import Mathlib.Tactic.Linarith.Frontend
  import Mathlib.Tactic.Qify
 -import Mathlib.Tactic.Polyrith
@@ -93,5 +139,5 @@ index 706219b..b4e5843 100644
  import Mathlib.Tactic.ApplyFun
  import Mathlib.Data.Multiset.Basic
 -- 
-2.50.1 (Apple Git-155)
+2.50.1
 

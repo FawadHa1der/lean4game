@@ -18,8 +18,8 @@
         "proof": "rw [h]\nrw [g]"
       },
       "expectedRaw": {
-        "runtime": "wasm64-d77d34b97592d014+slim",
-        "bytes": 546755869
+        "runtime": "wasm64-57ae00dc5f6ce958+slim",
+        "bytes": 553457285
       }
     },
     {
@@ -43,8 +43,8 @@
         "proof": "rfl"
       },
       "expectedRaw": {
-        "runtime": "wasm64-d77d34b97592d014+slim",
-        "bytes": 569269949
+        "runtime": "wasm64-57ae00dc5f6ce958+slim",
+        "bytes": 574944789
       },
       "probe2": {
         "world": "Addition",
@@ -62,7 +62,7 @@
       "source": {
         "url": "https://github.com/djvelleman/STG4",
         "rev": "b7296fcb2f06aa30d396422675c86a5b03b662f9",
-        "patch": null
+        "patch": "wasm/patches/stg4-wasm64-port.patch"
       },
       "leanOptions": [
         "linter.all=false",
@@ -74,14 +74,20 @@
         "proof": "exact h"
       },
       "expectedRaw": {
-        "runtime": "wasm64-d77d34b97592d014+slim",
-        "bytes": 665285845
+        "runtime": "wasm64-57ae00dc5f6ce958+slim",
+        "bytes": 669599797
       },
       "probe2": {
         "world": "Complement",
         "level": 1,
         "proof": "by_contra h3\nhave h4 : x ∈ B := h3 h1\nexact h2 h4",
-        "teaches": "by_contra (introduced by this level) and the goal-creating have from the compat Mathlib.Tactic.Have"
+        "teaches": "by_contra (introduced by this level) and the goal-creating have from Mathlib.Tactic.Have (the release's mathlib-game-extra pack)"
+      },
+      "probe3": {
+        "world": "Complement",
+        "level": 4,
+        "proof": "apply Subset.antisymm\nintro x h1\nrewrite [mem_compl_iff] at h1\nrewrite [mem_compl_iff] at h1\npush_neg at h1\nexact h1\nintro x h1\nrewrite [mem_compl_iff]\nrewrite [mem_compl_iff]\npush_neg\nexact h1",
+        "teaches": "apply and push_neg (introduced by this level; the level's own solution). push_neg is the port's wrapper macro over Mathlib's push Not (Game/CustomTactic/PushNeg.lean): Mathlib v4.34.0's own push_neg logs a deprecation warning, which made every level solved with it finish \"with warnings\" — this probe must close with no message"
       }
     },
     {
@@ -112,8 +118,8 @@
         "teaches": "constructor (the game's Game.constructor macro over Mathlib fconstructor, Game/Metadata/Tactic/Constructor.lean; taught in ProductWorld L1) plus exact (taught in TypeWorld L3) — both already unlocked (new: false) at this level, which is the first ∧ level and exercises them on Statement {P Q : Prop} (p : P) (q : Q) : P ∧ Q"
       },
       "expectedRaw": {
-        "runtime": "wasm64-d77d34b97592d014+slim",
-        "bytes": 562887317
+        "runtime": "wasm64-57ae00dc5f6ce958+slim",
+        "bytes": 569043773
       }
     },
     {
@@ -143,8 +149,8 @@
         "teaches": "cases (NewTactic cases; the h_1 names rely on tactic.hygienic=false, exactly as the level's own proof)"
       },
       "expectedRaw": {
-        "runtime": "wasm64-d77d34b97592d014+slim",
-        "bytes": 728516269
+        "runtime": "wasm64-57ae00dc5f6ce958+slim",
+        "bytes": 731165541
       }
     },
     {
@@ -172,11 +178,11 @@
         "world": "Congruence",
         "level": 8,
         "proof": "induction' n with d ih\nunfold ModEq\nuse 0\nring\nrw [pow_succ, pow_succ]\nexact mod_mul (a^d) (b^d) a b m ih h",
-        "teaches": "induction' (the full compat Mathlib.Tactic.Cases elaborator), plus unfold/use/ring/rw/exact and the NewTheorem pow_succ"
+        "teaches": "induction' (Mathlib.Tactic.Cases's full elaborator, from the release's mathlib-game-extra pack), plus unfold/use/ring/rw/exact and the NewTheorem pow_succ"
       },
       "expectedRaw": {
-        "runtime": "wasm64-d77d34b97592d014+slim",
-        "bytes": 835759917
+        "runtime": "wasm64-57ae00dc5f6ce958+slim",
+        "bytes": 1277174557
       }
     },
     {
@@ -206,8 +212,8 @@
         "teaches": "cases'"
       },
       "expectedRaw": {
-        "runtime": "wasm64-d77d34b97592d014+slim",
-        "bytes": 1004806229
+        "runtime": "wasm64-57ae00dc5f6ce958+slim",
+        "bytes": 1014571789
       }
     },
     {
@@ -241,8 +247,8 @@
         "teaches": "intro"
       },
       "expectedRaw": {
-        "runtime": "wasm64-d77d34b97592d014+slim",
-        "bytes": 1002146453
+        "runtime": "wasm64-57ae00dc5f6ce958+slim",
+        "bytes": 1012231501
       }
     },
     {
@@ -273,8 +279,8 @@
         "teaches": "apply"
       },
       "expectedRaw": {
-        "runtime": "wasm64-d77d34b97592d014+slim",
-        "bytes": 835310405
+        "runtime": "wasm64-57ae00dc5f6ce958+slim",
+        "bytes": 1276723429
       }
     },
     {
@@ -306,8 +312,8 @@
         "teaches": "unfold (taught TutorialWorld 5) on the game's own definition is_linear_map_v, then rfl; the level's solution verbatim"
       },
       "expectedRaw": {
-        "runtime": "wasm64-d77d34b97592d014+slim",
-        "bytes": 998558821
+        "runtime": "wasm64-57ae00dc5f6ce958+slim",
+        "bytes": 1279213317
       }
     }
   ]

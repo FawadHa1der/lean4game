@@ -1424,7 +1424,7 @@
    "disabled": false,
    "category": "ℝ",
    "altTitle":
-   " {α} [AddZeroClass α] [Preorder α] [AddLeftMono α] {a b} (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ a + b"},
+   " {α} {a b} [AddZeroClass α] [Preorder α] [AddLeftMono α] (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ a + b"},
   {"world": null,
    "proven": false,
    "new": false,

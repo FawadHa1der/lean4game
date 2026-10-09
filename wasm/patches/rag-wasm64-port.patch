@@ -1,8 +1,7 @@
-From 65e8037eb45d57f955e42d69b814eb85dadbe081 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: wasm64 port <wasm64@localhost>
-Date: Fri, 11 Sep 2026 11:58:05 -0400
-Subject: [PATCH] wasm64 port: build on the QED64 Lean fork (4.33.0-pre) /
- Mathlib de3a9cf
+Date: Tue, 06 Oct 2026 13:49:39 -0400
+Subject: [PATCH] wasm64 port: build on the QED64 Lean fork (Lean 4.34.0) / Mathlib v4.34.0
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -11,11 +10,15 @@ Port of RealAnalysisGame @ 930c383 to the wasm64 lean4game build (in-browser
 kernel, essential Mathlib pack). No level or world is removed and nothing a
 player types changes.
 
-- Game/Metadata.lean: `Mathlib.Analysis.SpecialFunctions.Log.Base` is absent
-  from the Mathlib pack this build ships and no level uses `Real.logb`; its
+- Game/Metadata.lean: `Mathlib.Analysis.SpecialFunctions.Log.Base` was
+  absent from the essential Mathlib pack and no level uses `Real.logb`; its
   two in-pack imports (Pow.Real, BigOperators.Field) replace it, plus
   `Mathlib.Tactic.Bound` for the taught `bound` tactic (previously reached
-  transitively through Log.Base).
+  transitively through Log.Base). Since Lean 4.34 the release's
+  mathlib-game-extra pack has Log.Base; the smaller closure is kept.
+- Game/Metadata.lean: `import Mathlib.Data.Real.Basic` ->
+  `import Mathlib.Basic.Real.Basic` (Mathlib v4.34.0 keeps the old name only
+  as a deprecated_module shim for this module, which would warn).
 - Game/CustomTactic/Linarith.lean: qualify `Mathlib.Tactic.elabLinarithConfig`
   (core Lean now has a grind-based `Lean.Elab.Tactic.elabLinarithConfig`).
 - Game/CustomTactic/PushNeg.lean (new, imported from Metadata): the macro
@@ -33,125 +36,128 @@ player types changes.
 - L22Levels/L03.lean: drop `attribute [grind]
   Mathlib.Tactic.Zify.natCast_le._simp_1` (constant gone; no level uses grind).
 
-Requires the full Mathlib.Tactic.Cases (cases'/induction') from wasm/compat.
+Requires the full Mathlib.Tactic.Cases (cases'/induction'), which the
+toolchain release's mathlib-game-extra pack provides.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- Game/CustomTactic/Linarith.lean               |   3 +-
- Game/CustomTactic/PushNeg.lean                |  17 ++
- Game/Levels/L10Levels/L06_Prod.lean           |  56 ++--
- Game/Levels/L10Levels/L07_Order.lean          |  20 +-
- Game/Levels/L10Levels/L08_Mono.lean           |  16 +-
- Game/Levels/L10Levels/L09_Subseq.lean         |  32 +-
- Game/Levels/L10Pset/L10Pset2.lean             |  30 +-
- Game/Levels/L10Pset/L10Pset3.lean             |  24 +-
- Game/Levels/L10Pset/L10Pset4.lean             |  20 +-
- Game/Levels/L10Pset/L10Pset5.lean             |  34 +--
- Game/Levels/L10Pset/L10Pset6.lean             |  26 +-
- Game/Levels/L10Pset/L10Pset7.lean             |  16 +-
- Game/Levels/L11Levels/L01_IsCauchyOfLim.lean  |  22 +-
- Game/Levels/L11Levels/L02_IsCauchyOfSum.lean  |  22 +-
- Game/Levels/L11Levels/L03_IsBddOfCauchy.lean  |  32 +-
- Game/Levels/L11Pset/L11Pset1.lean             |  32 +-
- Game/Levels/L12Levels/L01_Choose.lean         |  22 +-
- Game/Levels/L12Levels/L01_MonotoneBdd.lean    |  44 +--
- Game/Levels/L12Levels/L02_IterateGap.lean     |  18 +-
- Game/Levels/L12Pset/L12Pset1.lean             |  32 +-
- Game/Levels/L12Pset/L12Pset2.lean             |  24 +-
- Game/Levels/L13Levels/L03_MonotoneSubseq.lean |  76 ++---
- Game/Levels/L13Pset/L13Pset1.lean             |  32 +-
- .../L14Levels/L01_BolzanoWeierstrass.lean     |  88 +++---
- Game/Levels/L15Levels/L01_check.lean          | 116 ++++----
- Game/Levels/L15Pset/L15Pset1.lean             |  34 +--
- Game/Levels/L16Levels/L01_check.lean          |  24 +-
- Game/Levels/L16Pset/L16Pset1.lean             |  16 +-
- Game/Levels/L16Pset/L16Pset2.lean             |  26 +-
- Game/Levels/L16Pset/L16Pset3.lean             |  18 +-
- Game/Levels/L17Levels/L02.lean                |  42 +--
- Game/Levels/L17Levels/L03.lean                |  18 +-
- Game/Levels/L17Levels/L04.lean                |  52 ++--
- Game/Levels/L17Pset/L05'.lean                 |  28 +-
- Game/Levels/L17Pset/L05.lean                  |  14 +-
- Game/Levels/L17Pset/L06.lean                  |  20 +-
- Game/Levels/L18Levels/L01.lean                |  30 +-
- Game/Levels/L18Levels/L02.lean                |  46 +--
- Game/Levels/L18Pset/L01.lean                  |  34 +--
- Game/Levels/L18Pset/L02.lean                  |  22 +-
- Game/Levels/L18Pset/L03.lean                  |  18 +-
- Game/Levels/L18Pset/L04.lean                  |  36 +--
- Game/Levels/L18Pset/L05.lean                  |  40 +--
- Game/Levels/L18Pset/L06.lean                  |  40 +--
- Game/Levels/L18Pset/L07.lean                  |  44 +--
- Game/Levels/L18Pset/L08.lean                  |  62 ++--
- Game/Levels/L18Pset/L09.lean                  |  24 +-
- Game/Levels/L18Pset/L10.lean                  |  24 +-
- Game/Levels/L19Levels/L01.lean                |  90 +++---
- Game/Levels/L19Levels/L02.lean                |  28 +-
- Game/Levels/L19Levels/L03.lean                | 122 ++++----
- Game/Levels/L19Levels/L04.lean                |   2 +-
- Game/Levels/L20Levels/L01.lean                |  18 +-
- Game/Levels/L20Levels/L02.lean                |  40 +--
- Game/Levels/L20Levels/L03.lean                |  34 +--
- Game/Levels/L20Levels/L04.lean                |  18 +-
- Game/Levels/L20Pset/L01.lean                  |  10 +-
- Game/Levels/L20Pset/L02.lean                  |  18 +-
- Game/Levels/L20Pset/L03.lean                  |  34 +--
- Game/Levels/L20Pset/L04.lean                  |  24 +-
- Game/Levels/L21Levels/L05.lean                |  58 ++--
- Game/Levels/L21Levels/L06.lean                |  16 +-
- Game/Levels/L21Levels/L07.lean                |  20 +-
- Game/Levels/L21Levels/L08.lean                |  52 ++--
- Game/Levels/L22Levels/L01.lean                |  14 +-
- Game/Levels/L22Levels/L02.lean                |  34 +--
- Game/Levels/L22Levels/L03.lean                |  62 ++--
- Game/Levels/L22Pset/L01.lean                  |  12 +-
- Game/Levels/L22Pset/L02.lean                  |  24 +-
- Game/Levels/L22Pset/L03.lean                  |  24 +-
- Game/Levels/L22Pset/L04.lean                  |  10 +-
- Game/Levels/L23Levels/L01.lean                |  58 ++--
- Game/Levels/L23Levels/L02.lean                |  58 ++--
- Game/Levels/L23Levels/L03.lean                |  96 +++---
- Game/Levels/L24Levels/L01.lean                |  76 ++---
- Game/Levels/L24Levels/L02.lean                | 158 +++++-----
- Game/Levels/L24Levels/L03.lean                | 278 +++++++++---------
- Game/Levels/L24Levels/L04.lean                |  60 ++--
- Game/Levels/L24Pset/L01.lean                  |  20 +-
- Game/Levels/L24Pset/L02.lean                  |  36 +--
- Game/Levels/L25Levels/L01.lean                |  82 +++---
- Game/Levels/L25Levels/L02.lean                | 180 ++++++------
- Game/Levels/L3Pset/L3Pset2.lean               |  38 +--
- Game/Levels/L3Pset/L3Pset3.lean               |  46 +--
- Game/Levels/L3Pset/L3Pset4.lean               |  56 ++--
- Game/Levels/L4Levels/L01_NonConverge.lean     |   6 +
- Game/Levels/L6Levels/L01_SplitAnds.lean       |   6 +-
- Game/Levels/L6Levels/L02_LeftRight.lean       |   4 +-
- Game/Levels/L6Levels/L03_DotNotation.lean     |   2 +-
- Game/Levels/L6Levels/L04_Cases'.lean          |  10 +-
- Game/Levels/L6Levels/L05_AbsLt.lean           |  16 +-
- Game/Levels/L6Levels/L06_Squeeze.lean         |  38 +--
- Game/Levels/L6Pset/L6Pset1.lean               |   8 +-
- Game/Levels/L6Pset/L6Pset2.lean               |   2 +-
- Game/Levels/L6Pset/L6Pset3.lean               |  16 +-
- Game/Levels/L6Pset/L6Pset4.lean               |  28 +-
- Game/Levels/L6Pset/L6Pset5.lean               |   6 +-
- Game/Levels/L7Levels/L00_Uniqueness.lean      |  36 +--
- Game/Levels/L7Levels/L01_Eventually.lean      |  26 +-
- Game/Levels/L7Levels/L02_SeqOfAbs.lean        |  20 +-
- Game/Levels/L7Levels/L03_SeqInvLim.lean       |  52 ++--
- Game/Levels/L7Levels/L04_ByCases.lean         |  12 +-
- Game/Levels/L7Pset/L7Pset1.lean               |  18 +-
- Game/Levels/L7Pset/L7Pset2.lean               |  36 +--
- Game/Levels/L7Pset/L7Pset3.lean               |  92 +++---
- Game/Levels/L8Levels/L03_Induction'.lean      |  20 +-
- Game/Levels/L8Pset/L8Pset1.lean               |  16 +-
- Game/Levels/L8Pset/L8Pset2.lean               |  20 +-
- Game/Levels/L8Pset/L8Pset3.lean               |  24 +-
- Game/Levels/L8Pset/L8Pset4.lean               |  12 +-
- Game/Levels/L9Levels/L04_FiniteSums.lean      |  30 +-
- Game/Levels/L9Levels/L05_BddOfConv.lean       |  28 +-
- Game/Levels/L9Pset/L9Pset1.lean               |  32 +-
- Game/Levels/L9Pset/L9Pset2.lean               |  14 +-
- Game/Levels/L9Pset/L9Pset3.lean               |  14 +-
- Game/Metadata.lean                            |   9 +-
- 116 files changed, 2129 insertions(+), 2096 deletions(-)
+ Game/CustomTactic/Linarith.lean                   |   3 +-
+ Game/CustomTactic/PushNeg.lean                    |  17 ++
+ Game/Levels/L10Levels/L06_Prod.lean               |  56 ++---
+ Game/Levels/L10Levels/L07_Order.lean              |  20 +-
+ Game/Levels/L10Levels/L08_Mono.lean               |  16 +-
+ Game/Levels/L10Levels/L09_Subseq.lean             |  32 +--
+ Game/Levels/L10Pset/L10Pset2.lean                 |  30 +--
+ Game/Levels/L10Pset/L10Pset3.lean                 |  24 +-
+ Game/Levels/L10Pset/L10Pset4.lean                 |  20 +-
+ Game/Levels/L10Pset/L10Pset5.lean                 |  34 +--
+ Game/Levels/L10Pset/L10Pset6.lean                 |  26 +-
+ Game/Levels/L10Pset/L10Pset7.lean                 |  16 +-
+ Game/Levels/L11Levels/L01_IsCauchyOfLim.lean      |  22 +-
+ Game/Levels/L11Levels/L02_IsCauchyOfSum.lean      |  22 +-
+ Game/Levels/L11Levels/L03_IsBddOfCauchy.lean      |  32 +--
+ Game/Levels/L11Pset/L11Pset1.lean                 |  32 +--
+ Game/Levels/L12Levels/L01_Choose.lean             |  22 +-
+ Game/Levels/L12Levels/L01_MonotoneBdd.lean        |  44 ++--
+ Game/Levels/L12Levels/L02_IterateGap.lean         |  18 +-
+ Game/Levels/L12Pset/L12Pset1.lean                 |  32 +--
+ Game/Levels/L12Pset/L12Pset2.lean                 |  24 +-
+ Game/Levels/L13Levels/L03_MonotoneSubseq.lean     |  76 +++---
+ Game/Levels/L13Pset/L13Pset1.lean                 |  32 +--
+ Game/Levels/L14Levels/L01_BolzanoWeierstrass.lean |  88 +++----
+ Game/Levels/L15Levels/L01_check.lean              | 116 ++++-----
+ Game/Levels/L15Pset/L15Pset1.lean                 |  34 +--
+ Game/Levels/L16Levels/L01_check.lean              |  24 +-
+ Game/Levels/L16Pset/L16Pset1.lean                 |  16 +-
+ Game/Levels/L16Pset/L16Pset2.lean                 |  26 +-
+ Game/Levels/L16Pset/L16Pset3.lean                 |  18 +-
+ Game/Levels/L17Levels/L02.lean                    |  42 ++--
+ Game/Levels/L17Levels/L03.lean                    |  18 +-
+ Game/Levels/L17Levels/L04.lean                    |  52 ++--
+ Game/Levels/L17Pset/L05'.lean                     |  28 +--
+ Game/Levels/L17Pset/L05.lean                      |  14 +-
+ Game/Levels/L17Pset/L06.lean                      |  20 +-
+ Game/Levels/L18Levels/L01.lean                    |  30 +--
+ Game/Levels/L18Levels/L02.lean                    |  46 ++--
+ Game/Levels/L18Pset/L01.lean                      |  34 +--
+ Game/Levels/L18Pset/L02.lean                      |  22 +-
+ Game/Levels/L18Pset/L03.lean                      |  18 +-
+ Game/Levels/L18Pset/L04.lean                      |  36 +--
+ Game/Levels/L18Pset/L05.lean                      |  40 ++--
+ Game/Levels/L18Pset/L06.lean                      |  40 ++--
+ Game/Levels/L18Pset/L07.lean                      |  44 ++--
+ Game/Levels/L18Pset/L08.lean                      |  62 ++---
+ Game/Levels/L18Pset/L09.lean                      |  24 +-
+ Game/Levels/L18Pset/L10.lean                      |  24 +-
+ Game/Levels/L19Levels/L01.lean                    |  90 +++----
+ Game/Levels/L19Levels/L02.lean                    |  28 +--
+ Game/Levels/L19Levels/L03.lean                    | 122 +++++-----
+ Game/Levels/L19Levels/L04.lean                    |   2 +-
+ Game/Levels/L20Levels/L01.lean                    |  18 +-
+ Game/Levels/L20Levels/L02.lean                    |  40 ++--
+ Game/Levels/L20Levels/L03.lean                    |  34 +--
+ Game/Levels/L20Levels/L04.lean                    |  18 +-
+ Game/Levels/L20Pset/L01.lean                      |  10 +-
+ Game/Levels/L20Pset/L02.lean                      |  18 +-
+ Game/Levels/L20Pset/L03.lean                      |  34 +--
+ Game/Levels/L20Pset/L04.lean                      |  24 +-
+ Game/Levels/L21Levels/L05.lean                    |  58 ++---
+ Game/Levels/L21Levels/L06.lean                    |  16 +-
+ Game/Levels/L21Levels/L07.lean                    |  20 +-
+ Game/Levels/L21Levels/L08.lean                    |  52 ++--
+ Game/Levels/L22Levels/L01.lean                    |  14 +-
+ Game/Levels/L22Levels/L02.lean                    |  34 +--
+ Game/Levels/L22Levels/L03.lean                    |  62 ++---
+ Game/Levels/L22Pset/L01.lean                      |  12 +-
+ Game/Levels/L22Pset/L02.lean                      |  24 +-
+ Game/Levels/L22Pset/L03.lean                      |  24 +-
+ Game/Levels/L22Pset/L04.lean                      |  10 +-
+ Game/Levels/L23Levels/L01.lean                    |  58 ++---
+ Game/Levels/L23Levels/L02.lean                    |  58 ++---
+ Game/Levels/L23Levels/L03.lean                    |  96 ++++----
+ Game/Levels/L24Levels/L01.lean                    |  76 +++---
+ Game/Levels/L24Levels/L02.lean                    | 158 ++++++------
+ Game/Levels/L24Levels/L03.lean                    | 278 +++++++++++-----------
+ Game/Levels/L24Levels/L04.lean                    |  60 ++---
+ Game/Levels/L24Pset/L01.lean                      |  20 +-
+ Game/Levels/L24Pset/L02.lean                      |  36 +--
+ Game/Levels/L25Levels/L01.lean                    |  82 +++----
+ Game/Levels/L25Levels/L02.lean                    | 180 +++++++-------
+ Game/Levels/L3Pset/L3Pset2.lean                   |  38 +--
+ Game/Levels/L3Pset/L3Pset3.lean                   |  46 ++--
+ Game/Levels/L3Pset/L3Pset4.lean                   |  56 ++---
+ Game/Levels/L4Levels/L01_NonConverge.lean         |   6 +
+ Game/Levels/L6Levels/L01_SplitAnds.lean           |   6 +-
+ Game/Levels/L6Levels/L02_LeftRight.lean           |   4 +-
+ Game/Levels/L6Levels/L03_DotNotation.lean         |   2 +-
+ Game/Levels/L6Levels/L04_Cases'.lean              |  10 +-
+ Game/Levels/L6Levels/L05_AbsLt.lean               |  16 +-
+ Game/Levels/L6Levels/L06_Squeeze.lean             |  38 +--
+ Game/Levels/L6Pset/L6Pset1.lean                   |   8 +-
+ Game/Levels/L6Pset/L6Pset2.lean                   |   2 +-
+ Game/Levels/L6Pset/L6Pset3.lean                   |  16 +-
+ Game/Levels/L6Pset/L6Pset4.lean                   |  28 +--
+ Game/Levels/L6Pset/L6Pset5.lean                   |   6 +-
+ Game/Levels/L7Levels/L00_Uniqueness.lean          |  36 +--
+ Game/Levels/L7Levels/L01_Eventually.lean          |  26 +-
+ Game/Levels/L7Levels/L02_SeqOfAbs.lean            |  20 +-
+ Game/Levels/L7Levels/L03_SeqInvLim.lean           |  52 ++--
+ Game/Levels/L7Levels/L04_ByCases.lean             |  12 +-
+ Game/Levels/L7Pset/L7Pset1.lean                   |  18 +-
+ Game/Levels/L7Pset/L7Pset2.lean                   |  36 +--
+ Game/Levels/L7Pset/L7Pset3.lean                   |  92 +++----
+ Game/Levels/L8Levels/L03_Induction'.lean          |  20 +-
+ Game/Levels/L8Pset/L8Pset1.lean                   |  16 +-
+ Game/Levels/L8Pset/L8Pset2.lean                   |  20 +-
+ Game/Levels/L8Pset/L8Pset3.lean                   |  24 +-
+ Game/Levels/L8Pset/L8Pset4.lean                   |  12 +-
+ Game/Levels/L9Levels/L04_FiniteSums.lean          |  30 +--
+ Game/Levels/L9Levels/L05_BddOfConv.lean           |  28 +--
+ Game/Levels/L9Pset/L9Pset1.lean                   |  32 +--
+ Game/Levels/L9Pset/L9Pset2.lean                   |  14 +-
+ Game/Levels/L9Pset/L9Pset3.lean                   |  14 +-
+ Game/Metadata.lean                                |  11 +-
+ 116 files changed, 2130 insertions(+), 2097 deletions(-)
  create mode 100644 Game/CustomTactic/PushNeg.lean
 
 diff --git a/Game/CustomTactic/Linarith.lean b/Game/CustomTactic/Linarith.lean
@@ -5733,7 +5739,7 @@ index 90b05bd..10daa16 100644
  
  Conclusion ""
 diff --git a/Game/Metadata.lean b/Game/Metadata.lean
-index 4daee70..27556ad 100644
+index 4daee70..b3499b8 100644
 --- a/Game/Metadata.lean
 +++ b/Game/Metadata.lean
 @@ -2,12 +2,19 @@ import GameServer
@@ -5742,7 +5748,8 @@ index 4daee70..27556ad 100644
  import Game.CustomTactic.Linarith -- modified `linarith` tactic
 +import Game.CustomTactic.PushNeg -- wasm64 port: `push_neg` as `push Not`, without Mathlib's deprecation warning
  
- import Mathlib.Data.Real.Basic
+-import Mathlib.Data.Real.Basic
++import Mathlib.Basic.Real.Basic  -- wasm64 port: Mathlib v4.34.0 keeps Mathlib.Data.Real.Basic only as a deprecated shim for this module
  import Mathlib.Tactic.Ring
  import Mathlib.Tactic.FieldSimp
  import Mathlib.Analysis.RCLike.Basic
@@ -5758,5 +5765,5 @@ index 4daee70..27556ad 100644
  
  /-! Use this file to add things that should be available in all levels.
 -- 
-2.50.1 (Apple Git-155)
+2.50.1
 

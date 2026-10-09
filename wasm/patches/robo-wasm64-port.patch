@@ -1,19 +1,30 @@
-From 4d62ff25660513c928563e8e1ed004bc6e4f98e2 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: wasm64 port <wasm64@localhost>
-Date: Fri, 11 Sep 2026 11:28:18 -0400
-Subject: [PATCH] wasm64 port: drop the Batteries umbrella import
+Date: Tue, 06 Oct 2026 13:49:39 -0400
+Subject: [PATCH] wasm64 port: drop the Batteries umbrella import; Mathlib v4.34.0 names
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 
-The wasm64 build's essential Mathlib pack has no `Batteries.olean` umbrella
-(75 Batteries modules are present and arrive through `Mathlib.Tactic.Common`,
-which Game/Metadata/FromMathlib.lean imports). Everything else Robo needs from
-outside the pack (Mathlib.Tactic.{Have,Cases,Generalize},
-Mathlib.Algebra.Order.Ring.Star, Mathlib.Data.{Int,Rat}.Star) is provided by
-wasm/compat under its real module name, so no other source change is needed.
+- Game/Metadata.lean: drop `import Batteries`. The release's Mathlib packs
+  have no `Batteries.olean` umbrella; the Batteries modules Robo uses arrive
+  through `Mathlib.Tactic.Common`, which Game/Metadata/FromMathlib.lean
+  imports.
+- Game/Metadata/FromMathlib.lean: `import Mathlib.Data.Real.Basic` ->
+  `import Mathlib.Basic.Real.Basic` (Mathlib v4.34.0 keeps the old name only
+  as a deprecated_module shim for this module, which would warn).
+
+Everything else Robo needs beyond the essential pack
+(Mathlib.Tactic.{Have,Cases,Generalize}, Mathlib.Algebra.Order.Ring.Star,
+Mathlib.Data.{Int,Rat}.Star) is in the toolchain release's
+mathlib-game-extra pack under its real module name.
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- Game/Metadata.lean | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
+ Game/Metadata.lean             | 3 ++-
+ Game/Metadata/FromMathlib.lean | 2 +-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/Game/Metadata.lean b/Game/Metadata.lean
 index 22fd996..28a7568 100644
@@ -26,6 +37,17 @@ index 22fd996..28a7568 100644
  import GameServer
  import Game.Doc
  
+diff --git a/Game/Metadata/FromMathlib.lean b/Game/Metadata/FromMathlib.lean
+index 49dc228..91d428f 100644
+--- a/Game/Metadata/FromMathlib.lean
++++ b/Game/Metadata/FromMathlib.lean
+@@ -33,5 +33,5 @@ import Mathlib.Data.Int.Star
+ --import Mathlib.Data.Int.Star
+ import Mathlib.Data.Nat.Prime.Defs
+ import Mathlib.Data.Rat.Star
+-import Mathlib.Data.Real.Basic
++import Mathlib.Basic.Real.Basic  -- wasm64 port: Mathlib v4.34.0 keeps Mathlib.Data.Real.Basic only as a deprecated shim for this module
+ import Mathlib.LinearAlgebra.Matrix.Trace
 -- 
-2.50.1 (Apple Git-155)
+2.50.1
 

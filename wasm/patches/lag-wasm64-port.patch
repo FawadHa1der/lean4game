@@ -1,8 +1,7 @@
-From ddb4b8f9cab502022d0b7300f9d70da00629d7be Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: wasm64 port <wasm64@localhost>
-Date: Fri, 11 Sep 2026 14:36:08 -0400
-Subject: [PATCH] Port to the wasm64 lean4game build (Lean 4.33.0-pre, Mathlib
- de3a9cf)
+Date: Tue, 06 Oct 2026 13:49:39 -0400
+Subject: [PATCH] Port to the wasm64 lean4game build (Lean 4.34.0, Mathlib v4.34.0)
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -13,6 +12,10 @@ Import layer (no level or world removed, nothing a player types changed):
   and Data.Real.{Cardinality,Sqrt} -> Analysis.Real.* moves; import
   Mathlib.LinearAlgebra.Basis.VectorSpace so the root `VectorSpace` namespace that
   every level's `open VectorSpace` relies on stays in the closure.
+- Game/Data.lean, InnerProductWorld/LemmasAndDefs.lean: `Mathlib.Data.Real.Basic`
+  -> `Mathlib.Basic.Real.Basic` and `Mathlib.Data.Complex.Basic` ->
+  `Mathlib.Basic.Complex.Basic` (Mathlib v4.34.0 keeps the old names only as
+  deprecated_module shims for these modules, which would warn).
 - InnerProductWorld/LemmasAndDefs.lean: drop `Mathlib.Analysis.Complex.AbsMax`
   (245-module closure outside the pack; `Complex.abs` only appears in comments) and
   use Mathlib.Analysis.Real.Sqrt directly (Data.Real.Sqrt is a deprecated shim).
@@ -37,17 +40,18 @@ Proof drift (`field_simp` rewrite, unused simp args):
   two unused simp arguments dropped in LemmasAndDefs helper proofs.
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- Game.lean                                     |  5 +-
- Game/Data.lean                                | 79 ++++++++++++-------
- .../InnerProductWorld/LemmasAndDefs.lean      | 10 ++-
- Game/Levels/InnerProductWorld/Level03.lean    |  4 +
- Game/Levels/InnerProductWorld/Level06.lean    |  4 +
- Game/Levels/InnerProductWorld/Level07.lean    |  7 +-
- .../LinearIndependenceSpanWorld/Level08.lean  |  4 +
- Game/Levels/VectorSpaceWorld.lean             |  5 +-
- Game/Levels/VectorSpaceWorld/Level01.lean     |  4 +-
- 9 files changed, 83 insertions(+), 39 deletions(-)
+ Game.lean                                          |  5 +-
+ Game/Data.lean                                     | 81 ++++++++++++++--------
+ Game/Levels/InnerProductWorld/LemmasAndDefs.lean   | 14 ++--
+ Game/Levels/InnerProductWorld/Level03.lean         |  4 ++
+ Game/Levels/InnerProductWorld/Level06.lean         |  4 ++
+ Game/Levels/InnerProductWorld/Level07.lean         |  7 +-
+ .../LinearIndependenceSpanWorld/Level08.lean       |  4 ++
+ Game/Levels/VectorSpaceWorld.lean                  |  5 +-
+ Game/Levels/VectorSpaceWorld/Level01.lean          |  4 +-
+ 9 files changed, 86 insertions(+), 42 deletions(-)
 
 diff --git a/Game.lean b/Game.lean
 index e9b2300..b41c7fe 100644
@@ -72,7 +76,7 @@ index e9b2300..b41c7fe 100644
  
  end LinearAlgebraGame
 diff --git a/Game/Data.lean b/Game/Data.lean
-index bb24734..d6f1f23 100644
+index bb24734..efba194 100644
 --- a/Game/Data.lean
 +++ b/Game/Data.lean
 @@ -70,7 +70,8 @@ import Mathlib.Data.FinEnum-/
@@ -181,10 +185,11 @@ index bb24734..d6f1f23 100644
  import Mathlib.Data.Rbtree.Main
  import Mathlib.Data.Rbtree.MinMax-/
 -import Mathlib.Data.Real.Archimedean
+-import Mathlib.Data.Real.Basic
+-import Mathlib.Data.Real.Cardinality
 +-- wasm64 port: not in the essential Mathlib pack (unused by any level)
 +-- import Mathlib.Data.Real.Archimedean
- import Mathlib.Data.Real.Basic
--import Mathlib.Data.Real.Cardinality
++import Mathlib.Basic.Real.Basic  -- wasm64 port: Mathlib v4.34.0 keeps Mathlib.Data.Real.Basic only as a deprecated shim for this module
 +import Mathlib.Analysis.Real.Cardinality  -- wasm64 port: was Mathlib.Data.Real.Cardinality
  /-import Mathlib.Data.Real.ConjExponents
  import Mathlib.Data.Real.ENatENNReal
@@ -202,14 +207,18 @@ index bb24734..d6f1f23 100644
  import Mathlib.Data.SProd
  import Mathlib.Data.Semiquot
 diff --git a/Game/Levels/InnerProductWorld/LemmasAndDefs.lean b/Game/Levels/InnerProductWorld/LemmasAndDefs.lean
-index 3841260..c430600 100644
+index 3841260..5dc57f5 100644
 --- a/Game/Levels/InnerProductWorld/LemmasAndDefs.lean
 +++ b/Game/Levels/InnerProductWorld/LemmasAndDefs.lean
-@@ -4,10 +4,11 @@ import Game.Levels.VectorSpaceWorld
+@@ -2,12 +2,13 @@ import Game.Levels.LinearIndependenceSpanWorld
+ import Game.Levels.VectorSpaceWorld
+ 
  -- Minimal Mathlib imports for Lean 4.21.0 - avoiding conflicts with custom definitions
- import Mathlib.Data.Complex.Basic
- import Mathlib.Data.Real.Basic
+-import Mathlib.Data.Complex.Basic
+-import Mathlib.Data.Real.Basic
 -import Mathlib.Analysis.Complex.AbsMax  -- For Complex absolute value
++import Mathlib.Basic.Complex.Basic  -- wasm64 port: Mathlib v4.34.0 keeps Mathlib.Data.Complex.Basic only as a deprecated shim for this module
++import Mathlib.Basic.Real.Basic  -- wasm64 port: Mathlib v4.34.0 keeps Mathlib.Data.Real.Basic only as a deprecated shim for this module
 +-- wasm64 port: `Mathlib.Analysis.Complex.AbsMax` dropped (not in the essential pack; `Complex.abs`
 +-- is only mentioned in comments; the norm lemmas used come from Mathlib.Analysis.Complex.Basic)
  import Mathlib.Analysis.Normed.Group.Basic
@@ -354,5 +363,5 @@ index 4d9836a..ac2b7c2 100644
  TheoremTab "Groups"
  
 -- 
-2.50.1 (Apple Git-155)
+2.50.1
 
