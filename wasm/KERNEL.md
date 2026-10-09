@@ -260,7 +260,50 @@ library API, §10 lean4game's migration list) and `embedding/closure.json`
   workers need a newer kernel than ours (patch ids ordered by the release
   tools' `comparePatchIds`: `0035b` > `0035`).
 
-Current pin: qed64 **`bf9d947`** (`bf9d94788100235fe9c64f653a11d98a915d2a16`,
+Current pin: qed64 **`385a1ac`** (`385a1ac5f3bc33cd607c1cc2d03f4d8979ef4684`,
+QED64 `main`, committed 2026-10-08, pinned here 2026-10-09;
+`EMBED_API_REVISION` `1.0.0-pre.7`, the closure's kernel floor still 0032,
+the game's release runtime `wasm64-57ae00dc5f6ce958` patch 0036). What it
+brought, and what this side changed for it:
+
+- **A7, the library in `lib/`**: `qed64/embed` is `lib/index.ts` (the old
+  `frontend/src/embed/*` paths are one-cycle `export *` shims).
+  `client/tsconfig.json`'s `paths` names it, `stage-workers.sh` checks that
+  against `closure.json` `entry` (exit 2 otherwise), and the one test that
+  imports a library file by path (`game-translation-guard.test.ts`) reads
+  `lib/edit-coalescer.ts`.
+- **A3c**: the closure gains a fifth worker, `memory64-probe.js`
+  (`lean.worker.js` imports it), staged and precached like the rest with no
+  script change.
+- **runtime/v1 check**: a runtime manifest whose `buildId` is not
+  `wasm64-` + its `lean.wasm` sha256[:16] is refused by the page (the unit
+  fixtures now carry valid ones). **#65**: a pinned runtime-manifest fetch
+  that rejects (a refusing proxy, a dead link while `navigator.onLine` is
+  true) is a miss, and the mutable manifest decides.
+- **A2b**: a stale page's death is `FailureKind` `stale` (this page keys on
+  its `WORKER_DEP_MISMATCH` code, unchanged). **#63 follow-up**: the
+  prefetch request carries the index's `transfer` size.
+- **#64, the per-build index copies**: `fetchSnapshotIndexOnce`
+  (`games-api.ts`) reads the snapshot index with `loadSnapshotIndex(undefined,
+  { pairedBuildId })`, the throwing loader, so SEC1's off-site refusal
+  stays. `pairedBuildId` is the runtime the page boots: the `?runtime=`
+  override when set (it wins over the pin in qed64's resolver, and the
+  pairing check compares with the resolved manifest), else the shell's pin
+  `__QED64_BUILD_ID__`. A `/snapshots/index.json` naming another runtime is
+  replaced by `/snapshots/index.<buildId>.json` when that copy is paired with
+  it; `?snapshots=` reads only its own index. The service worker's install
+  precaches the pin's two copies beside the pinned runtime manifest
+  (`scripts/build-sw.mjs`), so an offline revisit inside a pairing window
+  has them. The site already published the copies from its merged index
+  (`scripts/stage-snapshots.py`, the preflight, the two-step upload).
+- **`qed64/edge`**: `infra/worker.js` is the library's `createWorker`
+  (`siteWorker(record)`), with the site's CSP as `decorate` and the
+  library's own `isImmutable` (imported) plus vite's hashed bundles
+  (wasm/DEPLOY.md lists where it is stricter than the pre-library worker).
+- **#66** (the from-source pipeline): `snapshot-probe` sets the runtime's
+  environment at `preRun`, where `getenv` reads it.
+
+Pin `bf9d947` (`bf9d94788100235fe9c64f653a11d98a915d2a16`,
 2026-10-06, branch `feature/embedding-api`; `EMBED_API_REVISION` still `1.0.0-pre.2`,
 the closure's kernel floor still 0032 — the game's release runtime
 `wasm64-57ae00dc5f6ce958` is patch 0036). One commit over `5c327c2`: a

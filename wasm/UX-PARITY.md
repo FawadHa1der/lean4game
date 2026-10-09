@@ -2082,6 +2082,64 @@ beside them (`qv-SUMMARY-slow.txt` for the slow-link set).
   twice** (2 × 155.5 MB; tab 1 ready at 58.6 s, tab 2 at 110.7 s; 4.33:
   57.2 s, 108.4 s). This is QED64's `openRawSnapshot`, as above.
 
+
+### QED64 `385a1ac` (2026-10-09)
+
+The QED64 pin moves from `bf9d947` to `385a1ac` (`wasm/KERNEL.md` lists
+what it brings), and `infra/worker.js` becomes `qed64/edge`
+(`wasm/DEPLOY.md`). A player meets one new behaviour, HARDENING #64:
+when `/snapshots/index.json` names another runtime (an upload of the next
+pairing ran ahead of this shell's deploy), the shell reads its own build's
+copy `/snapshots/index.<buildId>.json`, and games still boot and prove.
+Without a copy, every game refuses, as before. The review of the bump
+found two client gaps, both fixed before this run. First, `?runtime=X`
+paired the index with the shell's pin, not with X. Second, the copy was
+not precached, so after a first visit inside a pairing window an offline
+revisit refused every game. The service worker now precaches the
+pin's two index copies, which makes 237 shell files instead of 235.
+
+Bundle `index-B2CPBv8a.js`, sw `2313ea9a138d`, `scripts/serve-dist.mjs`
+on :3008. "385a1ac" is the verifier's run before the fixes
+(`index-D3K6RuED.js`, sw `3bf04b0b2161`, evidence `lv-shots/qv-385`).
+"Fixed" is the re-run after them (`lv-shots/qv-385b`). "4.34 pinfix" is
+the same 4.34 build on QED64 `bf9d947` with the pinned-manifest fix
+(above).
+
+| Check | 385a1ac | Fixed | 4.34 pinfix |
+|---|---|---|---|
+| Ten-game smoke (`--all`, fresh profile) | 10/10, boot 6.3–11.3 s | 10/10, boot 6.3–10.2 s, the same bytes per game | 10/10, 6.2–10.3 s |
+| Smoke console | 0 CSP hits in 2,312 lines; 2–3 textless errors per game; shell 235/235 ×10 | 0 CSP hits in 2,315 lines; 2–3 textless errors per game (`index-B2CPBv8a.js:1897`); shell 237/237 ×10; 0 "not cached" | 0 CSP hits; 1–3 textless errors |
+| Editor-mode proof, NNG4 Multiplication/1 | boot 7.0 s; error on the wrong line at 9.5 s; proof 3.6 s | 7.1 s; 9.5 s; 3.6 s | 6.7 s; 9.0 s; 3.5 s |
+| `decide` line (Fin 40), editor mode | error stays on its line, 0 deaths, one session, settles 0.61 s | the same, 0.61 s | 0.51 s |
+| D6: NNG4 prepared only, offline at never-visited levels | 7/7: prepare 1.3 s / 316.4 MB; A boot 6.0 s, proof 4.1 s; B goal 1.6 s; doc 0.1 s; landing Ready 3.2 s | 7/7: prepare 1.6 s / 316.4 MB; A 6.0 s, 3.9 s; B 1.6 s; doc 0.1 s; landing 3.2 s | 7/7: 2.8 s; 5.9 s, 3.8 s; 1.6 s; 0 s; 3.2 s |
+| Landing fresh / reload / offline | 0.4 / 0.3 / 0.4 s, 9/9 Download; fill 3.5 s | the same | the same |
+| D7 RAG, phase A (online) | boot 10.0 s, 492.8 MB; 354/354; shell 235/235 | 8.4 s, 492.8 MB; 354/354; shell 237/237 | 8.3 s, 492.8 MB, 354/354 |
+| D7, proxy refusing (`onLine` true) | boot 6.6 s, proof 8.2 s; 14 failing SW GETs (7 distinct); "all 354 files are held" | 6.5 s, 7.6 s; 14 (7); all 354 held | 6.1 s, 7.9 s; 14 (7) |
+| D7, Chromium offline | boot 6.4 s, proof 7.7 s; 0 of 143 failed | 6.1 s, 7.7 s; 0 of 143 | 6.7 s, 8.2 s; 0 of 143 |
+| SEC1 exploit set | 68/69 (only the known P2); 0 attacker requests from the app | 68/69 (P2); 0 attacker requests; `?snapshots=snapshots` ready in 6 s, proof, 0 CSP violations | 68/69 |
+| #64: index.json names `wasm64-d77d34b97592d014`, copy passes | 9 tiles "Download ≈155 MB"; NNG4 boots from the copy in 7.1 s; proof 1.4 s | 9 × Download; boot 6.6 s (155.5 MB); proof 1.4 s; shell 237/237 | refused (before #64) |
+| #64: the copy answers 404 | 9 tiles "Not available on this build"; refused in 0.6 s with Reload; 0 snapshot requests | the same, 0.6 s; shell 236/237 "complete, 1 failed" (the 404, tolerated) | — |
+| #64: the copy is mispaired too | refused in 0.6 s, 0 snapshot requests | the same, 0.6 s | — |
+| #64: offline revisit after ONE online visit | FAIL: refused in 0.9 s (the copy was in no cache) | PASS: offline Multiplication/2 boots in 5.5 s, proof 5.9 s; the copy is in `l4g-shell` after the first visit | refused |
+| #64: offline revisit after two online visits | PASS: 6.0 s, proof 5.3 s | not re-run (the one-visit case covers it) | — |
+
+- **Boot times.** The verifier's run read about 1 s slower on six smoke
+  games and on D7 phase A (10.0 s against 8.3 s). The wire bytes are
+  identical, the host's load average was 5–6, and the re-run's figures
+  are back within the earlier range (D7 phase A 8.4 s). We read it as host
+  noise; nothing in the bump touches the boot path.
+- **One more failed request per offline boot.** It comes from the fifth
+  worker, `memory64-probe.js`: offline, its revalidation fails and the
+  cached copy is used. D6 counted page 5 / service worker 30 failed
+  requests against 4 / 27 before. Nothing breaks.
+- **`?runtime=X`** is a dev override, and no second runtime is served
+  here, so it was checked only by `boot-params.test.ts`. That test runs
+  three cases: an index already on X is used as served; X's own copy
+  replaces an index on the pin; with no copy for X, the index is kept and
+  X's tile reads unavailable.
+- Not re-run: deep play, editor crash bursts, pace, the reload storm,
+  Cypress.
+
 ## Open
 
 - **A deep `decide` kills the checker with a JS stack overflow (runtime or

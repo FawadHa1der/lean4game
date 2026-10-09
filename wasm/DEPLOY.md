@@ -6,6 +6,26 @@ Same shape as the QED64 editor (`qed64/docs/DEPLOY.md`): the app shell is a
 (`infra/worker.js`; `client/public/_headers` is the defensive copy). Free
 tier: R2 10 GB with zero egress, Workers 100 k requests/day.
 
+`infra/worker.js` is QED64's edge-worker library, `qed64/edge` from the
+pinned `qed64` package (QED64 `docs/DEPLOY.md`, "Using qed64/edge in your
+own Worker", since the QED64 `385a1ac` pin): `createWorker({ r2Prefix:
+"lean4game/", release, isImmutable, decorate })` with the hardened defaults
+on (`siteWorker(record)` builds it; the default export is
+`siteWorker()` for `wasm/lean4-wasm64-release.json`). The site adds the
+SEC1 `Content-Security-Policy` (`decorate`) and vite's hashed `/assets/`
+bundles as immutable (`isImmutable` is the library's own `isImmutable`,
+imported, plus that one rule); everything below (routing, caching, ranges,
+HEAD) is the library's. Wrangler bundles it from the workspace's hoisted
+`node_modules/qed64` (`infra/worker.test.mjs` checks it is the client's
+install). Next to the pre-library worker it is stricter or adds in four
+places: GET and HEAD only on artifacts (anything else 405 with `Allow: GET,
+HEAD`, no-store); a binding that throws or is missing answers 500
+"internal error" with the isolation headers, the CSP and no-store instead
+of Cloudflare's error page; a full artifact GET states its
+`Content-Length`, and an asset HEAD gets the length a GET would (one extra
+GET to the assets binding); the release record is checked by the
+library's rules (a re-cut `-r<N>` id is accepted).
+
 | Piece | Where | Size |
 |---|---|---|
 | App shell (`client/dist` minus artifact dirs) | Workers static assets, `wasm/out/deploy` | ~40 MB, 450 files, largest 22.9 MiB (cap 25 MiB) |
@@ -77,8 +97,9 @@ token serve both.
    `snapshots/profiles-index.<its id>.json` inside R2 (`rclone copyto`
    remote to remote; an existing copy is never overwritten). The snapshot
    copy keeps a paired snapshot index for shells still paired with the
-   outgoing runtime (once they read copies); the profile copy is for a
-   rollback, not for those shells (see "Per-runtime index copies"). Then
+   outgoing runtime that read copies (every shell from the QED64 `385a1ac`
+   pin on); the profile copy is for a rollback, not for those shells (see
+   "Per-runtime index copies"). Then
    it uploads `snapshots/index.json`, then `profiles/index.json`. Every R2
    read fails closed: a failure that is not rclone's "not found" refuses
    before the first write. Re-runs write nothing.
@@ -99,19 +120,27 @@ With the two upload steps:
 - the live shell keeps working through step 1 and up to the deploy (the
   live one on `wasm64-port` predates #64 and reads only the mutable
   indexes);
-- the remaining gap is the seconds between the deploy and step 3: a game
-  boot on the new shell in that window reads the outgoing index and fails
-  the same way (a reload after step 3 boots). Run step 3 the moment the
-  deploy is live; with a CI deploy (a push to `wasm64-port`), the moment
-  the workflow's deploy step has finished. For a RUNTIME change step 3
-  refuses (exit 3, nothing written) until the new worker answers, so a run
-  that comes too early is safe and is simply rerun. For a same-runtime
-  change it cannot tell (below);
-- a tab still open on the outgoing shell after the deploy talks to the new
-  worker (its `/runtime/*` maps to the new release) and, after step 3,
-  reads the new indexes; it needs a reload. Once the client reads the
-  copies (below), such a tab at least keeps a paired snapshot index through
-  step 3.
+- between the deploy and step 3 the new shell reads the outgoing
+  `snapshots/index.json`, finds it names another runtime, and reads its
+  own copy `snapshots/index.<buildId>.json`, which step 1 uploaded (the
+  client reads copies since the QED64 `385a1ac` pin, "Per-runtime index
+  copies" below). Game boots work through that window; a shell from before
+  that pin read the outgoing index there and failed "not published for
+  this build" until step 3. Still run step 3 the moment the deploy is
+  live (with a CI deploy, a push to `wasm64-port`, the moment the
+  workflow's deploy step has finished): until it runs the mutable indexes
+  are the outgoing runtime's, so every new visit pays the copy request,
+  and a shell without the copy (one whose step 1 did not finish) refuses.
+  For a RUNTIME change step 3 refuses (exit 3, nothing written) until the
+  new worker answers, so a run that comes too early is safe and is simply
+  rerun. For a same-runtime change it cannot tell (below);
+- a tab still open on the outgoing shell after a runtime deploy talks to
+  the new worker (its `/runtime/*` maps to the new release, which has no
+  manifest of the outgoing runtime, so the tab resolves the new runtime)
+  and needs a reload: its game boot refuses "not published for this
+  build" with a Reload button. A shell that reads copies keeps a snapshot
+  index paired with its own runtime through step 3 (step 3 pins it), but
+  the runtime it would boot is the new worker's.
 
 Shell-only changes (this repo's client code) need step 2 alone. A snapshot
 rebake or a new game for the SAME runtime takes the same three steps: step 1
@@ -174,28 +203,37 @@ long as the multi-GB upload takes, not seconds.
   (`/\/(?:profiles-)?index(\.[^/]*)?\.json$/` is never immutable): the
   16-hex build id in the name would otherwise make them `immutable` for a
   year, and a rebake for the same runtime rewrites them. A 404 is `no-store`,
-  as every error. The service worker fetches them network-first, like the
-  indexes. The live pre-#64 worker on `wasm64-port` would still serve them
-  `immutable` (and its 404s too): no deployed shell asks for them, so do not
-  open their URLs on the live site before the deploy.
+  as every error (the rule is `qed64/edge`'s own `isImmutable`, imported).
+  The service worker fetches them network-first, like the indexes, and its
+  install precaches this shell's two copies with the pinned runtime manifest
+  (`scripts/build-sw.mjs`; a host without them answers 404, which the
+  install tolerates): learned on use, a first visit inside a pairing window
+  never stored its copy (the page read it before the worker controlled the
+  page), and an offline revisit then refused every game. The live pre-#64
+  worker on `wasm64-port` would still serve them `immutable` (and its 404s
+  too): no deployed shell asks for them, so do not open their URLs on the
+  live site before the deploy.
 - The reader (QED64's `loadSnapshotIndex(url, { pairedBuildId })`): read
   `index.json` first; only when an entry names a runtime other than the
   paired build id, read `index.<pairedBuildId>.json` with the same HTML,
   schema and origin checks and use it when every one of its entries pairs
   with that id. A 404, HTML, a network error, an empty, mixed or mispaired
   copy keeps `index.json`, and the pairing check refuses as before; a paired
-  index costs no extra request. Active once this client passes
-  `pairedBuildId` in `fetchSnapshotIndexOnce` (`client/src/wasm/games-api.ts`)
-  at the next QED64 pin bump. Until then the copies are published but read
-  by no shell, and the gap above is the seconds between the deploy and step
-  3; from then on, the index side of that gap closes for shells that read
-  them: the new shell reads its copy (step 1) until step 3, and an
-  outgoing shell's open tabs read their snapshot copy (step 3's pin; their
-  `/runtime/*` still follows the new worker's release, so they may still
-  need a reload). The game boot asks for no profile index
-  (`installArtifacts` with `profiles: "none"`); the profile copies are
-  published for the shared format (QED64's `installArtifacts` reads them)
-  and, for the outgoing runtime, for a rollback (see "In R2" above).
+  index costs no extra request. This client reads it so since the QED64
+  `385a1ac` pin: `fetchSnapshotIndexOnce` (`client/src/wasm/games-api.ts`)
+  passes as `pairedBuildId` the runtime the page boots, the `?runtime=`
+  override when one is set, else the shell's pin (`__QED64_BUILD_ID__`);
+  `?snapshots=` reads only its own index. So the index side of the gap
+  above is closed for shells from that pin on: the new shell reads its copy
+  (step 1) until step 3, and an outgoing shell's open tabs read their
+  snapshot copy (step 3's pin; their `/runtime/*` still follows the new
+  worker's release, so after a runtime deploy they still need a reload).
+  The game boot installs no profile (`installArtifacts` with `profiles:
+  "none"`): it reads `/profiles/index.json` and, when that names another
+  runtime, `installArtifacts` reads the profile copy, but neither is
+  used. The profile copies are published for the shared format (QED64's
+  `installArtifacts` reads them) and, for the outgoing runtime, for a
+  rollback (see "In R2" above).
 
 ## Adding a game
 
@@ -344,7 +382,8 @@ the same reason: vite's preview gzip broke the digests).
 ## Range requests
 
 `infra/worker.js` honours single-range GETs on the R2-served paths
-(`/runtime/`, `/profiles/`, `/snapshots/`): every artifact response carries
+(`/runtime/`, `/profiles/`, `/snapshots/`; `qed64/edge`'s `ranges`
+default, the same rules as this site's pre-library worker): every artifact response carries
 `Accept-Ranges: bytes`; a `Range: bytes=…` request (`a-b`, `a-`, `-n`) is
 handed to R2 as `get(key, { range: request.headers })` and answered `206`
 with `Content-Range` and the partial `Content-Length`; `If-Range` is

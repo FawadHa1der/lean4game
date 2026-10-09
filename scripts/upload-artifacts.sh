@@ -41,10 +41,12 @@
 #       uploads snapshots/index.json, then profiles/index.json.
 #
 # The live pre-#64 shell (it reads only the mutable indexes) keeps working
-# until --post-deploy; the new shell reads the outgoing indexes between the
-# deploy and --post-deploy (seconds) — until the client passes pairedBuildId
-# to qed64's loadSnapshotIndex (the next QED64 pin bump) and reads its copy
-# instead. A snapshot-only change (same runtime) takes the same two steps,
+# until --post-deploy. Between the deploy and --post-deploy the new shell
+# finds the outgoing snapshots/index.json mispaired and reads its own copy,
+# snapshots/index.<buildId>.json, which the first step uploaded (the client
+# passes pairedBuildId to qed64's loadSnapshotIndex since the QED64 385a1ac
+# pin; wasm/DEPLOY.md), so its game boots work through that window; run
+# --post-deploy right after the deploy all the same. A snapshot-only change (same runtime) takes the same two steps,
 # but --post-deploy's live check passes at once: it compares only the
 # runtime build id, so it cannot tell an old shell from a new one of the
 # same runtime. When such a change also ships a shell change (a new game
