@@ -2,7 +2,19 @@
 // to the same runtime build — a partial or mixed tree would strand the site.
 // Used by scripts/upload-artifacts.sh; run alone to check a staged tree:
 //   node scripts/preflight-artifacts.mjs [client/public]
-import { existsSync, readFileSync } from "node:fs";
+// The per-runtime index copies (QED64 HARDENING #64) are part of the tree:
+// snapshots/index.<buildId>.json and snapshots/profiles-index.<buildId>.json
+// for the runtime the manifest names, each byte-identical to its mutable
+// index (the upload publishes them before the deploy, the mutable indexes
+// after it), and no copy for another runtime (R2 keeps its own; a local one
+// names files that are gone). So is the pinned runtime manifest,
+// runtime/runtime-manifest.<buildId>.json, byte-identical to
+// runtime-manifest.json (the release ships both): the first file a QED64 boot
+// fetches and one the service worker precaches; R2 serves the release's, and
+// a local tree without it boots offline into "Failed to fetch" (serve-dist
+// answers the path with index.html). No pinned manifest for another runtime
+// either. scripts/stage-snapshots.py --copies writes all three.
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 const pub = process.argv[2] ?? "client/public";
 const read = (p) => JSON.parse(readFileSync(pub + p, "utf8"));
 let bad = false, files = 0;
@@ -24,5 +36,17 @@ for (const s of sn.snapshots ?? []) {
   need(s.url);
   if (s.runtime && s.runtime !== rt.buildId) { console.error(`snapshot ${s.url} paired to ${s.runtime}, manifest is ${rt.buildId}`); bad = true; }
 }
-if (bad) process.exit(3);
-console.log(`preflight ok: runtime ${rt.buildId}: ${chunks} chunks, ${parts} profile parts, ${(sn.snapshots ?? []).length} snapshots (${files} files)`);
+const COPIES = [[`/runtime/runtime-manifest.${rt.buildId}.json`, "/runtime/runtime-manifest.json"], [`/snapshots/index.${rt.buildId}.json`, "/snapshots/index.json"], [`/snapshots/profiles-index.${rt.buildId}.json`, "/profiles/index.json"]];
+for (const [copy, of] of COPIES) {
+  need(copy);
+  if (existsSync(pub + copy) && !readFileSync(pub + copy).equals(readFileSync(pub + of))) {
+    console.error(`STALE: ${pub + copy} is not byte-identical to ${pub + of} — python3 scripts/stage-snapshots.py --copies`); bad = true;
+  }
+}
+const STRAYS = [["/runtime", /^runtime-manifest\.(.+)\.json$/, "its release keeps its own"], ["/snapshots", /^(?:profiles-)?index\.(.+)\.json$/, "R2 keeps its own"]];
+for (const [dir, copyName, keeps] of STRAYS) for (const f of readdirSync(pub + dir)) {
+  const other = copyName.exec(f)?.[1];
+  if (other !== undefined && other !== rt.buildId) { console.error(`STRAY: ${pub}${dir}/${f} is a copy for ${other}, manifest is ${rt.buildId} — remove it (${keeps})`); bad = true; }
+}
+if (bad) { if (COPIES.some(([c]) => !existsSync(pub + c))) console.error("(the pinned runtime manifest and the per-runtime index copies: python3 scripts/stage-snapshots.py --copies)"); process.exit(3); }
+console.log(`preflight ok: runtime ${rt.buildId}: ${chunks} chunks, ${parts} profile parts, ${(sn.snapshots ?? []).length} snapshots, the pinned runtime manifest + ${COPIES.length - 1} per-runtime index copies (${files} files)`);

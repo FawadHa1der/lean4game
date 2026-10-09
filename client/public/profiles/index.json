@@ -1,15 +1,15 @@
 {
  "schema": "qed64.profile-index/v1",
  "runtime": {
-  "buildId": "wasm64-d77d34b97592d014",
-  "leanVersion": "4.33.0-pre"
+  "buildId": "wasm64-57ae00dc5f6ce958",
+  "leanVersion": "4.34.0"
  },
  "profiles": [
   {
    "id": "core",
    "manifest": "/profiles/lean-core.manifest.json",
-   "release": "lean-core-4.33.0-pre-local",
-   "modules": 629
+   "release": "lean-core-4.34.0-wasm64-36a96239e08fd2e0",
+   "modules": 649
   }
  ]
 }

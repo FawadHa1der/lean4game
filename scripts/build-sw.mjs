@@ -59,10 +59,13 @@ const files = [];
 })(dist);
 // The artifact manifests: the boot fetches them before the worker controls
 // the page on a first visit, so they must be precached, not learned on use.
-// The pinned manifest name comes from the shipped manifest's build id.
+// The pinned manifest name comes from the shipped manifest's build id. A
+// staged tree has the file (the bundle lane copies the release's,
+// scripts/stage-snapshots.py --copies writes it); a bare checkout (CI's
+// deploy build) does not — it is gitignored, and R2 serves the release's.
 const rt = JSON.parse(readFileSync(join(dist, "runtime/runtime-manifest.json"), "utf8"));
 for (const p of ["/runtime/runtime-manifest.json", `/runtime/runtime-manifest.${rt.buildId}.json`, "/snapshots/index.json", "/profiles/index.json", "/profiles/lean-core.manifest.json"]) {
-  let size = 0; try { size = statSync(join(dist, p)).size; } catch { /* the pinned copy exists only on the host */ }
+  let size = 0; try { size = statSync(join(dist, p)).size; } catch { /* the pinned copy, in a checkout that has none */ }
   files.push({ path: p, size });
 }
 files.sort((a, b) => a.path.localeCompare(b.path));
@@ -81,8 +84,8 @@ const critical = files.filter((f) =>
 for (const p of entry) if (!files.some((f) => f.path === p)) throw new Error(`build-sw: index.html references ${p}, which is not in the precache list`);
 if (!critical.some((f) => /^\/assets\/.*\.js$/.test(f.path))) throw new Error("build-sw: no entry script found in index.html");
 // The version hashes CONTENT (a same-size edit to an unhashed shell file
-// must still reach returning users); the R2-only pinned manifest, absent
-// on this host, contributes its name.
+// must still reach returning users); the pinned manifest, when this tree
+// has none, contributes its name.
 const h = createHash("sha256");
 for (const f of files) { h.update(f.path); try { h.update(readFileSync(join(dist, f.path))); } catch { h.update(""); } }
 const version = h.digest("hex").slice(0, 12);

@@ -1,31 +1,43 @@
 {
  "schema": "lean4game.artifact-bundle/v1",
- "tag": "artifacts-wasm64-d77d34b97592d014",
- "runtime": "wasm64-d77d34b97592d014",
- "snapshots": "knights=0894a607d8c019d1,lag=f84d616679d0ceb0,logic=72eeb282456209b3,nng4=db264c5f3eb7c69c,ntg=dfa69f626e1cf8e8,rag=a7a0c2f7f57b3ce2,reintro=eccae8a265ecef22,robo=5e905b3459712762,stg4=5dbab231c29a9c13,testgame=d5c4280126015f3a",
+ "tag": "artifacts-wasm64-57ae00dc5f6ce958",
+ "runtime": "wasm64-57ae00dc5f6ce958",
+ "snapshots": "knights=8ea2d33a8d34cfef,lag=b182a732c6ac90e2,logic=7e3d110a189e05e4,nng4=bc6dd28c66d74472,ntg=9388dabeb0256514,rag=e71a3a432322905a,reintro=bc6f2128cc1cc485,robo=4f71c4d1a5e28ec7,stg4=6a37164df3414c9c,testgame=8433a313ff78eb4e",
  "extract_into": "client/public",
  "tarballs": [
   {
    "class": "runtime",
    "file": "runtime.tar",
-   "bytes": 153668096,
-   "sha256": "d67af1bdf26211c31999eab192e4326b9975b94f86036ee2060b8f670e9eb0d6",
-   "files": 12
+   "bytes": 158883328,
+   "sha256": "100edcb69e037f55fb051c76e324a4ed91d0b91e76ff1919e664811033d0f5ea",
+   "files": 11
   },
   {
    "class": "profiles",
    "file": "profiles.tar",
-   "bytes": 120705024,
-   "sha256": "dd9dcaa1db8218114eb5af7bf70ad67ab68add140a971748ef4b171e55a1a457",
+   "bytes": 121501184,
+   "sha256": "79435170f05e7a03beaf2f2169adc6c86bc178e6463e8dc0212d590e3bd21f14",
    "files": 10
   },
   {
    "class": "snapshots",
    "file": "snapshots.tar",
-   "bytes": 2141870080,
-   "sha256": "431acdaae5fcdbcd3874f594b826fd09d82fc3a7717407770c072d8d355d4f75",
-   "files": 11
+   "bytes": 2500572160,
+   "sha256": "4755f924a7138ba40de14e8c665cf04bd6e2b56219938fb802e6f0b4e72969f7",
+   "files": 11,
+   "parts": [
+    {
+     "file": "snapshots.tar.part-000",
+     "bytes": 2000000000,
+     "sha256": "6800a1493e3682eabee3a6c7448f762176595384dcbf419176dbce5ac3337c1c"
+    },
+    {
+     "file": "snapshots.tar.part-001",
+     "bytes": 500572160,
+     "sha256": "dfbfa496535ab8dc0949149537479355b30e076984c86fb1f006bf7dc14684e4"
+    }
+   ]
   }
  ],
- "note": "Tarballs are plain tar of client/public/<class>/ (paths relative to client/public). Per-file digests live in the tracked manifests (runtime/runtime-manifest.json, snapshots/index.json, profiles/lean-core.manifest.json)."
+ "note": "Tarballs are plain tar of client/public/<class>/ (paths relative to client/public); a tarball with `parts` is published as those pieces (each under GitHub's 2 GiB asset limit), joined in order before its sha256 is checked. Per-file digests live in the tracked manifests (runtime/runtime-manifest.json, snapshots/index.json, profiles/lean-core.manifest.json)."
 }

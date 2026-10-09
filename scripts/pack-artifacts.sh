@@ -10,7 +10,12 @@
 #                    manifest + parts in <dir>, ~1 GB) as mathlib-pack.tar —
 #                    only needed for from-source builds (build-from-source.sh),
 #                    fetched with fetch-artifacts.sh --mathlib
-# Output: wasm/out/artifacts/<tag>/{runtime,profiles,snapshots}.tar + SHA256SUMS
+# Output: wasm/out/artifacts/<tag>/{runtime,profiles,snapshots}.tar + SHA256SUMS.
+# A tarball larger than PART_BYTES (default 2,000,000,000: a GitHub release
+# asset must stay under 2 GiB) is published as <class>.tar.part-NNN pieces
+# instead — BUNDLE.json keeps the whole tarball's bytes and sha256 and lists
+# each part's; fetch-artifacts.sh joins and verifies them. Ten games' 4.34
+# snapshots are ~2.5 GB.
 #
 # Classes (all under client/public/): runtime/ (Lean runtime chunks +
 # manifest), profiles/ (core library pack), snapshots/ (environment
@@ -19,6 +24,7 @@
 # plain (the members are already compressed) and built from a sorted file list.
 set -euo pipefail
 TAG="${1:?tag, e.g. artifacts-2026-09-02}"; shift
+PART_BYTES="${PART_BYTES:-2000000000}"
 MATHLIB=""
 while [ $# -gt 0 ]; do case "$1" in --mathlib) MATHLIB="$(cd "${2:?dir}" && pwd)"; shift 2 ;; *) echo "unknown option $1" >&2; exit 2 ;; esac; done
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -26,16 +32,27 @@ PUB="$ROOT/client/public"
 OUT="$ROOT/wasm/out/artifacts/$TAG"
 mkdir -p "$OUT" "$ROOT/wasm/artifacts"
 sha() { shasum -a 256 "$1" | cut -d' ' -f1; }
+size() { stat -f %z "$1" 2>/dev/null || stat -c %s "$1"; }
 entries=()
 for cls in runtime profiles snapshots; do
   [ -d "$PUB/$cls" ] || { echo "missing $PUB/$cls" >&2; exit 1; }
   tarball="$OUT/$cls.tar"
+  rm -f "$tarball" "$tarball".part-*
   ( cd "$PUB" && find "$cls" -type f | LC_ALL=C sort | tar -cf "$tarball" --no-recursion -T - )
-  bytes=$(stat -f %z "$tarball" 2>/dev/null || stat -c %s "$tarball")
+  bytes=$(size "$tarball")
   digest=$(sha "$tarball")
   files=$(cd "$PUB" && find "$cls" -type f | wc -l | tr -d ' ')
-  entries+=("{\"class\":\"$cls\",\"file\":\"$cls.tar\",\"bytes\":$bytes,\"sha256\":\"$digest\",\"files\":$files}")
-  echo "$cls.tar  $bytes B  sha256 $digest  ($files files)"
+  parts=""
+  if [ "$bytes" -gt "$PART_BYTES" ]; then
+    # Published as pieces (the whole tarball is not kept: the parts are it).
+    ( cd "$OUT" && split -a 3 -d -b "$PART_BYTES" "$cls.tar" "$cls.tar.part-" )
+    rm -f "$tarball"
+    for part in "$OUT/$cls.tar.part-"*; do
+      parts="${parts:+$parts,}{\"file\":\"$(basename "$part")\",\"bytes\":$(size "$part"),\"sha256\":\"$(sha "$part")\"}"
+    done
+  fi
+  entries+=("{\"class\":\"$cls\",\"file\":\"$cls.tar\",\"bytes\":$bytes,\"sha256\":\"$digest\",\"files\":$files${parts:+,\"parts\":[$parts]}}")
+  echo "$cls.tar  $bytes B  sha256 $digest  ($files files)${parts:+  as $(ls "$OUT/$cls.tar.part-"* | wc -l | tr -d ' ') parts of <= $PART_BYTES B}"
 done
 if [ -n "$MATHLIB" ]; then
   [ -f "$MATHLIB/mathlib-essential.manifest.json" ] || { echo "no mathlib-essential.manifest.json in $MATHLIB" >&2; exit 1; }
@@ -46,7 +63,7 @@ if [ -n "$MATHLIB" ]; then
   entries+=("{\"class\":\"mathlib\",\"file\":\"mathlib-pack.tar\",\"bytes\":$bytes,\"sha256\":\"$digest\",\"files\":$files,\"optional\":true,\"extract_into\":\"wasm/out/mathlib-pack\"}")
   echo "mathlib-pack.tar  $bytes B  sha256 $digest  ($files files, optional: from-source builds only)"
 fi
-( cd "$OUT" && shasum -a 256 *.tar > SHA256SUMS )
+( cd "$OUT" && ls | grep -E '\.tar(\.part-[0-9]+)?$' | LC_ALL=C sort | xargs shasum -a 256 > SHA256SUMS )
 runtime_id=$(python3 -c "import json;print(json.load(open('$PUB/runtime/runtime-manifest.json'))['buildId'])")
 snaps=$(python3 -c "import json;print(','.join(sorted(s['name']+'='+s['digest'][7:23] for s in json.load(open('$PUB/snapshots/index.json'))['snapshots'])))")
 python3 - "$ROOT/wasm/artifacts/BUNDLE.json" "$TAG" "$runtime_id" "$snaps" "${entries[@]}" <<'PY'
@@ -59,9 +76,10 @@ doc = {
   "snapshots": snaps,
   "extract_into": "client/public",
   "tarballs": [json.loads(e) for e in entries],
-  "note": "Tarballs are plain tar of client/public/<class>/ (paths relative to client/public). Per-file digests live in the tracked manifests (runtime/runtime-manifest.json, snapshots/index.json, profiles/lean-core.manifest.json).",
+  "note": "Tarballs are plain tar of client/public/<class>/ (paths relative to client/public); a tarball with `parts` is published as those pieces (each under GitHub's 2 GiB asset limit), joined in order before its sha256 is checked. Per-file digests live in the tracked manifests (runtime/runtime-manifest.json, snapshots/index.json, profiles/lean-core.manifest.json).",
 }
 json.dump(doc, open(out, "w"), indent=1); open(out, "a").write("\n")
 print("wrote", out)
 PY
-echo "publish e.g.:  gh release create $TAG $OUT/*.tar $OUT/SHA256SUMS --repo FawadHa1der/lean4game --title '$TAG' --notes 'wasm64 artifacts (runtime $runtime_id)'"
+assets="$(cd "$OUT" && ls | grep -E '\.tar(\.part-[0-9]+)?$' | LC_ALL=C sort | sed "s|^|$OUT/|" | tr '\n' ' ')"
+echo "publish e.g.:  gh release create $TAG ${assets}$OUT/SHA256SUMS --repo FawadHa1der/lean4game --title '$TAG' --notes 'wasm64 artifacts (runtime $runtime_id)'"
