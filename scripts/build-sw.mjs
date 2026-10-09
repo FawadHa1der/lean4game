@@ -25,7 +25,9 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const dist = join(root, "client/dist");
+// The built tree: client/dist, or the directory given as the one argument
+// (scripts/build-sw.test.mjs builds a small one).
+const dist = process.argv[2] ? resolve(process.argv[2]) : join(root, "client/dist");
 const SKIP_DIRS = new Set(["runtime", "profiles", "snapshots"]);
 const SIZE_CAP = 8 * 1024 * 1024;
 // The landing tiles' cover images (each game's `tile.image`, relative to its
@@ -59,13 +61,20 @@ const files = [];
 })(dist);
 // The artifact manifests: the boot fetches them before the worker controls
 // the page on a first visit, so they must be precached, not learned on use.
-// The pinned manifest name comes from the shipped manifest's build id. A
-// staged tree has the file (the bundle lane copies the release's,
-// scripts/stage-snapshots.py --copies writes it); a bare checkout (CI's
-// deploy build) does not — it is gitignored, and R2 serves the release's.
+// The pinned names come from the shipped manifest's build id (the same file
+// vite's __QED64_BUILD_ID__ is read from): the pinned runtime manifest, and
+// QED64 HARDENING #64's per-build index copies, which the page reads when
+// the mutable index names another runtime (an upload of the next pairing ran
+// ahead of the deploy) — learned on use, a first visit's copy was never
+// cached and an offline revisit in that window refused every game. A staged
+// tree has the files (the bundle lane copies the release's manifest,
+// scripts/stage-snapshots.py --copies writes all three); a bare checkout
+// (CI's deploy build) does not — they are gitignored, and R2 serves them.
+// A host without one answers 404, which the install tolerates.
 const rt = JSON.parse(readFileSync(join(dist, "runtime/runtime-manifest.json"), "utf8"));
-for (const p of ["/runtime/runtime-manifest.json", `/runtime/runtime-manifest.${rt.buildId}.json`, "/snapshots/index.json", "/profiles/index.json", "/profiles/lean-core.manifest.json"]) {
-  let size = 0; try { size = statSync(join(dist, p)).size; } catch { /* the pinned copy, in a checkout that has none */ }
+const PINNED = [`/runtime/runtime-manifest.${rt.buildId}.json`, `/snapshots/index.${rt.buildId}.json`, `/snapshots/profiles-index.${rt.buildId}.json`];
+for (const p of ["/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json", "/profiles/lean-core.manifest.json", ...PINNED]) {
+  let size = 0; try { size = statSync(join(dist, p)).size; } catch { /* a pinned copy, in a checkout that has none */ }
   files.push({ path: p, size });
 }
 files.sort((a, b) => a.path.localeCompare(b.path));
