@@ -12,8 +12,9 @@ workers_dev = true
 directory = "wasm/out/deploy"
 binding = "ASSETS"
 # Assets are served BEFORE the worker by default, which would skip the
-# COOP/COEP headers the app cannot live without — run the worker for every
-# request so withHeaders() applies to the shell too.
+# COOP/COEP headers (and the SEC1 Content-Security-Policy) the app cannot
+# live without — run the worker for every request so qed64/edge's
+# createWorker (infra/worker.js) sets them on the shell too.
 run_worker_first = true
 
 # Shared with the QED64 editor; the game's objects live under lean4game/

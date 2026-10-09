@@ -466,3 +466,125 @@ test("releaseRoutes refuses a record it cannot route by", () => {
   bad({ hosting: { ...RELEASE.hosting, mount: { "/assets/": "runtime/" } } });
   bad({ hosting: { ...RELEASE.hosting, siteOwned: ["/index.html"] } });
 });
+
+/* The worker is qed64/edge's createWorker (the package client/package.json
+ * pins). Its hardened defaults go beyond the pre-library worker in four
+ * places, each stricter or additive; pinned here so a bump that changes one
+ * is seen. */
+
+test("qed64/edge: the worker's library is the client's pinned qed64 — one install, hoisted to the workspace root", async () => {
+  const { createRequire } = await import("node:module");
+  const { realpathSync } = await import("node:fs");
+  const fromClient = createRequire(new URL("../client/package.json", import.meta.url)).resolve("qed64/package.json");
+  const fromInfra = createRequire(import.meta.url).resolve("qed64/package.json");
+  assert.equal(realpathSync(fromInfra), realpathSync(fromClient));
+  const edge = await import("qed64/edge");
+  assert.equal(parseRange, edge.parseRange);
+  assert.equal(resolveRange, edge.resolveRange);
+});
+
+test("qed64/edge: a method other than GET/HEAD on an artifact is 405 with Allow, no-store, the headers, and R2 is never asked", async () => {
+  for (const method of ["POST", "PUT", "DELETE", "OPTIONS"]) {
+    const env = makeEnv();
+    const response = await call(env, SNAPZ, { method });
+    assert.equal(response.status, 405, method);
+    assert.equal(response.headers.get("allow"), "GET, HEAD", method);
+    assert.equal(response.headers.get("cache-control"), "no-store", method);
+    assertIsolated(response);
+    assert.deepEqual(env.ARTIFACTS.calls, [], method);
+  }
+});
+
+test("qed64/edge: a throwing binding is a 500 with the isolation headers, the CSP and no-store (not the runtime's error page)", async () => {
+  const logged = [];
+  const error = console.error;
+  console.error = (...args) => logged.push(args.join(" "));
+  try {
+    for (const [pathname, env] of [
+      [SNAPZ, { ...makeEnv(), ARTIFACTS: { head: async () => { throw new Error("r2 down"); }, get: async () => { throw new Error("r2 down"); } } }],
+      ["/index.html", { ...makeEnv(), ASSETS: { fetch: async () => { throw new Error("assets down"); } } }],
+      [SNAPZ, { ASSETS: makeEnv().ASSETS }],
+    ]) {
+      const response = await call(env, pathname);
+      assert.equal(response.status, 500, pathname);
+      assert.equal(await response.text(), "internal error");
+      assert.equal(response.headers.get("cache-control"), "no-store");
+      assertIsolated(response);
+    }
+  } finally {
+    console.error = error;
+  }
+  assert.equal(logged.length, 3);
+});
+
+test("qed64/edge: a full artifact GET states its Content-Length; an asset HEAD gets the length a GET would", async () => {
+  const env = makeEnv();
+  const full = await call(env, SNAPZ);
+  assert.equal(full.headers.get("content-length"), "1000");
+  assert.deepEqual(await bodyBytes(full), BYTES);
+  const head = await call(env, "/index.html", { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(head.headers.get("content-length"), String("<!doctype html>".length));
+  assert.equal(head.body, null);
+  assertIsolated(head);
+  assert.deepEqual(env.assetRequests, ["/index.html", "/index.html"], "the HEAD, then one GET for its length");
+});
+
+test("qed64/edge: a re-cut release id (-r<N>) routes under its own prefix", () => {
+  const recut = releaseRoutes({ ...RELEASE, id: `${RELEASE.id.replace(/-r\d+$/, "")}-r3` });
+  assert.match(recut.releasePrefix, /^lean4-wasm64\/lean-v\d+\.\d+\.\d+.*-[0-9a-f]{7}-r3\/$/);
+  assert.equal(artifactKey("/runtime/runtime-manifest.json", recut), `${recut.releasePrefix}runtime/runtime-manifest.json`);
+  assert.equal(artifactKey(INDEX, recut), "lean4game" + INDEX);
+});
+
+test("qed64/edge: isImmutable is the library's own rule on every non-/assets/ path (imported, not copied), plus vite's hashed bundles", async () => {
+  const { isImmutable: edgeIsImmutable } = await import("qed64/edge");
+  const paths = [
+    SNAPZ, INDEX, ...COPIES, "/profiles/index.json", "/snapshots/profiles-index.json",
+    "/runtime/runtime-manifest.json", `/runtime/runtime-manifest.${BUILD}.json`, "/runtime/runtime-manifest.0123456789abcdef0123.json",
+    `/snapshots/index.wasm64-0123456789abcdef.json`, "/runtime/chunks/lean.wasm.0123456789abcdef.part-000",
+    "/profiles/lean-core.manifest.json", "/profiles/lean-core.pack.gzip.1016929d99bb0ba0e148.part-007",
+    "/", "/index.html", "/sw.js", "/workers/lean.worker.js", "/workers/memory64-probe.js", "/api/games",
+    "/data/g/hhu-adam/NNG4/game.json", "/i18n/g/hhu-adam/NNG4/en.json", "/infoview/index.js", "/locales/en/translation.json",
+  ];
+  for (const p of paths) assert.equal(isImmutable(p), edgeIsImmutable(p), p);
+  // vite's names (from a real build: <name>-<8 chars>.<ext>) are immutable; an unhashed /assets/ file is not
+  for (const p of ["/assets/index-D3K6RuED.js", "/assets/index-DkC8jS3l.css", "/assets/lean4-CJfLrWgR.json", "/assets/hc_black-lC_SmiRj.json"]) assert.equal(isImmutable(p), true, p);
+  assert.equal(isImmutable("/assets/codicon.ttf"), false);
+});
+
+test("qed64/edge: a re-cut release (-r<N>) through the site's own worker — R2 is asked for exactly the keys artifactKey names", async () => {
+  const { siteWorker } = await import("./worker.js");
+  const recut = { ...RELEASE, id: `${RELEASE.id.replace(/-r\d+$/, "")}-r3` };
+  const RECUT = `lean4-wasm64/${recut.id}/`;
+  const runtimeManifest = `/runtime/runtime-manifest.${RELEASE.runtime.buildId}.json`;
+  const cases = (prefix) => [
+    [runtimeManifest, `${prefix}runtime${runtimeManifest.slice("/runtime".length)}`],
+    ["/runtime/runtime-manifest.json", `${prefix}runtime/runtime-manifest.json`],
+    ["/runtime/chunks/lean.wasm.0123456789abcdef.part-000", `${prefix}runtime/chunks/lean.wasm.0123456789abcdef.part-000`],
+    ["/profiles/lean-core.manifest.json", `${prefix}profiles/lean-core.manifest.json`],
+    ["/profiles/lean-core.pack.gzip.0123456789abcdef.part-000", `${prefix}profiles/lean-core.pack.gzip.0123456789abcdef.part-000`],
+    ["/profiles/index.json", "lean4game/profiles/index.json"],
+    [INDEX, "lean4game" + INDEX],
+    ...COPIES.map((p) => [p, "lean4game" + p]),
+    [SNAPZ, "lean4game" + SNAPZ],
+  ];
+  for (const [record, prefix] of [[RELEASE, REL], [recut, RECUT]]) {
+    const w = siteWorker(record);
+    const routes = releaseRoutes(record);
+    assert.equal(routes.releasePrefix, prefix);
+    for (const [pathname, key] of cases(prefix)) {
+      assert.equal(artifactKey(pathname, routes), key, `artifactKey ${record.id} ${pathname}`);
+      const ARTIFACTS = fakeBucket({ [key]: { bytes: BYTES, etag: ETAG, contentType: "application/octet-stream" } });
+      const response = await w.fetch(new Request(ORIGIN + pathname), { ...makeEnv(), ARTIFACTS });
+      assert.equal(response.status, 200, `${record.id} ${pathname}`);
+      assertIsolated(response);
+      assert.deepEqual(ARTIFACTS.calls, [{ op: "get", key, range: null }], `${record.id} ${pathname}`);
+      assert.deepEqual(await bodyBytes(response), BYTES);
+    }
+  }
+  // the default export is siteWorker() for the committed record
+  const ARTIFACTS = fakeBucket({});
+  await worker.fetch(new Request(ORIGIN + runtimeManifest), { ...makeEnv(), ARTIFACTS });
+  assert.deepEqual(ARTIFACTS.calls.map((c) => c.key), [`${REL}runtime${runtimeManifest.slice("/runtime".length)}`]);
+});
