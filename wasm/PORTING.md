@@ -4,21 +4,27 @@ How a game from adam.math.hhu.de's catalog becomes a row in
 `wasm/catalog.json` that the lanes build, the staging script serves and the
 browser boots. The catalog is the only place a game is named; everything
 else reads it through `scripts/games-manifest.mjs` (`--check`, `--list`,
-`--api`, `--probe <snapshot>`, `--required-files`, `--langs`). Deployment
+`--api`, `--probe <snapshot> [<key>]`, `--probes <snapshot>`,
+`--required-files`, `--langs`). Deployment
 steps live in `wasm/DEPLOY.md` ("Adding a game"); this file is the port
 itself: the recipe (§1–§7, with the lessons of the nine ports folded in) and
-one record per ported game (§8). Worked examples of each shape: STG4 (no
-patch, one compat import), NumberTheoryGame (no patch, the compat umbrella),
+one record per ported game (§8). Worked examples of each shape: STG4 (one
+import rewrite), NumberTheoryGame (no patch, the `Mathlib.Tactic` umbrella),
 KnightsAndKnaves (a small patch), RealAnalysisGame (the largest patch),
 LinearAlgebraGame (import surgery plus proof drift).
 
-What we cannot change: the Lean fork (4.33.0-pre, `wasm/KERNEL-PIN`) and the
-Mathlib olean pack (`mathlib-essential`, an input from qed64 — Mathlib
-`de3a9cf`, 2254 Mathlib modules, the import closure of a fixed root set; list
-it with `ls -R wasm/out/trees/lib-tree/Mathlib` after the trees lane, or
-from the pack manifest). Every game was written for its own toolchain
-(v4.7 … v4.31) and a full Mathlib; the port is the distance between that and
-our pin.
+What we cannot change: the toolchain release this site pins
+(`wasm/lean4-wasm64-release.json`, `wasm/KERNEL.md` "Toolchain dependency":
+Lean 4.34.0 on the fork's `qed64-wasm64` line) and its Mathlib packs, built
+by the fork from Mathlib `v4.34.0`: `mathlib-essential` (4,354 modules —
+Lean, Std and the Mathlib closure QED64 serves) and `mathlib-game-extra`
+(737 game-only modules: the `Mathlib.Tactic` umbrella and leaves the games
+import). Their module lists ship with the release
+(`wasm/out/release/<id>/mirror/lists/{essential,extra}-modules.txt` after
+the release lane; `*-selection.json` beside them lists the
+`deprecated_module` shims each pack carries). Every game was written for its
+own toolchain (v4.7 … v4.31) and a full Mathlib; the port is the distance
+between that and the release.
 
 ## 1. Survey before touching anything
 
@@ -35,37 +41,40 @@ the reachability check that decides feasibility:
    `EquivalenceWorld/L08_UnusedBossLevel`, Knights
    `EquationalReasoning/L04_mul_left_cancel`, LAG `DemoWorld`,
    `InnerProductWorld/Code.lean`, `Game/MyTactic 2.lean`).
-2. Split the external Mathlib modules into present-in-pack vs missing
-   (compare against the pack module list).
-3. Classify each missing module:
-   - **pack-excluded leaf that exists upstream** (`Mathlib.Tactic.Have`,
-     `.Cases`, `.Generalize`, `Algebra.Order.Ring.Star`, `Data.Int.Star`,
-     `Data.Rat.Star` today): provided by `wasm/compat` — no game edit; a new
-     leaf is added the same way (§4);
-   - **the `Mathlib.Tactic` umbrella** (NumberTheoryGame, lean4game-logic,
-     LinearAlgebraGame): provided by `wasm/compat/Mathlib/Tactic.lean`, an
-     import list of the 244 `Mathlib.Tactic.*` leaves the pack has plus the
-     compat `Have`/`Cases` — no game edit. The umbrella lacks 110 of
-     upstream's 356 leaves (`Polyrith`, `ModCases`, `Ext`, `Change`,
-     `Replace`, `NormNum.Prime`, …): a player typing one of those tactics
-     gets "unknown tactic" where upstream would parse it. Check that no
-     level, hint or doc teaches one (none of the three games does);
-   - **a real Mathlib module absent from the pack**: first find out whether
+2. Split the external Mathlib modules into present-in-the-packs vs missing
+   (compare against the release's two module lists), and flag every import
+   that is a `deprecated_module` shim (the `deprecatedShims` of the two
+   selection files).
+3. Classify each missing or shimmed module:
+   - **a game-only Mathlib leaf** (`Mathlib.Tactic.Have`, `.Cases`,
+     `.Generalize`, `Algebra.Order.Ring.Star`, `Data.Int.Star`,
+     `Data.Rat.Star`, `NormNum.Prime`, `Analysis.SpecialFunctions.Log.Base`)
+     and **the `Mathlib.Tactic` umbrella** (NumberTheoryGame,
+     lean4game-logic, LinearAlgebraGame — the real one, 388 imports, every
+     upstream leaf): in `mathlib-game-extra` — no game edit. Until Lean 4.34
+     these were compiled from `wasm/compat` (§4); a new leaf now means asking
+     the fork to add it to the extra pack's roots (its `packs.json`), not a
+     copy here;
+   - **a deprecated shim** (Mathlib leaves the old name as a
+     `deprecated_module` that re-exports the new home and warns on import):
+     import what the shim imports — read it from the pack manifest
+     (`profiles/<pack>.manifest.json` `content.modules[<name>].imports`),
+     never guess the new name. At `v4.34.0`: `Mathlib.Data.Real.Basic` →
+     `Mathlib.Basic.Real.Basic`, `Mathlib.Data.Complex.Basic` →
+     `Mathlib.Basic.Complex.Basic`, `Mathlib.Data.Set.Lattice` →
+     `Mathlib.Data.Set.Lattice.{Bounded,Disjoint,Image,Indexed,Order}`;
+   - **a real Mathlib module absent from the packs**: first find out whether
      any level *uses* it. Three ports dropped such imports without loss
      because only comments or nothing referenced them: LAG's
      `Analysis.Complex.AbsMax` (245-module closure, `Complex.abs` only in
      comments), LAG's `Game/Data.lean` (22 unused `Data.*` imports), RAG's
      `Analysis.SpecialFunctions.Log.Base` (replaced by its two in-pack
      imports). Only when a lemma the levels use lives there is the game
-     blocked until the pack's root set grows (a qed64 input, not ours).
-     Vendoring the module into `wasm/compat` is an option only if it
-     compiles on the fork — RAG's `Log.Base` and the `module`-form
-     `Data.Rat.Star` hit an IR-interpreter assertion
-     (`ir_interpreter.cpp:928 fn_body_kind::Unreachable`);
-   - **renamed or shimmed modules**: follow the move (`Data.Matrix.* →
+     blocked until the extra pack's root set grows (the fork's
+     `wasm64-build/js/packs.json`, a release input, not ours);
+   - **renamed modules**: follow the move (`Data.Matrix.* →
      LinearAlgebra.Matrix.*`, `Data.Real.{Cardinality,Sqrt} →
-     Analysis.Real.*`; a `deprecated_module` shim such as `Data.Real.Sqrt`
-     would warn in every level that imports it);
+     Analysis.Real.*`);
    - **custom tactic layers** (`elab`/`macro_rules`/`TacticM` in non-level
      files): compile and see; syntax drift since the game's toolchain is
      the usual failure (Knights' column-0 binder, RAG's `elabLinarithConfig`
@@ -118,10 +127,15 @@ LinearAlgebraGame's "297 missing" into 0 with a 40-line import patch.
   neither matters).
 - `expectedRaw`: `null` until the first bake, then `{runtime, bytes}` as
   printed; keyed to the runtime (a runtime bump clears it).
-- `probe`: see §5. `probe2` (optional): a second, mid-game level whose proof
-  exercises a tactic the game teaches, with `teaches` naming it and where it
-  is introduced; the lanes run `probe` only, `probe2` is the reviewers'
-  second `Runner` check and documents which taught machinery was exercised.
+- `probe`: see §5. `probe2`, `probe3`, … (optional): further levels whose
+  own solution exercises a tactic the game teaches, with `teaches` naming it
+  and where it is introduced. The bake lane (`--verify-snapshots`) runs
+  `probe` through the wasm snapshot probe and natively with a negative
+  control, and every further probe natively (`games-manifest.mjs --probes
+  <snapshot>` lists them): each must close with no message — a warning is a
+  level a player finishes "with warnings", never completed. STG4's `probe3`
+  (Complement 4, which teaches `push_neg`) is the gate for its `push_neg`
+  wrapper (§3).
 
 `node scripts/games-manifest.mjs --check` must exit 0 (it also warns about
 non-ISO `Languages`, §6).
@@ -158,13 +172,28 @@ The games lane does the same when `src` is absent. Rules for the patch:
 - Prefer dropping an import over rewriting a level: NNG4's patch drops five
   vestigial imports and touches no proof; Knights drops `Polyrith`; Robo
   drops the `Batteries` umbrella; LAG drops 22 unused `Data.*` imports.
-- Vendoring a tactic file into `Game/Tactic/` is the fallback when compat
-  (§4) cannot host it; document the origin and licence in the commit.
+- Vendoring a tactic file into `Game/Tactic/` is the fallback when the
+  release's packs (§4) cannot host it; document the origin and licence in
+  the commit.
 - Record in `wasm/patches/README.md` what the patch does and why, and in §8
   here every player-visible consequence.
 
-Drift you will meet between the games' toolchains and 4.33.0-pre, with the
-port that hit it:
+Drift you will meet between the games' toolchains and the release's Lean,
+with the port that hit it (4.33.0-pre unless marked 4.34):
+
+- **`deriving Fintype` on an enum fails under 4.34's stricter defeq check**
+  (Knights, 4.34): the derived instance's `rewrite` reports "Did not find an
+  occurrence of the pattern … not type-correct under the `implicit`
+  transparency level". Put `set_option backward.isDefEq.respectTransparency
+  false in` before the `inductive … deriving …, Fintype` (what Mathlib does
+  at its own call sites); every such enum needs it — the compile stops at
+  the first one.
+- **Deprecated module shims** (Knights, RAG, Robo, LAG, STG4, 4.34): an
+  import of a `deprecated_module` warns when the module that names it is
+  compiled (Lean checks only a file's own header imports, so levels that
+  import that module do not repeat it, and a player's `Runner` document,
+  which imports only `Game`, never sees it). Replace it by exactly the
+  modules the shim imports (§1); the environment is unchanged.
 
 - **Column-0 `:= by` blocks** (RAG, 112 files). This Lean rejects a
   column-0 tactic block as soon as a term-ending tactic (`use 1`, `have h :=
@@ -190,12 +219,18 @@ port that hit it:
   identical.
 - **`Languages` must be ISO codes** (Knights, lean4game-logic, LAG all had
   `Languages "English"`): §6.
-- **A deprecated tactic that logs unconditionally** (RAG's taught
-  `push_neg`, `push Not` at `de3a9cf`): every use would finish the level
-  "with warnings". Add the wrapper macro Mathlib's own message recommends
-  (`macro (priority := high) "push_neg" cfg loc => push cfg Not loc`,
-  `Game/CustomTactic/PushNeg.lean`); the inventory's locked-tactic check
-  still works because it is atom-based.
+- **A deprecated tactic that logs unconditionally** (`push_neg`, `push Not`
+  at `de3a9cf` and still at `v4.34.0`; taught by RAG, and by STG4 —
+  Complement 4, fixed only on 4.34): every use finishes the level "with
+  warnings", which never marks it completed (`RpcHandlers.lean`: any
+  warning makes `completed` false). `linter.all=false` does not reach it
+  (a plain `logWarning`). Add the wrapper macro Mathlib's own message
+  recommends (`macro (priority := high) "push_neg" cfg loc => push cfg Not
+  loc`, `Game/CustomTactic/PushNeg.lean`, imported from the metadata); the
+  inventory's locked-tactic check still works because it is atom-based.
+  Find such tactics before baking: grep the game's model solutions for every
+  tactic Mathlib deprecates, and give the level that teaches one a catalog
+  probe (`probe3`, …) so the bake lane proves it closes silently.
 - **A renamed or removed lemma that players type or that the inventory
   names** (LAG): keep the taught name as an `alias` of the identical
   statement (`alias _root_.sq_eq_sq := sq_eq_sq₀`,
@@ -218,53 +253,42 @@ port that hit it:
   Mathlib's statement from the next level on — identical upstream (NTG: 6,
   Robo: 16). Leave them.
 
-## 4. The compat package
+## 4. The game-only Mathlib pack (formerly `wasm/compat`)
 
-`wasm/compat/**/*.lean` are Mathlib modules the essential pack excludes,
-compiled once under their **real module names** into the game base tree
-(`wasm/out/trees/lib-tree-gamebase`) by the `compat` lane of
-`wasm/build-from-source.sh` (also run at the end of `trees`), so a game's
-unmodified `import Mathlib.Tactic.Have` resolves. Seven modules today
-(`wasm/compat/README.md` has the table): `Mathlib.Tactic.Have` (v4.23.0
-file), `Mathlib.Tactic.Cases` (the **full** `de3a9cf` file, `cases'` and
-`induction'` included — RAG, NTG and LAG teach them), `Mathlib.Tactic.
-Generalize` and the three `*.Star` leaves (Robo), and the `Mathlib.Tactic`
-umbrella (NTG, lean4game-logic, LAG).
+Mathlib modules games import beyond the essential pack come from the
+release's `mathlib-game-extra` pack (737 modules, roots `Mathlib.Tactic`,
+`Mathlib.Tactic.{Have,Cases,Generalize}`, `Mathlib.Algebra.Order.Ring.Star`,
+`Mathlib.Data.{Int,Rat}.Star`, `Mathlib.Analysis.SpecialFunctions.Log.Base`,
+`Mathlib.Tactic.NormNum.Prime` — `lists/extra-selection.json`), compiled
+by the fork from Mathlib `v4.34.0` with the same native compiler as the
+essential pack, under their real module names. The trees lane unpacks it
+into the same trees as the essential pack, so a game's unmodified
+`import Mathlib.Tactic.Have` or `import Mathlib.Tactic` resolves.
 
-Rules the ports established:
+Until Lean 4.34 (branch `lean-v4.34`, 2026-10-06) this was `wasm/compat/`:
+seven modules (805 Lean lines — `Have` from v4.23.0, the full `de3a9cf`
+`Cases`, `Generalize`, the three `*.Star` leaves, and an imports-only
+`Mathlib.Tactic` umbrella of the 244 in-pack leaves) compiled by a `compat`
+lane into the game base tree. All seven are in `mathlib-game-extra`
+(checked against `lists/extra-modules.txt`), and the extra pack's umbrella
+is upstream's own: the 110 leaves the compat umbrella lacked (`Polyrith`,
+`ModCases`, `Change`, `Replace`, `NormNum.Prime`, …) are back for every game
+importing it. The rules that survive:
 
 - **Search path.** Lean resolves a module in the *first* `LEAN_PATH` entry
-  that contains its root directory (`Mathlib/`). The compat oleans must
-  therefore sit beside the pack's Mathlib oleans inside
-  `lib-tree-gamebase`, never in a later `LEAN_PATH` entry: an earlier lane
-  attempt that listed the pack's `lib-tree` first failed on the umbrella
-  with "object file `lib-tree/Mathlib/Tactic/Have.olean` of module
-  Mathlib.Tactic.Have does not exist" (`wasm/out/logs/compat.log`); the lane
-  now compiles with the game base tree as the single `LEAN_PATH` entry and
-  writes into it. Per-game overlays built by the port agents
-  (`wasm/out/port-<x>/gamebase`) are copies of the game base tree with the
-  compat oleans rsynced in.
-- **The umbrella pattern.** `import Mathlib.Tactic` cannot be satisfied by
-  the pack (it lacks the umbrella and 112 of its 356 leaves). Instead of
-  patching three games to enumerate their tactic imports,
-  `wasm/compat/Mathlib/Tactic.lean` is an imports-only file listing the 244
-  in-pack `Mathlib.Tactic.*` leaves plus compat `Have` and `Cases`, so it
-  must compile *after* those two (the lane compiles all compat roots into
-  the same tree, which orders them). Every level of a game that imports the
-  umbrella loads all 244 modules: NTG's per-module compile needs > 3 GB RSS.
-- **Fat tree.** The compat lane compiles against the fat `lib-tree` (every
-  `*.olean.private` present): the `module`-form `Cases.lean` has `import all
-  Lean.Elab.Tactic.Induction`. Slim per-game trees are fine afterwards —
-  play time never re-imports.
-- **Classic form when the fork rejects the module form.** `Data.Rat.Star`
-  keeps its declarations but drops `module`/`public import`/`public section`
-  (the module form aborts the IR interpreter); a classic module exports a
-  superset, nothing a game sees differs.
-- **Shadow rule.** A compat module may exist only while the pack does not
-  provide it; the lane checks every root against `lib-tree` and refuses to
-  run otherwise. The lane auto-discovers every `.lean` under `wasm/compat`
-  (`find`), so adding a leaf is: copy the pinned source, add the provenance
-  comment, run `--lanes compat`, update the README table.
+  that contains its root directory (`Mathlib/`, `Lake/`). Everything a game
+  imports outside its own package lives in ONE tree
+  (`lib-tree-gamebase`, the slim per-game trees): the extra pack's Mathlib
+  oleans beside the essential pack's, and the native compiler's Lake facets
+  merged into the tree rather than added as an entry (the extra pack ships
+  one Lake module, `Lake.Util.Casing`, which would hide the rest of Lake).
+- **Fat to compile, slim to bake.** Games and lean-i18n compile against the
+  fat tree (`unpack`, every `*.olean.private`: a legacy importer loads every
+  facet); the bakes mount `unpack --slim` of the same packs — play time
+  never re-imports.
+- **The umbrella's cost.** Every level of a game that imports
+  `Mathlib.Tactic` loads all its leaves: NTG's per-module compile needs
+  > 3 GB RSS; compile one game at a time (§7).
 
 ## 5. Choosing the probe
 
@@ -287,8 +311,9 @@ only in editor mode; the typewriter shows the Next button instead).
   level whose proof uses tactics introduced by that level or available from
   the start — level 1 of the first world is the natural choice
   (NNG4 Tutorial 1 `rfl`, STG4 Subset 1 `exact h`, TestGame TestWorld 1
-  `rw [h]\nrw [g]`). For `probe2` use the level's own solution and check the
-  level JSON that every tactic and lemma it uses is `locked: false` there.
+  `rw [h]\nrw [g]`). For `probe2`, `probe3`, … use the level's own
+  solution and check the level JSON that every tactic and lemma it uses is
+  `locked: false` there.
 - The proof must close the level *without warnings*: the smoke fails on
   "Level completed with warnings 🎭", which is what unsuppressed linters
   produce — the reason `leanOptions` carries `linter.all=false`. `sorry`
@@ -331,16 +356,26 @@ only in editor mode; the typewriter shows the Next button instead).
 ## 7. Bake, verify, stage, upload, deploy
 
 1. `node scripts/games-manifest.mjs --check`.
-2. `wasm/build-from-source.sh --lanes compat,games,bake --games <snapshot> --verify-snapshots`
-   (Docker; flags per the script header; `compat` is cheap and idempotent
-   and is required whenever `trees` did not run in the same invocation —
-   §4): compiles the game against `lib-tree-gamebase` with the row's
-   `leanOptions`, writes `<src>/.lake/gamedata` + `.i18n`, overlays the slim
-   per-game tree, bakes `<snapshot>.<digest>.snapz` into `wasm/out/staging`
-   and runs the probe (`SNAPSHOT PROBE PASS`). Paste the printed raw size
-   into `expectedRaw`.
+2. `wasm/build-from-source.sh --lanes preflight,release,trees` once per
+   toolchain release (fetch and verify it, unpack the packs, compile
+   lean-i18n and GameServer), then `wasm/build-from-source.sh --lanes
+   games,bake --games <snapshot> --verify-snapshots` (Docker; flags per the
+   script header; on a shared host run the bake under the browser lock, one
+   game per hold): compiles the game with the release's native compiler
+   against `lib-tree-gamebase` and the row's `leanOptions`, writes
+   `<src>/.lake/gamedata` + `.i18n`, overlays the slim per-game tree, bakes
+   `<snapshot>.<digest>.snapz` into `wasm/out/staging/<build id>/snapshots`
+   and runs the probes: `SNAPSHOT PROBE PASS` (the snapshot loads through
+   the browser path and seeds the environment cache), the native Runner
+   probe (the proof closes with no message), its negative control
+   (rejected), and the row's further probes natively (each closes with no
+   message). Paste the printed raw size into `expectedRaw`. An existing
+   `games-src` checkout that is not `source.rev` + the patch is refused
+   (delete it after re-cutting a patch; the lane clones it again), and a
+   per-game tree compiled from other inputs than the pinned record and row
+   is refused by the bake (its provenance stamp; `wasm/KERNEL.md`).
 3. `wasm/build-from-source.sh --lanes bundle` (or by hand:
-   `scripts/stage-snapshots.py wasm/out/staging/snapshots <snapshot>`,
+   `scripts/stage-snapshots.py wasm/out/staging/<build id>/snapshots <snapshot>`,
    `scripts/stage-game-assets.sh`, `npm --workspace client run build`).
 4. Local smoke: `node scripts/serve-dist.mjs` and
    `node /Users/fawadhaider/code/wasm64-lean-fable/qed64/work/games-smoke.mjs http://localhost:3006`
@@ -379,18 +414,36 @@ Mac's Docker VM):
 - **Verify against the tree the lane will use.** Several ports compiled
   against a private overlay holding an older compat `Cases.olean`; the
   reviewers re-ran the affected modules and probes against the current
-  `lib-tree-gamebase`. Run `--lanes compat` first and point `LEAN_PATH` at
-  the shared tree.
+  `lib-tree-gamebase`. Point `LEAN_PATH` at the shared tree the trees lane
+  built from the pinned release.
+- **The wasm snapshot probe does not judge a proof (Lean 4.34).** The
+  runtime's one-shot compile drops the errors of the theorem a `Runner`
+  command elaborates (`wasm/KERNEL.md`, "Building the artifacts from the
+  toolchain release"): judge probes natively — the bake lane does, with a
+  negative control.
 
 ## 8. Ported games
 
 Nine catalog rows (TestGame aside). "Probes" are the row's `probe` and
-`probe2`, both verified by native `Runner` elaboration (exit 0, no messages,
-negative control rejected) unless stated otherwise; "bake" is the raw
+`probe2` (STG4 also `probe3`), all verified by native `Runner` elaboration
+(exit 0, no messages, negative control rejected) unless stated otherwise —
+on 2026-10-08 all twenty of them passed natively on the 4.34 trees; "bake" is the raw
 snapshot size the bake lane printed (`expectedRaw`), or "not yet baked".
 Warning counts are build-time `warning:` lines from a message-capturing
 compile; none of them renders in a player's info view unless said so.
-Items the reports did not establish are marked UNVERIFIED.
+Items the reports did not establish are marked UNVERIFIED. The records
+describe the 4.33.0-pre ports (Mathlib `de3a9cf`); each ends with its
+**Lean 4.34** note (branch `lean-v4.34`, toolchain release
+`lean-v4.34.0-a8817d0`, Mathlib `v4.34.0`): what the port changed, the
+module count compiled with the release's native compiler (all ten compile
+with zero failures) and the bake. The bakes are against the current pin,
+`lean-v4.34.0-41ec565` (runtime `wasm64-57ae00dc5f6ce958`, patch 0036 — its
+packs and native compiler are byte-identical to `a8817d0`'s, so the
+compiled trees carried over): raw slim and transfer bytes, the change
+against the 4.33 slim bake, and the bake lane's three probes (the wasm
+`snapshot-probe --via-mem`, the native `Runner` probe, its negative
+control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
+149,933,562 B transfer, all three probes pass.
 
 ### NNG4 — hhu-adam/NNG4
 
@@ -410,8 +463,9 @@ Items the reports did not establish are marked UNVERIFIED.
     `Game/Tactic/MathlibHave.lean` (the v4.23.0 `Have` file);
   - `.i18n/en/Game.pot` regenerated (the one patch that carries the
     template; see §3).
-- Compat modules: none — the vendored copies above; the next rebake can drop
-  them and import `Mathlib.Tactic.{Have,Cases}` from compat.
+- Compat modules: none — the vendored copies above; a later port can drop
+  them and import `Mathlib.Tactic.{Have,Cases}` from the release's
+  `mathlib-game-extra` pack (formerly `wasm/compat`).
 - `leanOptions`: `linter.all=false`, `tactic.hygienic=false` (lakefile).
 - Languages: `en zh uk it fr`, translations shipped for `fr it uk zh`
   (coverage against the regenerated template UNVERIFIED).
@@ -422,8 +476,17 @@ Items the reports did not establish are marked UNVERIFIED.
   inventory unlocks, sound completion); the other worlds are verified by the
   compile of their in-file solutions only.
 - Inherited upstream defects: none reported.
-- Probes: Tutorial 1 `rfl` (`SNAPSHOT PROBE PASS`); no `probe2`. Bake:
-  569,269,949 B raw slim.
+- Probes: Tutorial 1 `rfl` (`SNAPSHOT PROBE PASS`); `probe2` Addition 1
+  (`induction n with d hd`, the game's induction wrapper; added after this
+  record). Bake: 569,269,949 B raw slim.
+- Lean 4.34 (2026-10-06, branch `lean-v4.34`): no source change, patch
+  unchanged (its vendored `MathlibHave`/`MathlibCases` still compile; the
+  extra pack's `Mathlib.Tactic.{Have,Cases}` would now serve the original
+  imports). 113/113 modules with the release's native compiler (258 s,
+  clone + `git am` included); bake on `wasm64-57ae00dc5f6ce958`
+  574,944,789 B raw slim (+1.0 % over 4.33; the same size as on the
+  first 4.34 runtime), 155,458,190 B transfer; `SNAPSHOT PROBE PASS`,
+  native probe clean, negative control rejected.
 
 ### STG4 — djvelleman/STG4
 
@@ -438,10 +501,47 @@ Items the reports did not establish are marked UNVERIFIED.
   pin (§6).
 - Served: 8 worlds / 51 levels (`Game/Levels/DemoWorld.lean` on disk, not
   imported — as upstream).
-- Player-visible differences: none reported.
+- Player-visible differences: none reported at the time — wrongly: Mathlib
+  `de3a9cf` already logged its `push_neg` deprecation warning (the RAG
+  record below), so the levels solved with `push_neg` (Complement 4, which
+  teaches it; Combo 1; FamCombo 1, 2, 5, 7) finished "with warnings" and
+  were never marked completed on 4.33 too. Fixed on 4.34 (below).
 - Inherited upstream defects: none reported.
-- Probes: Subset 1 `exact h` (`SNAPSHOT PROBE PASS`); no `probe2`. Bake:
+- Probes: Subset 1 `exact h` (`SNAPSHOT PROBE PASS`); `probe2` Complement 1
+  (`by_contra` and the goal-creating `have`) and, since 2026-10-08,
+  `probe3` Complement 4 (its own solution: `apply`, `push_neg`). Bake:
   665,285,845 B raw slim.
+- Lean 4.34 (2026-10-06): first patch, `wasm/patches/stg4-wasm64-port.patch`
+  — `import Mathlib.Data.Set.Lattice` (a `deprecated_module` shim at
+  `v4.34.0`) → the five modules it re-exports, exactly the replacement
+  Lean's own deprecation warning prints
+  (`Mathlib.Data.Set.Lattice.{Bounded,Disjoint,Image,Indexed,Order}`;
+  same environment; Lean prints that deprecation once, when
+  `Game/Metadata.lean` is compiled — not in the levels). `Mathlib.Tactic.Have`
+  from `mathlib-game-extra`. 61/61 modules (254 s). Bake on
+  `wasm64-57ae00dc5f6ce958`: 669,489,829 B raw slim (+0.6 %), 181,572,714 B
+  transfer; `SNAPSHOT PROBE PASS`, native probe clean, negative control
+  rejected.
+- Lean 4.34, `push_neg` (2026-10-08): the patch was re-cut to add RAG's
+  wrapper, `Game/CustomTactic/PushNeg.lean` (`macro (priority := high)
+  "push_neg" cfg loc => push cfg Not loc`, imported by `Game/Metadata.lean`):
+  Mathlib `v4.34.0`'s `push_neg` still logs "`push_neg` has been
+  deprecated. Prefer using `push Not` instead." unconditionally
+  (`linter.all=false` does not reach a plain `logWarning`), and any warning
+  makes `completed` false. Native `Runner` on Complement 4's own solution:
+  two such warnings on the old tree, none on the new one. The catalog's
+  `probe3` (that solution) is now part of every STG4 bake. 62/62 modules
+  (204 s, in the lane's new `lean4game-native64` image); bake on
+  `wasm64-57ae00dc5f6ce958`: 669,599,797 B raw slim (+109,968 B for the
+  macro), 181,606,426 B transfer, `sha256:6a37164df3414c9c…`;
+  `SNAPSHOT PROBE PASS` (load 1,090 ms, compile 1,395 ms), native probe
+  clean, negative control rejected, `probe2` and `probe3` clean (one lock
+  hold, 394 s). Browser: Complement 4 typed tactic by tactic in the
+  typewriter on a fresh profile completes (QED64's `games-smoke.mjs` with
+  `probe3` as the probe; boot 8.5 s).
+- Player-visible differences (4.34): `push_neg` goes through the wrapper —
+  same behaviour (`push_neg`, `push_neg at h`); the six levels above now
+  complete.
 
 ### ReintroductionToProofs — emilyriehl/ReintroductionToProofs
 
@@ -483,6 +583,10 @@ Items the reports did not establish are marked UNVERIFIED.
   B raw slim; 185 modules, 1495 s uncontended.
 - UNVERIFIED: browser smoke (`games-smoke.mjs`) was not run by the port or
   review.
+- Lean 4.34 (2026-10-06): no source change, no patch; `Mathlib.Tactic.Cases`
+  from `mathlib-game-extra`. 185/185 modules (818 s). Bake on
+  `wasm64-57ae00dc5f6ce958`: 569,043,773 B raw slim (+1.1 %), 153,935,953 B
+  transfer; `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected.
 
 ### KnightsAndKnaves — JadAbouHawili/KnightsAndKnaves-Lean4Game
 
@@ -537,6 +641,15 @@ Items the reports did not establish are marked UNVERIFIED.
   v4.29.1 (no Mathlib build for that toolchain was available); the 101
   warnings were attributed to upstream by reading the sources, not by an
   upstream build.
+- Lean 4.34 (2026-10-06): patch re-cut — `set_option
+  backward.isDefEq.respectTransparency false in` before BOTH enums with
+  `deriving DecidableEq, Fintype` (`settheory_KnightsAndKnaves.lean`
+  `Inhabitant`, `settheory_KnightsAndKnaves3.lean` `Inhabitant'`; the scout
+  saw only the first because the compile stops at the first failure);
+  `Mathlib.Data.Real.Basic` → `Mathlib.Basic.Real.Basic` (shim). Nothing a
+  player sees changes (the option is scoped to the two declarations).
+  75/75 modules (250 s). Bake on `wasm64-57ae00dc5f6ce958`: 731,165,541 B
+  raw slim (+0.4 %), 199,307,181 B transfer; `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected.
 
 ### NumberTheoryGame — k88-b/NumberTheoryGame
 
@@ -587,6 +700,18 @@ Items the reports did not establish are marked UNVERIFIED.
 - UNVERIFIED: browser smoke; the play-time memory footprint of the umbrella
   closure (every level's environment holds all 244 tactic modules — larger
   than NNG4/STG4).
+- Lean 4.34 (2026-10-06): no source change, no patch. `import
+  Mathlib.Tactic` is now upstream's own umbrella (`mathlib-game-extra`, 388
+  imports) instead of the 246-import compat one: the 110 leaves the compat
+  umbrella lacked (`Polyrith`, `ModCases`, `Change`, `NormNum.Prime`, …)
+  parse again at play time. 66/66 modules (1,022 s). Bake on
+  `wasm64-57ae00dc5f6ce958`: 1,277,174,557 B raw slim (+52.8 % over 4.33's
+  835,759,917 B), 364,475,324 B transfer (+57.4 %); `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected. The growth is the
+  umbrella's: the leaves upstream's `Mathlib.Tactic` imports beyond the
+  compat one (388 imports against 246) pull their Mathlib closure into
+  every level's environment
+  (lean4game-logic, which imports the same umbrella, grew the same way;
+  LinearAlgebraGame's Tutorial levels by +28 %).
 
 ### RealAnalysisGame — AlexKontorovich/RealAnalysisGame
 
@@ -657,6 +782,13 @@ Items the reports did not establish are marked UNVERIFIED.
   `push_neg +distrib` path; `de` coverage; the `Log.Base` assertion was not
   root-caused; the 26-warning count predates the de-indent (whitespace
   cannot add warnings).
+- Lean 4.34 (2026-10-06): patch re-cut — `Mathlib.Data.Real.Basic` →
+  `Mathlib.Basic.Real.Basic` (shim) in `Game/Metadata.lean`; the column-0
+  re-indentation, `PushNeg`, `elabLinarithConfig` and L4 `@[simp]` edits are
+  unchanged and still compile. `Log.Base` is in `mathlib-game-extra` now;
+  the patch keeps its smaller replacement closure. 187/187 modules
+  (1,415 s). Bake on `wasm64-57ae00dc5f6ce958`: 1,014,571,789 B raw slim
+  (+1.0 %), 283,590,594 B transfer; `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected.
 
 ### Robo — hhu-adam/Robo
 
@@ -708,6 +840,11 @@ Items the reports did not establish are marked UNVERIFIED.
   unknown.
 - UNVERIFIED: browser smoke; the 154 non-probe levels are verified by
   compiling their solutions only.
+- Lean 4.34 (2026-10-06): patch re-cut — `Game/Metadata/FromMathlib.lean`
+  imports `Mathlib.Basic.Real.Basic` instead of the `Mathlib.Data.Real.Basic`
+  shim; the four former compat leaves come from `mathlib-game-extra`.
+  189/189 modules (1,146 s). Bake on `wasm64-57ae00dc5f6ce958`:
+  1,012,231,501 B raw slim (+1.0 %), 283,000,792 B transfer; `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected.
 
 ### lean4game-logic — Trequetrum/lean4game-logic
 
@@ -744,6 +881,12 @@ Items the reports did not establish are marked UNVERIFIED.
   yet baked (`expectedRaw` null). 103 modules, 753 s (692 s by the
   reviewer's mtime measure).
 - UNVERIFIED: browser smoke.
+- Lean 4.34 (2026-10-06): no source change; patch unchanged (its message
+  still credits `wasm/compat` for the umbrella, which is now
+  `mathlib-game-extra`'s real one). 103/103 modules (688 s). Bake on
+  `wasm64-57ae00dc5f6ce958`: 1,276,723,429 B raw slim (+52.8 % over 4.33's
+  835,310,405 B), 364,270,851 B transfer (+57.5 %) — the umbrella's
+  closure, as for NumberTheoryGame; `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected.
 
 ### LinearAlgebraGame — ZRTMRH/LinearAlgebraGame
 
@@ -829,3 +972,19 @@ Items the reports did not establish are marked UNVERIFIED.
 - UNVERIFIED: bake and browser play; the InnerProductWorld `‖x‖` notation
   overload (over Mathlib's norm notation) compiled without ambiguity in all
   8 levels but was not exercised interactively.
+- Lean 4.34 (2026-10-06): patch re-cut — `Mathlib.Data.Real.Basic` →
+  `Mathlib.Basic.Real.Basic` (`Game/Data.lean`, `InnerProductWorld/
+  LemmasAndDefs.lean`) and `Mathlib.Data.Complex.Basic` →
+  `Mathlib.Basic.Complex.Basic` (`LemmasAndDefs.lean`; the
+  `Data.Complex.Basic` line in `Game/Data.lean` is inside upstream's own
+  block comment). `Mathlib.Tactic.NormNum.Prime` is back without a patch
+  line: the Tutorial levels' `import Mathlib.Tactic` is now upstream's
+  umbrella, which imports it (upstream's `MyTactic.lean` keeps its own
+  `NormNum.Prime` import inside a block comment, so nothing there to
+  restore). Of the 22 imports the patch comments out, `Data.Opposite` and
+  `Data.PNat.Prime` exist in `mathlib-game-extra` at 4.34 and
+  `Data.Matrix.{DualNumber,Invertible}`, `Data.Real.Archimedean` are shims;
+  none is restored (no level uses them). 55/55 modules (330 s). Bake on
+  `wasm64-57ae00dc5f6ce958`: 1,279,213,317 B raw slim (+28.1 % over 4.33's
+  998,558,821 B), 364,958,176 B transfer (+30.3 %) — upstream's umbrella
+  (the Tutorial levels' `import Mathlib.Tactic`); `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected.

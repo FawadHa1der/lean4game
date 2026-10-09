@@ -1604,7 +1604,7 @@ in the worktree except where said):
 | PKG-1 | Nothing compared `node_modules/qed64` with the lockfile pin: a pulled qed64 bump over an older install built, staged and deployed the old package (`deploy-app.sh` skips `npm ci` when `client/node_modules` exists), and the from-source preflight printed the lockfile's SHA as if checked. | `stage-workers.sh` (every build and deploy, `--check` in the preflight) refuses unless npm's record of the install (`node_modules/.package-lock.json`) names the pinned commit: "node_modules/qed64 is 90aef68…, package-lock.json pins 37e38bf… — run npm ci". The preflight prints both SHAs. |
 | PKG-2 | The four new modules were untracked; `git commit -a` would leave a branch whose clean clone does not build. | Commit them by name (the proposed commit split does), with `worker-liveness.test.ts`. |
 | PKG-4 | Staging never removed a worker a bump dropped or renamed; it shipped and was precached as critical. | `stage-workers.sh` removes every file in `client/public/workers` the closure does not name. |
-| PKG-7 | The `patch` line was never checked against the kernel: a pin moved back to a pre-0032 kernel with `patch 0032` left passed every check. | `patch 0032 992dc94…` names the kernel commit that completed the patch (commit subjects do not reliably carry the number); the from-source preflight refuses a pin whose history lacks it. |
+| PKG-7 | The `patch` line was never checked against the kernel: a pin moved back to a pre-0032 kernel with `patch 0032` left passed every check. | (2026-10-04) `patch 0032 992dc94…` named the kernel commit that completed the patch; the from-source preflight refused a pin whose history lacked it. Superseded 2026-10-06: `wasm/KERNEL-PIN` and that history check are gone with the kernel submodule; the patch id is the toolchain release record's `kernel.patch` (pinned with the record's id and self-digest), compared with the release tools' `comparePatchIds` by `stage-workers.sh` and the preflight. |
 | PKG-8 | `client/tsconfig.json` hard-codes the package's entry file; a move (or a nested install) would leave tsc on a stale or missing file while Vite bundles the new one. | `stage-workers.sh` refuses a `paths` target that is not `closure.json` `entry`. |
 | PKG-9 | The served `lean.worker.js` comment still describes lean4game's vendoring (QED64's text). | Reported upstream; `vendor-liveness.test.ts` is now `worker-liveness.test.ts`. |
 
@@ -1891,6 +1891,197 @@ Targeted re-test on the bumped build (`index-C3-6zpek.js`, sw
 | Editor-mode proof | pass | pass |
 | Cypress | 24/24 | 24/24 |
 
+## Lean 4.34 on the toolchain release (2026-10-06)
+
+Branch `lean-v4.34`: the game pins the kernel fork's toolchain release
+`lean-v4.34.0-41ec565` instead of building its own kernel
+(`wasm/KERNEL.md`, "Toolchain dependency"), and moves from Lean 4.33.0-pre
+(runtime `wasm64-d77d34b97592d014`, patch 0032) to Lean 4.34.0 (runtime
+`wasm64-57ae00dc5f6ce958`, patch 0036), with QED64 `bf9d947`. What a player
+meets:
+
+- **Every game re-downloads its environment once** (new runtime, new
+  digests). Seven games are within ±1.2 % of their 4.33 size; NTG,
+  lean4game-logic and LAG grew to ~364 MB each (from 231–280 MB): their
+  `import Mathlib.Tactic` is now upstream's full umbrella from the
+  `mathlib-game-extra` pack (388 imports, against the 246 of the deleted
+  compat umbrella). Open: a trimmed umbrella in the pack (fork/QED64) or
+  per-game import patches.
+- **A deep `decide` no longer kills the checker** (patch 0036). NNG4
+  Multiplication/1, editor mode, relaxed rules:
+  `have h : ∀ n : Fin 40, ∀ m : Fin 40, n * m = m * n := by decide` fails in
+  0.5 s with "maximum recursion depth has been reached: the WebAssembly
+  runtime's stack is exhausted …" on its line, the proof after it closes,
+  one session, no death, no reboot. Typing above it at 150 ms/char kept the
+  pthread pool at 24 (13 versions with `rw [add_zero]`; 38 versions with a
+  comment, 16 of which re-ran the `decide`) — before 0036 the same pace grew
+  the pool 26 → 77 workers and crashed the tab (`v434-decide-probe.mjs`,
+  `v434-pace-probe.mjs` in QED64's `work/lean4game-workflows/`).
+- **The InfoView keeps its RPC session through a long check** (QED64
+  `bf9d947`: `$/lean/rpc/keepAlive` no longer waits behind the edit
+  back-pressure's request cap). QED64's `work/qk-keepalive.mjs` on this
+  game: 22 "Outdated RPC session" lines on `5c327c2`, 0 on `bf9d947`.
+- **STG4's `push_neg` levels complete again.** Mathlib (`de3a9cf` on 4.33
+  and still `v4.34.0`) logs "`push_neg` has been deprecated. Prefer using
+  `push Not` instead." on every `push_neg`, and any warning keeps a level
+  from completing ("Level completed with warnings 🎭", no Next at
+  difficulty ≥ 2, the new tiles not added to the inventory). STG4 teaches
+  `push_neg` in Complement 4 and its model solutions use it in Combo 1 and
+  FamCombo 1, 2, 5, 7 — the live 4.33 site has the same defect. The STG4
+  patch now carries RAG's wrapper (`Game/CustomTactic/PushNeg.lean`,
+  `push_neg` = `push Not` without the warning); the catalog's `probe3`
+  (Complement 4's own solution) closes natively with no message, and the
+  bake lane checks it on every STG4 bake. In the browser (the rebaked
+  bundle on `scripts/serve-dist.mjs`, a fresh profile, QED64's
+  `work/games-smoke.mjs` with `probe3` as the probe — `v434-pushneg-smoke.sh`):
+  the eleven tactics typed one per Enter in the typewriter, `push_neg at h1`
+  and `push_neg` included, and the level is marked completed (the
+  `game_progress` flag and the Next button); boot 8.5 s.
+- Port changes per game (imports of deprecated module shims rewritten,
+  Knights' `deriving Fintype` option, LAG's umbrella): `wasm/PORTING.md` §8.
+
+**Regression results on the 4.34 bundle** (`index-D1y0TwBs.js`, sw
+`827e324300f3`, QED64 `bf9d947`, `scripts/serve-dist.mjs` on :3008, run
+2026-10-08). The comparison is the 4.33 build on :3007 (QED64
+`84d594e`/`5c327c2`, runtime `wasm64-d77d34b97592d014`) and its numbers
+in "QED64 as a dependency" above; 4.33's figures are in parentheses.
+Evidence: `lv-shots/qv-core`, `qv-net` and the `qv-*` probe directories
+beside them (`qv-SUMMARY-slow.txt` for the slow-link set).
+
+- **Core:**
+  - The ten-game smoke passed 10/10, boot 6.2–9.3 s (6.3–8.3 s).
+  - Deep play (each game's catalog probe, then Next and Previous) completed
+    in all nine games, in 11–16 s. Three Mathlib-heavy levels complete:
+    Knights SetTheory_Knights_Knaves/6 (11 steps, 21.0 s), Robo Babylon/6
+    (9 steps, 22.3 s) and LAG InnerProductWorld/2 (15 steps, 31.2 s). RAG
+    Lecture10/1 does not (below).
+  - Landing fresh/reload 0.4/0.3 s, shell fill 3.4 s, 9/9 Ready after the
+    smoke (the same).
+  - Editor bursts at 10 ms/char: no crash, 27 workers, pool 24 (`5c327c2`:
+    the same). At 150 ms/char above a 4 s `IO.sleep` line, the line settles
+    in 4.48 s at pool 24 (4.45 s). The `decide` line behaves as above.
+  - Reload storm (5 runs × 5 reloads + 2 relay restarts): 0/5 renderer
+    crashes, ready 6.0–7.7 s after the storm (0/5, 5.7–5.9 s).
+  - An editor-mode proof completed. Cypress 24/24 plain and 24/24 with the
+    app's CSP enforced (0 CSP lines).
+- **Network and security:**
+  - D4: no "after a crash" text. First visit ready at 99.3 s, 69.9 s after
+    link-back (90.8 s, 61.6 s; the region is 575 MB instead of 569 MB).
+    Under the worker ready at 87.5 s (87.0 s). The injected crash is
+    labelled; serving again in 7.3–8.3 s (6.7 s).
+  - NEW-3: no connection flash after link-back; boot 102.2 s (101.4 s).
+  - D7 with Chromium offline: boot 7.1 s, 0 failing service-worker GETs
+    (5.9 s, 0). With the proxy refusing it failed: the local regression
+    below.
+  - SEC1: 0 attacker requests over the 20 vectors (on the app and on a
+    no-CSP copy), the landing, editor mode and the rechecks. A tampered
+    index is refused; `?snapshots=snapshots` boots and proves with 0 CSP
+    violations. 67/69 checks: "P1 landing" (the local regression below)
+    and "P2" (`?snapshots=` after the `#`, also on 4.33).
+  - QD-API-2: on a reboot worker the mismatch label shows at 2.0 s and the
+    relay serves again at 8.8 s (1.9 s, 7.6 s). On the first worker the
+    "This site was updated" card shows 0.5 s after the reload (0.5 s),
+    never "Connecting…".
+  - QB-2: a 404 on the first worker's front door recovers on its own; the
+    goal appears at 10.3 s (9.2 s).
+- **Slow links and tabs** (NNG4: 155 MB, runtime 158.9 MB instead of
+  153.6 MB):
+  - S1 at 150 kB/s: 189/189 files, Ready, 356.5 MB in 2272.8 s (349.8 MB,
+    2229.6 s).
+  - D5 at 300 kB/s: longest still stretch 7.0 s, ready at 1108.9 s (7.1 s,
+    1087.1 s).
+  - Tabs A/B/D/R/G with dwell: drop times 0.15–0.34 s, no ghosts. A stall
+    fails at 179.8 s and Retry finishes in 31.1 s (179.9 s, 30.9 s).
+  - NEW-2: the remote line 0.01 s after the tiles. A first visit never
+    shows "waiting for another tab". Two landing tabs preparing the same
+    game make one download.
+- **A local-build regression, fixed: the pinned runtime manifest was not
+  staged.**
+  - A QED64 boot first fetches `/runtime/runtime-manifest.<buildId>.json`,
+    and the service worker precaches it. The release ships it beside
+    `runtime/runtime-manifest.json`, with the same bytes. The bundle lane
+    of `wasm/build-from-source.sh` copied only `runtime-manifest.json`. The
+    4.33 tree still held the gitignored copy the old
+    `scripts/upload-artifacts.sh` used to write.
+  - The deployed site was not affected: the Worker serves `/runtime/` from
+    the release.
+  - On :3008 `serve-dist` answered the pinned path with `index.html`.
+    Online, the boot fell back to `runtime-manifest.json`. Offline, or with
+    `navigator.onLine` true but the link dead, the fetch itself threw:
+    - D6 (NNG4 prepared from the landing only, booted offline at levels
+      never opened) and RAG's offline boot failed with "Lean runtime boot
+      failed: TypeError: Failed to fetch".
+    - The offline landing showed no Download/Prepare row on any tile.
+    - D7 with the proxy refusing failed after 0.9 s with "Lean could not
+      start in your browser — Failed to fetch".
+    - The service worker's install warned "1 of 68 critical shell files
+      not cached". The shell fill stopped at 233/234 and retried the file
+      every 10 s. That retry was SEC1 "P1 landing"'s one same-origin
+      request.
+  - A proxy serving that one file made every one of these checks match
+    4.33.
+  - The fix:
+    - The bundle lane copies the release's pinned manifest into
+      `client/public/runtime/`. It refuses when the mirror lacks it, names
+      another runtime, or differs from `runtime-manifest.json`, and it
+      removes other runtimes' pinned copies.
+    - `scripts/stage-snapshots.py --copies` (which
+      `scripts/fetch-artifacts.sh` runs) writes it from
+      `runtime-manifest.json`.
+    - `scripts/preflight-artifacts.mjs` requires it, byte-identical to
+      `runtime-manifest.json`, and refuses another runtime's
+      (`scripts/upload-artifacts.test.mjs`).
+  - Re-run on the rebuilt bundle (`index-D1y0TwBs.js`, sw `37affd8686ee`,
+    :3008, no proxy supplying the file; evidence `lv-shots/qv-pinfix`,
+    `qv-d7/D7-rag-fixed`):
+
+| Check | Before the fix | After | 4.33 |
+|---|---|---|---|
+| D6: NNG4 prepared only, offline, level A | "Failed to fetch" at 0.8 s | boot 5.9 s, proof 3.8 s | boot 5.3 s |
+| D6: level B goal, inventory doc | no goal in 121 s; doc 0.0 s | goal 1.6 s, doc 0.0 s; "all 189 files are held" | 1.6 s; 189 held |
+| D6: the game's landing tile, offline | no tile state after 33 s | Ready, 3.2 s | Ready |
+| D1/N2 partial tiles (two runtime chunks, `game.json` deleted) | 0.3 / 0.3 s | 0.3 / 0.3 s | 0.3 s |
+| Offline landing | no Download/Prepare row (`other: 9`), a failed resource | 0.4 s, 9 × Download, 0 errors | 9 × Download |
+| RAG prepared, booted offline + images | "Failed to fetch" | boot 7.2 s; level and world-intro images all complete | boot 6.1 s, the same images |
+| Shell fill, landing fresh / reload / offline | 233/234, 1 failed; offline: a retry round every 10 s | 234/234 complete in all three (fill 3.5 s) | 234/234 |
+| Service-worker install | "1 of 68 critical shell files not cached" | no warning | no warning |
+| D7 phase A (online warm-up) | boot 8.0 s, 354/354, shell 233/234 | boot 8.3 s, 354/354, shell 234/234 | boot 8.2 s, 354/354, shell complete |
+| D7, proxy refusing (`onLine` true) | failed at 0.9 s | boot 6.1 s, proof done, 14 failing service-worker GETs (7 distinct), "all 354 files are held" | boot 6.0 s, 14 failing |
+| D7, Chromium offline | boot 7.1 s, 0 failing (143) | boot 6.7 s, 0 failing (143) | boot 5.9 s, 0 failing |
+| SEC1 | 67/69; "P1 landing" saw 1 same-origin request | 68/69 (only "P2"); "P1 landing" 0 requests; 0 attacker requests outside the two positive controls; `?snapshots=snapshots` ready in 7 s | 68/69; 0 attacker requests |
+| Ten-game smoke (`--all`, fresh profile) | 10/10, boot 6.2–9.3 s; shell fill 233/234 in every game | 10/10, boot 6.2–10.3 s, the same bytes per game; shell fill 234/234; 0 CSP hits in 2,303 console lines; 2–3 textless errors per game | 10/10, 6.3–8.3 s |
+
+- **RAG Lecture10/1 (the product-of-limits boss) cannot be finished in the
+  browser, on 4.34 or on 4.33.**
+  - On 4.34, `have ε1 : 0 < ε / (2 * K) := by bound` (step 3) gets
+    "maximum recursion depth has been reached: the WebAssembly runtime's
+    stack is exhausted …", and so do the `bound` calls at steps 12 and 26.
+    The checker survives (patch 0036), on two runs.
+  - On 4.33, steps 1–25 pass and the checker dies again and again at step
+    26 ("Maximum call stack size exceeded").
+  - So `bound` now runs out of stack earlier, but cleanly. Reported to the
+    kernel session (the stack budget, or deeper recursion in 4.34's
+    `bound`/aesop). Other `bound`-heavy RAG levels were not checked.
+- **NTG, lean4game-logic and LAG snapshots grew** with the full
+  `Mathlib.Tactic` umbrella (above). The download went 231.5 → 364.5 MB,
+  231.3 → 364.3 MB and 280.1 → 365.0 MB (+133 / +133 / +85 MB; raw
+  0.84 → 1.28 GB and 1.00 → 1.28 GB). Their boots take 8.2–9.3 s instead
+  of 7.2–7.3 s. The smoke's "MB wire" column reads +266 / +266 / +170 MB
+  because it counts every download twice (NNG4: 310.9 MB for its 155.5 MB
+  snapshot). The other seven games moved by 3–10 MB raw. Follow-up: a
+  trimmed umbrella or per-game imports (above).
+- **Empty `console.error` lines, 1–3 per boot.** Each is
+  `console.error("")` from lean4monaco's fallback notification service
+  (`$showMessage` → `_showMessage` → `notify`). Something shows an
+  Error-severity window message with no text while a level elaborates or
+  is proved. No check is affected, and the sender is not traced. The net
+  run saw none on 4.33, but the 4.33 smoke (`qr-core`) logged the same 1–3
+  per game, and the slow run counted 1/2/6 against 4.33's 0/1/4. So they
+  predate 4.34.
+- **Two game tabs booting the same new game still download the snapshot
+  twice** (2 × 155.5 MB; tab 1 ready at 58.6 s, tab 2 at 110.7 s; 4.33:
+  57.2 s, 108.4 s). This is QED64's `openRawSnapshot`, as above.
+
 ## Open
 
 - **A deep `decide` kills the checker with a JS stack overflow (runtime or
@@ -1903,6 +2094,13 @@ Targeted re-test on the bumped build (`index-C3-6zpek.js`, sw
   - Typing over that line after a restart grew the pool 26 → 77 workers and
     crashed the tab.
   - Reported to QED64 and the kernel session.
+  - Fixed by kernel patch 0036 (release `lean-v4.34.0-41ec565`, branch
+    `lean-v4.34`): the line now fails with Lean's "maximum recursion depth
+    has been reached: the WebAssembly runtime's stack is exhausted …" error
+    and the checker stays up; typing above it at 150 ms/char keeps the pool
+    at 24 (`wasm/KERNEL.md`, "The Lean 4.34 port"). Reproducing it needs the
+    relaxed rules: at difficulty 2 the Runner cuts the proof before the
+    locked `have` and the `decide` never runs.
 
 - **Editor mode crash: closed upstream** (QED64 ≥ `f150f47`, `editCoalesceMs`;
   the game's throttle is deleted — "QED64 as a dependency" above). Residual,

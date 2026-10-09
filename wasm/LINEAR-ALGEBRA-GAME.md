@@ -1,5 +1,14 @@
 # LinearAlgebraGame on the wasm64 fork — engineering report (2026-09-11)
 
+> **Superseded in part (2026-10-06, Lean 4.34).** This report describes the
+> 4.33.0-pre port. `wasm/compat` and the lane's `compat` lane no longer
+> exist: the modules it names below (the `Mathlib.Tactic` umbrella, `Have`,
+> `Cases`, …) come from the toolchain release's `mathlib-game-extra` pack
+> (`wasm/PORTING.md` §4), `--lanes compat` is no longer a lane, and the
+> current port of this game is `wasm/PORTING.md` §8 (LinearAlgebraGame) with
+> `wasm/patches/lag-wasm64-port.patch`. The analysis of the game itself
+> stands as written.
+
 Analyst: LAG port analysis. Inputs: `ports-facts.md`; clone of
 github.com/ZRTMRH/LinearAlgebraGame `main` @ **03b894b2** (2026-05-17, "fix: merge duplicate
 NewTheorem blocks in 3 levels (#26)") at

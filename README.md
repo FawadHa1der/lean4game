@@ -18,9 +18,39 @@ npm --workspace client run build    # -> client/dist
 ```
 
 To play locally, fetch the runtime and the game snapshots first
-(`scripts/fetch-artifacts.sh`, ~1.2 GB) and serve the build with
-`node scripts/serve-dist.mjs` — [wasm/KERNEL.md](wasm/KERNEL.md), "Rebuilding
-from a clone".
+(`scripts/fetch-artifacts.sh`, ~2.8 GB for the ten games; the bundle named in
+`wasm/artifacts/BUNDLE.json` must have been published) and serve the build
+with `node scripts/serve-dist.mjs` — [wasm/KERNEL.md](wasm/KERNEL.md),
+"Rebuilding from a clone".
+
+### Building the artifacts from source
+
+The Lean toolchain is not built here: the game pins one **toolchain
+release** of the kernel fork (github.com/FawadHa1der/lean4,
+`lean-v4.34.0-41ec565`: Lean 4.34.0, runtime `wasm64-57ae00dc5f6ce958`) —
+the root `package.json` devDependency `lean4-wasm64` (the release's tools
+tgz) and `wasm/lean4-wasm64-release.json` (a byte copy of its
+`release.json`: id, self-digest, runtime build id, kernel patch, packs,
+native compiler). `wasm/build-from-source.sh` fetches and verifies that
+release, compiles lean-i18n, GameServer and every game in
+`wasm/catalog.json` with the release's native compiler, bakes one
+environment snapshot per game with QED64's pipeline (from the `qed64`
+package) and stages the client bundle:
+
+```bash
+npm ci
+wasm/build-from-source.sh --plan                                  # every step, nothing runs
+wasm/build-from-source.sh --verify-snapshots                      # everything (~4 h for ten games)
+wasm/build-from-source.sh --lanes games,bake --games stg4 --verify-snapshots   # one game
+```
+
+It needs Docker that runs `linux/arm64` containers (native on Apple silicon;
+an x86_64 host needs qemu emulation — Docker Desktop has it), Node ≥ 24,
+python3, rsync, ~25 GB of disk and ~2.3 GB of downloads; the lane builds its
+own ~40 MB image from `wasm/docker/Dockerfile`. Lanes, checks and the
+release bump: [wasm/KERNEL.md](wasm/KERNEL.md) ("Toolchain dependency",
+"Building the artifacts from the toolchain release"); porting a game:
+[wasm/PORTING.md](wasm/PORTING.md).
 
 ## Creating a Game
 
