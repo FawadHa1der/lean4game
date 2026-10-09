@@ -87,7 +87,8 @@ Object.assign(globalThis, {
   BroadcastChannel: undefined,
   location: new URL("https://l4g.test/"),
   // The warm-up's manifest (no service worker here: the warm-up ends at once).
-  fetch: async () => new Response(JSON.stringify({ buildId: "b1", leanVersion: "4", files: {} }), { status: 200, headers: { "content-type": "application/json" } }),
+  // runtime/v1: buildId is "wasm64-" + sha256(lean.wasm)[:16], which qed64's resolveRuntimeManifest checks (since qed64 80ddbf6).
+  fetch: async () => new Response(JSON.stringify({ buildId: `wasm64-${"b1".repeat(8)}`, leanVersion: "4", files: { "lean.wasm": { bytes: 1, sha256: "b1".repeat(32), chunks: [] } } }), { status: 200, headers: { "content-type": "application/json" } }),
 });
 Object.defineProperty(globalThis, "navigator", {
   configurable: true,
@@ -115,7 +116,8 @@ await test("single flight: a second caller of the region a Prepare streams (qed6
   const all = gc.prepareGame(entry);
   await flush();
   assert.equal(FakeWorker.all.length, 1);
-  assert.deepEqual(FakeWorker.all[0]!.posted[0], { url: entry.url, cacheKey: snapshotCacheKey(entry), rawBytes: entry.bytes });
+  // transferBytes: the index's compressed size, for the worker's short-transfer check (qed64 HARDENING #63 follow-up).
+  assert.deepEqual(FakeWorker.all[0]!.posted[0], { url: entry.url, cacheKey: snapshotCacheKey(entry), rawBytes: entry.bytes, transferBytes: entry.transfer });
   // qed64's snapshot load (loadSnapshotByName → prefetchRaw "wait"); the
   // game's boot waits for the Prepare's region before its session gets here
   // (PAR-2, below), but the registry is what keeps any second caller to one download.

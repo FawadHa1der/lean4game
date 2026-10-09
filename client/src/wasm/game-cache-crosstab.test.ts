@@ -79,7 +79,8 @@ class FakeWorker {
 }
 
 const fetched: string[] = [];
-const manifest = { buildId: "b1", leanVersion: "4", files: { "lean.js": { bytes: 1, sha256: "", chunks: [{ url: "/runtime/chunks/lean.js.aa.part-000", bytes: 1, sha256: "" }] }, "lean.wasm": { bytes: 1, sha256: "", chunks: [] } } };
+// runtime/v1: buildId is "wasm64-" + sha256(lean.wasm)[:16], which qed64's resolveRuntimeManifest checks (since qed64 80ddbf6).
+const manifest = { buildId: `wasm64-${"b1".repeat(8)}`, leanVersion: "4", files: { "lean.js": { bytes: 1, sha256: "", chunks: [{ url: "/runtime/chunks/lean.js.aa.part-000", bytes: 1, sha256: "" }] }, "lean.wasm": { bytes: 1, sha256: "b1".repeat(32), chunks: [] } } };
 const json = (v: unknown) => new Response(JSON.stringify(v), { status: 200, headers: { "content-type": "application/json" } });
 Object.assign(globalThis, {
   window: fakeWindow,

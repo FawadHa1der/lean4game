@@ -151,7 +151,8 @@ assert.equal(readDeath(workerDied("crash", "Uncaught NetworkError: Failed to exe
 assert.equal(readDeath(workerDied("heartbeat", "no heartbeat; NetworkError", {})), "own");
 assert.equal(rebootLabel(rebooting0("crash", frontDoorMissing), networkInEpisode(readDeath(frontDoorMissing), false, true)), NETWORK_WAIT_LABEL, "inside a network episode: the link's wording, not \"after a crash (…)\"");
 // QD-API-2: a stale page — its own verdict, never the link's, never a crash label
-assert.deepEqual([depMismatch.reason, depMismatch.cause?.kind, depMismatch.cause?.code], [WORKER_DEP_MISMATCH, "other", WORKER_DEP_MISMATCH], "qed64's classification of the error reply");
+// qed64 A2b (d386fd5): a stale page is its own FailureKind, "stale" (it was "other"); its code stays WORKER_DEP_MISMATCH, which is what this page reads.
+assert.deepEqual([depMismatch.reason, depMismatch.cause?.kind, depMismatch.cause?.code], [WORKER_DEP_MISMATCH, "stale", WORKER_DEP_MISMATCH], "qed64's classification of the error reply");
 assert.equal(isStalePageDeath(depMismatch), true);
 assert.equal(isStalePageDeath({ reason: "crash", message: "x", cause: { kind: "other", code: WORKER_DEP_MISMATCH, message: "x" } }), true, "by the cause's code");
 assert.equal(isStalePageDeath(oobCrash), false);

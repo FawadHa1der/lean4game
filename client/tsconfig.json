@@ -23,7 +23,7 @@
     // it changes how other packages resolve and adds errors of its own; so the
     // one entry is spelled out, at the workspace's hoisted node_modules.
     "paths": {
-      "qed64/embed": ["../node_modules/qed64/frontend/src/embed/index.ts"]
+      "qed64/embed": ["../node_modules/qed64/lib/index.ts"]
     },
   },
   "include": [

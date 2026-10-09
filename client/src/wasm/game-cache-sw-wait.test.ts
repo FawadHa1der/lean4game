@@ -84,7 +84,8 @@ class FakeWorker {
   say(data: unknown): void { if (!this.terminated) this.onmessage?.({ data }); }
 }
 
-const manifest = { buildId: "b1", leanVersion: "4", files: { "lean.wasm": { bytes: 2, sha256: "", chunks: [{ url: "/runtime/chunks/lean.wasm.aa.part-000", bytes: 1, sha256: "" }, { url: "/runtime/chunks/lean.wasm.aa.part-001", bytes: 1, sha256: "" }] } } };
+// runtime/v1: buildId is "wasm64-" + sha256(lean.wasm)[:16], which qed64's resolveRuntimeManifest checks (since qed64 80ddbf6).
+const manifest = { buildId: `wasm64-${"b1".repeat(8)}`, leanVersion: "4", files: { "lean.wasm": { bytes: 2, sha256: "b1".repeat(32), chunks: [{ url: "/runtime/chunks/lean.wasm.aa.part-000", bytes: 1, sha256: "" }, { url: "/runtime/chunks/lean.wasm.aa.part-001", bytes: 1, sha256: "" }] } } };
 const json = (v: unknown) => new Response(JSON.stringify(v), { status: 200, headers: { "content-type": "application/json" } });
 Object.assign(globalThis, {
   Worker: FakeWorker,

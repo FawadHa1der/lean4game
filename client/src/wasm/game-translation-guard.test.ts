@@ -289,7 +289,7 @@ assert.equal(relayErrorKind("No connection to Lean"), null);
 // onOrphanedRequest; the hover queued with them waits for the window.
 {
   const pkg = path.dirname(createRequire(import.meta.url).resolve("qed64/package.json"));
-  const { createEditCoalescer, SUPERSEDED, DEFAULT_EDIT_COALESCE_MS } = await import(pathToFileURL(path.join(pkg, "frontend/src/embed/edit-coalescer.ts")).href);
+  const { createEditCoalescer, SUPERSEDED, DEFAULT_EDIT_COALESCE_MS } = await import(pathToFileURL(path.join(pkg, "lib/edit-coalescer.ts")).href);
   assert.equal(DEFAULT_EDIT_COALESCE_MS, 300, "the window the game's throttle measured");
   // Injected timers: the window ends when the test says so.
   let timers: Array<{ id: number; f: () => void }> = [];

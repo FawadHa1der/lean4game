@@ -16,7 +16,8 @@
  *  - session adapter + boot policy:      ResidentSession (+ its session files)
  *  - the relay (crash recovery, replay): LspRelay
  *  - the worker itself:                  /workers/lean.worker.js (+ lsp-frames.js,
- *                                        lsp-front-door.js, snapshot-prefetch.worker.js)
+ *                                        memory64-probe.js, lsp-front-door.js,
+ *                                        snapshot-prefetch.worker.js: qed64's WORKER_URLS)
  *
  * Game-specific responsibilities here:
  *  0. the artifacts: installArtifacts with NO library pack (`profiles:

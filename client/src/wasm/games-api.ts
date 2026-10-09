@@ -109,13 +109,37 @@ export function gameKnownCheck(gameId: string): Promise<boolean> {
 
 declare const __QED64_BUILD_ID__: string;
 
+/** The runtime build this shell was built against (vite's
+ * `__QED64_BUILD_ID__`, from the committed runtime manifest), or null where
+ * no bundler defines it (the unit tests). Read at call time. The pin
+ * resolveRuntimeManifest fetches first; the snapshot index is paired with
+ * bootedBuildId, which is this unless `?runtime=` is set. */
+const shellBuildId = (): string | null => (typeof __QED64_BUILD_ID__ === "string" ? __QED64_BUILD_ID__ : null);
+
+/** The runtime build this page boots, as far as it is known before the
+ * manifest resolves: the `?runtime=` override (validated by boot-params as
+ * `wasm64-` + 16 hex), which wins over the pin in qed64's resolver, else the
+ * shell's pin. The snapshot index is paired with this (HARDENING #64; qed64
+ * docs/EMBEDDING.md §7.0 asks for "the buildId of the runtime it boots"),
+ * because the tiles and the boot's pairing check compare its entries with
+ * the RESOLVED manifest's buildId: paired with the pin instead, `?runtime=X`
+ * on a site whose index.json already names X swapped in the pin's copy, and
+ * every tile and boot refused X's snapshots. It is known without awaiting
+ * the manifest, so the manifest and index fetches stay parallel. It differs
+ * from the resolved build only on a pin miss (the pinned manifest 404s or
+ * cannot be fetched and the mutable one names another runtime: a tab left
+ * open across a runtime deploy); the pairing check then refuses "not
+ * published for this build" with its Reload, as such a stale tab must. */
+const bootedBuildId = (overrides: { runtime: string | null }): string | null => overrides.runtime ?? shellBuildId();
+
 let manifestPromise: Promise<RuntimeManifest> | null = null;
 /** The manifest of the runtime this shell boots — the ONE resolution per
  * page (the pairing check, the landing tiles, the boot's artifact install
  * and the Prepare warm-up all read it), by qed64's own resolver
- * (docs/EMBEDDING.md §7.6): the immutable copy pinned to the build the shell
- * was built against, else the `?runtime=` dev override, else the mutable
- * manifest — so the pairing check and the boot can never disagree about
+ * (docs/EMBEDDING.md §7.6): the `?runtime=` dev override when set (it wins
+ * over the pin), else the immutable copy pinned to the build the shell was
+ * built against, else (a pin miss) the mutable manifest — so the pairing
+ * check and the boot can never disagree about
  * which runtime runs. A failure is not memoised, so a later caller retries.
  * SEC1: the overrides only as boot-params accepts them (a refused value
  * throws — no fetch, no fallback to the served runtime), and a manifest
@@ -124,8 +148,7 @@ let manifestPromise: Promise<RuntimeManifest> | null = null;
  * look at the chunks). */
 export function resolveRuntimeManifest(): Promise<RuntimeManifest> {
   manifestPromise ??= (async () => {
-    const pinnedBuildId = typeof __QED64_BUILD_ID__ === "string" ? __QED64_BUILD_ID__ : null;
-    const manifest = await resolveManifestFor(bootOverrides(), { pinnedBuildId });
+    const manifest = await resolveManifestFor(bootOverrides(), { pinnedBuildId: shellBuildId() });
     if (typeof manifest.buildId !== "string" || !manifest.buildId) throw new Error("runtime manifest: no buildId");
     refuseForeignManifestUrls(manifest);
     return manifest;
@@ -157,12 +180,27 @@ let indexPromise: Promise<SnapshotIndex | null> | null = null;
  * (refusedSnapshotIndex), not the "unreadable" null: the re-root rewrites only
  * `/snapshots/…`, so an absolute url used to survive it and reach the HEAD,
  * the prefetch worker and the Lean worker, and the region landed in OPFS
- * under the live key the index itself named. A refusal is not memoised either. */
+ * under the live key the index itself named. A refusal is not memoised either.
+ * HARDENING #64: the served index is read with the build this page boots
+ * (bootedBuildId: `?runtime=`, else the shell's pin) as `pairedBuildId` —
+ * when /snapshots/index.json names another runtime (an upload of the next
+ * pairing ran ahead of this shell's deploy), qed64's loader reads
+ * /snapshots/index.<buildId>.json (scripts/stage-snapshots.py --copies
+ * publishes it from the served index; the service worker precaches the
+ * pin's, scripts/build-sw.mjs) and uses it when every entry is paired with
+ * that build; a 404, HTML, a network error or a mispaired copy keeps the
+ * mutable index, whose unpaired entries the tiles and the boot then refuse
+ * as before. The throwing loader stays: its off-site refusal of index.json
+ * is SEC1's, and a refused copy is never used (the mutable index is kept).
+ * A paired index costs no extra request. `?snapshots=` reads only its own
+ * index (qed64's fetchSnapshotIndexFor). */
 export function fetchSnapshotIndexOnce(): Promise<SnapshotIndex | null> {
   indexPromise ??= (async () => {
     const overrides = bootOverrides();
     try {
-      return overrides.snapshots ? await fetchSnapshotIndexFor(overrides) : await loadSnapshotIndex();
+      return overrides.snapshots
+        ? await fetchSnapshotIndexFor(overrides)
+        : await loadSnapshotIndex(undefined, { pairedBuildId: bootedBuildId(overrides) ?? undefined });
     } catch (e) {
       if (refusedOffSite(e)) throw refusedSnapshotIndex(String((e as Error)?.message ?? e));
       if (overrides.snapshots) throw e;

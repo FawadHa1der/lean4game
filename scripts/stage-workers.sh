@@ -8,9 +8,10 @@
 #
 # What to copy is the package's embedding/closure.json, not a list kept here:
 # each `workers[]` entry is {path (in the package), serveAs (on the site)}.
-# lean.worker.js importScripts lsp-frames.js and lsp-front-door.js from its
-# own directory, so the closure ships all four together, and a bump that adds
-# a worker needs no change here.
+# lean.worker.js importScripts lsp-frames.js, memory64-probe.js and
+# lsp-front-door.js from its own directory, so the closure ships them
+# together, and a bump that adds a worker (qed64 A3c's memory64-probe.js)
+# needs no change here.
 #
 # Staging makes client/public/workers exactly the closure's set: a worker a
 # bump dropped or renamed is removed, not left to ship and be precached.
