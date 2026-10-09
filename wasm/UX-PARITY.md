@@ -2140,6 +2140,109 @@ the same 4.34 build on QED64 `bf9d947` with the pinned-manifest fix
 - Not re-run: deep play, editor crash bursts, pace, the reload storm,
   Cypress.
 
+### Live: Lean 4.34 on the toolchain release (wasm64-port 821692f, 2026-10-09)
+
+The 4.34 branch with the QED64 `385a1ac` pin is live: `wasm64-port` @
+`821692f`, release `lean-v4.34.0-41ec565`, runtime
+`wasm64-57ae00dc5f6ce958`, the edge worker on `qed64/edge`. Bundle
+`index-B2CPBv8a.js`, the same bundle as the local "Fixed" run. The service
+worker is `af426a36296c`. Both runtime manifests (`runtime-manifest.json`
+and the pinned `runtime-manifest.wasm64-57ae00dc5f6ce958.json`) name the new
+runtime, and `/snapshots/index.json` is byte-identical to its copy
+`index.wasm64-57ae00dc5f6ce958.json` (3,791 B, same etag).
+
+**The deploy, as it happened:**
+
+1. `scripts/upload-artifacts.sh` (step 1) uploaded the new snapshots and
+   the new runtime's index copies.
+2. The push to `wasm64-port` landed and CI deployed the shell **before
+   step 1 had finished**. R2's `index.json` still paired with
+   `wasm64-d77d34b97592d014`, so the new shell read its own copy
+   (#64). That copy was not in R2 yet, so for about 90 s (12:46:48–12:48:17
+   UTC) every game on the live site was refused. Once step 1 wrote the
+   copy, the shell booted games from it.
+3. `scripts/upload-artifacts.sh --post-deploy` passed its preflight (32
+   runtime files, the release in R2, the live site serving the new
+   runtime). It then pinned the outgoing indexes, which had no copies yet:
+   `index.wasm64-d77d34b97592d014.json` (3,228 B) and
+   `profiles-index.wasm64-d77d34b97592d014.json` (285 B). Then it replaced
+   the mutable `index.json` (3,791 B) and `profiles/index.json` (295 B).
+   Both runtimes' `.snapz` remain in R2.
+
+Two lanes ran, both read-only (GETs and normal browsing, at most one cold
+download per game per lane), under the host browser lock. Evidence
+`lv-shots/lv-434/<lane>`. The probes are QED64's
+`work/lv-434-*.mjs`, copies of the `qv-*` / `games-smoke` probes pointed at
+the live site. The link measured about 11 MB/s (20 MB in 1.81 s). Local
+boots used fresh profiles over localhost, so they are not comparable with
+cold boots over the internet. "Local" is the "Fixed" run and the 4.34 core
+run above. "Previous live" is the live runs of `88fe4fb` (the 2026-09
+campaign, ~6.8 MB/s), `4083fb4` and SEC1's `live6`.
+
+| Check | Live 4.34 | Local | Previous live |
+|---|---|---|---|
+| Ten-game smoke, cold, fresh profile | 10/10, each level completed; boot 19.3–38.5 s (testgame 35.8 s with the runtime) | 10/10, 6.3–10.2 s | 33.5–88.5 s (testgame 63.2 s) |
+| Smoke MB on the wire (counts each download twice) | the same as local within ±0.4 MB, except testgame 459.1 (the runtime counted once: the service worker registered 7 s before the page closed, so its runtime warm-up did not run there) | testgame 617.6 | — |
+| Smoke console | 0 CSP hits in 2,686 lines, 0 in Chromium's log; 0 "not published for this build", 0 "not cached"; 1–3 textless errors per game (`index-B2CPBv8a.js:1897`) | 0 in 2,315; 2–3 | — |
+| Smoke shell fill | 237/237 on 8 of 10 pages, first at the third page (STG4); the testgame and NNG4 pages closed before any fill line | 237/237 ×10 | — |
+| Ten-game smoke, second visit (same profile) | 10/10, boot 5.6–10.0 s, 0.0 MB, 237/237 ×10, 0 CSP hits in 2,261 lines | 6.3–10.2 s | NNG4 6.5 s cached |
+| Editor-mode proof, NNG4 Multiplication/1 | boot 8.4 s; error on the wrong line at 10.8 s; proof 3.5 s, "Level completed! 🎉"; 9 console errors (3 textless, 6 "QED64: the client cancelled…") | 7.1 s; 9.5 s; 3.6 s; 11 errors of the same kinds | — |
+| `decide` line (Fin 40), relaxed rules | "… stack is exhausted …" on its line, settles 0.2 s, the proof then 0 errors; one session, 0 deaths, pool 24 | 0.61 s, the same | (killed the checker before 0036) |
+| Deep play Knights SetTheory_Knights_Knaves/6 | boot 10.2 s; 11/11 steps; completed 25.2 s; Next 1.1 s, Previous 2.0 s | 6.6 / 21.0 / 1.1 / 2.0 s | 6.6–14.2 s cached boots |
+| Deep play Robo Babylon/6 | 10.0 s; 9/9; 23.9 s; 1.2 / 2.7 s | 7.9 / 22.3 / 1.1 / 2.7 s | |
+| Deep play LAG InnerProductWorld/2 | 9.8 s; 15/15; 37.2 s; 1.2 / 3.0 s | 7.5 / 31.2 / 1.2 / 2.7 s | |
+| RAG Lecture10/1 | not completable, as known (below) | the same | — |
+| SEC1: the 10 override vectors | 10/10 refused, `BOOT_PARAM_REFUSED` + "Open without the override" in 0.1–0.2 s, 0 index or snapshot requests; the way out boots; the landing vector shows the notice and 9 tiles | 68/69 exploit set (only P2) | 10/10 (`live6`) |
+| SEC1: CSP | cross-origin fetch, XHR and WebSocket blocked; same-origin `/api/games` 200, `blob:` and `data:` work; 0 foreign requests apart from the `example.com` control; Chromium logged only the 4 control lines | the same | the same |
+| SEC1: normal boot (warm) | NNG4 Tutorial/1 boot 7.1 s, proof 1.1 s; the stored NNG4 region (574,944,789 B) unchanged by the vectors | `?snapshots=snapshots` 6 s | boots and proves |
+| Landing fresh / reload / offline | 1.0 / 0.3 / 0.5 s, 9/9 Download, 0 errors | 0.4 / 0.3 / 0.4 s | — |
+| D6: NNG4 prepared from the landing only | 27.1 s, 314.3 MB, 189/189, region 574.9 MB; offline A (Multiplication/1) boot 7.0 s, proof 3.8 s; B goal 1.6 s, proof 5.5 s; doc 0.1 s (service worker); offline tile Ready 3.4 s | 1.6 s / 316.4 MB; 6.0, 3.9; 1.6; 0.1; 3.2 s | 29.8 s, 309 MB; A 5.4 s; B 1.6 s |
+| RAG prepared, then offline with images | Prepare 35.2 s, 444.3 MB, 353/353 (14 images, 1.82 MB), region 1,014.6 MB; NewtonsCalculationOfPi/1 boots offline in 7.0 s; SeqLim.jpg (1594×732) and the 6 world-intro images complete | 7.2 s, all images | 356/356, images render |
+| #64 on a normal boot | `/snapshots/index.json` read once by the page and once by the service worker; 0 copy requests (also offline) | copy read only when mispaired | (new) |
+| #64 precache | the install fetches both copies of the pin once, 3 s into the first visit; both in `l4g-shell` after it | the same | (new) |
+| Shell fill (security lane) | 237/237, 0 failed, in every pass of three profiles, ~4.4 s after registration; the 71 critical paths answer 200 (2 through a 307) | 237/237 | — |
+| Edge headers (curl) | Range → 206 with the right Content-Range (snapshot, suffix, chunk); If-Range match 206, mismatch 200 full; 416 and 404 `no-store`; POST/PUT 405 `Allow: GET, HEAD`; `immutable` on `/assets/*`, `.snapz`, `/runtime/chunks/*`, `must-revalidate` on the shell, the manifests and every index and copy; COOP/COEP/CORP and the CSP on every response, errors and redirects included | — | — |
+
+- **The 90 s refusal window during the deploy** is the case `wasm/DEPLOY.md`
+  warns about: "finish step 1 BEFORE the push". It lasted only 90 s because
+  step 1 finished soon after the push. A push earlier in step 1 would have
+  kept every game refused for the whole multi-GB upload. CI cannot check
+  R2, but it can check the live site. A guard in `deploy.yml` (or `deploy-app.sh`) that refuses, or
+  waits, until `$SITE_URL/snapshots/index.<new buildId>.json` answers 200,
+  or `index.json` already names the new runtime, would close the window.
+  Open.
+- **The cold smoke's shell fill (8 of 10 pages)** is not a defect. Over the
+  internet the service worker registered while the first pages were still
+  downloading, and the testgame and NNG4 pages closed before the fill
+  logged (NNG4 logged "offline cache 189/189"). The fill was complete from
+  the third page on, on the second visit, and in every security-lane pass.
+- **RAG Lecture10/1** stays as on the local 4.34 runs. Boot 10.4 s; step 3's
+  `bound` and step 26's run out of stack cleanly. Step 12 gives knock-on
+  errors ("Unknown identifier `n`", an LE instance failure, `aesop`),
+  because the steps before it failed. Overall, 19 of 28 steps fail; the
+  last error is "Unknown identifier `f1`". The checker answered every step
+  in 0.8–2.2 s, there was one boot, and there were no deaths or crashes.
+  Which `bound` steps run out of stack varies by run (local: 3, 7, 26 and
+  3, 6, 12, 26); step 3 has failed in every run.
+- **Warm boots over the internet** take 9.8–10.4 s in the deep-play rows
+  against 6.6–7.9 s on localhost. No bytes are downloaded, so the
+  difference is probably the round trips to revalidate the
+  `must-revalidate` shell files (not measured).
+- Minor, none failing a check:
+  - `/api/games` is served with no `content-type`.
+  - `/index.html` and `/assets/webWorkerExtensionHostIframe-gIqsUtfW.html`
+    answer 307 to their extension-less paths (Cloudflare's asset HTML
+    handling); the fill reports complete.
+  - Five worker-script requests end `ERR_ABORTED` on every boot, online and
+    offline, and every boot reaches ready.
+  - RAG's world intro loads a YouTube thumbnail, which fails offline (game
+    content; images are not under `connect-src`).
+  - The service worker's console reached neither Playwright nor Chromium's
+    log, so the absence of "not cached" rests on curl (every critical path
+    200) and on every fill ending with 0 failed.
+- Not run live: D4/D5/D7 cuts and refusals, slow links, tabs, the reload
+  storm, editor bursts and pace, Cypress. Every profile was deleted.
+
 ## Open
 
 - **A deep `decide` kills the checker with a JS stack overflow (runtime or
