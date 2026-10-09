@@ -30,10 +30,12 @@
 #    a bump that moves it (or an install that nests the package) would leave
 #    tsc checking a stale or missing file while Vite bundles the new one;
 #  - the kernel floor: the workers state the oldest kernel patch level they
-#    drive (closure.json runtime.minKernelPatch); this site serves its OWN
-#    runtime, built from wasm/KERNEL-PIN, so a qed64 bump whose workers need a
-#    newer kernel is refused here — before a deploy ships workers the served
-#    runtime cannot run.
+#    drive (closure.json runtime.minKernelPatch); this site serves the runtime
+#    of the toolchain release it pins (wasm/lean4-wasm64-release.json, whose
+#    kernel.patch is that runtime's patch id), so a qed64 bump whose workers
+#    need a newer kernel is refused here — before a deploy ships workers the
+#    served runtime cannot run. Patch ids are NNNN plus an optional lowercase
+#    letter (0035b), ordered by the release tools' comparePatchIds.
 #
 #   scripts/stage-workers.sh           check, then stage them
 #   scripts/stage-workers.sh --check   check only (the from-source preflight)
@@ -84,15 +86,22 @@ node -e '
   const target = mapped === undefined ? null : real(path.resolve(clientDir, config.compilerOptions?.baseUrl ?? ".", mapped));
   if (!target || target !== real(entry)) fail(`client/tsconfig.json maps qed64/embed to ${mapped ?? "nothing"}, but the installed package\u2019s entry is ${path.relative(clientDir, entry)} (closure.json entry) — update the paths entry`);
 ' "$PKG" "$PWD/client"
-MIN_PATCH="$(node -p 'require(process.argv[1] + "/embedding/closure.json").runtime?.minKernelPatch ?? ""' "$PKG")"
-KERNEL_PATCH="$(sed -nE 's/^patch ([0-9]{4})( [0-9a-f]{40})?$/\1/p' wasm/KERNEL-PIN | head -1)"
-[[ "$MIN_PATCH" =~ ^[0-9]{4}$ ]] || { echo "stage-workers: the qed64 closure states no runtime.minKernelPatch ('$MIN_PATCH')" >&2; exit 2; }
-[ -n "$KERNEL_PATCH" ] || { echo "stage-workers: wasm/KERNEL-PIN has no 'patch NNNN' line" >&2; exit 2; }
-if [ "$((10#$KERNEL_PATCH))" -lt "$((10#$MIN_PATCH))" ]; then
-  echo "stage-workers: the qed64 workers need kernel patch $MIN_PATCH or newer (closure.json runtime.minKernelPatch), this site's runtime is built from patch $KERNEL_PATCH (wasm/KERNEL-PIN) — bump the kernel (a full rebake) or pin an older qed64" >&2
-  exit 2
-fi
-if [ "${1:-}" = --check ]; then echo "qed64 workers: kernel patch $KERNEL_PATCH meets their floor $MIN_PATCH"; exit 0; fi
+# The floor, compared by the release tools (the root devDependency
+# lean4-wasm64; resolved from the repo root, this script's cwd).
+FLOOR="$(node --input-type=module -e '
+  import fs from "node:fs";
+  import { comparePatchIds, parsePatchId } from "lean4-wasm64";
+  const [pkg, rec] = process.argv.slice(1);
+  const fail = (why) => { process.stderr.write(`stage-workers: ${why}\n`); process.exit(2); };
+  const min = JSON.parse(fs.readFileSync(`${pkg}/embedding/closure.json`, "utf8")).runtime?.minKernelPatch ?? "";
+  let r; try { r = JSON.parse(fs.readFileSync(rec, "utf8")); } catch { fail(`${rec} (the pinned toolchain release record) is missing or unreadable`); }
+  const have = r.kernel?.patch ?? "";
+  try { parsePatchId(min); } catch { fail(`the qed64 closure states no valid runtime.minKernelPatch (${JSON.stringify(min)})`); }
+  try { parsePatchId(have); } catch { fail(`${rec} names no valid kernel.patch (${JSON.stringify(have)})`); }
+  if (comparePatchIds(have, min) < 0) fail(`the qed64 workers need kernel patch ${min} or newer (closure.json runtime.minKernelPatch), this site serves the runtime of ${r.id}, patch ${have} (wasm/lean4-wasm64-release.json) — pin a newer toolchain release (a full rebake) or an older qed64`);
+  console.log(`qed64 workers: kernel patch ${have} (${r.id}, runtime ${r.runtime?.buildId}) meets their floor ${min}`);
+' "$PKG" wasm/lean4-wasm64-release.json)" || exit 2
+if [ "${1:-}" = --check ]; then echo "$FLOOR"; exit 0; fi
 PUB=client/public
 # Generated and gitignored: whatever the closure does not name goes (every
 # serveAs is a plain /workers/*.js, checked above).

@@ -7,7 +7,9 @@
 //   --check            validate the catalog (exit 1 with reasons)
 //   --list             one TSV row per game for bash loops (see COLUMNS)
 //   --api              write client/public/api/games from the staged game.json tiles
-//   --probe <snapshot> print the bake/e2e probe file for one game
+//   --probe <snapshot> [<key>]  print the bake/e2e probe file for one game
+//                      (key: probe — the default —, probe2, …)
+//   --probes <snapshot> print the game's probe keys, one per line (probe first)
 //   --required-files   print the files scripts/deploy-app.sh must find in dist
 //   --langs            print the UI language codes (client/src/config.json)
 import fs from "node:fs";
@@ -48,8 +50,12 @@ function check() {
     if (!/^[a-z0-9_-]+$/.test(g.snapshot ?? "")) errors.push(`${where} snapshot '${g.snapshot}' must match ^[a-z0-9_-]+$ (it names /snapshots/<name>.<digest>.snapz)`);
     if (ids.has(g.id)) errors.push(`${where} duplicate game id`); ids.add(g.id);
     if (snaps.has(g.snapshot)) errors.push(`${where} duplicate snapshot name '${g.snapshot}'`); snaps.add(g.snapshot);
-    if (!g.probe || typeof g.probe.world !== "string" || !Number.isInteger(g.probe.level) || typeof g.probe.proof !== "string")
-      errors.push(`${where} probe must be {world: string, level: integer, proof: string}`);
+    if (!g.probe) errors.push(`${where} probe is required`);
+    for (const k of probeKeys(g)) {
+      const p = g[k];
+      if (!p || typeof p.world !== "string" || !Number.isInteger(p.level) || typeof p.proof !== "string")
+        errors.push(`${where} ${k} must be {world: string, level: integer, proof: string}`);
+    }
     if (!Array.isArray(g.leanOptions) || g.leanOptions.some((o) => typeof o !== "string" || !/^[A-Za-z0-9_.]+=[^\s]+$/.test(o)))
       errors.push(`${where} leanOptions must be an array of "option=value" strings`);
     if (g.source === null || g.source === undefined) {
@@ -71,10 +77,20 @@ function check() {
   return errors;
 }
 
-const probeText = (g) => {
+/** A row's probes: `probe` (the bake's: wasm + native) and the optional
+ * `probe2`, `probe3`, … (a mid-game level's own solution; the bake lane runs
+ * them natively — a warning there is a level that never completes). */
+function probeKeys(g) {
+  return Object.keys(g).filter((k) => /^probe([2-9]|[1-9][0-9]+)?$/.test(k))
+    .sort((a, b) => (Number(a.slice(5)) || 1) - (Number(b.slice(5)) || 1));
+}
+
+const probeText = (g, key = "probe") => {
   const gj = gameJson(g);
   if (!gj) throw new Error(`${g.id}: no game.json (run the games lane or stage the game first)`);
-  return `import Game\nimport GameServer.Runner\nRunner "${gj.json.name}" "${g.probe.world}" ${g.probe.level} (difficulty := 1) (inventory := []) := by\n${g.probe.proof}\n`;
+  const p = g[key];
+  if (!p) throw new Error(`${g.id}: no ${key} in its catalog row`);
+  return `import Game\nimport GameServer.Runner\nRunner "${gj.json.name}" "${p.world}" ${p.level} (difficulty := 1) (inventory := []) := by\n${p.proof}\n`;
 };
 
 const mode = process.argv[2];
@@ -99,16 +115,17 @@ if (mode === "--check") {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   fs.writeFileSync(dst, JSON.stringify(out));
   console.log(`wrote ${path.relative(root, dst)}: ${out.map((g) => `${g.owner}/${g.game}${g.listed ? "" : " (unlisted)"}`).join(", ")}`);
-} else if (mode === "--probe") {
+} else if (mode === "--probe" || mode === "--probes") {
   const g = games.find((x) => x.snapshot === process.argv[3]);
   if (!g) { console.error(`no catalog game with snapshot '${process.argv[3]}'`); process.exit(1); }
-  process.stdout.write(probeText(g));
+  if (mode === "--probes") console.log(probeKeys(g).join("\n"));
+  else process.stdout.write(probeText(g, process.argv[4] ?? "probe"));
 } else if (mode === "--required-files") {
   console.log("api/games");
   for (const g of games.filter((x) => x.listed)) console.log(`data/${g.id}/game.json`);
 } else if (mode === "--langs") {
   console.log(uiLanguages().join(" "));
 } else {
-  console.error("usage: games-manifest.mjs --check | --list | --api | --probe <snapshot> | --required-files | --langs");
+  console.error("usage: games-manifest.mjs --check | --list | --api | --probe <snapshot> [<key>] | --probes <snapshot> | --required-files | --langs");
   process.exit(2);
 }

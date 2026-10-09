@@ -1,5 +1,0 @@
-[submodule "wasm/kernel"]
-	path = wasm/kernel
-	url = https://github.com/FawadHa1der/lean4.git
-	branch = qed64-wasm64
-	update = none

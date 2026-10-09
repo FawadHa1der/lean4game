@@ -1,0 +1,877 @@
+{
+  "schema": "lean4-wasm64.release/v1",
+  "id": "lean-v4.34.0-41ec565",
+  "lean": {
+    "version": "4.34.0",
+    "upstreamTag": "v4.34.0"
+  },
+  "kernel": {
+    "repo": "https://github.com/FawadHa1der/lean4",
+    "branch": "qed64-wasm64",
+    "commit": "41ec56530df541dcfb1d612a876fdc992d7ab8f5",
+    "patch": "0036"
+  },
+  "gate": {
+    "passed": true,
+    "commit": "41ec56530df541dcfb1d612a876fdc992d7ab8f5",
+    "wasmSha256": "57ae00dc5f6ce9585579b4326db4805f2aea7ef0273292751146950f0497653f",
+    "checks": 16
+  },
+  "runtime": {
+    "buildId": "wasm64-57ae00dc5f6ce958",
+    "manifest": "runtime/runtime-manifest.json",
+    "target": "wasm64-unknown-emscripten",
+    "sourceRevision": "qed64-wasm64@41ec56530d (upstream v4.34.0)",
+    "files": {
+      "lean.js": {
+        "bytes": 48973198,
+        "sha256": "e0b8397a43ae51a86b989d82afb21155ed8ffa3e4c6a681d6598af1f6db44dca",
+        "chunks": 3
+      },
+      "lean.wasm": {
+        "bytes": 109877359,
+        "sha256": "57ae00dc5f6ce9585579b4326db4805f2aea7ef0273292751146950f0497653f",
+        "chunks": 7
+      }
+    },
+    "bin": [
+      {
+        "name": "leanmake",
+        "path": "runtime/bin/leanmake",
+        "bytes": 839,
+        "sha256": "07c96082b95fce057ed9656cc80da50477d596250973cfdd414f74e7631eb56d"
+      }
+    ]
+  },
+  "packs": [
+    {
+      "id": "lean-core",
+      "manifest": "profiles/lean-core.manifest.json",
+      "release": "lean-core-4.34.0-wasm64-36a96239e08fd2e0",
+      "modules": 649,
+      "rawBytes": 390065102,
+      "rawSha256": "1c5c75db4e883f026f88ff6538c285467332cf2677d795d2e91a50f4dd1e22a3",
+      "roots": [
+        "Init"
+      ],
+      "lean": {
+        "version": "4.34.0",
+        "compiler": "8d91aadcda8a0b231e47c42d4ff4b9b8360563aa",
+        "gitRevision": "8d91aadcda8a"
+      },
+      "note": "transport copied from served bytes, not re-packed"
+    },
+    {
+      "id": "mathlib-essential",
+      "manifest": "profiles/mathlib-essential.manifest.json",
+      "release": "mathlib-essential-5ed2965-wasm64-36a96239e08fd2e0",
+      "modules": 4354,
+      "rawBytes": 3568001947,
+      "rawSha256": "eeab078f1c0d4d021d178a9bd1eaad9391b7ba02c7a3f5415413fde11a248b4c",
+      "roots": [
+        "Mathlib.Analysis.SpecialFunctions.Complex.Circle",
+        "Mathlib.Geometry.Manifold.Instances.Sphere",
+        "Mathlib.Geometry.Manifold.IsManifold.Basic"
+      ],
+      "lean": {
+        "version": "4.34.0",
+        "compiler": "857544b439aa51633344d638dacc03d304b9ea96",
+        "gitRevision": "8d91aadcda8a"
+      },
+      "mathlib": {
+        "commit": "5ed2965256430c3649e86755f9576b54eca72435",
+        "tag": "v4.34.0"
+      },
+      "note": "transport copied from served bytes, not re-packed"
+    },
+    {
+      "id": "mathlib-game-extra",
+      "manifest": "profiles/mathlib-game-extra.manifest.json",
+      "release": "mathlib-game-extra-5ed2965-wasm64-36a96239e08fd2e0",
+      "modules": 737,
+      "rawBytes": 656766956,
+      "rawSha256": "7252fb7e25a65b524f957e975d96ef66a0ecef755f1a016f4382ad73fff0680d",
+      "roots": [],
+      "lean": {
+        "version": "4.34.0",
+        "compiler": "857544b439aa51633344d638dacc03d304b9ea96",
+        "gitRevision": "8d91aadcda8a"
+      },
+      "mathlib": {
+        "commit": "5ed2965256430c3649e86755f9576b54eca72435",
+        "tag": "v4.34.0"
+      },
+      "note": "transport copied from served bytes, not re-packed"
+    },
+    {
+      "id": "lean-lib",
+      "manifest": "profiles/lean-lib.manifest.json",
+      "release": "lean-lib-4.34.0-wasm64-57ae00dc5f6ce958",
+      "modules": 2520,
+      "rawBytes": 2129320563,
+      "rawSha256": "9faccacf310eece94c367efae7765d254f8a8957f7096df286f9d63adf265967",
+      "roots": [
+        "Init",
+        "Std",
+        "Lean",
+        "Lake",
+        "LakeMain",
+        "LeanChecker",
+        "LeanIR",
+        "Leanc"
+      ],
+      "lean": {
+        "version": "4.34.0",
+        "compiler": "41ec56530df541dcfb1d612a876fdc992d7ab8f5",
+        "gitRevision": "41ec56530df5"
+      }
+    }
+  ],
+  "native64": {
+    "commit": "857544b439aa51633344d638dacc03d304b9ea96",
+    "os": "linux",
+    "arch": "aarch64",
+    "tar": "native64/native64.tar.gz"
+  },
+  "docker": {
+    "tag": "qed64-toolchain:emsdk-6.0.5",
+    "recipeCommit": "974ee228b0c368f1d74f55ed4794ef60c15de4c2",
+    "imageId": "sha256:5708c2dbf5a1f5745b469450029016303419ab6e3cc8ed205e2bd33c4653d121",
+    "base": "emscripten/emsdk:6.0.5@sha256:76a44fff907397784decc435115d07fcb9587a4f1504977f39f3745e538e3a1e"
+  },
+  "mathlib": {
+    "commit": "5ed2965256430c3649e86755f9576b54eca72435",
+    "tag": "v4.34.0"
+  },
+  "modules": {
+    "essential": "lists/essential-modules.txt",
+    "extra": "lists/extra-modules.txt"
+  },
+  "hosting": {
+    "layout": "served",
+    "mount": {
+      "/runtime/": "runtime/",
+      "/profiles/": "profiles/"
+    },
+    "siteOwned": [
+      "/profiles/index.json",
+      "/snapshots/"
+    ],
+    "crossOriginIsolation": {
+      "coop": "same-origin",
+      "coep": "require-corp",
+      "corp": "same-origin"
+    },
+    "contentEncoding": "identity on *.part-NNN",
+    "spec": "wasm64-build/js/formats/HOSTING.md"
+  },
+  "tools": {
+    "package": "lean4-wasm64",
+    "version": "4.34.0-41ec565",
+    "tgz": "tools/lean4-wasm64-4.34.0-41ec565.tgz",
+    "commit": "712e371a062673eb47dd1b3e2a0d87096c38ea35"
+  },
+  "notes": [
+    "Runtime: the gated 41ec56530d build (patch 0036, qed64 HARDENING #60). Deep recursion now fails with Lean's own error at the browser engine's stack limit instead of killing the thread with 'RangeError: Maximum call stack size exceeded'. Meta: 'maximum recursion depth has been reached: the WebAssembly runtime's stack is exhausted (…)'; kernel: '(kernel) the WebAssembly engine's stack is exhausted: …'. The session survives either way.",
+    "Runtime-only release: lean-core, mathlib-essential and mathlib-game-extra are byte-identical to lean-v4.34.0-a8817d0's (transport copied, not re-packed); native64 and the lists are the import's. Apps re-pair (rebake snapshots) against this runtime's build id.",
+    "Patch 0036 changed Lean/CoreM: in the browser packs, Lean.CoreM's olean lacks Lean.Core.nativeStackOk and checkNativeStack and keeps the old checkSystem body until the next import (as with 0034). Harmless: only compiled code calls the two, and interpreted callers reach the compiled checkSystem through its exported wrapper. Against the import build, only Lean/CoreM.c (0036) and the 0034 modules changed in the stdlib's generated C, with names added and none removed or reused. Naming Lean.Core.nativeStackOk in user code reports an unknown constant. lean-lib is the 41ec56530d build's own lib/lean, the tree the release gate passed on."
+  ],
+  "files": [
+    {
+      "path": "lists/essential-modules.txt",
+      "bytes": 138423,
+      "sha256": "2194a774011978ea8003403173e00921aaa91fbac2aaac08260aae095b419319"
+    },
+    {
+      "path": "lists/essential-selection.json",
+      "bytes": 3422,
+      "sha256": "738ee6a1d8952c3de79109b71dd7730fe7ab8ce8e8f7703a2d512c398d306259"
+    },
+    {
+      "path": "lists/extra-modules.txt",
+      "bytes": 29093,
+      "sha256": "1a47044929f1856323280afdb4ff9e36084bd6721f7ea064e5ff0dec7d5d8dd7"
+    },
+    {
+      "path": "lists/extra-selection.json",
+      "bytes": 610,
+      "sha256": "7f2f3608ab24564c20720bce086ee01df4b8606f24474e6ed55184ae48a80c4e"
+    },
+    {
+      "path": "native64/native64.tar.gz",
+      "bytes": 821257946,
+      "sha256": "e0b2694bf9b5651171004cad4ef004a1dc8ed82ddd0a5dc78c3c6cecc468886e"
+    },
+    {
+      "path": "profiles/lean-core.manifest.json",
+      "bytes": 1526343,
+      "sha256": "6cf28295d7fc321bab3800c59b4dcd2f571cba36b7a361237f98b11b9fa9f36d"
+    },
+    {
+      "path": "profiles/lean-core.pack.gzip.1016929d99bb0ba0e148.part-007",
+      "bytes": 2506552,
+      "sha256": "1016929d99bb0ba0e14848fad367d13d5ec5c7369c3899405ac307ae82e44ff0"
+    },
+    {
+      "path": "profiles/lean-core.pack.gzip.1a2a12eb3e5d5316bef9.part-001",
+      "bytes": 16777216,
+      "sha256": "1a2a12eb3e5d5316bef934d5e37bdb592810411f76039ffad0a15ac439246b86"
+    },
+    {
+      "path": "profiles/lean-core.pack.gzip.814c5b938052613b3180.part-003",
+      "bytes": 16777216,
+      "sha256": "814c5b938052613b3180492a856222cd9fd3c3d12a56b70cd1c7c9fcaf1485e9"
+    },
+    {
+      "path": "profiles/lean-core.pack.gzip.89e3b0f9cb9300774759.part-002",
+      "bytes": 16777216,
+      "sha256": "89e3b0f9cb93007747593da604453bd5fabc6f12434363fbe972dd9dfa4e8c22"
+    },
+    {
+      "path": "profiles/lean-core.pack.gzip.a7f8a6bdc37c406f3890.part-005",
+      "bytes": 16777216,
+      "sha256": "a7f8a6bdc37c406f3890b5668412fc5906c2bbe96b1cb78792f575db7f1481e7"
+    },
+    {
+      "path": "profiles/lean-core.pack.gzip.bc2709bea0127940a05b.part-000",
+      "bytes": 16777216,
+      "sha256": "bc2709bea0127940a05bec3e09da28f2f2d5907e9422c5db70d20a60cea7301d"
+    },
+    {
+      "path": "profiles/lean-core.pack.gzip.f594cddcdb5719430720.part-006",
+      "bytes": 16777216,
+      "sha256": "f594cddcdb571943072037070ba0a42970e1c7c30bc5b800136df2392ed86d2b"
+    },
+    {
+      "path": "profiles/lean-core.pack.gzip.f70abf78a9003c6c45dd.part-004",
+      "bytes": 16777216,
+      "sha256": "f70abf78a9003c6c45dd3aad50cb29d1b4e620986aac447d3304400b30df37da"
+    },
+    {
+      "path": "profiles/lean-lib.manifest.json",
+      "bytes": 5931638,
+      "sha256": "a93bec81085d126f2e7f5d3b9e1faa6e8155fe2f9a552eceaa049bf7a3b608d2"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.08b5216952e09b39c70e.part-021",
+      "bytes": 16777216,
+      "sha256": "08b5216952e09b39c70ed178c91421e6256510fdbe28723c25753050c102930e"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.16325cb413b3c15a8d02.part-024",
+      "bytes": 16777216,
+      "sha256": "16325cb413b3c15a8d0225cc9160357278027d0ce9bb257f350041bbfffd3f44"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.1a2a12eb3e5d5316bef9.part-001",
+      "bytes": 16777216,
+      "sha256": "1a2a12eb3e5d5316bef934d5e37bdb592810411f76039ffad0a15ac439246b86"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.1b7b9470681b9baa63e9.part-019",
+      "bytes": 16777216,
+      "sha256": "1b7b9470681b9baa63e930e1ee1a5753c10410dc24668bf827323534a1e456c2"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.2f43c2664944a9b05ab0.part-007",
+      "bytes": 16777216,
+      "sha256": "2f43c2664944a9b05ab090f2d4beba26940215f81cedf73b2c11b8fa226848b0"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.35dd34c9872cd75b03fd.part-023",
+      "bytes": 16777216,
+      "sha256": "35dd34c9872cd75b03fd9f521ae679da497109659cbc6db53c26e871a4469e97"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.43a372cfb8a5a8a5d44a.part-010",
+      "bytes": 16777216,
+      "sha256": "43a372cfb8a5a8a5d44a978b48e5dce4d4d104935bf566ae8bdf167845e3adea"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.44b9ccf5c79cdeaa2a07.part-009",
+      "bytes": 16777216,
+      "sha256": "44b9ccf5c79cdeaa2a070aae823e585e541d7042c512ee958103fb6c8ea5b800"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.48a18a13f2fc99c8571c.part-034",
+      "bytes": 11265410,
+      "sha256": "48a18a13f2fc99c8571cb0c70fbd3bcc033bd51fe9d5649a520b217be57be4ac"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.60583ec91916eda827c0.part-016",
+      "bytes": 16777216,
+      "sha256": "60583ec91916eda827c06a9b171e6df41d6b150ff839c20e6d6abce03b54f01e"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.60b4dc803ad686570edd.part-028",
+      "bytes": 16777216,
+      "sha256": "60b4dc803ad686570edd99a9eb81f9a75a211438458e3913475029ec35daa022"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.6316167f2c40cb08a3d2.part-032",
+      "bytes": 16777216,
+      "sha256": "6316167f2c40cb08a3d25c026944f3ecf8a2330787bb853160c8a330d506971b"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.63fd111d583f6f736455.part-026",
+      "bytes": 16777216,
+      "sha256": "63fd111d583f6f73645571faf0ff52dcc9cdbe73fab24300da3b70ed65f18581"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.68dc524c2498ae2064ac.part-000",
+      "bytes": 16777216,
+      "sha256": "68dc524c2498ae2064acaa7c42002a6c93cb61fc0b255877e36169127183d306"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.814c5b938052613b3180.part-003",
+      "bytes": 16777216,
+      "sha256": "814c5b938052613b3180492a856222cd9fd3c3d12a56b70cd1c7c9fcaf1485e9"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.89e3b0f9cb9300774759.part-002",
+      "bytes": 16777216,
+      "sha256": "89e3b0f9cb93007747593da604453bd5fabc6f12434363fbe972dd9dfa4e8c22"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.8ca665cb817819e8938e.part-029",
+      "bytes": 16777216,
+      "sha256": "8ca665cb817819e8938ef8154e0bc9829cecb8f1245789408f8eb64148c659ca"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.8ccbc365f72cba3d0b5b.part-014",
+      "bytes": 16777216,
+      "sha256": "8ccbc365f72cba3d0b5b5bda992b5ea9ecab102341357b2937e7e25f2b574cdf"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.9567a0842e86b69e26aa.part-031",
+      "bytes": 16777216,
+      "sha256": "9567a0842e86b69e26aa1ccadd7d78b6a407a670e37e0096f6b6eb14f9bfb6f5"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.95b87bca883a342bdc68.part-020",
+      "bytes": 16777216,
+      "sha256": "95b87bca883a342bdc68ff48ff8b2df589fcb36619bdc00c661136833a8bc68f"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.9670bfb793709c2410e3.part-011",
+      "bytes": 16777216,
+      "sha256": "9670bfb793709c2410e38343d83eed3d64d0b8d88d7afcdc7c1150371a7e3b79"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.9cebc6d17094848982fc.part-022",
+      "bytes": 16777216,
+      "sha256": "9cebc6d17094848982fc844231b1fffa8129424ce03a8c1b4fab30c0ef90fc8d"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.a7f8a6bdc37c406f3890.part-005",
+      "bytes": 16777216,
+      "sha256": "a7f8a6bdc37c406f3890b5668412fc5906c2bbe96b1cb78792f575db7f1481e7"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.b0da5ad75e4f174db827.part-033",
+      "bytes": 16777216,
+      "sha256": "b0da5ad75e4f174db82731819f3bcd148fddeb44f435f8e7e36f5d11f1f41520"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.be1f918f82658764e387.part-017",
+      "bytes": 16777216,
+      "sha256": "be1f918f82658764e38786b579749b1e6bf535ff496711d1e9352b1ddc7c43b1"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.c84c6f2eadf5a877247e.part-030",
+      "bytes": 16777216,
+      "sha256": "c84c6f2eadf5a877247e8d7ff9b205eee37fdc7f293a5fc910f6b8d0cfb3bc9b"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.c86fd14a20f606dcbed8.part-015",
+      "bytes": 16777216,
+      "sha256": "c86fd14a20f606dcbed8507735d857e6381c992c0824a1ce5248dddeafbfbe78"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.ccbb6a495220ac610f79.part-018",
+      "bytes": 16777216,
+      "sha256": "ccbb6a495220ac610f7951267880c27a28202a1930c468965cf01573401cd5ca"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.df75835bee9a1700edc3.part-013",
+      "bytes": 16777216,
+      "sha256": "df75835bee9a1700edc378d0b9d9be7887845882a9a23e8c0351d1ad0c5ce43e"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.ef38d20896a36f54beda.part-025",
+      "bytes": 16777216,
+      "sha256": "ef38d20896a36f54beda863256a69b549c08f9f8bba296fb4a709f8086244a19"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.f594cddcdb5719430720.part-006",
+      "bytes": 16777216,
+      "sha256": "f594cddcdb571943072037070ba0a42970e1c7c30bc5b800136df2392ed86d2b"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.f6a2f0ad4af49c14a34b.part-027",
+      "bytes": 16777216,
+      "sha256": "f6a2f0ad4af49c14a34b7abf96a4ec73265365034ebcf5eeff6658135e49bd96"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.f70abf78a9003c6c45dd.part-004",
+      "bytes": 16777216,
+      "sha256": "f70abf78a9003c6c45dd3aad50cb29d1b4e620986aac447d3304400b30df37da"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.f8e2fa1cfac10abcf4de.part-012",
+      "bytes": 16777216,
+      "sha256": "f8e2fa1cfac10abcf4deb479171496ff93122601d3c1c71dcf7bd8b04efb8930"
+    },
+    {
+      "path": "profiles/lean-lib.pack.gzip.fe72b7e169168d46e8fa.part-008",
+      "bytes": 16777216,
+      "sha256": "fe72b7e169168d46e8fa58c83d92d6557d8e3cab18e23ff5806258017259f3e3"
+    },
+    {
+      "path": "profiles/mathlib-essential.manifest.json",
+      "bytes": 10405192,
+      "sha256": "09b4656d475b54dd8c8252fa65d35b6a9841cda9f61499ce641fdea459a19160"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.0327b1b114b076880d9f.part-021",
+      "bytes": 16777216,
+      "sha256": "0327b1b114b076880d9f83489b547378faa54c738500b8768a88f7a23bb8c3ea"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.065a0bf9246dbb6ed512.part-030",
+      "bytes": 16777216,
+      "sha256": "065a0bf9246dbb6ed5120fe31910bdc515200bc8442612944bff825c84657ac6"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.0aaa85f2c9bbf7e67bd8.part-039",
+      "bytes": 16777216,
+      "sha256": "0aaa85f2c9bbf7e67bd829097e2aef1c98c476d03a697219bc56b1acba048076"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.0ceda28eff4102c890a3.part-024",
+      "bytes": 16777216,
+      "sha256": "0ceda28eff4102c890a38bda2ba835a809417ce8bd58a431776dc539aa32130b"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.1015de06119489cc6665.part-059",
+      "bytes": 16777216,
+      "sha256": "1015de06119489cc666509ff543acea3790b40c20cf4745bb72f19adc3d7e097"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.101a624fcf926276f4ad.part-032",
+      "bytes": 16777216,
+      "sha256": "101a624fcf926276f4adee65ad96acaa355e24e8db85efd72f8723ba243c7536"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.17ccfb25713cb81d05a1.part-054",
+      "bytes": 16777216,
+      "sha256": "17ccfb25713cb81d05a1408560dfcc4edfcf15abafb19ae8162240a10a9a6ebf"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.1b734bd1e9d956b713aa.part-015",
+      "bytes": 16777216,
+      "sha256": "1b734bd1e9d956b713aa1cf37fb42d74421a1031de98a7e4ef0b9699c00024a2"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.1c140259584737e3316b.part-000",
+      "bytes": 16777216,
+      "sha256": "1c140259584737e3316b97f434b54b09d2534245ad8321d27c0e05c81e4a5945"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.1e8ddcb80e6993480766.part-028",
+      "bytes": 16777216,
+      "sha256": "1e8ddcb80e699348076671691d6c2c27bf94a686805bde8bc31dd04d0f3a68b3"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.1f81600846c16914df3f.part-004",
+      "bytes": 16777216,
+      "sha256": "1f81600846c16914df3f1854f45204fe44638ecdb5d773251454556cca101bef"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.2135c13f2cb61429d83c.part-013",
+      "bytes": 16777216,
+      "sha256": "2135c13f2cb61429d83cbb50ec8e59a9ce12a6b0e2aa36420649460bb62ef32f"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.295d0bda82767c7e8071.part-002",
+      "bytes": 16777216,
+      "sha256": "295d0bda82767c7e807131128cbaeff0140b5b36dc37f40251bfdd98312aa5f5"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.2ad84fd5333e79afa2c7.part-019",
+      "bytes": 16777216,
+      "sha256": "2ad84fd5333e79afa2c77b0fd97d33c6462667930ccdc2b2101143112725229f"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.36bf2617bee2beb239ef.part-005",
+      "bytes": 16777216,
+      "sha256": "36bf2617bee2beb239ef374b80280bace387f6dbf5fec83db7af3cb1bdaf6106"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.3864b308b12a9b9e69d6.part-053",
+      "bytes": 16777216,
+      "sha256": "3864b308b12a9b9e69d6a6511de31189179b06e685dcd2b80189e31f61c3eab3"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.3ba8e66f26028bd30c39.part-045",
+      "bytes": 16777216,
+      "sha256": "3ba8e66f26028bd30c3930f9206eebfcf045b4074fbc71f889c220f6cb83aae9"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.3ea4cf17390888fa6b90.part-014",
+      "bytes": 16777216,
+      "sha256": "3ea4cf17390888fa6b90b034bff0ba2b261fd697d29e7b2c84fff5c35f6878c6"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.449ca2e9eee7235b97ea.part-022",
+      "bytes": 16777216,
+      "sha256": "449ca2e9eee7235b97ea26beece36f33c058944cfed6efa12a9d4b6191ab92e7"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.46b67d722d4bb51f7b94.part-042",
+      "bytes": 16777216,
+      "sha256": "46b67d722d4bb51f7b949ef386b3a943cd86fc0c6d9142dba420878e059148ac"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.48be729bbd26c77fcde4.part-041",
+      "bytes": 16777216,
+      "sha256": "48be729bbd26c77fcde4cc660cedb2ee44adc36151a0983604b1177826b069ba"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.49268d5fdc25d88f3556.part-016",
+      "bytes": 16777216,
+      "sha256": "49268d5fdc25d88f3556d7378a22223c4351837bab30c3abbd46490d5bee1a29"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.4f6c54bebc12377915a2.part-037",
+      "bytes": 16777216,
+      "sha256": "4f6c54bebc12377915a2827cb7978c09bb9908143b6ae98f5926e11ab97f4cbc"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.566ca755e482a363996e.part-043",
+      "bytes": 16777216,
+      "sha256": "566ca755e482a363996e8f66498bcc3b755bab73b88f205af9871d77d1e2fa8a"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.5681fe9c18231184815f.part-046",
+      "bytes": 16777216,
+      "sha256": "5681fe9c18231184815f49ab049c43b3276bad7aac87e4df072fcd9fd6814b6c"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.5d4b681f317f8e8ce0fc.part-034",
+      "bytes": 16777216,
+      "sha256": "5d4b681f317f8e8ce0fc078c443999d3d57fc515ef1fd7cbf5a8244bde28c45d"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.5e9b6fc3f7ed20cd7353.part-011",
+      "bytes": 16777216,
+      "sha256": "5e9b6fc3f7ed20cd7353a3ba7bcfce2a77d0ee6280dc8b4adc676ba269be7dfe"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.6355206bc98c28396c16.part-051",
+      "bytes": 16777216,
+      "sha256": "6355206bc98c28396c16aaef95048925c903118d8a59e2f3517912a55f45b26d"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.68f95302309387d28acf.part-025",
+      "bytes": 16777216,
+      "sha256": "68f95302309387d28acf12df2ae5387e97c15da1b8b444858f713b9302cca8b9"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.6de0a1c78157a62da821.part-048",
+      "bytes": 16777216,
+      "sha256": "6de0a1c78157a62da821de2b964e5713079151c7ee693e8c1ceef03ed952f9a8"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.6e3fd0056b49dd9d024f.part-018",
+      "bytes": 16777216,
+      "sha256": "6e3fd0056b49dd9d024f4c2c30ccfb3e2b12f8f7c58fa986049303d8bb295b9b"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.6f5d778948634015c60f.part-006",
+      "bytes": 16777216,
+      "sha256": "6f5d778948634015c60fdd464537c609281ce9105d5e9f658bb04f2ef45b7afe"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.7056534e45c4c64be17b.part-057",
+      "bytes": 16777216,
+      "sha256": "7056534e45c4c64be17b7addc3f4cb22062ac2c0279197a622fceccc46813207"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.73118613a965c614006f.part-049",
+      "bytes": 16777216,
+      "sha256": "73118613a965c614006f648e30aab4e92947d319e3b5ef6971d08483951e32c6"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.7aceab96c37e95f1ea44.part-027",
+      "bytes": 16777216,
+      "sha256": "7aceab96c37e95f1ea44e525a9d43c3d9ac4ca0eed624f3cc92f555e020bf323"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.7d8a948a5bd687b1e76c.part-035",
+      "bytes": 16777216,
+      "sha256": "7d8a948a5bd687b1e76caafdff450c50ff3f481a4954bfbe59475bff4ce7c958"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.81e036ec0306cc0c8d3a.part-009",
+      "bytes": 16777216,
+      "sha256": "81e036ec0306cc0c8d3a6293290a02675ae65831a19c4a6ef7c79c9648bd8fc2"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.8d0808243d30e77a0f5a.part-031",
+      "bytes": 16777216,
+      "sha256": "8d0808243d30e77a0f5af02dae178669ce974ebcde8de8d72146530d0b5448e3"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.932dc98bfd60ea81347e.part-001",
+      "bytes": 16777216,
+      "sha256": "932dc98bfd60ea81347e16cca5f5c9f77112c68cf381659f0b07cf46e8621e4d"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.93579cf2fb8fbebb448a.part-008",
+      "bytes": 16777216,
+      "sha256": "93579cf2fb8fbebb448a9bfff658bfbb99e8e0a6d9326e9cfd99160be351a1d8"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.940bfbc0221e799db423.part-026",
+      "bytes": 16777216,
+      "sha256": "940bfbc0221e799db4237af255b33adb7ae205f0122e2f5d4c3d0ca4d998c383"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.9628984fc84f8593f354.part-003",
+      "bytes": 16777216,
+      "sha256": "9628984fc84f8593f35442eccdf44f027e203487c3630f1fb02a5219a415b76b"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.969f42101617e4416745.part-012",
+      "bytes": 16777216,
+      "sha256": "969f42101617e4416745b654fcffc10c118b4f6c0903a417df14af750e43e7e4"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.9c9e41bf0a7bc1e96d2f.part-058",
+      "bytes": 16777216,
+      "sha256": "9c9e41bf0a7bc1e96d2f00e54bd9a9f65195c705694cb10c36a8d65af8d37966"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.9d520735e2fd522661e2.part-023",
+      "bytes": 16777216,
+      "sha256": "9d520735e2fd522661e2453a52de1c7a127d2c60dfe32af19615d588e0292c02"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.b95e4b439647fcdc2917.part-036",
+      "bytes": 16777216,
+      "sha256": "b95e4b439647fcdc291707ebe970975d7ef0f9dbb8a0f50ff44cad07869a7c90"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.bb9ff8eddf5d123e8a6e.part-056",
+      "bytes": 16777216,
+      "sha256": "bb9ff8eddf5d123e8a6efa2b9af39c9a5104111b7cd286b0e4828c3a7a4c7c85"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.bfd6fdf1d62dbd771706.part-047",
+      "bytes": 16777216,
+      "sha256": "bfd6fdf1d62dbd7717069e69f815a233ee2a460c1549b91f5b828da63d895e41"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.cf5e30833681f21f1b50.part-029",
+      "bytes": 16777216,
+      "sha256": "cf5e30833681f21f1b50cce1f42832bff4cc8b6562ccb11bf58ea2ae61aa77ce"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.d13701ebe8aa65521601.part-033",
+      "bytes": 16777216,
+      "sha256": "d13701ebe8aa65521601e948fa6b9ae20da9a31e3c131afb9c24149400148f85"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.d185f8fe892dbb3bc601.part-052",
+      "bytes": 16777216,
+      "sha256": "d185f8fe892dbb3bc601ce1d4cf00cc573b30fc0449026610aad7ef5496f4538"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.d4e8c6ea4d982af7d3fc.part-060",
+      "bytes": 6773838,
+      "sha256": "d4e8c6ea4d982af7d3fce0d4d09e55ac41d707743ef859ee6d68b51a696df7c3"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.dc4bd0e12d20982ea1ff.part-017",
+      "bytes": 16777216,
+      "sha256": "dc4bd0e12d20982ea1ff9437fecb41b3a36a9fa8d4e82a446e475302521ca534"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.e759c597be1061e90755.part-044",
+      "bytes": 16777216,
+      "sha256": "e759c597be1061e907551dcec8feac2b8694ebb7288986bf1617df5c6443f3db"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.e77325a45e2ca587b8b2.part-040",
+      "bytes": 16777216,
+      "sha256": "e77325a45e2ca587b8b2e79a8f786c6eb608d753e38ae850ad40233a5f152bbf"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.eea61c7bcc5765424da8.part-038",
+      "bytes": 16777216,
+      "sha256": "eea61c7bcc5765424da8df31294a02f9bf2ccabeb16ac4650bbbfdd05b7e9e56"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.f0f6236a8c96304cde4d.part-010",
+      "bytes": 16777216,
+      "sha256": "f0f6236a8c96304cde4d6bc745ef1989d0db12f918e3a8171675592cbc9b21a1"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.f45a0dac2daa89d78914.part-050",
+      "bytes": 16777216,
+      "sha256": "f45a0dac2daa89d78914ac4cddf16a4aa296f915688b887c08505ff4a847316f"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.f71a8166dc35154fb898.part-007",
+      "bytes": 16777216,
+      "sha256": "f71a8166dc35154fb89817daead9d400b52f38e4354ae1b5c8160995fbf10432"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.f71ff5409dbebbb39bc9.part-020",
+      "bytes": 16777216,
+      "sha256": "f71ff5409dbebbb39bc9001f047a343e8b2bf4b9db625eb7a34958fdf17e28f1"
+    },
+    {
+      "path": "profiles/mathlib-essential.pack.gzip.f7c099be86b5c10a4088.part-055",
+      "bytes": 16777216,
+      "sha256": "f7c099be86b5c10a4088e0c136b7909983d7db215f1999c838e5600b7e2bb2c6"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.manifest.json",
+      "bytes": 1837632,
+      "sha256": "b8eee7eac40ba1cc96312a755e4498c828e64695e95ca541bf102f6bd5499c41"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.pack.gzip.01bb6567fa970b5a63ec.part-007",
+      "bytes": 16777216,
+      "sha256": "01bb6567fa970b5a63ec527f3fe8d877bb2d9c640148a2ebbf964cca38568aa5"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.pack.gzip.07a05fe05f6a13f9f9e0.part-009",
+      "bytes": 16777216,
+      "sha256": "07a05fe05f6a13f9f9e0601ef446e18b3da25b1d16dbc2c66c5196d8452b7713"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.pack.gzip.1c66396194c6fbb4bb12.part-002",
+      "bytes": 16777216,
+      "sha256": "1c66396194c6fbb4bb127db4fe44f80defe56176053c74b85dd1df79d02d75ee"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.pack.gzip.1fec8155eafda3336a91.part-001",
+      "bytes": 16777216,
+      "sha256": "1fec8155eafda3336a912850a18ee14b2727405d806dd8ed3ccc868667180a1b"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.pack.gzip.204061fe865f05e83e83.part-000",
+      "bytes": 16777216,
+      "sha256": "204061fe865f05e83e830741199159a3652e98b3b232e8e1d1530c80c7185a69"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.pack.gzip.27f00b0dd579d92f1990.part-011",
+      "bytes": 13525009,
+      "sha256": "27f00b0dd579d92f19907e62a2857c620950b27bdf92f130033d95101508ac99"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.pack.gzip.2f065957a4a08fa7addf.part-010",
+      "bytes": 16777216,
+      "sha256": "2f065957a4a08fa7addf82f37059d1ce5561dc8a39d8a2b927b85427bcaa49de"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.pack.gzip.55bbc44a7e13709b01b3.part-004",
+      "bytes": 16777216,
+      "sha256": "55bbc44a7e13709b01b33696525bc5f769e234fbf02fae1a856991a7286488e7"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.pack.gzip.6f450d8b03653be82828.part-005",
+      "bytes": 16777216,
+      "sha256": "6f450d8b03653be828283c894bcd7c7830975a812692dc95721b3f17cc685904"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.pack.gzip.7ebe650e6c0b1b202a29.part-008",
+      "bytes": 16777216,
+      "sha256": "7ebe650e6c0b1b202a2985129200f243788a2b0fe60295fa77e68af635fc47ec"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.pack.gzip.d28cd9652c1757b4fa27.part-003",
+      "bytes": 16777216,
+      "sha256": "d28cd9652c1757b4fa273bf14b54a284f30bcfaa76c9c23522cc7c7d07e3bbf3"
+    },
+    {
+      "path": "profiles/mathlib-game-extra.pack.gzip.e17be80593c874145c53.part-006",
+      "bytes": 16777216,
+      "sha256": "e17be80593c874145c53148ca4e78ba6dfd62d4341e7bfa09e6f96700c631c08"
+    },
+    {
+      "path": "runtime/bin/leanmake",
+      "bytes": 839,
+      "sha256": "07c96082b95fce057ed9656cc80da50477d596250973cfdd414f74e7631eb56d"
+    },
+    {
+      "path": "runtime/chunks/lean.js.148ecdb5ac0c6a9d2872.part-001",
+      "bytes": 16777216,
+      "sha256": "148ecdb5ac0c6a9d2872b49fb2ec53ac8322e5e8f17fad6ac1d31653f3950f80"
+    },
+    {
+      "path": "runtime/chunks/lean.js.3b54d26ad47472bb296a.part-000",
+      "bytes": 16777216,
+      "sha256": "3b54d26ad47472bb296af0f86472abb88d5082dba6e587465283236d60b1d0e8"
+    },
+    {
+      "path": "runtime/chunks/lean.js.8f86ecd999a20187e251.part-002",
+      "bytes": 15418766,
+      "sha256": "8f86ecd999a20187e2512c09494e9ec7b71e00a99e641eea15b371e0fd2a1b69"
+    },
+    {
+      "path": "runtime/chunks/lean.wasm.1a217673be940f72276b.part-003",
+      "bytes": 16777216,
+      "sha256": "1a217673be940f72276b97f2ca99dc3fb253c3f3b8100378ca71b8e30b48e6eb"
+    },
+    {
+      "path": "runtime/chunks/lean.wasm.36dee9f971f4b55c671e.part-004",
+      "bytes": 16777216,
+      "sha256": "36dee9f971f4b55c671ea577dc467e388c23a1aa8ad13da7860ba70e4b7b70df"
+    },
+    {
+      "path": "runtime/chunks/lean.wasm.54c3c3c82050af350ecf.part-002",
+      "bytes": 16777216,
+      "sha256": "54c3c3c82050af350ecff40f7808f123344f1b2eb06632e2c8d3e0b081cc8a66"
+    },
+    {
+      "path": "runtime/chunks/lean.wasm.85a21a0118a96a6b8b92.part-006",
+      "bytes": 9214063,
+      "sha256": "85a21a0118a96a6b8b925fffeb3f6e1e81c2807e7b5772b44e49caa99a233561"
+    },
+    {
+      "path": "runtime/chunks/lean.wasm.86850b8d3701dc580561.part-001",
+      "bytes": 16777216,
+      "sha256": "86850b8d3701dc5805610aecbf2b02c5c503365e5eee9e14a6a569eb21377671"
+    },
+    {
+      "path": "runtime/chunks/lean.wasm.b4a19232aadd82c2d700.part-000",
+      "bytes": 16777216,
+      "sha256": "b4a19232aadd82c2d700cb10eed3c2c4941082dc0f68cd59fd900547c1d6f0ed"
+    },
+    {
+      "path": "runtime/chunks/lean.wasm.b57b2a5b5cec98ea902d.part-005",
+      "bytes": 16777216,
+      "sha256": "b57b2a5b5cec98ea902de07795a41990d5d3681bf81beb76dbbd5a4537e43797"
+    },
+    {
+      "path": "runtime/runtime-manifest.json",
+      "bytes": 2803,
+      "sha256": "b74567bda62c0108316f4fd12380437dd6e0ca83fbccab94614e683ace808cc2"
+    },
+    {
+      "path": "runtime/runtime-manifest.wasm64-57ae00dc5f6ce958.json",
+      "bytes": 2803,
+      "sha256": "b74567bda62c0108316f4fd12380437dd6e0ca83fbccab94614e683ace808cc2"
+    },
+    {
+      "path": "tools/lean4-wasm64-4.34.0-41ec565.tgz",
+      "bytes": 69577,
+      "sha256": "c8864d60166f58cbba7f0c4bfbe8aaa9a4eb4274e2a300e3b0aaac07fa2b5efe"
+    }
+  ],
+  "digest": "sha256:f958ba7508317a4ceed42e1a13cbd78b716209e2e2a86fe1a7f6a93a607888ee"
+}
