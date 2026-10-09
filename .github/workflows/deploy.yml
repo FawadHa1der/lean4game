@@ -1,8 +1,19 @@
 # CD: pushes to wasm64-port redeploy the APP SHELL to Cloudflare Workers
 # (seconds, ~25 MB of static files). Artifacts (multi-GB in R2) are uploaded
-# manually via scripts/upload-artifacts.sh when a runtime or snapshot actually
-# changes. Runs only when the repo has the CLOUDFLARE_API_TOKEN secret
-# (Workers Scripts: Edit — no R2 permission needed) and CLOUDFLARE_ACCOUNT_ID.
+# manually, in TWO steps around this deploy, when a runtime or snapshot
+# actually changes (wasm/DEPLOY.md, "Deploy, in order"; QED64 HARDENING #64):
+#   1. scripts/upload-artifacts.sh BEFORE pushing (the .snapz and the
+#      per-runtime index copies; the live indexes stay as they are). For a
+#      runtime change, a push before it has finished leaves every game boot
+#      failing for the whole upload.
+#   2. scripts/upload-artifacts.sh --post-deploy as soon as this workflow's
+#      deploy step has finished (the mutable indexes). For a runtime change
+#      it refuses until the new worker is live; for a same-runtime change it
+#      cannot tell, so wait for this job.
+# This job has no R2 credentials and runs neither; scripts/deploy-app.sh
+# logs the reminder for step 2 and annotates the run with it. Runs only when
+# the repo has the CLOUDFLARE_API_TOKEN secret (Workers Scripts: Edit — no
+# R2 permission needed) and CLOUDFLARE_ACCOUNT_ID.
 name: deploy
 on:
   push:

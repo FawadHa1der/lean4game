@@ -264,6 +264,27 @@ await test("R2-4 (review of N3): the memo covers game content only — inside it
   assert.deepEqual(sw.fetched, [DATA[0], "/workers/lean.worker.js"], "tried the network first even inside the memo");
 });
 
+await test("QED64 HARDENING #64: the per-runtime index copies are network-first like the indexes — never cache-first, inside N3's memo too; a 404 for one is not stored", async () => {
+  skew = 0;
+  // A 16-hex build id in the name, but a same-runtime rebake rewrites them (infra/worker.js revalidates them too).
+  const copies = ["/snapshots/index.wasm64-57ae00dc5f6ce958.json", "/snapshots/profiles-index.wasm64-57ae00dc5f6ce958.json"];
+  const sw = loadWorker();
+  await seed(sw, "l4g-runtime-v1", [...copies, DATA[0]!]);
+  for (const p of copies) assert.equal(await (await sw.request(p)).text(), `body of ${p}`, `${p}: the host's copy, not the held one`);
+  assert.deepEqual(sw.fetched, copies);
+  // Inside the memo (a /data read just failed outright): game data answers from the cache, the copies still ask the host.
+  sw.fetched.length = 0;
+  sw.setAnswer((p) => (p === DATA[0] ? "link" : "ok"));
+  assert.equal(await (await sw.request(DATA[0]!)).text(), `held ${DATA[0]}`);
+  for (const p of copies) assert.equal(await (await sw.request(p)).text(), `body of ${p}`, `${p} inside the memo`);
+  assert.deepEqual(sw.fetched, [DATA[0], ...copies]);
+  // A copy the host does not have yet (before its upload): the 404 reaches the page and is not stored.
+  const fresh = loadWorker();
+  fresh.setAnswer(() => "404");
+  assert.equal((await fresh.request(copies[0]!)).status, 404);
+  assert.equal(await (await fresh.caches.open("l4g-runtime-v1")).match(copies[0]!), undefined, "a 404 is never stored");
+});
+
 // ---- the page's side ----
 type Listener = () => void;
 const winListeners = new Map<string, Listener[]>();

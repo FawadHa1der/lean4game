@@ -3,7 +3,11 @@
 # multi-GB artifacts live in R2 and are uploaded separately and rarely
 # (scripts/upload-artifacts.sh) — run that FIRST whenever the runtime,
 # profile pack or snapshots changed, so the shell never points at objects
-# that are not there yet.
+# that are not there yet, and `scripts/upload-artifacts.sh --post-deploy`
+# right AFTER this deploy: it replaces the mutable snapshot and profile
+# indexes, which must not change before the shell that pairs with them is
+# live (QED64 HARDENING #64; wasm/DEPLOY.md). Not run from here: CI has no R2
+# credentials, and a shell-only deploy needs nothing.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -d client/node_modules ] || npm ci
@@ -40,3 +44,12 @@ node -e '
 ' "$OUT"
 echo "shell: $(find "$OUT" -type f | wc -l | tr -d ' ') files, $(du -sh "$OUT" | cut -f1)"
 npx wrangler deploy "$@"
+echo "deployed. If scripts/upload-artifacts.sh ran for this deploy (a runtime or snapshot change), run NOW:"
+echo "  scripts/upload-artifacts.sh --post-deploy"
+echo "(it replaces snapshots/index.json and profiles/index.json in R2; until then this shell reads the outgoing ones)"
+# In CI the log above is easy to miss: also annotate the run, which shows on
+# its summary page (a GitHub Actions workflow command; nothing elsewhere).
+# The title is a property: no ':' or ',' in it unescaped.
+if [ "${GITHUB_ACTIONS:-}" = true ]; then
+  echo "::notice title=Shell deployed - run the post-deploy upload::If scripts/upload-artifacts.sh ran before this deploy (a runtime or snapshot change), run scripts/upload-artifacts.sh --post-deploy now (wasm/DEPLOY.md, Deploy in order)."
+fi

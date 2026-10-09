@@ -2,13 +2,23 @@
  * one origin — the same shape as QED64's infra/worker.js.
  *
  * The built client (client/dist minus the artifact directories) ships as
- * Workers static assets; the multi-hundred-MB artifacts (runtime chunks,
- * the Lean core profile pack, game snapshots) stream from the shared R2
- * bucket under the `lean4game/` prefix, so the editor's and the game's
- * mutable manifests never collide. Cross-origin isolation headers go on
- * every response (without COOP/COEP the browser refuses SharedArrayBuffer
- * and Memory64, and the in-tab checker cannot start); digest-named files
- * are immutable, indexes and manifests revalidate.
+ * Workers static assets; the multi-hundred-MB artifacts stream from the
+ * shared R2 bucket. Two owners, two prefixes (the toolchain release's
+ * hosting rules, wasm64-build/js/formats/HOSTING.md in the lean4 fork):
+ *   - the Lean runtime and the Lean core pack are the lean4 fork's release,
+ *     uploaded once under `lean4-wasm64/<release id>/` and shared by every
+ *     site; `/runtime/*` and `/profiles/*` map onto its `runtime/` and
+ *     `profiles/` (release.json hosting.mount), no manifest rewritten;
+ *   - the site's own mutable pointers and products (hosting.siteOwned:
+ *     `/profiles/index.json`, `/snapshots/*`) stay under `lean4game/`, so
+ *     the editor's and the game's manifests never collide.
+ * The release id and the mapping come from wasm/lean4-wasm64-release.json,
+ * the release record the bake pins (one file names the toolchain). The
+ * browser only ever sees this origin: the release prefix is proxied, never
+ * linked. Cross-origin isolation headers go on every response (without
+ * COOP/COEP the browser refuses SharedArrayBuffer and Memory64, and the
+ * in-tab checker cannot start); digest-named files are immutable, indexes
+ * and manifests revalidate, errors are never cached.
  *
  * Artifacts honour single-range GETs (206 + Content-Range, If-Range against
  * the object's etag, 416 when unsatisfiable): a browser that was cut off
@@ -16,8 +26,63 @@
  * the whole object again.
  */
 
+import release from "../wasm/lean4-wasm64-release.json" with { type: "json" };
+
 const ARTIFACT_PREFIXES = ["/runtime/", "/profiles/", "/snapshots/"];
-const R2_PREFIX = "lean4game/";
+/** The site's own prefix: snapshots and the site's pointers. */
+export const SITE_PREFIX = "lean4game/";
+
+/** Where each artifact path lives, from a lean4-wasm64.release/v1 record:
+ * `{ releasePrefix, mount: [[urlPrefix, dir]], siteOwned: [path] }`. Throws
+ * on a record this worker cannot route by — at module load, so a deploy
+ * with a bad record fails instead of serving 404s. A release id carries a
+ * 7-hex kernel commit, never 16+ hex: the cache rule (isImmutable) would
+ * otherwise read a manifest under that prefix as digest-named (HOSTING.md
+ * rule 8; the rule sees the URL path, but the record is checked anyway). */
+export function releaseRoutes(record) {
+  const fail = (why) => { throw new Error(`wasm/lean4-wasm64-release.json: ${why}`); };
+  if (record?.schema !== "lean4-wasm64.release/v1") fail(`schema ${JSON.stringify(record?.schema)} is not lean4-wasm64.release/v1`);
+  if (typeof record.id !== "string" || !/^lean-v\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)*-[0-9a-f]{7}$/.test(record.id) || /[0-9a-f]{16,}/.test(record.id)) {
+    fail(`release id ${JSON.stringify(record.id)} is not lean-v<version>-<kernel7>`);
+  }
+  const h = record.hosting ?? {};
+  if (h.layout !== "served") fail(`hosting.layout ${JSON.stringify(h.layout)} is not "served"`);
+  const mount = Object.entries(h.mount ?? {});
+  if (mount.length === 0) fail("hosting.mount is empty");
+  for (const [url, dir] of mount) {
+    if (!ARTIFACT_PREFIXES.includes(url)) fail(`hosting.mount ${url} is not one of ${ARTIFACT_PREFIXES.join(" ")}`);
+    if (typeof dir !== "string" || !/^[a-z0-9-]+\/$/.test(dir)) fail(`hosting.mount ${url} → ${JSON.stringify(dir)} is not a top-level directory`);
+  }
+  const siteOwned = h.siteOwned ?? [];
+  if (!Array.isArray(siteOwned) || siteOwned.some((p) => typeof p !== "string" || !ARTIFACT_PREFIXES.some((a) => p.startsWith(a)))) {
+    fail("hosting.siteOwned must list artifact paths");
+  }
+  return { releasePrefix: `lean4-wasm64/${record.id}/`, mount, siteOwned: [...siteOwned] };
+}
+
+const ROUTES = releaseRoutes(release);
+
+// A "." or ".." segment, also percent-encoded, a backslash or a control
+// character never names a published artifact (as qed64/edge's artifactKey).
+const DOT_SEGMENT = /^(?:\.|%2e){1,2}$/i;
+const UNSAFE_CHAR = /[\\\u0000-\u001f\u007f]/;
+
+/** The R2 key for an artifact path, or null when the path is unsafe (an
+ * empty, "." or ".." segment, a backslash, a control character → 404, R2
+ * never asked). A site-owned path (exactly `/profiles/index.json`, or under
+ * `/snapshots/`) is the site's; a mounted one is the release's, with the
+ * URL prefix replaced by the release directory; anything else is the
+ * site's. */
+export function artifactKey(pathname, routes = ROUTES) {
+  if (typeof pathname !== "string" || !pathname.startsWith("/")) return null;
+  const rel = pathname.slice(1);
+  if (UNSAFE_CHAR.test(rel) || rel.split("/").some((s) => s === "" || DOT_SEGMENT.test(s))) return null;
+  if (routes.siteOwned.some((p) => (p.endsWith("/") ? pathname.startsWith(p) : pathname === p))) return SITE_PREFIX + rel;
+  for (const [url, dir] of routes.mount) {
+    if (pathname.startsWith(url)) return routes.releasePrefix + dir + pathname.slice(url.length);
+  }
+  return SITE_PREFIX + rel;
+}
 
 /** SEC1: what the page and its workers may connect to — fetch, XHR,
  * WebSocket, EventSource, sendBeacon — on every response (the document's
@@ -39,8 +104,13 @@ export const CONTENT_SECURITY_POLICY = "connect-src 'self' blob: data:";
 export function isImmutable(pathname) {
   // Manifests and indexes revalidate, INCLUDING runtime-manifest.<buildId>.json
   // (the buildId is sha256(lean.wasm) alone; a relink of lean.js keeps the
-  // name and rewrites the chunk digests inside).
-  if (/\/runtime-manifest(\.[^/]*)?\.json$/.test(pathname) || /\/index\.json$/.test(pathname)) return false;
+  // name and rewrites the chunk digests inside) and the per-runtime index
+  // copies /snapshots/index.<buildId>.json and
+  // /snapshots/profiles-index.<buildId>.json (QED64 HARDENING #64; the same
+  // rule as qed64's infra/edge-worker.js): their 16-hex build id would make
+  // them immutable for a year below, but a rebake for the same runtime
+  // rewrites them under the same name.
+  if (/\/runtime-manifest(\.[^/]*)?\.json$/.test(pathname) || /\/(?:profiles-)?index(\.[^/]*)?\.json$/.test(pathname)) return false;
   // Digest-named artifact files and vite's content-hashed bundles never
   // change under the same name.
   return /(\.part-\d+|\.snapz|\.chunk\.|[0-9a-f]{16,})/.test(pathname) || /^\/assets\/[^/]+[-.][A-Za-z0-9_-]{8}\.[a-z0-9]+$/.test(pathname);
@@ -52,9 +122,12 @@ function withHeaders(response, pathname) {
   headers.set("Cross-Origin-Embedder-Policy", "require-corp");
   headers.set("Cross-Origin-Resource-Policy", "same-origin");
   headers.set("Content-Security-Policy", CONTENT_SECURITY_POLICY);
+  // Errors are never cached: a 404 under a digest-named URL (an artifact
+  // requested before its upload landed) would otherwise stick for a year.
   headers.set(
     "Cache-Control",
-    isImmutable(pathname) ? "public, max-age=31536000, immutable" : "public, max-age=0, must-revalidate",
+    response.status >= 400 ? "no-store"
+      : isImmutable(pathname) ? "public, max-age=31536000, immutable" : "public, max-age=0, must-revalidate",
   );
   return new Response(response.body, { status: response.status, headers });
 }
@@ -105,7 +178,8 @@ function notFound(pathname) {
 }
 
 async function serveArtifact(request, env, pathname) {
-  const key = R2_PREFIX + pathname.slice(1);
+  const key = artifactKey(pathname);
+  if (key === null) return notFound(pathname);
   // Range is defined for GET only (HEAD ignores it and answers from head()).
   let spec = request.method === "GET" ? parseRange(request.headers.get("range")) : null;
   if (spec !== null) {
