@@ -2,39 +2,39 @@
  "schema": "lean4game.artifact-bundle/v1",
  "tag": "artifacts-wasm64-57ae00dc5f6ce958",
  "runtime": "wasm64-57ae00dc5f6ce958",
- "snapshots": "knights=8ea2d33a8d34cfef,lag=b182a732c6ac90e2,logic=7e3d110a189e05e4,nng4=bc6dd28c66d74472,ntg=9388dabeb0256514,rag=e71a3a432322905a,reintro=bc6f2128cc1cc485,robo=4f71c4d1a5e28ec7,stg4=6a37164df3414c9c,testgame=8433a313ff78eb4e",
+ "snapshots": "knights=8ea2d33a8d34cfef,lag=b182a732c6ac90e2,logic=7e3d110a189e05e4,nng4=bc6dd28c66d74472,ntg=9388dabeb0256514,rag=ba04198e01c50752,reintro=bc6f2128cc1cc485,robo=4f71c4d1a5e28ec7,stg4=6a37164df3414c9c,testgame=8433a313ff78eb4e",
  "extract_into": "client/public",
  "tarballs": [
   {
    "class": "runtime",
    "file": "runtime.tar",
-   "bytes": 158883328,
-   "sha256": "100edcb69e037f55fb051c76e324a4ed91d0b91e76ff1919e664811033d0f5ea",
-   "files": 11
+   "bytes": 158888960,
+   "sha256": "0a9d3b2fc2fde9f695d2096d1127fd1b35458ae90fb80374cfce577dc271d383",
+   "files": 12
   },
   {
    "class": "profiles",
    "file": "profiles.tar",
    "bytes": 121501184,
-   "sha256": "79435170f05e7a03beaf2f2169adc6c86bc178e6463e8dc0212d590e3bd21f14",
+   "sha256": "9c8b994a1cf6458cf614df3f6621936f26441a0184152b73cc0c4ce2051fd0f2",
    "files": 10
   },
   {
    "class": "snapshots",
    "file": "snapshots.tar",
-   "bytes": 2500572160,
-   "sha256": "4755f924a7138ba40de14e8c665cf04bd6e2b56219938fb802e6f0b4e72969f7",
-   "files": 11,
+   "bytes": 2500596736,
+   "sha256": "045100db28aaa278ba5eb14d42dc3f116f3155af1d8f7fd7753a904acdfe94e5",
+   "files": 13,
    "parts": [
     {
      "file": "snapshots.tar.part-000",
      "bytes": 2000000000,
-     "sha256": "6800a1493e3682eabee3a6c7448f762176595384dcbf419176dbce5ac3337c1c"
+     "sha256": "62904f1b1d1d4c7dbcbe34a877942e24521400eff65d16bfe7b7594e529a2557"
     },
     {
      "file": "snapshots.tar.part-001",
-     "bytes": 500572160,
-     "sha256": "dfbfa496535ab8dc0949149537479355b30e076984c86fb1f006bf7dc14684e4"
+     "bytes": 500596736,
+     "sha256": "8f46c5f4c76bc3e7c94527d8461eda695723b711c84a2c69a187c44f9894bfff"
     }
    ]
   }

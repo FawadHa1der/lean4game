@@ -114,22 +114,6 @@
    ]
   },
   {
-   "name": "rag",
-   "url": "/snapshots/rag.e71a3a432322905a.snapz",
-   "digest": "sha256:e71a3a432322905af9b5f00afd291b3a175b3fe4368b65c6ebb6f1d8b4e566d3",
-   "bytes": 1014571789,
-   "transfer": 283590594,
-   "imports": [
-    "Game",
-    "GameServer.Runner"
-   ],
-   "runtime": "wasm64-57ae00dc5f6ce958",
-   "roots": [
-    "Game",
-    "GameServer.Runner"
-   ]
-  },
-  {
    "name": "robo",
    "url": "/snapshots/robo.4f71c4d1a5e28ec7.snapz",
    "digest": "sha256:4f71c4d1a5e28ec70101ee6363b5f19a58867970860eb9565ebb000c6998ab8a",
@@ -151,6 +135,22 @@
    "digest": "sha256:6a37164df3414c9c26993b618e90f842d77c66655d9ac9c02c0afce85f152d14",
    "bytes": 669599797,
    "transfer": 181606426,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-57ae00dc5f6ce958",
+   "roots": [
+    "Game",
+    "GameServer.Runner"
+   ]
+  },
+  {
+   "name": "rag",
+   "url": "/snapshots/rag.ba04198e01c50752.snapz",
+   "digest": "sha256:ba04198e01c50752b6cef2f5e582952f11dd73394cc4e7e221dfa258c913febc",
+   "bytes": 1014552989,
+   "transfer": 283605481,
    "imports": [
     "Game",
     "GameServer.Runner"

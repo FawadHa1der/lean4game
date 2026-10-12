@@ -50,7 +50,12 @@ What each patch changes for a player is recorded per game in
   the patch from `git diff <rev> -- . ':!.i18n'` with the commit message as
   its header (no commit made; the `From 0000…` line is the mbox separator
   only); each was then proven with a fresh clone + `git am` (clean, tree
-  identical). The nng4 and logic patches did not change.
+  identical). The nng4 and logic patches did not change. RAG's was re-cut
+  again on 2026-10-12 the same way (Lecture10 1's model solution without
+  `bound`, plus a hint in its Introduction, below), from the checkout's working tree with
+  `git diff <rev> -- . ':!.i18n'` (the script that rebuilt the old file
+  byte-for-byte first), and proven with a fresh clone + `git am` (clean;
+  tree identical to the checkout's working tree).
 
 ## nng4-wasm64-port.patch
 
@@ -142,10 +147,12 @@ git -C games-src/KnightsAndKnaves-Lean4Game am ../../wasm/patches/knights-wasm64
   v4.26.0). Commit `65e8037`, 2026-09-11 (amended after review to
   de-indent 13 doc comments; the file was regenerated from the amended
   commit).
-- Size: 220,594 bytes, 5,769 lines, 116 files — 111 of them are
-  whitespace-only re-indentation; five files change content (Lean 4.34
-  re-cut; before: 219,562 bytes).
-- Summary: no level or world removed; nothing a player types changes.
+- Size: 222,135 bytes, 5,792 lines, 116 files — 110 of them are
+  whitespace-only re-indentation; six files change content (2026-10-12
+  re-cut; Lean 4.34 re-cut: 220,594 bytes; before: 219,562 bytes).
+- Summary: no level or world removed; Lecture10 1's model solution and
+  introduction change (below), otherwise nothing a player types or reads
+  changes.
   - Lean 4.34: `Game/Metadata.lean` imports `Mathlib.Basic.Real.Basic`, the
     module the `Mathlib.Data.Real.Basic` shim re-exports.
   - `Game/Metadata.lean`: `import Mathlib.Analysis.SpecialFunctions.Log.Base`
@@ -179,6 +186,35 @@ git -C games-src/KnightsAndKnaves-Lean4Game am ../../wasm/patches/knights-wasm64
   - `Game/Levels/L22Levels/L03.lean`: `attribute [grind]
     Mathlib.Tactic.Zify.natCast_le._simp_1` commented out — the constant no
     longer exists; no reachable level calls `grind`.
+  - `Game/Levels/L10Levels/L06_Prod.lean` (Lecture10 1, "Big Boss : Product
+    of Sequences", 2026-10-12): the model solution no longer calls `bound`.
+    Mathlib's Aesop-based `bound` runs interpreted in the browser and needs
+    ~520–620 KiB of engine stack on this level, more than a macOS Chrome
+    Worker's ~500 KiB, so the level failed with "the WebAssembly runtime's
+    stack is exhausted". The runtime is not changed (user decision,
+    2026-10-12). The six `bound` steps are replaced with steps the level
+    already unlocks:
+    - `field_simp; linarith [hε]` for `0 < ε / (2 * K)` and
+      `0 < ε / (2 * |L|)`, with `Kpos` moved up;
+    - `linarith [hn]` for `N1 ≤ n` and `N2 ≤ n` (the game's `linarith`
+      uses only the facts it is given);
+    - a `by_cases h0 : a n - L = 0` block for
+      `|a n - L| * |b n| ≤ |a n - L| * K`;
+    - `field_simp at hN1 hN2`, so the final `linarith` needs no division.
+      `f5`, `f6`, `f8`, `f9` and `bnBnd` are dropped.
+
+    No new tactic or theorem is used. Players never see the model solution,
+    and the level had no hint, so the Introduction gains one `**Hint:**`
+    paragraph after its Strategy list: it names these steps (the `by_cases`
+    inside one `have … := by …; …` line) and says why to avoid `bound` here.
+    The statement and the inventory are unchanged, and `bound` stays
+    unlocked (a `DisabledTactic bound` for this level would change the
+    inventory; not done). The native `Runner` check (difficulty 0, 1 and 2,
+    and the one-line `f4`) closes with no message. Under the browser-stack
+    harness (0.68 MB pthread stack, fresh import), the new proof is clean
+    where the old one fails its `bound` steps; the margin is about
+    0.01–0.02 MB. Fresh clone at `930c383` + `git am`: tree `2d3feeef7a58`.
+    The other levels that use `bound` are unchanged.
   - Needs the full `Mathlib.Tactic.Cases` (`cases'` / `induction'` are
     taught): in the `mathlib-game-extra` pack (until Lean 4.34:
     `wasm/compat`). The extra pack also has `Log.Base` now; the smaller

@@ -7,8 +7,9 @@ Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
 Port of RealAnalysisGame @ 930c383 to the wasm64 lean4game build (in-browser
-kernel, essential Mathlib pack). No level or world is removed and nothing a
-player types changes.
+kernel, essential Mathlib pack). No level or world is removed. Lecture10
+level 1's model solution no longer uses `bound` and its introduction gains
+a hint saying how; otherwise nothing a player types or reads changes.
 
 - Game/Metadata.lean: `Mathlib.Analysis.SpecialFunctions.Log.Base` was
   absent from the essential Mathlib pack and no level uses `Real.logb`; its
@@ -35,6 +36,17 @@ player types changes.
   (this Mathlib's `bound` proves the even case, not the odd one).
 - L22Levels/L03.lean: drop `attribute [grind]
   Mathlib.Tactic.Zify.natCast_le._simp_1` (constant gone; no level uses grind).
+- L10Levels/L06_Prod.lean (Lecture10 1, Product of Sequences): the model
+  solution's six `bound` steps are replaced with tactics the level already
+  unlocks (`field_simp; linarith [hε]`, `linarith [hn]`, a `by_cases` for
+  `|a n - L| * |b n| <= |a n - L| * K`, `field_simp at hN1 hN2`), and the
+  final `linarith` gets fewer facts. Mathlib's Aesop-based `bound` runs
+  interpreted in the browser and needs ~520-620 KiB of engine stack here,
+  more than a macOS Chrome Worker's ~500 KiB, so the level failed with
+  "the WebAssembly runtime's stack is exhausted". The introduction gains
+  one **Hint:** paragraph naming these steps (and why to avoid `bound`
+  here). The statement and inventory are unchanged, and `bound` stays
+  unlocked.
 
 Requires the full Mathlib.Tactic.Cases (cases'/induction'), which the
 toolchain release's mathlib-game-extra pack provides.
@@ -43,7 +55,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  Game/CustomTactic/Linarith.lean                   |   3 +-
  Game/CustomTactic/PushNeg.lean                    |  17 ++
- Game/Levels/L10Levels/L06_Prod.lean               |  56 ++---
+ Game/Levels/L10Levels/L06_Prod.lean               |  60 ++---
  Game/Levels/L10Levels/L07_Order.lean              |  20 +-
  Game/Levels/L10Levels/L08_Mono.lean               |  16 +-
  Game/Levels/L10Levels/L09_Subseq.lean             |  32 +--
@@ -157,7 +169,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  Game/Levels/L9Pset/L9Pset2.lean                   |  14 +-
  Game/Levels/L9Pset/L9Pset3.lean                   |  14 +-
  Game/Metadata.lean                                |  11 +-
- 116 files changed, 2130 insertions(+), 2097 deletions(-)
+ 116 files changed, 2134 insertions(+), 2097 deletions(-)
  create mode 100644 Game/CustomTactic/PushNeg.lean
 
 diff --git a/Game/CustomTactic/Linarith.lean b/Game/CustomTactic/Linarith.lean
@@ -198,10 +210,19 @@ index 0000000..bd4d732
 +macro (priority := high) "push_neg" cfg:optConfig loc:(location)? : tactic =>
 +  `(tactic| push $cfg:optConfig Not $[$loc]?)
 diff --git a/Game/Levels/L10Levels/L06_Prod.lean b/Game/Levels/L10Levels/L06_Prod.lean
-index 9481bc8..060f72a 100644
+index 9481bc8..bc9c866 100644
 --- a/Game/Levels/L10Levels/L06_Prod.lean
 +++ b/Game/Levels/L10Levels/L06_Prod.lean
-@@ -44,34 +44,34 @@ TheoremDoc ProdLimNeNe as "ProdLimNeNe" in "aₙ"
+@@ -30,6 +30,8 @@ The corner piece `(a n - L) * (b n - M)` gets absorbed into the first term—it'
+ 3. Make `|b n - M| < ε/(2*|L|)` to control the second term
+ 4. Combine using the triangle inequality
+ 
++**Hint:** Here you can do without `bound` (on this level it can run out of stack in the browser). `field_simp` then `linarith [hε]` proves `0 < ε / (2 * K)`, and `linarith` given `n ≥ N1 + N2` proves `N1 ≤ n`. For `|a n - L| * |b n| ≤ |a n - L| * K`, use `by_cases` on `a n - L = 0` inside its `have` (separate the steps with semicolons); when `a n - L` is not zero, `field_simp` cancels it. Finally, `field_simp at` your two `N` hypotheses clears their denominators, so `linarith` can put everything together.
++
+ 
+ Good luck!
+ "
+@@ -44,34 +46,36 @@ TheoremDoc ProdLimNeNe as "ProdLimNeNe" in "aₙ"
  Statement ProdLimNeNe (a b c : ℕ → ℝ) (L M : ℝ) (hL : L ≠ 0) (hM : M ≠ 0) (ha : SeqLim a L)
      (hb : SeqLim b M) (hc : ∀ n, c n = a n * b n):
      SeqLim c (L * M) := by
@@ -235,32 +256,34 @@ index 9481bc8..060f72a 100644
 -linarith [f1, f2, f3, f5, f6, f7, f8, f9]
 +  intro ε hε
 +  choose K hK using Bdd_of_ConvNonzero b M hb hM
-+  have ε1 : 0 < ε / (2 * K) := by bound
++  have Kpos : 0 < K := by apply hK.1
++  have ε1 : 0 < ε / (2 * K) := by field_simp; linarith [hε]
 +  have absL : 0 < |L| := by apply abs_pos_of_nonzero hL
-+  have ε2 : 0 < ε / (2 * |L|) := by bound
++  have ε2 : 0 < ε / (2 * |L|) := by field_simp; linarith [hε]
 +  specialize ha (ε / (2 * K)) ε1
 +  specialize hb (ε / (2 * |L|)) ε2
 +  choose N1 hN1 using ha
 +  choose N2 hN2 using hb
 +  use N1 + N2
 +  intro n hn
-+  have hn1 : N1 ≤ n := by bound
-+  have hn2 : N2 ≤ n := by bound
++  have hn1 : N1 ≤ n := by linarith [hn]
++  have hn2 : N2 ≤ n := by linarith [hn]
 +  specialize hN1 n hn1
 +  specialize hN2 n hn2
++  have f4 : |(a n - L)| * |b n| ≤ |(a n - L)| * K := by
++    by_cases h0 : a n - L = 0
++    rewrite [h0]
++    norm_num
++    field_simp
++    apply hK.2 n
++  field_simp at hN1 hN2
 +  specialize hc n
 +  rewrite [hc]
 +  have f1 : |a n * b n - L * M| = |(a n - L) * b n + (L * (b n -  M))| := by ring_nf
 +  have f2 : |(a n - L) * b n + (L * (b n -  M))| ≤ |(a n - L) * b n| + |(L * (b n -  M))| := by apply abs_add_le
 +  have f3 : |(a n - L) * b n| = |(a n - L)| * |b n| := by apply abs_mul
-+  have bnBnd : |b n| ≤ K := by apply hK.2 n
-+  have f5 : |(a n - L)| * |b n| ≤ ε / (2 * K) * K := by bound
-+  have Kpos : 0 < K := by apply hK.1
-+  have f6 : ε / (2 * K) * K = ε / 2 := by field_simp
 +  have f7 : |(L * (b n -  M))| = |L| * |b n -  M| := by apply abs_mul
-+  have f8 :  |L| * |b n -  M| < |L| * (ε / (2 * |L|)) := by bound
-+  have f9 : |L| * (ε / (2 * |L|)) = ε / 2 := by field_simp
-+  linarith [f1, f2, f3, f5, f6, f7, f8, f9]
++  linarith [f1, f2, f3, f4, f7, hN1, hN2]
  
  
  Conclusion "

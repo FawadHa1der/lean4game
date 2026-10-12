@@ -211,9 +211,15 @@
         "proof": "cases' h with h1 h2\nrewrite [h1]\nring_nf\nrewrite [h2]\nring_nf",
         "teaches": "cases'"
       },
+      "probe3": {
+        "world": "Lecture10",
+        "level": 1,
+        "proof": "intro ε hε\nchoose K hK using Bdd_of_ConvNonzero b M hb hM\nhave Kpos : 0 < K := by apply hK.1\nhave ε1 : 0 < ε / (2 * K) := by field_simp; linarith [hε]\nhave absL : 0 < |L| := by apply abs_pos_of_nonzero hL\nhave ε2 : 0 < ε / (2 * |L|) := by field_simp; linarith [hε]\nspecialize ha (ε / (2 * K)) ε1\nspecialize hb (ε / (2 * |L|)) ε2\nchoose N1 hN1 using ha\nchoose N2 hN2 using hb\nuse N1 + N2\nintro n hn\nhave hn1 : N1 ≤ n := by linarith [hn]\nhave hn2 : N2 ≤ n := by linarith [hn]\nspecialize hN1 n hn1\nspecialize hN2 n hn2\nhave f4 : |(a n - L)| * |b n| ≤ |(a n - L)| * K := by by_cases h0 : a n - L = 0; rewrite [h0]; norm_num; field_simp; apply hK.2 n\nfield_simp at hN1 hN2\nspecialize hc n\nrewrite [hc]\nhave f1 : |a n * b n - L * M| = |(a n - L) * b n + (L * (b n -  M))| := by ring_nf\nhave f2 : |(a n - L) * b n + (L * (b n -  M))| ≤ |(a n - L) * b n| + |(L * (b n -  M))| := by apply abs_add_le\nhave f3 : |(a n - L) * b n| = |(a n - L)| * |b n| := by apply abs_mul\nhave f7 : |(L * (b n -  M))| = |L| * |b n -  M| := by apply abs_mul\nlinarith [f1, f2, f3, f4, f7, hN1, hN2]",
+        "teaches": "Lecture10 1's model solution without bound (port patch, 2026-10-12), one step per line as the typewriter takes it: field_simp; linarith [hε], linarith [hn], a by_cases inside one have, field_simp at. Natively it pins that the bound-free solution still closes; it cannot catch the browser's stack budget (bound needed more than a macOS Chrome Worker's ~500 KiB here) — that needs the browser-stack harness"
+      },
       "expectedRaw": {
         "runtime": "wasm64-57ae00dc5f6ce958+slim",
-        "bytes": 1014571789
+        "bytes": 1014552989
       }
     },
     {
