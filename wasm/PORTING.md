@@ -757,7 +757,10 @@ control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
   lemmas are not in any level's environment (no level, hint or doc uses
   them); `simp`/`norm_num`/`bound` in every level after L4 L01 also know
   the added simp lemma (strictly stronger; harmless). Players never see the
-  solution indentation.
+  solution indentation. Since 2026-10-12 (below), Lecture10 1's model
+  solution avoids `bound` and its Introduction ends with a `**Hint:**`
+  paragraph showing how; a player's own `bound` on that level can still
+  exhaust a Chrome Worker's stack (`bound` stays unlocked).
 - Inherited upstream defects: L24Pset 2 ("Open Balls are Open") defines
   `lemma IsOpen_of_Ball … := by …` instead of a `Statement`, so it is a
   level with no goal (`statementName "[anonymous]"`) — left as is (a content
@@ -768,7 +771,9 @@ control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
   levels) — and 2 i18n backslash warnings (`L18Lecture.lean`).
 - Probes: RealAnalysisStory 1 `apply h` (`SNAPSHOT PROBE PASS`); Lecture6 5
   `cases' h with h1 h2 / rewrite [h1] / ring_nf / rewrite [h2] / ring_nf`
-  (`cases'`, new in Lecture6 4). Bake: 1,004,806,293 B raw slim; 187
+  (`cases'`, new in Lecture6 4); since 2026-10-12, probe3 Lecture10 1, the
+  `bound`-free solution below (native only: it cannot see the browser's
+  stack budget). Bake: 1,004,806,293 B raw slim; 187
   modules, 1016 s for the last clean build.
 - UNVERIFIED (the report's status is "partial"): the port's own
   recompile after the doc-comment de-indent never reached `package
@@ -789,6 +794,75 @@ control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
   the patch keeps its smaller replacement closure. 187/187 modules
   (1,415 s). Bake on `wasm64-57ae00dc5f6ce958`: 1,014,571,789 B raw slim
   (+1.0 %), 283,590,594 B transfer; `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected.
+- 2026-10-12, Lecture10 1 ("Big Boss : Product of Sequences",
+  `Game/Levels/L10Levels/L06_Prod.lean`).
+  - Why: on Lean 4.34, Mathlib's `bound` (Aesop, interpreted in the
+    browser) needs ~520–620 KiB of engine stack on this level, more than a
+    macOS Chrome Worker's ~500 KiB. The level failed with "the WebAssembly
+    runtime's stack is exhausted", locally and live; the session survived.
+    The user chose to change this level only, not the runtime (no stack
+    tuning; patch 0036 keeps such a failure a clean error, `wasm/KERNEL.md`).
+  - What replaced `bound`: all six uses were in the model solution, none
+    in the level's text.
+    - `0 < ε / (2 * K)` and `0 < ε / (2 * |L|)`: `field_simp; linarith [hε]`
+      (`Kpos` moved up).
+    - `N1 ≤ n` and `N2 ≤ n`: `linarith [hn]` (the game's `linarith` uses
+      only the facts it is given).
+    - The two product bounds (`f5`, `f8`): a new `f4 : |a n - L| * |b n| ≤
+      |a n - L| * K` by `by_cases h0 : a n - L = 0` (zero: `rewrite [h0]`,
+      `norm_num`; nonzero: `field_simp`, `apply hK.2 n`), then
+      `field_simp at hN1 hN2`, so the final
+      `linarith [f1, f2, f3, f4, f7, hN1, hN2]` needs no division. `bnBnd`,
+      `f5`, `f6`, `f8` and `f9` are dropped.
+  - Every tactic used is unlocked at this level (`positivity`, `div_pos`,
+    `mul_pos`, `le_max_left` are not), and no theorem is new. Players never
+    see the model solution, and the level had no hint, so the Introduction
+    gains one `**Hint:**` paragraph after its Strategy list naming these
+    steps (the `by_cases` goes inside one `have … := by …; …` line, as the
+    typewriter takes one line per step) and why to avoid `bound` here. The
+    statement and inventory are unchanged and `bound` stays unlocked; a
+    `DisabledTactic bound` for this level would change the inventory and
+    was not done.
+  - Patch re-cut: 222,135 bytes, six files change content. A fresh clone
+    at `930c383` + `git am` gives tree `2d3feeef7a58` (identical to the
+    checkout's working tree).
+  - Evidence:
+    - Native `Runner` check (lane image, 41ec565): clean at difficulty 0, 1
+      and 2, and with the one-line `f4`. Dropping `f4` from the final
+      `linarith` is rejected. The edited level file compiles cleanly. The
+      catalog's new rag `probe3` (this solution, one step per line) closes
+      with no message, as do `probe` and `probe2`; the negative control is
+      rejected.
+    - Browser-stack harness (Node, the 41ec565 artifact, fresh import of
+      `lib-tree-rag`, pthread stack 0.68 MB as in Chrome's macOS Worker):
+      the new proof is clean at 0.68 and 0.67 MB and fails at 0.66 MB. The
+      old proof fails its `bound` steps at 0.68 MB and is clean at 4 MB.
+      The margin is ~0.01–0.02 MB. At 0.66 MB, steps without `bound` fail
+      too (`apply abs_mul`, `ring_nf`), while `intro` + `choose` alone are
+      clean at 0.56 MB, so the need grows with the whole proof, not only
+      with `bound`. On this artifact the probe does not print the "stack is
+      exhausted" message; the failures show only through a verdict that
+      walks the theorem for synthetic `sorry`s.
+    - Headless Chromium on `:3008` (the pre-change build; same statement
+      and inventory): the new proof, typed one step per Enter (25 steps),
+      is accepted at every step and completes the level in one session
+      with no stack error (two runs). The old proof gets "stack is
+      exhausted" at steps 3 and 13 in one run and 3, 6, 12, 22 and 26 in
+      another, and does not complete. Lecture10 2, which still uses `bound`
+      twice, completes.
+  - Rebake (same runtime, `wasm64-57ae00dc5f6ce958`): the checkout's HEAD
+    was re-made as `930c383` + this patch (tree `2d3feeef7a58`); the games
+    lane recompiled all 187 modules (981 s), and the bake gave raw
+    1,014,552,989 B (−18,800), transfer 283,605,481 B, digest
+    `sha256:ba04198e01c50752…` (`rag.ba04198e01c50752.snapz`). The wasm
+    probe, the native probe, probe2, probe3 and the negative control all
+    behave. On the rebuilt `:3008`, Chromium completes Lecture10 1 with the
+    new solution (25 steps, one session, no stack error), shows the new
+    Hint, completes Lecture10 2, and boots NNG4 and Knights unchanged.
+
+  `bound` is used in ~90 other RAG level files (Hints or prose recommend
+  it in Lecture3, 4, 8, 17, 20, 22 and L3Pset 4). They are unchanged by user
+  decision; their stack use in the browser was not measured.
 
 ### Robo — hhu-adam/Robo
 

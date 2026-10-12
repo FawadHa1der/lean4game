@@ -2052,7 +2052,8 @@ beside them (`qv-SUMMARY-slow.txt` for the slow-link set).
 | Ten-game smoke (`--all`, fresh profile) | 10/10, boot 6.2–9.3 s; shell fill 233/234 in every game | 10/10, boot 6.2–10.3 s, the same bytes per game; shell fill 234/234; 0 CSP hits in 2,303 console lines; 2–3 textless errors per game | 10/10, 6.3–8.3 s |
 
 - **RAG Lecture10/1 (the product-of-limits boss) cannot be finished in the
-  browser, on 4.34 or on 4.33.**
+  browser, on 4.34 or on 4.33.** (Since 2026-10-12 it can, without
+  `bound`: "RAG Lecture10/1 without `bound`" below.)
   - On 4.34, `have ε1 : 0 < ε / (2 * K) := by bound` (step 3) gets
     "maximum recursion depth has been reached: the WebAssembly runtime's
     stack is exhausted …", and so do the `bound` calls at steps 12 and 26.
@@ -2242,6 +2243,46 @@ campaign, ~6.8 MB/s), `4083fb4` and SEC1's `live6`.
     200) and on every fill ending with 0 failed.
 - Not run live: D4/D5/D7 cuts and refusals, slow links, tabs, the reload
   storm, editor bursts and pace, Cypress. Every profile was deleted.
+
+### RAG Lecture10/1 without `bound` (2026-10-12)
+
+- **RAG Lecture10/1 can now be completed in the browser.** By user
+  decision the level changed, not the runtime. Its model solution no
+  longer uses `bound`, and its Introduction ends with a `**Hint:**`
+  paragraph naming the replacement steps: `field_simp; linarith [hε]`,
+  `linarith [hn]`, a `by_cases` inside one `have`, and `field_simp at`.
+  The statement and inventory are unchanged, so these steps already work
+  on the current build; the rebake only adds the hint. Details are in
+  `wasm/PORTING.md` §8 RAG. Rebaked on the same runtime:
+  `rag.ba04198e01c50752.snapz` (transfer 283,605,481 B); on the rebuilt
+  `:3008` Chromium completes Lecture10/1 with the new solution (25 steps,
+  one session, no stack error) and shows the Hint, completes Lecture10/2,
+  and boots NNG4 and Knights unchanged.
+- Headless browser-stack harness (Node, 41ec565, fresh import of
+  `lib-tree-rag`, 0.68 MB pthread stack as in Chrome's macOS Worker):
+  - the new proof is clean at difficulty 2 and 1, also in its one-line
+    `f4` form;
+  - it is clean at 0.67 MB and fails at 0.66 MB;
+  - dropping `f4` is rejected;
+  - the old proof fails its 7 `bound`-dependent steps at 0.68 MB and is
+    clean at 4 MB.
+- Headless Chromium on `:3008` (the pre-change build), one step per Enter,
+  fresh profile:
+
+  | Proof | Steps accepted | Completed | Stack errors |
+  |---|---|---|---|
+  | New proof | 25/25 (boot 7.5 s) | yes ("Level completed!", Next) | none |
+  | Lecture10/2 (unchanged, `bound` ×2) | 10/10 | yes | none |
+  | Old proof | 10/28 | no | steps 3, 6, 12, 22, 26 |
+
+  Every run used one session with no death, and the console showed only
+  the known textless errors.
+- **Still open:** `bound` stays unlocked, so a player who types it here
+  can still hit the stack error. The new hint steers players away from it.
+  The other `bound` uses are unchanged by user decision: the reference
+  solutions of 88 playable levels, plus 7 hints and 14 prose paragraphs
+  that recommend or explain it (Lecture3, 4, 8, 17, 20, 22 and L3Pset 4).
+  They are inventoried, but their browser stack use was not measured.
 
 ## Open
 
