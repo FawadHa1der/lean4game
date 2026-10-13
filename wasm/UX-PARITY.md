@@ -2277,6 +2277,17 @@ campaign, ~6.8 MB/s), `4083fb4` and SEC1's `live6`.
 
   Every run used one session with no death, and the console showed only
   the known textless errors.
+- **Live** (`abc296c` deployed; headless Chromium, fresh profile, one step
+  per Enter, 2026-10-12): the page downloads `rag.ba04198e01c50752.snapz`
+  (283,605,481 B, named by the live `/snapshots/index.json`), and the
+  service worker is `db8a77e53509`, active with cache
+  `l4g-shell-db8a77e53509`. RAG Lecture10/1 with the new solution (catalog
+  `probe3`, one-line `f4`): 25/25 steps accepted, completed ("Level
+  completed!", Next). The cold boot took 82.2 s, the slowest step 2.3 s.
+  The Introduction shows the Hint. Lecture10/2: 10/10, completed (boot
+  7.8 s). NNG4 Tutorial/1 and Knights EquationalReasoning/1 boot (31.7 s,
+  38.8 s, cold) and complete. Each run had one session and no death, no
+  "stack is exhausted", and only the known textless console errors.
 - **Still open:** `bound` stays unlocked, so a player who types it here
   can still hit the stack error. The new hint steers players away from it.
   The other `bound` uses are unchanged by user decision: the reference
