@@ -2433,8 +2433,183 @@ during a two-tab Prepare (`client/src/wasm/game-cache.ts` drops the remote
 state on `prepare-ended` before its re-probe lands; unchanged since 4.34),
 and RAG's two upstream level defects.
 
+### Live: Lean 4.35 on the toolchain release (wasm64-port f81943a, 2026-10-23)
+
+The 4.35 branch is live: `wasm64-port` @ `f81943a`, release
+`lean-v4.35.0-b081e7c` (Lean 4.35.0), runtime `wasm64-36d7f415704473d9`
+(8 chunks: `lean.js` 1 + `lean.wasm` 7), QED64 `73d7f3b`, the edge worker on
+`qed64/edge` `createWorker`. Bundle `index-DCO7X7V9.js`, the same bundle as
+the local "fixed" run; `lean.worker.js` is byte-identical to the local
+dist. The service worker is `b5993288820e` (local `c6e5ae55d985`: `sw.js`
+differs only in its VERSION, which `scripts/build-sw.mjs` hashes from file
+content, and CI's checkout lacks the gitignored pinned copies). Both runtime
+manifests name the new runtime; `/snapshots/index.json` is byte-identical
+to its copy `index.wasm64-36d7f415704473d9.json` (3,789 B, same etag), and
+`/profiles/index.json` to its copy (295 B).
+
+**The deploy, as it happened:**
+
+1. `scripts/upload-artifacts.sh` (step 1) finished **before the push**: the
+   10/10 new snapshots and both `wasm64-36d7f415704473d9` index copies were
+   in R2 at 14:41:35 UTC.
+2. The push to `wasm64-port`; CI run 39971880810 started at 14:42:10 UTC
+   (deploy job 14:42:12–14:43:44, 1m32s, success).
+3. A first `--post-deploy` right after CI's success **refused** (nothing
+   written): a request still got the 4.34 runtime manifest
+   (`wasm64-57ae00dc5f6ce958`) from the edge. At 14:44:24 UTC 20 fresh
+   requests all returned `wasm64-36d7f415704473d9`.
+4. The rerun (about 14:45 UTC) passed its preflight (30 runtime files: 8
+   chunks, 8 profile parts, 10 snapshots, the pinned runtime manifest, 2
+   per-runtime index copies; the release in R2; the live site serving the
+   new runtime) and replaced the mutable `snapshots/index.json` (3,789 B)
+   and `profiles/index.json` (295 B). The outgoing 4.34 copies
+   (`index.wasm64-57ae00dc5f6ce958.json`, 3,791 B, and
+   `profiles-index.wasm64-57ae00dc5f6ce958.json`) were already in R2, and
+   the 4.34 `.snapz` stay for old tabs.
+5. 14:59:57 UTC, while the checks below ran: the R2 cleanup of 51 unread
+   objects under `lean4game/` (4.43 GiB: the old `runtime/` and
+   `profiles/lean-core.*` copies the release mount shadows, and snapshot
+   generations no index names). The 4.34 generation (12 objects, 2.5 GB)
+   stays until open 4.34 tabs have reloaded.
+
+Unlike the 4.34 deploy, there was no window in which the new shell lacked
+its index copy: step 1 had finished before CI started.
+
+Two lanes ran, each followed by a skeptic recheck (the rechecked figures
+are the ones below), all read-only (GETs and normal browsing, at most one
+cold download per game per lane), under the host browser lock. Evidence
+`lv-shots/lv-435/<lane>` in the session scratchpad (`games`, `sec-*`,
+`skeptic-games`, `skeptic-security-offline`); probes `v435/live/probes/lv-435-*.mjs`,
+copies of the v4.35 regression probes pointed at the live site. "Local
+4.35" is the "fixed" column above (`:3009`, localhost, fresh profiles, so
+cold boots are not comparable with boots over the internet). "Live 4.34"
+is "Live: Lean 4.34 …" above.
+
+**Games**
+
+| Check | Live 4.35 | Local 4.35 | Live 4.34 |
+|---|---|---|---|
+| Ten-game smoke, cold, fresh profile | 10/10, each "Level completed! 🎉"; boot testgame 40.3, nng4 24.3, stg4 26.3, reintro 24.3, knights 29.3, ntg 50.3, rag 40.3, robo 39.3, logic 47.3, lag 37.3 s | 10/10, 2.2–4.2 s | 10/10, 19.3–38.5 s (testgame 35.8) |
+| Smoke MB on the wire (each download counted twice) | 403.2 / 310.6 / 361.7 / 307.7 / 396.7 / 723.0 / 561.9 / 560.9 / 722.7 / 724.1 (order as above): local ±0.4 MB except testgame (no fill line on that page) | 509.2 / 310.4 / 361.5 / 307.5 / 396.5 / 722.6 / 561.6 / 560.6 / 722.3 / 723.7 | local ±0.4, testgame 459.1 |
+| Smoke console | 0 CSP hits in 2,897 lines, 0 "Refused to" / "Content Security Policy" in Chromium's log; 0 "not published for this build" (page, console, log); 1 textless error per game (`index-DCO7X7V9.js:1897`) | 0 in 2,266; 0–1 per game | 0 in 2,686; 1–3 per game |
+| Smoke: the 4.35 linter blocker | 0 warning diagnostics, 0 linter messages (32 forwarded diagnostics, all severity 1 "unsolved goals" of intermediate states); every Runner line starts `set_option Elab.async true Runner` | 0 | — (4.34 had no blocker) |
+| Smoke shell fill | 237/237 on 8 of 10 pages; testgame (none) and NNG4 (only "offline cache 187/187") closed before the fill line | 237/237 ×10 | 8 of 10, same pattern |
+| Ten-game smoke, second visit (same profile) | 10/10, boot 2.2–3.2 s, 0.0 MB, 0 errors, 0 CSP hits in 2,254 lines, fill on 7 of 10 pages, 0 linter messages | not run | 10/10, 5.6–10.0 s, 0.0 MB |
+| Editor-mode proof, NNG4 Multiplication/1 (warm) | lane runs 2 and 3 / skeptic: boot 16.7 / 16.7 / 5.6 s; wrong-line error 18.5 / 18.5 / 7.4 s; proof 3.5 / 2.6 / 3.5 s, "Level completed! 🎉"; console errors 14 / 13 / 10 ("client cancelled" 9 / 8 / 7, "the document changed before this request" 5 / 5 / 3); 0 CSP. Cold, fresh profile: boot 74.8 s, proof 3.6 s | 2.4 / 4.3 / 3.5 s; 7 errors | 8.4 / 10.8 / 3.5 s; 9 errors |
+| `decide` line (Fin 40), difficulty 1 | stack-exhausted error on line 2 only, 0.05 s after the document's first diagnostics; the proof then 0 errors, completed; session s1, 0 deaths; boot 2.57 s | 0.05 s by the same measure (8.09 → 8.14 s in its `result.json`; the 0.14 s above is FIX.md's figure, measured differently) | 0.2 s; one session, 0 deaths |
+| Deep play Knights SetTheory_Knights_Knaves/6 | boot 2.6 s; 11/11; completed 16.5 s; Next 1.2 s, Previous 2.0 s | 2.4 / 16.7 / 1.1 / 2.0 s | 10.2 / 25.2 / 1.1 / 2.0 s |
+| Deep play Robo Babylon/6 | 3.6 s; 9/9; 14.8 s; 1.1 / 2.1 s | 2.4 / 13.8 / 1.2 / 2.1 s | 10.0 / 23.9 / 1.2 / 2.7 s |
+| Deep play LAG InnerProductWorld/2 | 3.7 s; 15/15; 23.7 s; 1.2 / 2.6 s | 2.5 / 23.2 / 1.2 / 2.5 s | 9.8 / 37.2 / 1.2 / 3.0 s |
+| RAG Lecture10/1 bound-free, step by step, ×3 | 3/3 completed: 25/25, 0 stack errors, 0 warnings; LSP 10.07 / 9.65 / 9.84 s (slowest step 0.59–0.61 s); session s1, 0 deaths; boot 2.82–3.10 s | 25/25, completed, LSP 10.08 s | `abc296c` (2026-10-12): 25/25, completed, slowest step 2.3 s |
+| RAG Lecture10/2 (`bound` ×2), ×3 | 3/3 completed, 10/10, 0 stack errors; LSP 3.51 / 3.43 / 3.44 s; boot 2.83–3.35 s | 10/10, LSP 3.20 s | `abc296c`: 10/10, completed, boot 7.8 s |
+| Knights DSL fix: DSL_Knights_Knaves/1, /3, SetTheory_Knights_Knaves/1 (editor mode, difficulty 0) | 3/3 "Level completed! 🎉", 0 errors, 0 warnings; boot 3.05 s | DSL/1 completed (DSL/3 and SetTheory/1 only by the native/wasm sweep) | DSL/1 fails, "`rcases` failed" (on `:3008`, the 4.34 bundle) |
+| Pass with warnings: Reintro QuantifierWorld/7, ProductWorld/6 | "Level completed with warnings 🎭"; line 2 "Try this: intro h a" / "Try this: intro f a b" + the `linter.tacticAnalysis.introMerge` Note; identical to the local result | the same | `:3008`: the same without the Note |
+
+**Security, offline and caching**
+
+| Check | Live 4.35 | Local 4.35 | Live 4.34 |
+|---|---|---|---|
+| SEC1, the 69-check exploit set | 68/69, only the known P2 (no goal pane within 60 s, as local); 0 attacker and 0 foreign requests; Chromium logged 4 CSP lines (the P0 controls); P3 tampered index 3/3 `SNAPSHOT_INDEX_FOREIGN_URL`; NNG4 region unchanged (571,686,925 B). The first pass read 65/69: three probe faults (vector 1 counted the service worker's install precache; a portless `attacker.invalid` is a legal same-origin folder name → its own `/attacker.invalid/index.json` 404; as `attacker.invalid:443` refused 3/3) | 68/69 (P2) | not run (10-vector subset only) |
+| SEC1: the 10 override vectors | 10/10 refused in 0.1–0.2 s; the landing vector shows the notice and 9 tiles; Chromium logged only the 4 `example.com` control lines | — | 10/10 in 0.1–0.2 s |
+| SEC1: CSP (P0c) | cross-origin fetch, XHR and WebSocket blocked (6 `connect-src` violations); same-origin index and `/api/games` 200; `blob:` and `data:` work; P1 cards 1.2–2.7 s after goto | the same | the same |
+| Landing fresh / reload / offline | 0.9 / 0.4 / 0.5 s, 9/9 Download, 0 errors, fill 237/237 | 0.4 / 0.3 / 0.4 s | 1.0 / 0.3 / 0.5 s |
+| D6: NNG4 prepared from the landing only | Prepare 35.2 s, 261.5 MB (content-length sum), 187/187 files, 8 chunks, region 571,686,925 B; offline A (Multiplication/1) boot 2.4 s, proof 3.5 s, completed; B goal 1.5 s, proof 5.5 s; doc 0.1 s (service worker); offline tile Ready 3.5 s | 1.3 s / 263.6 MB / 187/187; boot 1.9 s, proof 3.5 s; B goal 1.6 s | 27.1 s / 314.3 MB / 189/189; A 7.0 s, 3.8 s; B 1.6 s, 5.5 s; 0.1 s; 3.4 s |
+| RAG prepared, then offline with images | Prepare region done ~54 s, 388.9 MB, 351/351 (14 images, 1.82 MB), region 999.8 MB; NewtonsCalculationOfPi/1 boots offline in 3.9 s (skeptic 3.3 s); `SeqLim.jpg` (1594×732) 0.8 s, the 6 world-intro images complete; only the YouTube thumbnail misses (game content) | D6 RAG: Prepare ~1 s, 397.6 MB, 351/351, region 999.8 MB; boot 1.9 s, image 0.9 s | 35.2 s, 444.3 MB, 353/353, region 1,014.6 MB; boot 7.0 s |
+| Served runtime manifest | 8 chunks; `buildId` `wasm64-36d7f415704473d9` | 8 | 10 |
+| #64 on a cold first visit (TestGame) | page: `index.json` ×1, `profiles/index.json` ×1, 0 copies; the service worker (registered at 37.5 s, after "game served"): both indexes and both 36d7 copies ×1 (its precache); boot 37.0 s, proof 1.2 s. Warm NNG4: page and service worker each read both indexes once, 0 copies | copy read only when mispaired | read by page + service worker; 0 copies |
+| Service worker | fill 237/237 in every pass; "not cached" 0 on the page and in Chromium's logs (the service worker's own console still does not reach Playwright); its precache lists the three pinned 36d7 names, all in the shell cache | 237/237 | 237/237 |
+| Edge headers (curl) | Range 206 (`bytes 0-99/155205162`, suffix right); If-Range match 206, mismatch 200 full; 416 and 404 `no-store`; POST/PUT 405 `Allow: GET, HEAD` (`POST /` 405 without `Allow`); `immutable` on `.snapz`, runtime chunks, profile parts, `/assets`; `must-revalidate` on the HTML, `sw.js`, the worker, both runtime manifests, both indexes, every copy, `/api/games`; COOP/COEP/CORP and `connect-src 'self' blob: data:` on every response, 307/404/405/416 included. `lean.js` sha256 `8ab11236…` = the release record; `lean.wasm` part-006 = its manifest digest; core pack `8aca4fa4…` = the release; the 10 current `.snapz` answer a 1-byte Range with 206 | — | the same |
+| Old 4.34 tab | `index.wasm64-57ae…json` 200 (3,791 B), its profile copy 200, all 10 snapshots it names 206; the 4.34 runtime manifest, its 10 chunks and 8 core-pack parts 404; `/profiles/lean-core.manifest.json` names the 4.35 release | — | not checked |
+| Forced abort (#73; a route in the test browser rewrites the worker script) | pthread / main: death 2.37 / 2.23 s, `RUNTIME_ABORTED`, the #73 label at 2.42 / 2.33 s; serving again 17.41 / 16.95 s (lane: 59.1 / 29.0 s); `rfl` accepted in session s2, 0 errors | death 2.26 / 2.31 s; serving 5.73 / 5.77 s | not run |
+
+- **No check failed.** Two lane failures were probe faults: the first
+  editor-mode run (the `decide` row had left NNG4 in editor mode in the
+  shared profile; boot 2.5 s, then a 60 s wait for the typewriter pane), and
+  the skeptic's first RAG offline rerun (below).
+- **Slow edge responses on the R2-backed `must-revalidate` files
+  (intermittent; Open).** `/runtime/runtime-manifest.json`, the pinned
+  runtime manifest, `/snapshots/index.json` and `/profiles/index.json`
+  took 0.4–17.5 s to first byte (curl at ~15:33Z: 0.38–15.56, 0.90–12.82,
+  0.68–17.46 s; at 15:36Z 0.37–1.39 s); static `/api/games` and `/sw.js`
+  0.10–0.68 s. Every boot fetches them from the network (`sw:false`, warm
+  boots included), so the delay lands in "checking this game's
+  environment": the editor rows' warm boots of 16.7 / 16.7 / 5.6 s against
+  2.2–3.2 s for the warm smoke (`editor-proof-3/result.json`: the pinned
+  runtime manifest took 13,048 ms; the skeptic's warm run:
+  `/snapshots/index.json` 2.31 s, `/profiles/index.json` 1.0 s). Not
+  reproduced afterwards from the same host: at 16:01Z 12 rounds took
+  0.17–1.53 s (static 0.09–0.24 s), and 8 rounds during one 155 MB
+  snapshot download (11.3 MB/s) 0.20–1.58 s (static 0.10–0.52 s).
+- **A cold first visit downloads the runtime one chunk at a time and the
+  snapshot only after it (Open).** NNG4 from a fresh profile
+  (`skeptic-games/editor-cold`): the 8 chunks run back to back from 6.4 to
+  48.9 s (each starts within 0.03 s of the previous one's end; 1.1–6.2 s
+  each, the last 16.4 s); a first `.snapz` request ends `ERR_ABORTED` at
+  4.09 s; the real snapshot transfer starts at 49.4 s and takes 24.7 s;
+  boot 74.8 s. Invisible on localhost; no 4.34 live timeline exists to
+  compare.
+- **Cold boots are slower than live 4.34.** The games lane's RAG moved
+  ~280 MB in 40.3 s (~7 MB/s); the security lane measured ~11 MB/s, as in
+  the 4.34 run. The link was not measured during the games lane (to avoid
+  another download).
+- **New console message in editor mode:** "QED64: the document changed
+  before this request…" 1–5 times per run, next to 7–9 "client cancelled"
+  lines; 0 in the local 4.35 run and in live 4.34. Console only; every
+  proof completes (Open, minor).
+- **Old 4.34 tabs** get their snapshots and index copies, but not their
+  runtime or core pack: `infra/worker.js` maps `/runtime/*` and
+  `/profiles/*` to the deployed release only. That is the documented case
+  (`wasm/DEPLOY.md`: such tabs "need a reload"); not checked in a browser.
+  The 4.34 release is still in R2 (`lean4-wasm64/lean-v4.34.0-41ec565/`),
+  but the worker no longer routes to it.
+- **Harness caveat for live timings:** any context with `context.route`
+  (SEC1's attacker emulation, the abort row's worker rewrite) disables
+  Chromium's HTTP cache, and each boot re-downloads the 106.4 MB runtime.
+  Same NNG4 profile: normal context warm boot 2.46 s, 0 runtime bytes,
+  proof 0.6 s; with only a route on `attacker.invalid` 21.75 s and
+  106.4 MB. So SEC1's P2 66.1 s and P4 31.8 s boots and the abort row's
+  serving-again times measure the link, not the site. Playwright's
+  `serviceWorkers: "block"` does not stop an existing registration.
+- **Offline boots are slower than local with no network involved:** RAG
+  3.3–3.9 s against 1.9 s, NNG4 2.4 s against 1.9 s. Unexplained (host
+  load possible); not a failure.
+- **Probe race (Open, probe updates):** `lv-435-sec-rag.mjs` (and its
+  sources `qv-core-rag.mjs`, `v435-core-rag.mjs`) treats the first
+  `[game-cache] prepare rag:` line (the images line) as done. In the
+  skeptic's first rerun it closed the browser with the region still
+  `.raw.partial` (907.9 MB; tile "Preparing… 254 / 281 MB"), and the
+  offline boot was then correctly refused ("not published for this build
+  (unreachable …)"). Waiting for `prepare rag: region done` passed 3/3.
+- Minor: the "R2 view" printed by `scripts/upload-artifacts.sh` stopped at
+  `head -40` and hid `testgame.8c34115c6d4b983f.snapz`, which the site
+  serves (206); it now prints the whole listing. `/index.html` still 307s
+  to `/`; `/api/games` still has no `content-type`.
+- Not run live: D4/D5/D7 cuts and refusals, slow links, tabs, pair, the
+  reload storm, editor bursts and pace, panic, QD-API-2, QB-2, NEW-2/3,
+  Cypress. Every lane and skeptic profile was deleted; nothing was written
+  to R2 or a repository.
+
 ## Open
 
+- **Edge latency on the R2-backed `must-revalidate` files (live 4.35,
+  2026-10-23).** `/runtime/runtime-manifest*.json`, `/snapshots/index.json`
+  and `/profiles/index.json` took 0.4–17.5 s to first byte, intermittently,
+  against 0.1–0.7 s for static files, and every boot waits for them (warm
+  NNG4 editor boots 5.6–16.7 s against 2.2–3.2 s for warm smoke boots).
+  Candidates: an edge cache with a short TTL or stale-while-revalidate for
+  these small files, or the service worker answering from its copy while it
+  revalidates. Not yet known whether the time is in R2 or the worker; not
+  reproduced at 16:01Z (0.17–1.58 s, idle and during one snapshot
+  download).
+- **Cold first visit: runtime chunks one at a time, the snapshot after the
+  last one (live 4.35).** NNG4 from a fresh profile booted in 74.8 s: 8
+  chunks back to back 6.4–48.9 s, then the 24.7 s snapshot transfer; an
+  early `.snapz` request ended `ERR_ABORTED` at 4.09 s. Check whether the
+  snapshot prefetch is meant to overlap the runtime download, and why the
+  early request aborts.
+- **Minor: "QED64: the document changed before this request…" console
+  errors in editor mode on the live site** (1–5 per run; 0 locally). The
+  proofs complete.
 - **Reference proofs that finish "with warnings" (Lean 4.35 sweep, 53
   levels, the same on the live 4.34 site).** 51 trip Mathlib's
   `linter.tacticAnalysis.introMerge` ("Try this: intro x h") on
@@ -2463,7 +2638,11 @@ and RAG's two upstream level defects.
   `qv-core-rag.mjs` expect 10 runtime chunks (read the count from the
   served manifest: the 4.35 runtime has 8); `qv-tabs.mjs` waits for
   `prepare nng4: region (error|failed)` (add `silent`). The Lean 4.35 runs
-  used patched copies.
+  used patched copies. `qv-core-rag.mjs` (and its copies `v435-core-rag`,
+  `lv-435-sec-rag`) takes the first `prepare rag:` line (the images line)
+  as the end of Prepare; wait for `prepare rag: region done` (a live rerun
+  closed the browser on a `.raw.partial` region and the offline boot was
+  refused).
 - **A deep `decide` kills the checker with a JS stack overflow (runtime or
   kernel; also on the live build).**
   - Repro: NNG4 Multiplication/1, editor mode,
