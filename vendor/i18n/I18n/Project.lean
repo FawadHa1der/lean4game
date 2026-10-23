@@ -45,7 +45,9 @@ def getProjectContextForPackage (id : PkgId) : IO ProjectContext := do
     | throw <| IO.userError s!"i18n: package '{id}' is missing from lake-manifest.json"
 
   let dir := match entry.src with
-    | .path dir => rootDir / dir
+    -- Lake v4.35 added `copy` (a copy under the packages directory); `dir` is
+    -- still the package's own source directory, relative to the root.
+    | .path dir _ => rootDir / dir
     | .git _url _rev _inputRev? subDir? =>
       let packagesDir := manifest.packagesDir?.getD (manifest.lakeDir / "packages")
       let repositoryDir := rootDir / packagesDir / entry.name.toString (escape := false)
