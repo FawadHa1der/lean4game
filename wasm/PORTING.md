@@ -15,11 +15,11 @@ LinearAlgebraGame (import surgery plus proof drift).
 
 What we cannot change: the toolchain release this site pins
 (`wasm/lean4-wasm64-release.json`, `wasm/KERNEL.md` "Toolchain dependency":
-Lean 4.34.0 on the fork's `qed64-wasm64` line) and its Mathlib packs, built
-by the fork from Mathlib `v4.34.0`: `mathlib-essential` (4,354 modules —
-Lean, Std and the Mathlib closure QED64 serves) and `mathlib-game-extra`
-(737 game-only modules: the `Mathlib.Tactic` umbrella and leaves the games
-import). Their module lists ship with the release
+Lean 4.35.0 on the fork's `qed64-wasm64` line) and its Mathlib packs, built
+by the fork from Mathlib `v4.35.0`: `mathlib-essential` (4,438 modules —
+Lean, Std and the Mathlib closure QED64 serves; 4,354 at 4.34) and
+`mathlib-game-extra` (721 game-only modules, 737 at 4.34: the
+`Mathlib.Tactic` umbrella and leaves the games import). Their module lists ship with the release
 (`wasm/out/release/<id>/mirror/lists/{essential,extra}-modules.txt` after
 the release lane; `*-selection.json` beside them lists the
 `deprecated_module` shims each pack carries). Every game was written for its
@@ -188,7 +188,8 @@ with the port that hit it (4.33.0-pre unless marked 4.34):
   false in` before the `inductive … deriving …, Fintype` (what Mathlib does
   at its own call sites); every such enum needs it — the compile stops at
   the first one.
-- **Deprecated module shims** (Knights, RAG, Robo, LAG, STG4, 4.34): an
+- **Deprecated module shims** (Knights, RAG, Robo, LAG, STG4, 4.34; Robo
+  again at 4.35: `Data.Int.SuccPred`, `Data.{Int,Rat}.Star`): an
   import of a `deprecated_module` warns when the module that names it is
   compiled (Lean checks only a file's own header imports, so levels that
   import that module do not repeat it, and a player's `Runner` document,
@@ -248,6 +249,54 @@ with the port that hit it (4.33.0-pre unless marked 4.34):
   an extra `ring`; Knights SetTheory 9 loses a `simp at diff` that now makes
   no progress). A `bound`/`norm_num` regression can be met with a local
   `@[simp]` lemma (RAG L4 L01), knowing later levels see it too.
+- **A module the packs stop shipping** (Lean 4.35: `Batteries.Tactic.OpenPrivate`,
+  imported by GameServer and by NNG4's, ReintroductionToProofs' and Robo's
+  `induction`/`cases` wrappers for `open private` of the module-private
+  helpers of `Lean.Elab.Tactic.Induction`): it left Mathlib's import
+  closure, so the release's packs dropped it. The trees lane compiles a
+  vendored byte copy (`vendor/batteries/README.md`) into the base trees
+  while the packs lack it; no game or GameServer source changes. (Dropping
+  `open private` does not work: those helpers are `def`s outside the
+  module's `public section`, i.e. private to it, and a legacy file cannot
+  `import all`.)
+- **Lake API drift in a vendored dependency** (lean-i18n, Lean 4.35):
+  `Lake.PackageEntrySrc.path` gained `copy : Bool := false`, so a `.path dir`
+  pattern is no longer exhaustive ("Missing cases"); `vendor/i18n` matches
+  `.path dir _` (the source directory is still `dir`). With `copy := true`
+  Lake materializes the package under the packages directory
+  (`Lake/Load/Materialize.lean` `mkPath`) and i18n would still read `dir`
+  — the same bytes at materialization; no catalog game has such a
+  dependency, so the source was left as baked (a change would make every
+  snapshot's i18n oleans differ from their source until the next rebake).
+- **False unused-tactic warnings on every proof** (all Mathlib-linter
+  games, QED64 `73d7f3b`, found at the Lean 4.35 port): QED64's worker
+  starts the FileWorker with `-DElab.async=false` (its HARDENING #70);
+  `Runner` elaborates the proof in the level file's scope, which the native
+  compile captured with `Elab.async` on, so the proof ran as tasks the
+  Runner command's synchronous linters did not wait for, and every tactic
+  of a correct proof got "Unused tactic linter: `…` does nothing" (and "this
+  tactic is never executed") — "Level completed with warnings", never
+  completed. Not a game change: the worker document's Runner line starts
+  with the command `set_option Elab.async true`
+  (`client/src/wasm/game-translation.ts` `RUNNER_PRELUDE`; not `… in`,
+  which does not reach the outer command's linters; not a line of its own,
+  GameServer's `getProofState` counts the proof from line 2), and the
+  probe documents carry it (§5). A wasm probe without it reproduces the
+  symptom (1, 22 and 50 false warnings on three correct probes).
+- **Two worlds that declare the same tactic syntax** (Knights, live on 4.34
+  too, fixed at the Lean 4.35 port): the browser checks every level in the
+  snapshot's whole-`Game` environment (the level header is served
+  "covered"), not in the level's own import closure as upstream's `lake
+  serve` does. Two `macro "knight_or_knave" t:term …` declarations in two
+  worlds give the parser two syntaxes for the same text; Lean runs the
+  first of such a choice and falls through only on unsupported syntax, so
+  one world's levels ran the other world's expansion and failed with their
+  own model proofs. Declare the syntax once (a small module both import)
+  and keep each world's expansion as `macro_rules`: same-kind macro rules
+  are tried in turn until one succeeds. An all-level sweep (every model
+  solution under `import Game`, natively and on the snapshot — the Lean 4.35
+  port's, `wasm/UX-PARITY.md`) finds this class: a level that passes with
+  its module header but fails under `import Game`.
 - **`Statement` names that clash with Mathlib** (`Statement dvd_refl …`):
   GameServer warns "Environment already contains X" and the inventory shows
   Mathlib's statement from the next level on — identical upstream (NTG: 6,
@@ -256,11 +305,12 @@ with the port that hit it (4.33.0-pre unless marked 4.34):
 ## 4. The game-only Mathlib pack (formerly `wasm/compat`)
 
 Mathlib modules games import beyond the essential pack come from the
-release's `mathlib-game-extra` pack (737 modules, roots `Mathlib.Tactic`,
-`Mathlib.Tactic.{Have,Cases,Generalize}`, `Mathlib.Algebra.Order.Ring.Star`,
-`Mathlib.Data.{Int,Rat}.Star`, `Mathlib.Analysis.SpecialFunctions.Log.Base`,
+release's `mathlib-game-extra` pack (721 modules at Lean 4.35, 737 at 4.34;
+roots `Mathlib.Tactic`, `Mathlib.Tactic.{Have,Cases,Generalize}`,
+`Mathlib.Algebra.Order.Ring.Star`, the `*.Star` instances,
+`Mathlib.Analysis.SpecialFunctions.Log.Base`,
 `Mathlib.Tactic.NormNum.Prime` — `lists/extra-selection.json`), compiled
-by the fork from Mathlib `v4.34.0` with the same native compiler as the
+by the fork from Mathlib `v4.35.0` with the same native compiler as the
 essential pack, under their real module names. The trees lane unpacks it
 into the same trees as the essential pack, so a game's unmodified
 `import Mathlib.Tactic.Have` or `import Mathlib.Tactic` resolves.
@@ -294,7 +344,10 @@ importing it. The rules that survive:
 
 The probe is one level and one proof, used twice: the bake lane's
 `snapshot-probe` (`--probe <snapshot>` prints
-`import Game\nimport GameServer.Runner\nRunner "<game.json name>" "<world>" <level> (difficulty := 1) (inventory := []) := by\n<proof>`)
+`import Game\nimport GameServer.Runner\nset_option Elab.async true Runner "<game.json name>" "<world>" <level> (difficulty := 1) (inventory := []) := by\n<proof>`
+— the `set_option` is the client's `RUNNER_PRELUDE`, read from
+`client/src/wasm/game-translation.ts`, so the probe is the document the
+browser sends; §3, "false unused-tactic warnings")
 and the browser smoke (`qed64/work/games-smoke.mjs`), which clears the
 level's stored progress, opens
 `/#/g/<owner>/<game>/world/<world>/level/<level>`, types the proof and
@@ -365,11 +418,10 @@ only in editor mode; the typewriter shows the Next button instead).
    against `lib-tree-gamebase` and the row's `leanOptions`, writes
    `<src>/.lake/gamedata` + `.i18n`, overlays the slim per-game tree, bakes
    `<snapshot>.<digest>.snapz` into `wasm/out/staging/<build id>/snapshots`
-   and runs the probes: `SNAPSHOT PROBE PASS` (the snapshot loads through
-   the browser path and seeds the environment cache), the native Runner
-   probe (the proof closes with no message), its negative control
-   (rejected), and the row's further probes natively (each closes with no
-   message). Paste the printed raw size into `expectedRaw`. An existing
+   and runs every catalog probe of the row twice — on the snapshot through
+   the browser's load path (`snapshot-probe --via-mem`, which also proves
+   the environment cache is hit) and natively — each must close with no
+   message on both, and the negative control must be rejected on both. Paste the printed raw size into `expectedRaw`. An existing
    `games-src` checkout that is not `source.rev` + the patch is refused
    (delete it after re-cutting a patch; the lane clones it again), and a
    per-game tree compiled from other inputs than the pinned record and row
@@ -445,6 +497,22 @@ against the 4.33 slim bake, and the bake lane's three probes (the wasm
 control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
 149,933,562 B transfer, all three probes pass.
 
+Lean 4.35 (branch `lean-v4.35`, toolchain release `lean-v4.35.0-b081e7c`,
+runtime `wasm64-36d7f415704473d9`, Mathlib `v4.35.0`): every game ends with
+a **Lean 4.35** note. All ten compile with the release's native compiler
+(no failure, no deprecation warning after Robo's re-cut), and every bake is
+0.5–1.5 % smaller than its 4.34 bake. Every catalog probe closes with no
+message both on its snapshot (`snapshot-probe --via-mem`) and natively, and
+every negative control is rejected on both: since kernel patch 0037 (QED64
+HARDENING #61) the wasm one-shot compile reports the errors of a `Runner`
+proof, so the wasm probe is a verdict of its own; the probe documents are the
+browser's, with the client's `RUNNER_PRELUDE` (`set_option Elab.async true`
+before `Runner`; §3, "false unused-tactic warnings"). An all-level sweep ran
+the 826 model solutions natively and on the snapshots (`wasm/UX-PARITY.md`,
+"Lean 4.35 on the toolchain release"): identical messages on both sides.
+TestGame (6 modules, 26 s): 545,144,253 B raw (−1.5 %), 148,334,432 B
+transfer.
+
 ### NNG4 — hhu-adam/NNG4
 
 - Upstream: <https://github.com/hhu-adam/NNG4> @ `360d797` (the row keeps
@@ -487,6 +555,7 @@ control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
   574,944,789 B raw slim (+1.0 % over 4.33; the same size as on the
   first 4.34 runtime), 155,458,190 B transfer; `SNAPSHOT PROBE PASS`,
   native probe clean, negative control rejected.
+- Lean 4.35 (2026-10-23, branch `lean-v4.35`, `lean-v4.35.0-b081e7c` (runtime `wasm64-36d7f415704473d9`)): no source change, patch unchanged. Its `Game/Tactic/{MathlibCases,Induction}.lean` import `Batteries.Tactic.OpenPrivate`, which the v4.35 packs no longer ship; the trees lane compiles the vendored copy (`vendor/batteries/`), so nothing in the game changes. 113/113 modules (262 s), no warning. Bake: 571,686,925 B raw slim (−0.6 % against 4.34), 155,458,190 → 155,205,162 B transfer, `sha256:d45f2982ffc7562a…`; wasm probe (`--via-mem`; the browser's document, `RUNNER_PRELUDE` included), native `Runner` probe and negative control and `probe2` all behave.
 
 ### STG4 — djvelleman/STG4
 
@@ -542,6 +611,7 @@ control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
 - Player-visible differences (4.34): `push_neg` goes through the wrapper —
   same behaviour (`push_neg`, `push_neg at h`); the six levels above now
   complete.
+- Lean 4.35 (2026-10-23, `lean-v4.35.0-b081e7c` (runtime `wasm64-36d7f415704473d9`)): no source change, patch unchanged (Mathlib `v4.35.0`'s `push_neg` still logs its deprecation, so the wrapper stays). 62/62 modules (204 s), no warning. Bake: 663,665,797 B raw slim (−0.9 %), 180,766,754 B transfer, `sha256:48ccba5a8be93e36…`; wasm probe (`--via-mem`; the browser's document, `RUNNER_PRELUDE` included), native `Runner` probe and negative control, `probe2` and `probe3` (Complement 4 with `push_neg`) all behave.
 
 ### ReintroductionToProofs — emilyriehl/ReintroductionToProofs
 
@@ -587,6 +657,7 @@ control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
   from `mathlib-game-extra`. 185/185 modules (818 s). Bake on
   `wasm64-57ae00dc5f6ce958`: 569,043,773 B raw slim (+1.1 %), 153,935,953 B
   transfer; `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected.
+- Lean 4.35 (2026-10-23, `lean-v4.35.0-b081e7c` (runtime `wasm64-36d7f415704473d9`)): still no patch. `Game/Metadata/Tactic/Induction.lean` imports `Batteries.Tactic.OpenPrivate` (the `open private` of `getElimNameInfo`, `generalizeTargets`, `generalizeVars`, module-private in `Lean.Elab.Tactic.Induction`), served by the lane's vendored copy. 185/185 modules (449 s), no warning. Bake: 565,917,437 B raw slim (−0.5 %), 153,741,634 B transfer, `sha256:07da70bf9ac61b41…`; wasm probe (`--via-mem`; the browser's document, `RUNNER_PRELUDE` included), native `Runner` probe and negative control and `probe2` all behave.
 
 ### KnightsAndKnaves — JadAbouHawili/KnightsAndKnaves-Lean4Game
 
@@ -650,6 +721,7 @@ control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
   player sees changes (the option is scoped to the two declarations).
   75/75 modules (250 s). Bake on `wasm64-57ae00dc5f6ce958`: 731,165,541 B
   raw slim (+0.4 %), 199,307,181 B transfer; `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected.
+- Lean 4.35 (2026-10-23, `lean-v4.35.0-b081e7c` (runtime `wasm64-36d7f415704473d9`)): patch re-cut for one defect, live on 4.34 too: the DSL world (`dsl_KnightsAndKnaves`) and the set-theory world (`settheory_knightsknavesfoundation`) each declared `knight_or_knave` (`A` / `A with h₁ h₂`), `knight_interp` and `knave_interp` (bare / `at h` / `at *`) with their own `macro`; the browser checks every level in the whole-`Game` environment, where the parser returned both syntaxes and Lean ran the set-theory one, so DSL levels 1 and 3–14 failed with their own model proofs ("`rcases` failed: `x✝ : ?m.4` is not an inductive datatype", "`simp` made no progress"). New `Game/LevelLemmas/knightsknaves_tactic_syntax.lean` declares each syntax once (with docstrings); both worlds import it and keep their expansions as `macro_rules`, which Lean tries in turn (§3, "Two worlds that declare the same tactic syntax"). Nothing a player types changes; the DSL levels now complete. 76/76 modules (244 s), 93 warnings (the 101 before minus 8 "missing tactic documentation" for those tactics), no deprecation; gamedata byte-identical to the first 4.35 compile, whose only tracked change was `doc__Tactic__grind.json` (the core docstring's reference-manual link now names 4.35.0). The `deriving DecidableEq, Fintype` enums were rechecked against the new defeq guard (lean4#14624): with the patch's `set_option backward.isDefEq.respectTransparency false in` both derive, and `Fintype.card Inhabitant = 2`, `Finset.univ = {A, B}`, `Fintype.card Inhabitant' = 3` hold by `decide` natively and on the snapshot (the browser's `.server` imports; `card = 3` is refuted there by `decide`); without the option both still fail exactly as on 4.34 ("Tactic `rewrite` failed … not type-correct under the `implicit` transparency level"). Bake: 724,048,693 B raw slim (−1.0 %), 198,243,195 B transfer, `sha256:ab5bbdc3a72773bc…` (the first 4.35 bake, before the re-cut: 724,124,853 B, `3a1e90c54929e063`). The row gained `probe3` (DSL 1, `knight_or_knave … with`), `probe4` (DSL 3, `knight_interp`) and `probe5` (SetTheory 1, the other world's `knight_or_knave`); all five probes close with no message on the snapshot and natively, the negative control is rejected on both. The all-level sweep after the re-cut: the DSL world's 13 failures are gone natively (the other five world documents print byte-identical output), and in the browser DSL 1's model proof reads "Level completed! 🎉".
 
 ### NumberTheoryGame — k88-b/NumberTheoryGame
 
@@ -712,6 +784,7 @@ control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
   every level's environment
   (lean4game-logic, which imports the same umbrella, grew the same way;
   LinearAlgebraGame's Tutorial levels by +28 %).
+- Lean 4.35 (2026-10-23, `lean-v4.35.0-b081e7c` (runtime `wasm64-36d7f415704473d9`)): no source change, no patch. 66/66 modules (351 s; 1,022 s on 4.34), the same 6 warnings. Bake: 1,263,706,005 B raw slim (−1.1 %), 361,314,473 B transfer, `sha256:3348e313e1e88224…`; wasm probe (`--via-mem`; the browser's document, `RUNNER_PRELUDE` included), native `Runner` probe and negative control and `probe2` all behave.
 
 ### RealAnalysisGame — AlexKontorovich/RealAnalysisGame
 
@@ -863,6 +936,7 @@ control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
   `bound` is used in ~90 other RAG level files (Hints or prose recommend
   it in Lecture3, 4, 8, 17, 20, 22 and L3Pset 4). They are unchanged by user
   decision; their stack use in the browser was not measured.
+- Lean 4.35 (2026-10-23, `lean-v4.35.0-b081e7c` (runtime `wasm64-36d7f415704473d9`)): patch unchanged. 187/187 modules (858 s), no deprecation. The build now echoes every warning (`compile-pkg.py`): 97 — the 24 `declaration uses sorry` and 2 i18n backslash warnings recorded above plus 71 `MakeGame` "No world introducing X" (upstream authoring, never counted before). Bake: 999,811,797 B raw slim (−1.5 %), 280,800,504 B transfer, `sha256:1543a662b845afc1…`; wasm probe (`--via-mem`; the browser's document, `RUNNER_PRELUDE` included), native `Runner` probe and negative control, `probe2` and `probe3` (Lecture10 1 without `bound`) all behave; the browser stack margin of Lecture10 1 was not re-measured here.
 
 ### Robo — hhu-adam/Robo
 
@@ -919,6 +993,7 @@ control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
   shim; the four former compat leaves come from `mathlib-game-extra`.
   189/189 modules (1,146 s). Bake on `wasm64-57ae00dc5f6ce958`:
   1,012,231,501 B raw slim (+1.0 %), 283,000,792 B transfer; `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected.
+- Lean 4.35 (2026-10-23, `lean-v4.35.0-b081e7c` (runtime `wasm64-36d7f415704473d9`)): patch re-cut — `Game/Metadata/FromMathlib.lean` imports `Mathlib.Order.SuccPred.Int`, `Mathlib.Algebra.Order.Star.Int` and `Mathlib.Algebra.Order.Star.Rat` instead of the `Mathlib.Data.Int.SuccPred`, `Mathlib.Data.Int.Star` and `Mathlib.Data.Rat.Star` shims (each exactly `public import` of its replacement; one deprecation warning each before). `Game/Metadata/Tactic/Induction.lean`'s `Batteries.Tactic.OpenPrivate` comes from the lane's vendored copy. 189/189 modules (832 s), the same 31 warnings, no deprecation. Bake: 997,790,909 B raw slim (−1.4 %), 280,304,343 B transfer, `sha256:92ce7e2103d5f6ba…`; wasm probe (`--via-mem`; the browser's document, `RUNNER_PRELUDE` included), native `Runner` probe and negative control and `probe2` all behave. Nothing a player sees changes.
 
 ### lean4game-logic — Trequetrum/lean4game-logic
 
@@ -961,6 +1036,7 @@ control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
   `wasm64-57ae00dc5f6ce958`: 1,276,723,429 B raw slim (+52.8 % over 4.33's
   835,310,405 B), 364,270,851 B transfer (+57.5 %) — the umbrella's
   closure, as for NumberTheoryGame; `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected.
+- Lean 4.35 (2026-10-23, `lean-v4.35.0-b081e7c` (runtime `wasm64-36d7f415704473d9`)): no source change, patch unchanged. 103/103 modules (539 s), the same 2 warnings. Bake: 1,263,266,405 B raw slim (−1.1 %), 361,131,525 B transfer, `sha256:2a2f6c7bc14a7dd1…`; wasm probe (`--via-mem`; the browser's document, `RUNNER_PRELUDE` included), native `Runner` probe and negative control and `probe2` all behave.
 
 ### LinearAlgebraGame — ZRTMRH/LinearAlgebraGame
 
@@ -1062,3 +1138,4 @@ control). TestGame (6 modules, no change): 553,457,285 B raw (+1.2 %),
   `wasm64-57ae00dc5f6ce958`: 1,279,213,317 B raw slim (+28.1 % over 4.33's
   998,558,821 B), 364,958,176 B transfer (+30.3 %) — upstream's umbrella
   (the Tutorial levels' `import Mathlib.Tactic`); `SNAPSHOT PROBE PASS`, native probe clean, negative control rejected.
+- Lean 4.35 (2026-10-23, `lean-v4.35.0-b081e7c` (runtime `wasm64-36d7f415704473d9`)): no source change, patch unchanged (Mathlib.Data.Array.Defs and Mathlib.Tactic.Recall, gone at v4.35, appear only in comments). 55/55 modules (263 s), the same 24 warnings. Bake: 1,265,726,077 B raw slim (−1.1 %), 361,833,154 B transfer, `sha256:fe55552ee963523f…`; wasm probe (`--via-mem`; the browser's document, `RUNNER_PRELUDE` included), native `Runner` probe and negative control and `probe2` all behave.

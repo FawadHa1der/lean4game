@@ -33,32 +33,56 @@ mixed with another.
 | the release's tools (npm package `lean4-wasm64`: fetch, verify, unpack, id, the identity rules) | root `package.json` devDependency — the release's own tgz URL; `package-lock.json` holds its sha512 integrity |
 | the release record (id, self-digest, runtime build id, kernel commit and patch id, packs, native compiler, module lists) | `wasm/lean4-wasm64-release.json`: a byte copy of the release's `release.json`; its id and `digest` are what every fetch is pinned to |
 
-Current pin: release **`lean-v4.34.0-41ec565`** (digest
-`sha256:f958ba7508317a4ceed42e1a13cbd78b716209e2e2a86fe1a7f6a93a607888ee`):
-Lean 4.34.0 (upstream `v4.34.0`), kernel `41ec56530d`, patch `0036`,
-runtime **`wasm64-57ae00dc5f6ce958`** — Mathlib `v4.34.0` (`5ed2965256`),
-native compiler `857544b439`, tools `lean4-wasm64@4.34.0-41ec565`
+Current pin: release **`lean-v4.35.0-b081e7c`** (digest
+`sha256:5450ccc080ec02cb659a11ef750d4771c155c4d21b62b831df766c1a953c69c7`):
+Lean 4.35.0 (upstream `v4.35.0`), kernel `b081e7c041`, patch `0042`,
+runtime **`wasm64-36d7f415704473d9`** — Mathlib `v4.35.0` (`56a005855e`),
+native compiler `b081e7c041`, tools `lean4-wasm64@4.35.0-b081e7c`
 (integrity
-`sha512-/j63PQR6Komk8kDLP7ezP7bv+8URgmttbrC8h3Np9kNWJ6eU1K2v+bdnGaCYOaXoE4IxlebAC7SCzzCoTz5gDA==`).
-Patch 0036 turns deep recursion into Lean's own error ("maximum recursion
-depth has been reached: the WebAssembly runtime's stack is exhausted", or
-"(kernel) the WebAssembly engine's stack is exhausted") where 0035b killed
-the thread, and with it the checker (`by decide` over `Fin 40 × Fin 40` in
-NNG4's editor mode). It is a runtime-only release: its packs, native
-compiler and module lists are byte-identical to those of
-`lean-v4.34.0-a8817d0` (patch `0035b`, runtime `wasm64-3ab1c6a9da03bc29`, the
-first 4.34 pin), so the compiled trees carried over and only the bakes were
-redone. Dedicated-thread parking is off by default in this runtime; the
-game never sets `LEAN_WASM_PARKED_DEDICATED` (the rule at the end of "The
-qed64 dependency").
+`sha512-n7rktWWTHt7LFZg8ERq2ok1w3hKBn5gmNgfG/WqY7gTXjR0KYBX+FSVjmCr+Y6M68hZ1zDxcUSxJXSQi4ch6fw==`).
+A full release, by value (its own runtime, packs, native compiler and
+module lists; no `base`): every olean tree was rebuilt and every game
+rebaked ("The Lean 4.35 port" below). Over the previous pin's patch 0036
+it carries patches 0037–0042, among them 0037 (the one-shot compile keeps a
+declaration's messages under `Elab.async`, QED64 HARDENING #61 — the bake's
+wasm probe now sees the errors of a `Runner` proof), native Wasm exception
+handling with 0041's stack fix, and 0042 (imports load at `.server`:
+docstrings and declaration ranges from `.olean.server`; `module` files on a
+shared environment). Its `mathlib-game-extra` pack has 721 modules (737 at
+4.34); `Batteries.Tactic.OpenPrivate` left Mathlib's closure and the packs,
+so the trees lane compiles a vendored copy (`vendor/batteries/README.md`).
 
-The release is published (GitHub release `lean-v4.34.0-41ec565`); the
-devDependency is its tgz,
-`https://github.com/FawadHa1der/lean4/releases/download/lean-v4.34.0-41ec565/lean4-wasm64-4.34.0-41ec565.tgz`,
-so the release lane's default `RELEASE_FROM` (that tgz's release directory)
-applies. The bakes below fetched the same bytes from the staged copy before
-it was published (`RELEASE_FROM=<staged release dir>/`; the id and digest
-checks are the same for any source).
+Previous pin: `lean-v4.34.0-41ec565` (digest `sha256:f958ba75…888ee`, Lean
+4.34.0, kernel `41ec56530d`, patch `0036`, runtime
+`wasm64-57ae00dc5f6ce958`, Mathlib `v4.34.0` `5ed2965256`, native compiler
+`857544b439`) — the live site's until this branch merges; lean4game skipped
+the runtime-only `lean-v4.34.0-53cb11e` (patch 0041) by decision of
+2026-10-22. Patch 0036 turns deep recursion into Lean's own error
+("maximum recursion depth has been reached: the WebAssembly runtime's stack
+is exhausted", or "(kernel) the WebAssembly engine's stack is exhausted")
+where 0035b killed the thread, and with it the checker (`by decide` over
+`Fin 40 × Fin 40` in NNG4's editor mode). Dedicated-thread parking is off
+by default in these runtimes; the game never sets
+`LEAN_WASM_PARKED_DEDICATED` (the rule at the end of "The qed64
+dependency").
+
+**Not yet published.** The kernel staged and verified the release
+(`wasm64-lean-kernel-release/lean-v4.35.0-b081e7c` on the build host) and
+publishes it after its consumers are green. The devDependency already
+names its GitHub tgz,
+`https://github.com/FawadHa1der/lean4/releases/download/lean-v4.35.0-b081e7c/lean4-wasm64-4.35.0-b081e7c.tgz`,
+with the staged tgz's sha512 (the same bytes; QED64 pinned it the same way
+in `add01f8`). Until the release is published: `npm ci` works only where
+npm's cache already holds that tarball (npm takes a locked tarball from its
+cache by integrity, offline — checked with npm's own pacote on the build
+host, where an install of the staged tgz put it there), so CI's `npm ci`
+(`.github/workflows/deploy.yml`, on every push to `wasm64-port`) fails —
+**publish the release before this branch reaches `wasm64-port`**; and the
+release lane's default `RELEASE_FROM` (the tgz's release directory on
+GitHub) answers 404, so run the lanes with
+`RELEASE_FROM=<staged release dir>/` (the id and digest checks are the same
+for any source). After the publish nothing changes here: same URL, same
+integrity, and the default `RELEASE_FROM` applies.
 
 What the pin is checked against, and where:
 
@@ -83,14 +107,18 @@ What the pin is checked against, and where:
   every Lake facet a pack ships too (`Lake.Util.Casing`) is byte-identical
   to native64's before the merge replaces it;
 - the olean trees' provenance stamps (`wasm/scripts/tree-stamp.py`): the
-  trees lane stamps the base trees with the packs' `rawSha256` and the
-  native64 tarball's sha256, the games lane stamps each per-game tree with
+  trees lane stamps the base trees with the packs' `rawSha256`, the
+  native64 tarball's sha256 and (since the Lean 4.35 port) the sha256 of
+  the sources it compiles into them (GameServer, lean-i18n, the vendored
+  Batteries leaf), the games lane stamps each per-game tree with
   those plus the game's source pin (catalog `rev` + the patch's sha256,
   after checking an existing `games-src` checkout IS `rev` + patch); the
   games lane refuses stale base trees and the bake lane stale per-game
   trees. The record id and runtime are not in the stamp, so a runtime-only
-  release (this one) keeps its trees, while a release whose packs or
-  native64 changed cannot be baked on the old trees.
+  release keeps its trees, while a release whose packs or native64 changed
+  (this one) cannot be baked on the old trees. A per-game tree's stamp does
+  not repeat the base's source hashes: after the trees lane rebuilt
+  GameServer, rerun the games lane too.
 
 **Bumping the release** (e.g. the kernel-only fix release that carries patch
 0036): change the devDependency URL to the new release's tgz, `npm install`
@@ -198,6 +226,83 @@ re-elaborated the `decide`) kept the pthread pool at 24 and the page alive
 (before patch 0036, typing over that line grew the pool 26 → 77 workers
 and crashed the tab, `wasm/UX-PARITY.md`).
 
+### The Lean 4.35 port (branch `lean-v4.35`, 2026-10-23)
+
+A full release bump: lean4game goes from `lean-v4.34.0-41ec565` straight
+to `lean-v4.35.0-b081e7c` in one ten-game rebake, with QED64 `73d7f3b`
+(below). Ported by the lane itself (a copy of `v434-lane-runner.sh`, one
+browser-lock hold per bake); what changed in the sources:
+
+- **Pins**: the tools devDependency and lockfile (the release's GitHub tgz,
+  above), `wasm/lean4-wasm64-release.json` (a byte copy of the staged
+  `release.json`), `server/lean-toolchain` `v4.35.0`, `client/package.json`
+  qed64 `73d7f3b`.
+- **`Batteries.Tactic.OpenPrivate`** (imported by GameServer and by NNG4's,
+  ReintroductionToProofs' and Robo's `induction`/`cases` wrappers) is in
+  no v4.35 pack: `vendor/batteries/` holds a byte copy (Batteries
+  `66e469188fe0`, Mathlib v4.35's pin, Apache-2.0), compiled into the base
+  trees only while the packs lack it. GameServer and the three games need
+  no change for it.
+- **`vendor/i18n`**: Lake's `PackageEntrySrc.path` gained a `copy` flag;
+  the match is `.path dir _`.
+- **Games**: Robo's patch re-cut (three more `deprecated_module` imports);
+  Knights' patch re-cut on 2026-10-23 for a defect the 4.35 sweep found
+  (it was live on 4.34 too): both Knights worlds declared
+  `knight_or_knave`/`knight_interp`/`knave_interp` with their own `macro`,
+  and in the whole-`Game` environment the browser checks every level in,
+  the 13 DSL levels ran the set-theory expansion and failed. The syntax is
+  now declared once and each world keeps its expansions as `macro_rules`
+  (`wasm/patches/README.md`). Per-game notes: `wasm/PORTING.md` §8.
+- **The worker document** (`client/src/wasm/game-translation.ts`): the
+  Runner line now starts with `set_option Elab.async true ` (`RUNNER_PRELUDE`;
+  why: "The qed64 dependency", pin `73d7f3b`), and the bake lane's probe
+  documents read that prelude from the client
+  (`scripts/games-manifest.mjs --probe`), so the lane checks what the browser
+  sends.
+- **Lane**: `--verify-snapshots` now gives the wasm probe a verdict of its
+  own (every catalog probe closes with no message on the snapshot, and the
+  negative control fails there — possible since patch 0037); the base stamp
+  covers the sources the trees lane compiles; the compile echoes the
+  warnings of modules that compile; the `.pot` templates are restored from a
+  copy instead of `git checkout`.
+
+All ten compile with no failure and no deprecation warning (warning counts
+as on 4.34: knights 93 after its re-cut — 101 before, the 8 "missing tactic
+documentation" warnings of the three shared tactics are gone — ntg 6, robo
+31, logic 2, lag 24; rag 97 = the recorded 26 + 71 upstream "No world
+introducing" lines the echo now shows). Every snapshot pairs to
+`wasm64-36d7f415704473d9` with `imports` = `roots` =
+`[Game, GameServer.Runner]`; `expectedRaw` is re-recorded under
+`wasm64-36d7f415704473d9+slim`.
+
+| game | modules / compile | raw slim (vs 4.34) | transfer | digest |
+| --- | --- | --- | --- | --- |
+| testgame | 6 / 26 s | 545,144,253 B (−1.5 %) | 148,334,432 B | `8c34115c6d4b983f` |
+| nng4 | 113 / 262 s | 571,686,925 B (−0.6 %) | 155,205,162 B | `d45f2982ffc7562a` |
+| stg4 | 62 / 204 s | 663,665,797 B (−0.9 %) | 180,766,754 B | `48ccba5a8be93e36` |
+| reintro | 185 / 449 s | 565,917,437 B (−0.5 %) | 153,741,634 B | `07da70bf9ac61b41` |
+| knights (re-cut patch, rebaked 2026-10-23) | 76 / 244 s | 724,048,693 B (−1.0 %) | 198,243,195 B | `ab5bbdc3a72773bc` |
+| ntg | 66 / 351 s | 1,263,706,005 B (−1.1 %) | 361,314,473 B | `3348e313e1e88224` |
+| rag | 187 / 858 s | 999,811,797 B (−1.5 %) | 280,800,504 B | `1543a662b845afc1` |
+| robo | 189 / 832 s | 997,790,909 B (−1.4 %) | 280,304,343 B | `92ce7e2103d5f6ba` |
+| logic | 103 / 539 s | 1,263,266,405 B (−1.1 %) | 361,131,525 B | `2a2f6c7bc14a7dd1` |
+| lag | 55 / 263 s | 1,265,726,077 B (−1.1 %) | 361,833,154 B | `fe55552ee963523f` |
+
+The kernel expected patch 0042's `.server` imports to grow snapshots
+(~+7.5 % at Init scale); every game shrank 0.5–1.5 % instead, as QED64's
+own adoption did (init 122.4 → 116.9 MB, mathlib 1,127 → 1,114 MB) with its
+hover-docstring test passing, and the slim trees keep every `.olean.server`
+— so the shrink is not lost `.server` data. Measured, not explained.
+
+Probes: every catalog probe (21 before the Knights re-cut, 24 after: Knights
+gained `probe3`–`probe5`, two DSL levels and one set-theory level with the
+shared tactics) closes with no message natively and on its snapshot, and
+every negative control fails on both (the first bakes ran the stricter wasm
+check as a separate batch, the Knights rebake in the lane). The all-level
+sweep (`wasm/UX-PARITY.md`, "Lean 4.35 on the toolchain release") ran all
+826 reference solutions natively and on the snapshots: identical messages
+on both sides for every level.
+
 ## The qed64 dependency
 
 The browser-side substrate — boot/artifacts (`qed64-boot.ts`), the session
@@ -260,10 +365,53 @@ library API, §10 lean4game's migration list) and `embedding/closure.json`
   workers need a newer kernel than ours (patch ids ordered by the release
   tools' `comparePatchIds`: `0035b` > `0035`).
 
-Current pin: qed64 **`385a1ac`** (`385a1ac5f3bc33cd607c1cc2d03f4d8979ef4684`,
-QED64 `main`, committed 2026-10-08, pinned here 2026-10-09;
+Current pin: qed64 **`73d7f3b`** (`73d7f3b363b49909d6d1ac0fade8885b0312dc6c`,
+QED64 `main`, committed 2026-10-19, pinned here with the Lean 4.35 port
+2026-10-23; `EMBED_API_REVISION` `1.0.0-pre.8`, the closure's kernel floor
+still 0032, the game's release runtime `wasm64-36d7f415704473d9` patch
+0042). 42 commits over `385a1ac`; what reaches the game:
+
+- **HARDENING #70, synchronous elaboration**: the worker starts the
+  FileWorker with `RESIDENT_ARGV = ["--worker", "-Dserver.reportDelayMs=0",
+  "-DElab.async=false"]` (a file of ~20 Mathlib theorems grew Lean's task
+  threads past the pool and crashed the tab). This side had to answer it:
+  `Runner` elaborates the proof in the level file's scope, which the native
+  compile captured with `Elab.async` on, so with the document's own
+  commands synchronous the Runner command's linters ran before the proof's
+  tasks reported their info trees, and every tactic of a correct proof got
+  a false "Unused tactic linter: … does nothing" / "this tactic is never
+  executed" warning — a warning keeps a level from completing (8 of the 10
+  games; TestGame and ReintroductionToProofs have no Mathlib linters). The
+  worker document's Runner line now starts with the command `set_option
+  Elab.async true` (`client/src/wasm/game-translation.ts`,
+  `RUNNER_PRELUDE`): async for the one Runner command, as the 4.34 site and
+  stock lean4game's `lake serve` ran it, QED64's default everywhere else (#70:
+  "a file can still opt in"). On the Runner's line, not a line of its own —
+  GameServer's `getProofState` counts the proof from line 2 too
+  (`RpcHandlers.lean`, compiled into every snapshot) and line 0 stays the
+  header QED64 reads — and as its own command, not `set_option … in`, which
+  does not reach the outer command's linters (measured: 1, 22 and 50 false
+  warnings on three probes with `… in`, none with the command; in the
+  browser 10/10 smoke and 12/12 deep play complete). A one-theorem document,
+  so #70's thread growth does not apply; the editor bursts, the pace probe
+  and the reload storm on the fixed build kept the pool at 24
+  (`wasm/UX-PARITY.md`, "Lean 4.35 on the toolchain release").
+- **#69** (a thread budget: task manager min(cores, 8), 4 parked dedicated
+  threads), **#68** (a page waits for every Worker of the runtime it
+  replaced), **#71/#72** (no engine-stack tuning; a stack-overflow death
+  pauses checking instead of crash-looping), **#73** (an abort without a
+  reason reads "Lean runtime aborted: no reason given; the engine's error is
+  in the console"), **#74** (a lost own chunk during a deploy is a stale
+  page), **#75/#76/#78** (Firefox install; memory sampled at ready; the
+  heartbeat watchdog runs from the arm). No API change this side needed;
+  `client/tsconfig.json` and `stage-workers.sh` already had the `lib/`
+  layout.
+
+Pin `385a1ac` (`385a1ac5f3bc33cd607c1cc2d03f4d8979ef4684`,
+QED64 `main`, committed 2026-10-08, pinned here 2026-10-09 — the live
+site's pin until this branch merges;
 `EMBED_API_REVISION` `1.0.0-pre.7`, the closure's kernel floor still 0032,
-the game's release runtime `wasm64-57ae00dc5f6ce958` patch 0036). What it
+the release runtime `wasm64-57ae00dc5f6ce958` patch 0036). What it
 brought, and what this side changed for it:
 
 - **A7, the library in `lib/`**: `qed64/embed` is `lib/index.ts` (the old
@@ -710,7 +858,7 @@ What a clone contains: the client and server sources, the qed64 pin
 no QED64 checkout, no git or SSH for it), the compiled gamedata for NNG4 and
 TestGame (`client/public/data`, tracked), the digest manifests of every
 served artifact, and every game's port as a patch (`wasm/patches`). What it
-does not contain: the ~2.8 GB of served binaries (Lean 4.34, ten games) —
+does not contain: the ~2.7 GB of served binaries (Lean 4.35, ten games) —
 the Lean runtime chunks, the core library pack and the environment
 snapshots — which are published as the artifact bundle named in
 `wasm/artifacts/BUNDLE.json` (or rebuilt with `wasm/build-from-source.sh`,
@@ -746,6 +894,15 @@ sha256 under the tarball's `parts`, and `fetch-artifacts.sh` checks each,
 joins them and checks the whole. Until the tag is published, a clone's
 `fetch-artifacts.sh` gets a 404 (it says so); the packing machine uses
 `--from-dir wasm/out/artifacts/<tag>`.
+
+**The 4.35 bundle (branch `lean-v4.35`): packed, not published.**
+`BUNDLE.json` names `artifacts-wasm64-36d7f415704473d9` (runtime
+`wasm64-36d7f415704473d9`, the ten 4.35 snapshots, Knights' rebake
+included): `runtime.tar` 106,310,144 B (the 4.35 runtime is 8 chunks,
+`lean.wasm` 106 MB), `profiles.tar` 120,369,664 B, `snapshots.tar`
+2,481,721,344 B as two pieces (2,000,000,000 + 481,721,344 B), in
+`wasm/out/artifacts/artifacts-wasm64-36d7f415704473d9/` only; uploads wait
+for the release publish and the hosting decision.
 
 **The 4.34 bundle (branch `lean-v4.34`): packed, not published.**
 `BUNDLE.json` names `artifacts-wasm64-57ae00dc5f6ce958` (runtime
@@ -798,21 +955,27 @@ byte-identical (22/22 oleans) to the build in the emsdk image.
 | --- | --- | --- |
 | preflight | the release record (canonical, self-digest), installed tools == record == lockfile, the Mathlib packs' compiler == `native64.commit`, the files a clone needs are tracked by git (the record, `wasm/docker/Dockerfile`, `wasm/scripts/tree-stamp.py`, every catalog patch; warns), qed64 pin, the workers' kernel floor (`stage-workers.sh --check`), `games-manifest.mjs --check`, which olean trees the record still accepts (stamps), Node ≥ 24, python3/rsync/openssl, disk; when a Docker lane is selected (release, trees, games, bake with `--verify-snapshots`): Docker reachable, the native image present (built when missing) and runnable for the record's platform — a hard failure, before any fetch | — |
 | release | `lean4-wasm64 fetch --id --digest` into `wasm/out/release/<id>/mirror` (runtime manifest + chunks, `lean-core`, `mathlib-essential`, `mathlib-game-extra`, `native64`, module lists, tools; every byte sha256-checked, a rerun keeps what is verified); the fetched `release.json` must be the tracked record byte for byte; `fetch --only runtime` from the mirror into `…/artifact` (`bin/lean.js`, `lean.wasm`, `leanmake`) and the build id recomputed from `bin/lean.wasm`; the tools tgz's sha512 == the lockfile's integrity; `native64.tar.gz` unpacked once per release and its `lean --version` checked (a failing `docker run` is reported, not a silent exit) | network once (~2.3 GB), 7 min at ~5 MB/s |
-| trees | `unpack` the three packs fat into `lib-tree` and `unpack --slim` into `lib-tree-slim`; every module of the release's two lists must have an olean; Lake facets from the native compiler's `lib/lean` merged into the trees (`mathlib-game-extra` ships `Lake.Util.Casing` itself, so a separate `LEAN_PATH` entry would hide the rest of Lake); the Lake facets a pack ships too must be byte-identical to native64's; lean-i18n (`vendor/i18n`) and `server/GameServer` compiled with the native compiler → `lib-tree-gamebase` (fat, compiles) and `lib-tree-gamebase-slim` (bakes); last, the base stamp `wasm/out/trees/gamebase.stamp` | Docker; 3.5 min |
-| games | refuses base trees whose stamp is not the record's; per selected catalog row: clone `source.url` @ `rev` + `git am` the patch when `src` is absent, and refuse an existing checkout whose `HEAD` tree is not `rev` + the patch (delete it: the lane clones it again); compile with the native compiler and the row's `leanOptions` (`-D` flags) → gamedata; restore the regenerated `.i18n/*/*.pot` templates (only those — translations beside them are left alone); overlay a per-game tree — **slim** by default (on `lib-tree-gamebase-slim`; `SLIM_TREES=0` = fat) — and stamp it (`lib-tree-<snapshot>.stamp`: the base stamp + `source <rev> <patch sha256>`) | Docker, one compile at a time |
-| bake | refuses a per-game tree whose stamp is not the record's and the row's; `bake-snapshot.mjs` per selected game, in place in `node_modules/qed64`, against the release's runtime (`--artifact`), the per-game tree (`--lib`), `--work wasm/out/bake-work`, `--out wasm/out/staging/<build id>/snapshots`, `--roots Game,GameServer.Runner` (the entry's `roots` = its `imports`), reserve = the row's `reserveBytes`; no environment flag (the 4.34 runtime admits the games' legacy oleans under the wasm target by itself); raw size checked against the row's `expectedRaw` when its `runtime` equals this run's pairing key — the build id, plus `+slim` for slim trees — ±5 % stops the run, otherwise the value to paste is printed; raw > reserve only warns; superseded `.snapz` pruned; `--verify-snapshots`: the catalog probe through `snapshot-probe.mjs --via-mem` (load path + env-cache hit), then natively against the same per-game tree (the proof must close with no message) and its negative control (must fail), and every further catalog probe of the row (`probe2`, `probe3`, …: `games-manifest.mjs --probes`) natively, each closing with no message | the browser lock on a shared host; ~10 min per game |
+| trees | `unpack` the three packs fat into `lib-tree` and `unpack --slim` into `lib-tree-slim`; every module of the release's two lists must have an olean; Lake facets from the native compiler's `lib/lean` merged into the trees (`mathlib-game-extra` ships `Lake.Util.Casing` itself, so a separate `LEAN_PATH` entry would hide the rest of Lake); the Lake facets a pack ships too must be byte-identical to native64's; while the packs lack `Batteries.Tactic.OpenPrivate` (Lean 4.35), the vendored copy (`vendor/batteries`) compiled and merged into the base tree; lean-i18n (`vendor/i18n`) and `server/GameServer` compiled with the native compiler → `lib-tree-gamebase` (fat, compiles) and `lib-tree-gamebase-slim` (bakes); last, the base stamp `wasm/out/trees/gamebase.stamp` (packs, native64 and the sha256 of those compiled sources) | Docker; 2–3.5 min |
+| games | refuses base trees whose stamp is not the record's; per selected catalog row: clone `source.url` @ `rev` + `git am` the patch when `src` is absent, and refuse an existing checkout whose `HEAD` tree is not `rev` + the patch (delete it: the lane clones it again); compile with the native compiler and the row's `leanOptions` (`-D` flags) → gamedata, echoing the warnings of modules that compile; put back the `.pot` templates the compile regenerates, from a copy taken before it (only those — translations beside them are left alone; no git command); overlay a per-game tree — **slim** by default (on `lib-tree-gamebase-slim`; `SLIM_TREES=0` = fat) — and stamp it (`lib-tree-<snapshot>.stamp`: the base stamp + `source <rev> <patch sha256>`) | Docker, one compile at a time |
+| bake | refuses a per-game tree whose stamp is not the record's and the row's; `bake-snapshot.mjs` per selected game, in place in `node_modules/qed64`, against the release's runtime (`--artifact`), the per-game tree (`--lib`), `--work wasm/out/bake-work`, `--out wasm/out/staging/<build id>/snapshots`, `--roots Game,GameServer.Runner` (the entry's `roots` = its `imports`), reserve = the row's `reserveBytes`; no environment flag (the release's runtime admits the games' legacy oleans under the wasm target by itself); raw size checked against the row's `expectedRaw` when its `runtime` equals this run's pairing key — the build id, plus `+slim` for slim trees — ±5 % stops the run, otherwise the value to paste is printed; raw > reserve only warns; superseded `.snapz` pruned; `--verify-snapshots`: every catalog probe of the row (`probe`, `probe2`, …: `games-manifest.mjs --probes`; each the document the browser sends, the client's `RUNNER_PRELUDE` included) through `snapshot-probe.mjs --via-mem` (load path + env-cache hit) and natively against the same per-game tree, each closing with no message on both; the negative control must fail with an error on both | the browser lock on a shared host; ~10 min per game |
 | bundle | refuses unless every snapshot the served index will hold pairs with the release's runtime; stages `stage-game-assets.sh`, the release's runtime manifest + chunks and `lean-core` pack into `client/public`, writes the site-owned `profiles/index.json`, `stage-snapshots.py` for the selected names from `wasm/out/staging/<build id>/snapshots` (which refuses an index mixing runtimes), client build, `pack-artifacts.sh` (a tarball over 2,000,000,000 B is written as `.part-NNN` pieces: GitHub's asset limit is 2 GiB) | — |
 
-Why the native probe: `snapshot-probe.mjs` compiles through the runtime's
+Why two probes: `snapshot-probe.mjs` compiles through the runtime's
 one-shot `lean_wasm_compile` (kernel `Lean/Shell.lean` `wasmCompile`), which
-collects each command's own message log. On the 4.34 runtime the errors of
-the theorem a `Runner` command elaborates never reach that log: a wrong or
-incomplete level proof "passes" there with `errors=0` (measured on testgame:
-`exact <unknown identifier>` and an unsolved goal both report no error,
-while a plain `theorem` in the same file reports its error, and the native
-compiler reports both). The wasm probe therefore proves the snapshot (it
-loads through the browser's `_mem` path and seeds the environment cache —
-the compile stays within budget); the native pair proves the level.
+collects each command's own message log. Up to kernel patch 0036 (the 4.34
+pins) the errors of the theorem a `Runner` command elaborates never reached
+that log: a wrong or incomplete level proof "passed" there with `errors=0`
+(measured on testgame: `exact <unknown identifier>` and an unsolved goal
+both reported no error, while a plain `theorem` in the same file reported
+its error, and the native compiler reported both), so the wasm probe proved
+only the snapshot (it loads through the browser's `_mem` path and seeds the
+environment cache — the compile stays within budget) and the native pair
+proved the level. Patch 0037 (QED64 HARDENING #61) keeps those messages, so
+since the Lean 4.35 port the wasm probe is a verdict too (no message; the
+negative control fails); the native run stays as the cross-check. The
+probe documents carry the client's `RUNNER_PRELUDE`: without it the
+one-shot compile, synchronous like QED64's FileWorker, printed 1, 22 and 50
+false unused/unreachable-tactic warnings on three correct probes.
 
 The trees are the browser's: the bake mounts `unpack --slim` of the very
 packs whose fat copies the games were compiled against (Init from

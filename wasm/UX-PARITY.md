@@ -2295,8 +2295,175 @@ campaign, ~6.8 MB/s), `4083fb4` and SEC1's `live6`.
   that recommend or explain it (Lecture3, 4, 8, 17, 20, 22 and L3Pset 4).
   They are inventoried, but their browser stack use was not measured.
 
+## Lean 4.35 on the toolchain release (2026-10-23)
+
+Branch `lean-v4.35`: the game pins `lean-v4.35.0-b081e7c` (Lean 4.35.0,
+Mathlib `v4.35.0`, runtime `wasm64-36d7f415704473d9`, kernel patch 0042;
+staged, not yet published) and QED64 `73d7f3b`, skipping the 4.34 runtime
+`53cb11e` (`wasm/KERNEL.md`, "The Lean 4.35 port"). The live site
+(`wasm64-port` `bd63b80`) stays on `lean-v4.34.0-41ec565` until this
+branch merges. What a player meets:
+
+- **Every game re-downloads once** (new runtime, new digests), each
+  0.5–1.5 % smaller than its 4.34 environment; the runtime is 106 MB in 8
+  chunks.
+- **Faster.** Game boots from a fresh profile take 2.2–4.2 s against
+  7.3–10.6 s for the 4.34 build measured in the same hour on the same
+  host; checking is ~1.7–2.6× faster (RAG Lecture10/1's 25 steps: LSP
+  10.1 s against 17.6 s; Knights SetTheory/6, Robo Babylon/6, LAG
+  InnerProductWorld/2 complete in 16.7, 13.8 and 23.2 s against 21.0, 22.3
+  and 31.2 s).
+- **The first 4.35 bundle could not complete a level in 8 of the 10
+  games — fixed before anything shipped.** QED64 `73d7f3b` elaborates
+  synchronously (its HARDENING #70: `-DElab.async=false`); `Runner`
+  elaborates the proof in the level's scope, captured natively with
+  `Elab.async` on, so the Runner command's linters ran before the proof's
+  tasks reported, and every tactic of a correct proof got "Unused tactic
+  linter: `…` does nothing" (and "this tactic is never executed") — "Level
+  completed with warnings 🎭": never marked completed, no inventory
+  unlock, and at difficulty ≥ 2 no Next. TestGame and
+  ReintroductionToProofs (no Mathlib linters) were unaffected; Cypress
+  plays only TestGame and passed. The worker document's Runner line now
+  starts with the command `set_option Elab.async true`
+  (`client/src/wasm/game-translation.ts` `RUNNER_PRELUDE`): async for the
+  one Runner command, as on 4.34 and in stock lean4game; the bake lane's
+  probe documents carry the same prelude, read from the client, and its
+  wasm probe must now print no message (it printed the warnings without
+  the prelude: 1, 22 and 50 on three correct probes). Rejected
+  alternatives: `set_option … in` (does not reach the outer command's
+  linters: 5/5 games still failed), a line of its own (GameServer's
+  `getProofState` counts the proof from line 2; compiled into every
+  snapshot), forcing `Elab.async false` inside `Runner` (a GameServer
+  change, a ten-game rebake, and the proof would lose its fresh task's
+  stack — RAG Lecture10/1's margin), or booting the game's worker without
+  #70 (QED64's thread-growth fix).
+- **The Knights DSL world plays with its own tactics** (13 levels; broken
+  on the live 4.34 site too): `knight_or_knave`, `knight_interp` and
+  `knave_interp` were declared by two worlds with `macro`, and the
+  whole-`Game` environment ran the set-theory expansion. The Knights patch
+  declares each syntax once (`wasm/patches/README.md`); DSL/1's model proof
+  now reads "Level completed! 🎉" (on `:3008` it fails with "`rcases`
+  failed: `x✝ : ?m.4` is not an inductive datatype").
+- Unchanged and measured: the `decide` over `Fin 40` fails on its line
+  with the stack message (0.14 s) and the proof after it completes; a
+  Lean panic shows as information, no death; `native_decide` (now through
+  the elaborator, lean4#14953) works; a runtime abort restarts the checker
+  with "Lean runtime aborted: no reason given; the engine's error is in
+  the console" (QED64 #73) and serves again in 5.8 s.
+
+**Regression results** (`scripts/serve-dist.mjs` on :3009, headless
+Chromium, one browser-lock hold per probe group; the probes are the
+`qv-*`/`eh` sets copied per run; evidence
+`lv-shots/v435-core`, `v435-net`, `v435-fix-core`, `v435-fix-net` in the
+session scratchpad). "First" is the first 4.35 bundle (`index-C8jDbSVY.js`,
+sw `1e5c90ed6675`); "fixed" is the bundle with the Runner prelude and the
+Knights rebake (`index-DCO7X7V9.js`, sw `c6e5ae55d985`). The 4.34 column is
+the 4.34 build on `:3008` in the same hour where it was rerun, else the
+4.34 figures above.
+
+| Check | 4.35 first | 4.35 fixed | 4.34 |
+|---|---|---|---|
+| Ten-game smoke (`--all`, fresh profile) | **8/10 FAIL** (false unused-tactic warnings; TestGame, Reintro pass), boot 2.2–4.2 s | 10/10, completed + Next, boot 2.2–4.2 s | 10/10, boot 7.3–10.6 s (same hour) |
+| Landing fresh / reload / offline / cached | 0.4 / 0.3 / 0.4 / 0.5 s, fill 3.5 s, 9/9 Ready | 0.4 / 0.3 / 0.4 / 0.4 s, fill 3.5 s, 9/9 Ready | the same |
+| Deep play (12 rows, probe2 + Knights SetTheory/6, Robo Babylon/6, LAG InnerProductWorld/2) | every step accepted, **0/12 completed** | 12/12 completed, Next 1.1–1.2 s, Previous 1.7–2.5 s; 16.7 / 13.8 / 23.2 s | 12/12; 21.0 / 22.3 / 31.2 s |
+| RAG Lecture10/1 bound-free, step by step | 25/25, 0 stack errors, not completed (52 warnings) | 25/25, completed, 0 stack errors, one session, LSP 10.1 s | 25/25, completed, LSP 17.6 s (same hour) |
+| RAG Lecture10/2 (`bound` ×2) | 10/10, not completed | 10/10, completed, LSP 3.2 s | 10/10, completed, 7.9 s |
+| `decide` line (Fin 40), editor mode | stack error 0.14 s, 0 deaths; proof not completed | the same, then completed | 0.64 s, completed |
+| Panic (`run_tac` `a[5]!`; `native_decide`) | info, 0 deaths | the same; the `native_decide` row completes | the same |
+| Forced abort (pthread / main) | death 2.3 s, #73 label, serving 5.8 s | death 2.3 s, serving 5.7 / 5.8 s | — |
+| Editor bursts 10 ms/char ×4 | 0 crashes, pool 24 | 0 crashes, pool 24, 27 workers | 0 crashes, 27 workers |
+| Editor-mode proof (NNG4 Multiplication/1) | error 4.8 s; "completed with warnings" | error 4.3 s; "Level completed! 🎉" in 3.5 s | error 9.0–9.5 s, 3.5 s |
+| Pace 150 ms/char above a 4 s sleep / the decide (rw, comment) | 0 crashes, pool 24 | 4.05 s; 13 / 13 / 38 versions (10 re-ran the decide), pool 24, 0 deaths | 4.48 s; pool 24 |
+| Reload storm, 5 runs | 0/5 crashed | 0/5 crashed, first ready 1.3–2.3 s | 0/5 |
+| D6 offline NNG4 (Prepare only) / RAG + images | pass, except the probes' 10-chunk constant (4.35: 8) | 7/7 and 3/3: Prepare 1.3 s / 263.6 MB, offline boot 1.9 s + completed proof, B goal 1.6 s | Prepare 1.6–2.8 s / 316.4 MB, boot 5.9 s |
+| Cypress plain / CSP enforced | 24/24 / 24/24 | 24/24 / 24/24, 0 CSP lines | 24/24 / 24/24 |
+| D4 first visit (20 s cut at 41 MB): ready after link-back / PRESW: ready from load | no crash text; 61.7 s / 85.9 s; proof FAIL | 57.9 s / 80.2 s, proof completes; injected crash labelled, serving 3.1 s | 69.9 s / 87.5 s; 7.3–8.3 s |
+| NEW-3 (through the proxy) | 0 flashes; boot 87.0 s; proof FAIL | 41.9 s after link-back, boot 86.9 s, proof completes | boot 102.2 s |
+| D7 RAG: online / proxy refusing / offline | 3.3 / 1.9 / 1.8 s; 12 failing GETs (6 distinct); proof FAIL | 3.9 / 1.9 / 1.8 s, proofs 2.5 / 2.7 s; 12 (6); 0 of 143 | 8.3 / 6.1–6.5 / 6.1–6.7 s; 14 (7) |
+| SEC1 | 67/69 (P2 known, P4's proof) | 68/69 (only the known P2); 0 attacker requests | 68/69 |
+| QD-API-2 reboot / first worker | 1.6 / 4.0 s; card 0.5 s | 2.5 / 4.9 s, proves; card 0.3 s, Reload works | 2.0 / 8.8 s; 0.5 s |
+| QB-2 (404 on lsp-front-door.js) | goal 4.5 s, 2 page errors | goal 4.5 s, the same 2 page errors | goal 10.3 s; the same 2 page errors (rerun 2026-10-23: goal 9.1 s) |
+| NEW-2 | remote line 0.01 s after the tiles | 0.01 s | 0.01 s |
+| Pair GG / PP | tab1 never waits; proofs FAIL; region fetched twice / one region request, busy tab Ready 0.06 s after | tab1 never waits, both proofs complete, region still fetched twice / one request, busy tab Ready 0.06 s after the downloader | the same (2 × 155.5 MB) |
+| Tabs A / B / D / R / G | drop 0.10–0.48 s; stall fails 179.7 s after; Retry 31.1 s | drop 0.10–0.36 s; stall fails 179.7 s after (now matched: "region silent"); Retry 31.1 s; 0 ghosts | 0.15–0.34 s; 179.8 s; 31.1 s |
+| S1 at 150 kB/s (Prepare while the SW installs) | 187/187, Ready 1876 s, 298 MB | 187/187, Ready (also after a reload) 1876.6 s after the click, 298.1 MB | 189/189, 2272.8 s, 356.5 MB |
+| D5 at 300 kB/s | longest still 7.0 s, no backwards step, ready 928 s; proof FAIL | longest still 7.0 s (7.26 s watched), no backwards step, 750 labels; ready 928.4 s, 278.6 MB; proof completes | 7.0 s; 1108.9 s |
+
+- The stalled Prepare's console line now reads "prepare nng4: region
+  silent (the download stalled (no data for 3 minutes))"; the 4.34 run's
+  matched `region (error|failed)`. Same outcome and timing; probes and log
+  greps match all three words.
+- No first visit showed "waiting for another tab" (only pair GG's second
+  tab, correctly).
+
+**All-level sweep** (every model solution of the ten games, natively at
+`.private` with the release's native compiler and on the snapshots
+through `snapshot-probe --via-mem`; one document per world under `import
+Game` + `GameServer.Runner` + `Elab.async` on, difficulty 0, solo reruns,
+mutation control; 826 levels):
+
+| | pass | pass, warnings | a: wasm-only failure | b: fails on both (error / upstream `sorry`) | c: crash |
+|---|---|---|---|---|---|
+| first bake | 748 | 53 | **0** | 15 / 10 | 0 |
+| after the Knights re-cut (Knights rerun on both sides; the other nine carry over) | 761 | 53 | **0** | 2 / 10 | 0 |
+
+- **The (a) list is empty**: no level's model solution depends on a proof
+  body only a `.olean.private` holds; native and wasm print identical
+  messages (severity, line, column, text) for every level, and natively
+  the fat compile tree and the slim tree the snapshot was baked from give
+  byte-identical output for all 124 world documents. A player's own route
+  can still need a private body.
+- (b) errors left: RAG Lecture22/3 (the model solution uses Finset's
+  scoped `#(range n)`, which the Runner document does not open — upstream
+  fails the same way with the level-module header) and RAG L24Pset/2 (no
+  `Statement`: the level has no goal). Upstream `sorry`: RAG Lecture25/1,
+  25/2, 24/3, 24/4, 23/1–3, 19/4, L22Pset/2, L22Pset/3.
+- Pass with warnings (53, identical on both sides): 51 hit
+  Mathlib's `linter.tacticAnalysis.introMerge` ("Try this: intro x h") on
+  consecutive `intro`s, 2 are genuine unused tactics (Knights
+  KnightsAndKnaves2/8's `#check` lines, RAG L8Pset/3's `norm_num`). Checked
+  in the browser on both builds: ReintroductionToProofs QuantifierWorld/7
+  and ProductWorld/6 end "Level completed with warnings 🎭" on 4.34 and
+  4.35 alike.
+
+Not changed, by decision or as pre-existing (all in "Open" below): the
+introMerge warnings, the QB-2 page errors, the busy tile's ~20 ms
+"Prepare offline" flash between "caching the checker there…" and "Ready"
+during a two-tab Prepare (`client/src/wasm/game-cache.ts` drops the remote
+state on `prepare-ended` before its re-probe lands; unchanged since 4.34),
+and RAG's two upstream level defects.
+
 ## Open
 
+- **Reference proofs that finish "with warnings" (Lean 4.35 sweep, 53
+  levels, the same on the live 4.34 site).** 51 trip Mathlib's
+  `linter.tacticAnalysis.introMerge` ("Try this: intro x h") on
+  consecutive `intro`s — ReintroductionToProofs 26, RAG 9, Robo 9, STG4
+  4, lean4game-logic 2, LAG 2 (lists in "Lean 4.35 on the toolchain
+  release") — and a player who writes `intro x` then `intro h` meets the
+  same; 2 are genuine unused tactics (Knights KnightsAndKnaves2/8, RAG
+  L8Pset/3). Such a level is never marked completed and its new tiles are
+  not added to the inventory; at difficulty ≥ 2 Next stays disabled. A UX
+  decision: switching the linter off for Runner documents needs a
+  GameServer / level-scope change (a ten-game rebake); it cannot go into
+  the client's `RUNNER_PRELUDE`, since the option exists only where Mathlib
+  is imported (TestGame would get "unknown option").
+- **RAG upstream level defects (report upstream):** Lecture22/3's model
+  solution uses Finset's scoped `#(range n)`, which the Runner document
+  does not open (a parse error; other routes work), and L24Pset/2 has no
+  `Statement` (no goal; the level cannot be solved anywhere).
+- **QB-2's two page errors are pre-existing** (measured on the 4.34 build,
+  2026-10-23: the same "Client is not running and can't be stopped. It's
+  current state is: starting" and "Object" at 0.7 s). They come from
+  vscode-languageclient's own `initialize` failure path (`void
+  this.stop()` on a client still "starting", then a rethrow) after N1
+  answers the orphaned `initialize`; recovery is unaffected (goal at
+  4.5 s). Same upstream candidate as the item above.
+- **Probe updates for QED64's `work/` copies:** `qv-core-offline.mjs` and
+  `qv-core-rag.mjs` expect 10 runtime chunks (read the count from the
+  served manifest: the 4.35 runtime has 8); `qv-tabs.mjs` waits for
+  `prepare nng4: region (error|failed)` (add `silent`). The Lean 4.35 runs
+  used patched copies.
 - **A deep `decide` kills the checker with a JS stack overflow (runtime or
   kernel; also on the live build).**
   - Repro: NNG4 Multiplication/1, editor mode,

@@ -27,7 +27,7 @@ with `node scripts/serve-dist.mjs` — [wasm/KERNEL.md](wasm/KERNEL.md),
 
 The Lean toolchain is not built here: the game pins one **toolchain
 release** of the kernel fork (github.com/FawadHa1der/lean4,
-`lean-v4.34.0-41ec565`: Lean 4.34.0, runtime `wasm64-57ae00dc5f6ce958`) —
+`lean-v4.35.0-b081e7c`: Lean 4.35.0, runtime `wasm64-36d7f415704473d9`) —
 the root `package.json` devDependency `lean4-wasm64` (the release's tools
 tgz) and `wasm/lean4-wasm64-release.json` (a byte copy of its
 `release.json`: id, self-digest, runtime build id, kernel patch, packs,

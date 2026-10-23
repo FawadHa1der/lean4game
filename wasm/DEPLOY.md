@@ -52,7 +52,13 @@ token serve both.
    three `rclone copy` commands the lean4 fork's
    `wasm64-build/stage-release.sh` prints (HOSTING.md, "Where a release
    lives"; immutable, digest-named objects first, `release.json` last).
-   Step 1 refuses to run until it is there.
+   Step 1 refuses to run until it is there. The release must also be
+   **published on GitHub** before the branch that pins it reaches
+   `wasm64-port`: the root devDependency `lean4-wasm64` is the release's
+   GitHub tgz, and `.github/workflows/deploy.yml` runs `npm ci` on every
+   push there (`wasm/KERNEL.md`, "The pin" — the Lean 4.35 pin
+   `lean-v4.35.0-b081e7c` was staged, not published, when this branch was
+   built).
 1. `scripts/upload-artifacts.sh` — **before the deploy**. Preflights
    `client/public` (`scripts/preflight-artifacts.mjs`: every chunk, profile
    part and snapshot present and paired to the manifest's build id, and the
@@ -248,9 +254,11 @@ port itself — survey, source pin and patch, options, probe, languages — is
    lean-i18n and GameServer), then `--lanes games,bake --games <snapshot>
    --verify-snapshots`: compiles the game with the release's native
    compiler, overlays its slim tree, bakes `<snapshot>.<digest>.snapz` into
-   `wasm/out/staging/<runtime build id>/snapshots` and probes it (the
-   snapshot through the wasm runtime, the level proofs natively with a
-   negative control); record the
+   `wasm/out/staging/<runtime build id>/snapshots` and probes it (every
+   catalog probe of the row — the document the browser sends,
+   `games-manifest.mjs --probe` — through the wasm runtime on the snapshot
+   and natively on the same tree, each closing with no message, plus a
+   negative control that must fail on both); record the
    printed raw size in the row's `expectedRaw`. Run each bake under the
    host's browser lock (`with-browser-lock.sh lean4game …`), one game per
    hold.

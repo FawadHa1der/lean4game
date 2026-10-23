@@ -56,6 +56,20 @@ What each patch changes for a player is recorded per game in
   `git diff <rev> -- . ':!.i18n'` (the script that rebuilt the old file
   byte-for-byte first), and proven with a fresh clone + `git am` (clean;
   tree identical to the checkout's working tree).
+- Lean 4.35 (branch `lean-v4.35`, toolchain release `lean-v4.35.0-b081e7c`,
+  2026-10-23): only the robo patch changed (three more `deprecated_module`
+  shim imports, below), re-cut the same way from the checkout's working
+  tree; the old checkout was deleted and the games lane cloned upstream,
+  checked out `source.rev` and `git am`ed the new file — `git diff <rev>
+  HEAD -- . ':!.i18n'` there is byte-identical to the ported working tree's
+  diff. Knights' was re-cut the same day (the shared tactic syntax, below)
+  and proven the same way. The nng4, stg4, rag, logic and lag patches did not change,
+  and ReintroductionToProofs and NumberTheoryGame still need none. The one
+  v4.35 gap three games hit — `import Batteries.Tactic.OpenPrivate`
+  (NNG4's and ReintroductionToProofs' and Robo's `induction`/`cases`
+  wrappers, which `open private` helpers of `Lean.Elab.Tactic.Induction`),
+  a module the v4.35 packs no longer ship — is not patched per game: the
+  trees lane compiles a vendored copy (`vendor/batteries/README.md`).
 
 ## nng4-wasm64-port.patch
 
@@ -101,10 +115,30 @@ git -C games-src/NNG4 am ../../wasm/patches/nng4-wasm64-port.patch
 - Upstream: `JadAbouHawili/KnightsAndKnaves-Lean4Game` `main` @
   `bd4ab6e6d00fbbfb95b17e66589c07e75bb9d56c` (Lean v4.29.1 / Mathlib
   v4.29.1). Commit `a1b6fba`, 2026-09-11.
-- Size: 6,546 bytes, 143 lines, 7 files (+12/−8) (Lean 4.34 re-cut;
-  before: 4,157 bytes, 5 files).
+- Size: 15,017 bytes, 348 lines, 9 files (+91/−42) (Lean 4.35 re-cut,
+  2026-10-23, the shared tactic syntax below; Lean 4.34: 6,546 bytes, 143
+  lines, 7 files (+12/−8); before: 4,157 bytes, 5 files).
 - Summary: no level or world removed; the one thing a player can notice is
-  toolchain drift, not the patch (`wasm/PORTING.md` §8).
+  toolchain drift, not the patch (`wasm/PORTING.md` §8) — and, since the
+  Lean 4.35 re-cut, that the DSL world's own tactics work in the browser.
+  - Lean 4.35 re-cut (2026-10-23): new
+    `Game/LevelLemmas/knightsknaves_tactic_syntax.lean` declares the syntax
+    of `knight_or_knave` (`A` / `A with h₁ h₂`), `knight_interp` and
+    `knave_interp` (bare / `at h` / `at *`) once, with docstrings;
+    `Game/LevelLemmas/dsl_KnightsAndKnaves.lean` and
+    `settheory_knightsknavesfoundation.lean` import it and turn their
+    `macro "…" … : tactic => …` declarations into `macro_rules` with the
+    same expansions. Upstream each world declared the syntax with its own
+    `macro`, harmless there because a level imports only its own world;
+    the browser checks every level in the whole-`Game` environment, where
+    the parser returned both syntaxes and Lean ran only the first (a
+    choice falls through only on unsupported syntax): 13 DSL levels (1,
+    3–14) failed with their model proofs, on the live 4.34 site too. With
+    one syntax per tactic, Lean tries the expansions in turn and keeps the
+    first that succeeds (as for both worlds' `contradiction` extensions).
+    The compile's 8 "missing tactic documentation" warnings for these
+    tactics are gone (the syntax has docstrings); the gamedata is
+    byte-identical.
   - Lean 4.34: `Game/LevelLemmas/settheory_KnightsAndKnaves.lean` and
     `settheory_KnightsAndKnaves3.lean` put `set_option
     backward.isDefEq.respectTransparency false in` before their `inductive
@@ -132,7 +166,12 @@ git -C games-src/NNG4 am ../../wasm/patches/nng4-wasm64-port.patch
     the following `rw [not_iff] at diff` and `knight_interp at diff` reach
     the same `diff : A ∈ Knight ↔ C ∉ Knight`. Hints and statement untouched.
 - Regenerate: `git -C games-src/KnightsAndKnaves-Lean4Game format-patch
-  --stdout bd4ab6e6d00fbbfb95b17e66589c07e75bb9d56c -- . ':!.i18n'`.
+  --stdout bd4ab6e6d00fbbfb95b17e66589c07e75bb9d56c -- . ':!.i18n'`. (The
+  Lean 4.35 re-cut was written without a commit: `git diff
+  bd4ab6e6d00fbbfb95b17e66589c07e75bb9d56c -- . ':!.i18n'` of the working
+  tree plus `git diff --no-index /dev/null` of the new file, under the old
+  header with one more paragraph; the lane then cloned upstream and `git
+  am`ed it — clean, and the clone's files equal the working tree's.)
 
 ```bash
 git clone https://github.com/JadAbouHawili/KnightsAndKnaves-Lean4Game games-src/KnightsAndKnaves-Lean4Game
@@ -237,16 +276,21 @@ git -C games-src/RealAnalysisGame am ../../wasm/patches/rag-wasm64-port.patch
 - Upstream: `hhu-adam/Robo` `main` @ `5d335ce54e9aec50f55ab7e1e24a7a1a79bee188`
   (Lean v4.31.0 / Mathlib v4.31.0; 18 worlds / 156 levels, key-style
   translations `de en es zh`). Commit `4d62ff2`, 2026-09-11.
-- Size: 2,159 bytes, 53 lines, 2 files (+3/−2) (Lean 4.34 re-cut; before:
-  1,172 bytes, 1 file).
-- Summary: two lines. `Game/Metadata.lean` drops `import Batteries`, the
+- Size: 3,222 bytes, 68 lines, 2 files (+6/−5) (Lean 4.35 re-cut; Lean 4.34: 2,159
+  bytes, 53 lines, +3/−2; before: 1,172 bytes, 1 file).
+- Summary: five import lines in two files (one dropped, four replaced). `Game/Metadata.lean` drops `import Batteries`, the
   Batteries umbrella module the release's packs do not ship (the Batteries
   modules reach the game through `Mathlib.Tactic.Common`, imported by
   `Game/Metadata/FromMathlib.lean`); Lean 4.34: `Game/Metadata/FromMathlib.lean`
   imports `Mathlib.Basic.Real.Basic`, the module the `Mathlib.Data.Real.Basic`
-  shim re-exports. No level, proof, doc or tactic file changes: every other
+  shim re-exports; Lean 4.35: the same file imports
+  `Mathlib.Order.SuccPred.Int`, `Mathlib.Algebra.Order.Star.Int` and
+  `Mathlib.Algebra.Order.Star.Rat` instead of the `Mathlib.Data.Int.SuccPred`,
+  `Mathlib.Data.Int.Star` and `Mathlib.Data.Rat.Star` shims (each is exactly
+  `public import` of its replacement; the compile printed one deprecation
+  warning per shim, now none). No level, proof, doc or tactic file changes: every other
   gap (`Mathlib.Tactic.{Have,Cases,Generalize}`,
-  `Mathlib.Algebra.Order.Ring.Star`, `Mathlib.Data.{Int,Rat}.Star`) is a
+  `Mathlib.Algebra.Order.Ring.Star`, `Mathlib.Algebra.Order.Star.{Int,Rat}`) is a
   `mathlib-game-extra` module under its real name (until Lean 4.34: a
   `wasm/compat` module — the four Robo leaves were added for this port), so
   the game's custom tactic layer (`Game/Metadata/Tactic/*`) compiles from
