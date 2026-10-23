@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: wasm64 port <wasm64@localhost>
-Date: Tue, 06 Oct 2026 13:49:39 -0400
-Subject: [PATCH] wasm64 port: Lean 4.34.0 / Mathlib v4.34.0
+Date: Fri, 23 Oct 2026 08:18:30 -0400
+Subject: [PATCH] wasm64 port: Lean 4.34.0 / Mathlib v4.34.0; one syntax for the shared tactics
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -24,20 +24,34 @@ Content-Transfer-Encoding: 8bit
   Mathlib sets the same option at its own call sites).
 - SetTheory_Knights_Knaves L09: remove `simp at diff` from the model proof
   (no progress on this Mathlib; the following steps reach the same state).
+- New LevelLemmas/knightsknaves_tactic_syntax (2026-10-23): the syntax of
+  `knight_or_knave`, `knight_interp` and `knave_interp`, declared once;
+  dsl_KnightsAndKnaves and settheory_knightsknavesfoundation import it and
+  keep their expansions as `macro_rules` instead of each declaring the
+  syntax with `macro`. The wasm64 build checks every level in one
+  environment holding the whole game, where the two worlds' `macro`s gave
+  the parser two syntaxes for the same text and Lean ran only the first
+  (the set-theory one): 13 DSL_Knights_Knaves levels failed with their own
+  model proofs. With one syntax Lean tries both expansions and keeps the
+  one that works, as it already does for both worlds' `contradiction`
+  extensions. A level that imports only its own world is unchanged.
 
 No level or world removed; nothing a player types changes.
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- Game.lean                                               | 2 +-
- Game/LevelLemmas/settheory.lean                         | 3 +--
- Game/LevelLemmas/settheory_KnightsAndKnaves.lean        | 3 +++
- Game/LevelLemmas/settheory_KnightsAndKnaves3.lean       | 3 +++
- Game/LevelLemmas/settheory_knightsknavesfoundation.lean | 3 +--
- Game/Levels/SetTheory_Knights_Knaves/L09_same.lean      | 2 +-
- Game/MathlibTheorems.lean                               | 4 ++--
- 7 files changed, 12 insertions(+), 8 deletions(-)
+ Game.lean                                               |  2 +-
+ Game/LevelLemmas/dsl_KnightsAndKnaves.lean              | 27 +++++++++++++++++++--------
+ Game/LevelLemmas/settheory.lean                         |  3 +--
+ Game/LevelLemmas/settheory_KnightsAndKnaves.lean        |  3 +++
+ Game/LevelLemmas/settheory_KnightsAndKnaves3.lean       |  3 +++
+ Game/LevelLemmas/settheory_knightsknavesfoundation.lean | 55 +++++++++++++++++++++++++++----------------------------
+ Game/Levels/SetTheory_Knights_Knaves/L09_same.lean      |  2 +-
+ Game/MathlibTheorems.lean                               |  4 ++--
+ Game/LevelLemmas/knightsknaves_tactic_syntax.lean       | 34 ++++++++++++++++++++++++++++++++++
+ 9 files changed, 91 insertions(+), 42 deletions(-)
+ create mode 100644 Game/LevelLemmas/knightsknaves_tactic_syntax.lean
 
 diff --git a/Game.lean b/Game.lean
 index f594cfd..543338b 100644
@@ -51,6 +65,69 @@ index f594cfd..543338b 100644
 +Languages "en"
  CaptionShort "From the basics to Knights And Knaves"
  CaptionLong "A guided experience that teaches you everything you need to know to understand and solve knights and knaves logic puzzles, including the basics of lean and logic.
+ 
+diff --git a/Game/LevelLemmas/dsl_KnightsAndKnaves.lean b/Game/LevelLemmas/dsl_KnightsAndKnaves.lean
+index 2a2f7ae..271b1bf 100644
+--- a/Game/LevelLemmas/dsl_KnightsAndKnaves.lean
++++ b/Game/LevelLemmas/dsl_KnightsAndKnaves.lean
+@@ -1,4 +1,5 @@
+ import Game.MathlibTheorems
++import Game.LevelLemmas.knightsknaves_tactic_syntax
+ import Mathlib.Tactic.ApplyAt
+ import Mathlib.Tactic.ApplyFun
+ 
+@@ -66,34 +67,44 @@ axiom notknight_said {A : Islander} {P : Prop} : (A said P) → ¬A.isKnight →
+ 
+ section tactics
+ 
+-macro "knight_or_knave" t1:term "with" t2:rcasesPat t3:rcasesPat : tactic => do`(tactic| obtain ($t2 | $t3) := isKnight_or_isKnave $t1)
++-- wasm64 port: the syntax is declared once in Game.LevelLemmas.knightsknaves_tactic_syntax
++-- (the set-theory world teaches the same tactics); these are this world's expansions.
++macro_rules
++| `(tactic| knight_or_knave $t1 with $t2 $t3) => do`(tactic| obtain ($t2 | $t3) := isKnight_or_isKnave $t1)
+ 
+-macro "knight_or_knave" t1:term : tactic => do`(tactic| cases isKnight_or_isKnave $t1)
++macro_rules
++| `(tactic| knight_or_knave $t1) => do`(tactic| cases isKnight_or_isKnave $t1)
+ 
+ 
+-macro "knave_interp" : tactic =>
++macro_rules
++| `(tactic| knave_interp) =>
+ do`(tactic| ((try rw [not_iff_not.symm] ); simp only[isKnight_notisKnaveIff ,not_not])
+ )
+ 
+-macro "knave_interp" "at" t1:Lean.Parser.Tactic.locationWildcard : tactic =>
++macro_rules
++| `(tactic| knave_interp at $t1:locationWildcard) =>
+ do`(tactic| ((try rw [not_iff_not.symm] at $t1 ); simp only[isKnight_notisKnaveIff ,not_not] at $t1)
+ )
+ 
+-macro "knave_interp" "at" t1:Lean.Parser.Tactic.locationHyp : tactic =>
++macro_rules
++| `(tactic| knave_interp at $t1:locationHyp) =>
+ do`(tactic| ((try rw [not_iff_not.symm] at $t1 ); simp only[isKnight_notisKnaveIff ,not_not] at $t1)
+ )
+ 
+ 
+ 
+-macro "knight_interp" : tactic =>
++macro_rules
++| `(tactic| knight_interp) =>
+ do`(tactic| ((try rw [not_iff_not.symm] ); simp only[isKnave_notisKnightIff,not_not])
+ )
+ 
+-macro "knight_interp" "at" t1:Lean.Parser.Tactic.locationWildcard : tactic =>
++macro_rules
++| `(tactic| knight_interp at $t1:locationWildcard) =>
+ do`(tactic| ((try rw [not_iff_not.symm] at $t1 ); simp only[isKnave_notisKnightIff,not_not] at $t1)
+ )
+ 
+-macro "knight_interp" "at" t1:Lean.Parser.Tactic.locationHyp : tactic =>
++macro_rules
++| `(tactic| knight_interp at $t1:locationHyp) =>
+ do`(tactic| ((try rw [not_iff_not.symm] at $t1 ); simp only[isKnave_notisKnightIff,not_not] at $t1)
+ )
  
 diff --git a/Game/LevelLemmas/settheory.lean b/Game/LevelLemmas/settheory.lean
 index 72ab43d..e4f39b5 100644
@@ -95,10 +172,16 @@ index 32b2d49..b60fac4 100644
  | A
  | B
 diff --git a/Game/LevelLemmas/settheory_knightsknavesfoundation.lean b/Game/LevelLemmas/settheory_knightsknavesfoundation.lean
-index bbad27a..8313fae 100644
+index bbad27a..f447d14 100644
 --- a/Game/LevelLemmas/settheory_knightsknavesfoundation.lean
 +++ b/Game/LevelLemmas/settheory_knightsknavesfoundation.lean
-@@ -10,8 +10,7 @@ class World' (Inhabitant : Type u) [DecidableEq Inhabitant] where
+@@ -1,4 +1,5 @@
+ import Game.LevelLemmas.settheory
++import Game.LevelLemmas.knightsknaves_tactic_syntax
+ 
+ universe u
+ 
+@@ -10,8 +11,7 @@ class World' (Inhabitant : Type u) [DecidableEq Inhabitant] where
    dis : Knight ∩ Knave = ∅
    KorKn : ∀ x : Inhabitant, x ∈ Knight ∨ x ∈ Knave
  
@@ -108,6 +191,88 @@ index bbad27a..8313fae 100644
  
  namespace hidden
  axiom  Knight : Finset Inhabitant
+@@ -141,56 +141,55 @@ theorem notknave_knightIff
+   · exact knight_notknave
+ 
+ 
++-- wasm64 port: the syntax (and these docstrings) is declared once in
++-- Game.LevelLemmas.knightsknaves_tactic_syntax (the DSL world teaches the same
++-- tactics); these are this world's expansions.
+ -- hypothesis
+-/--
+-Interpret statements in terms of knaves
+--/
+-macro "knave_interp" "at" t1:Lean.Parser.Tactic.locationHyp : tactic =>
++-- Interpret statements in terms of knaves
++macro_rules
++| `(tactic| knave_interp at $t1:locationHyp) =>
+ do`(tactic| ( (try rw [not_iff_not.symm] at $t1) ; simp only[knight_notknaveIff,not_not] at $t1)
+ )
+-/--
+-Interpret statements in terms of knaves
+--/
++-- Interpret statements in terms of knaves
+ -- goal , usually goal doesn't have Iff
+-macro "knave_interp" : tactic =>
++macro_rules
++| `(tactic| knave_interp) =>
+ do`(tactic| ((try rw [not_iff_not.symm]) ; simp only[knight_notknaveIff,not_not] )
+ )
+-/--
+-Interpret statements in terms of knaves
+--/
++-- Interpret statements in terms of knaves
+ -- *
+-macro "knave_interp" "at"  t1:Lean.Parser.Tactic.locationWildcard : tactic =>
++macro_rules
++| `(tactic| knave_interp at $t1:locationWildcard) =>
+ do`(tactic| ( (try rw [not_iff_not.symm] at $t1) ; simp only[knight_notknaveIff,not_not] at $t1)
+ )
+ 
+ 
+ #check knave_notknightIff
+ -- hypothesis
+-/--
+-Interpret statements in terms of knights
+--/
+-macro "knight_interp" "at" t1:Lean.Parser.Tactic.locationHyp : tactic =>
++-- Interpret statements in terms of knights
++macro_rules
++| `(tactic| knight_interp at $t1:locationHyp) =>
+ do`(tactic| ((try rw [not_iff_not.symm] at $t1 ); simp only[knave_notknightIff,not_not] at $t1)
+ )
+ -- goal , usually goal doesn't have Iff
+-/--
+-Interpret statements in terms of knights
+--/
+-macro "knight_interp" : tactic =>
++-- Interpret statements in terms of knights
++macro_rules
++| `(tactic| knight_interp) =>
+ do`(tactic| ((try rw [not_iff_not.symm]) ; simp only[knave_notknightIff,not_not] )
+ )
+ -- *
+-/--
+-Interpret statements in terms of knights
+--/
+-macro "knight_interp" "at"  t1:Lean.Parser.Tactic.locationWildcard : tactic =>
++-- Interpret statements in terms of knights
++macro_rules
++| `(tactic| knight_interp at $t1:locationWildcard) =>
+ do`(tactic| ( (try rw [not_iff_not.symm] at $t1) ; simp only[knave_notknightIff,not_not] at $t1))
+ 
+ 
+-macro "knight_or_knave" t1:term  : tactic =>
++macro_rules
++| `(tactic| knight_or_knave $t1) =>
+ do`(tactic| cases (KorKn $t1)  )
+ 
+-macro "knight_or_knave" t1:term "with" t2:rcasesPat t3:rcasesPat  : tactic =>
++macro_rules
++| `(tactic| knight_or_knave $t1 with $t2 $t3) =>
+ do`(tactic| obtain $t2|$t3 := (KorKn $t1)  )
+ 
+ example {A : Inhabitant} (h : A ∈ Knight) : A ∉ Knave := by
 diff --git a/Game/Levels/SetTheory_Knights_Knaves/L09_same.lean b/Game/Levels/SetTheory_Knights_Knaves/L09_same.lean
 index 8e862c6..60ec51c 100644
 --- a/Game/Levels/SetTheory_Knights_Knaves/L09_same.lean
@@ -138,6 +303,46 @@ index 706219b..b8cf874 100644
  import Mathlib.Algebra.Group.Basic
  import Mathlib.Tactic.ApplyFun
  import Mathlib.Data.Multiset.Basic
+diff --git a/Game/LevelLemmas/knightsknaves_tactic_syntax.lean b/Game/LevelLemmas/knightsknaves_tactic_syntax.lean
+new file mode 100644
+index 0000000..d1d6d74
+--- /dev/null
++++ b/Game/LevelLemmas/knightsknaves_tactic_syntax.lean
+@@ -0,0 +1,34 @@
++/-
++wasm64 port: the syntax of the tactics both Knights and Knaves worlds teach
++(`knight_or_knave`, `knight_interp`, `knave_interp`), declared once.
++
++The DSL world (`dsl_KnightsAndKnaves`) and the set-theory world
++(`settheory_knightsknavesfoundation`) each declared these with `macro`, so each
++world had its own syntax with the same tokens. Upstream that is harmless: a
++level imports only its own world. The wasm64 build checks every level in one
++environment that holds the whole game. There the parser returns both syntaxes
++and Lean runs only the first one (a choice of syntaxes falls through only on
++unsupported syntax), so the DSL levels ran the set-theory expansions and
++failed. With one syntax here and each world's expansions as `macro_rules`,
++Lean tries the expansions in turn and keeps the first that succeeds, as it
++already does for the `contradiction` extensions both worlds add.
++-/
++
++/-- Case split on whether an islander is a knight or a knave. -/
++syntax "knight_or_knave" term "with" rcasesPat rcasesPat : tactic
++/-- Case split on whether an islander is a knight or a knave. -/
++syntax "knight_or_knave" term : tactic
++
++/-- Interpret statements in terms of knaves -/
++syntax "knave_interp" : tactic
++/-- Interpret statements in terms of knaves -/
++syntax "knave_interp" "at" Lean.Parser.Tactic.locationHyp : tactic
++/-- Interpret statements in terms of knaves -/
++syntax "knave_interp" "at" Lean.Parser.Tactic.locationWildcard : tactic
++
++/-- Interpret statements in terms of knights -/
++syntax "knight_interp" : tactic
++/-- Interpret statements in terms of knights -/
++syntax "knight_interp" "at" Lean.Parser.Tactic.locationHyp : tactic
++/-- Interpret statements in terms of knights -/
++syntax "knight_interp" "at" Lean.Parser.Tactic.locationWildcard : tactic
 -- 
 2.50.1
 

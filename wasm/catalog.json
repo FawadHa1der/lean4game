@@ -18,8 +18,8 @@
         "proof": "rw [h]\nrw [g]"
       },
       "expectedRaw": {
-        "runtime": "wasm64-57ae00dc5f6ce958+slim",
-        "bytes": 553457285
+        "runtime": "wasm64-36d7f415704473d9+slim",
+        "bytes": 545144253
       }
     },
     {
@@ -43,8 +43,8 @@
         "proof": "rfl"
       },
       "expectedRaw": {
-        "runtime": "wasm64-57ae00dc5f6ce958+slim",
-        "bytes": 574944789
+        "runtime": "wasm64-36d7f415704473d9+slim",
+        "bytes": 571686925
       },
       "probe2": {
         "world": "Addition",
@@ -74,8 +74,8 @@
         "proof": "exact h"
       },
       "expectedRaw": {
-        "runtime": "wasm64-57ae00dc5f6ce958+slim",
-        "bytes": 669599797
+        "runtime": "wasm64-36d7f415704473d9+slim",
+        "bytes": 663665797
       },
       "probe2": {
         "world": "Complement",
@@ -118,8 +118,8 @@
         "teaches": "constructor (the game's Game.constructor macro over Mathlib fconstructor, Game/Metadata/Tactic/Constructor.lean; taught in ProductWorld L1) plus exact (taught in TypeWorld L3) — both already unlocked (new: false) at this level, which is the first ∧ level and exercises them on Statement {P Q : Prop} (p : P) (q : Q) : P ∧ Q"
       },
       "expectedRaw": {
-        "runtime": "wasm64-57ae00dc5f6ce958+slim",
-        "bytes": 569043773
+        "runtime": "wasm64-36d7f415704473d9+slim",
+        "bytes": 565917437
       }
     },
     {
@@ -148,9 +148,27 @@
         "proof": "cases h\nexact hPR h_1\nexact hQR h_1",
         "teaches": "cases (NewTactic cases; the h_1 names rely on tactic.hygienic=false, exactly as the level's own proof)"
       },
+      "probe3": {
+        "world": "DSL_Knights_Knaves",
+        "level": 1,
+        "proof": "knight_or_knave A with hA hnA\nhave hnA := knight_said hAKn hA\ncontradiction\nhave hnA := knave_said hAKn hnA\ncontradiction",
+        "teaches": "knight_or_knave (introduced by this level; the level's own solution). The DSL and set-theory worlds teach tactics with the same names and syntax; the whole-Game environment the browser serves every level from holds both, and before the port patch declared their syntax once (Game/LevelLemmas/knightsknaves_tactic_syntax.lean) the DSL levels ran the set-theory expansion and failed — this probe must close with no message"
+      },
+      "probe4": {
+        "world": "DSL_Knights_Knaves",
+        "level": 3,
+        "proof": "have BKnave : B.isKnave\nknight_interp\nintro BKnight\nhave hA := knight_said hB BKnight\nexact dsl_iamknave hA\nhave CKnight := said_knight hC BKnave\nconstructor\nassumption\nassumption",
+        "teaches": "knight_interp in the DSL world (the level's own solution), the second shared tactic"
+      },
+      "probe5": {
+        "world": "SetTheory_Knights_Knaves",
+        "level": 1,
+        "proof": "knight_or_knave A with AKnight AKnave\nhave := stA.mp AKnight\ncontradiction\nhave := stA.mpr AKnave\ncontradiction",
+        "teaches": "knight_or_knave in the set-theory world (the level's own solution): the other world's expansion of the same syntax"
+      },
       "expectedRaw": {
-        "runtime": "wasm64-57ae00dc5f6ce958+slim",
-        "bytes": 731165541
+        "runtime": "wasm64-36d7f415704473d9+slim",
+        "bytes": 724048693
       }
     },
     {
@@ -181,8 +199,8 @@
         "teaches": "induction' (Mathlib.Tactic.Cases's full elaborator, from the release's mathlib-game-extra pack), plus unfold/use/ring/rw/exact and the NewTheorem pow_succ"
       },
       "expectedRaw": {
-        "runtime": "wasm64-57ae00dc5f6ce958+slim",
-        "bytes": 1277174557
+        "runtime": "wasm64-36d7f415704473d9+slim",
+        "bytes": 1263706005
       }
     },
     {
@@ -218,8 +236,8 @@
         "teaches": "Lecture10 1's model solution without bound (port patch, 2026-10-12), one step per line as the typewriter takes it: field_simp; linarith [hε], linarith [hn], a by_cases inside one have, field_simp at. Natively it pins that the bound-free solution still closes; it cannot catch the browser's stack budget (bound needed more than a macOS Chrome Worker's ~500 KiB here) — that needs the browser-stack harness"
       },
       "expectedRaw": {
-        "runtime": "wasm64-57ae00dc5f6ce958+slim",
-        "bytes": 1014552989
+        "runtime": "wasm64-36d7f415704473d9+slim",
+        "bytes": 999811797
       }
     },
     {
@@ -253,8 +271,8 @@
         "teaches": "intro"
       },
       "expectedRaw": {
-        "runtime": "wasm64-57ae00dc5f6ce958+slim",
-        "bytes": 1012231501
+        "runtime": "wasm64-36d7f415704473d9+slim",
+        "bytes": 997790909
       }
     },
     {
@@ -285,8 +303,8 @@
         "teaches": "apply"
       },
       "expectedRaw": {
-        "runtime": "wasm64-57ae00dc5f6ce958+slim",
-        "bytes": 1276723429
+        "runtime": "wasm64-36d7f415704473d9+slim",
+        "bytes": 1263266405
       }
     },
     {
@@ -318,8 +336,8 @@
         "teaches": "unfold (taught TutorialWorld 5) on the game's own definition is_linear_map_v, then rfl; the level's solution verbatim"
       },
       "expectedRaw": {
-        "runtime": "wasm64-57ae00dc5f6ce958+slim",
-        "bytes": 1279213317
+        "runtime": "wasm64-36d7f415704473d9+slim",
+        "bytes": 1265726077
       }
     }
   ]
