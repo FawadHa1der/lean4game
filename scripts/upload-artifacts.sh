@@ -143,8 +143,7 @@ if [ "$POST_DEPLOY" = 0 ]; then
   echo "== the per-runtime index copies of $RUNTIME_ID (no deployed shell reads them yet) → $SITE/snapshots"
   for c in "${COPIES[@]}"; do rclone copyto "$PUB/$c" "$SITE/$c" "${ONE[@]}" "${STATS[@]}"; done
   echo "pre-deploy upload complete; R2's snapshots/index.json and profiles/index.json are untouched — R2 view:"
-  # (|| true: head closing the pipe early must not fail a finished upload)
-  rclone ls "$SITE/snapshots" | sort -k2 | head -40 || true
+  rclone ls "$SITE/snapshots" | sort -k2 || true
   echo "next, in this order:"
   echo "  1. scripts/deploy-app.sh   (or the push that runs it in CI)"
   echo "  2. as soon as it is live:  scripts/upload-artifacts.sh --post-deploy"
@@ -272,5 +271,5 @@ echo "== the mutable indexes (the shell of $RUNTIME_ID is live) → $SITE"
 rclone copyto "$PUB/snapshots/index.json" "$SITE/snapshots/index.json" "${ONE[@]}" "${STATS[@]}"
 rclone copyto "$PUB/profiles/index.json" "$SITE/profiles/index.json" "${ONE[@]}" "${STATS[@]}"
 echo "post-deploy upload complete — R2 view:"
-rclone ls "$SITE/snapshots" | sort -k2 | head -40 || true
+rclone ls "$SITE/snapshots" | sort -k2 || true
 rclone ls "$SITE/profiles/index.json" || true
