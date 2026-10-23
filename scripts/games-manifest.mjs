@@ -85,12 +85,25 @@ function probeKeys(g) {
     .sort((a, b) => (Number(a.slice(5)) || 1) - (Number(b.slice(5)) || 1));
 }
 
+/** The command the browser's worker document puts before `Runner`, read from
+ * the client (client/src/wasm/game-translation.ts RUNNER_PRELUDE), so a probe
+ * document checks what the browser sends — e.g. Elab.async on for the Runner
+ * command, without which every tactic gets a false unused-tactic warning
+ * under qed64's synchronous FileWorker. Read as text: this script runs on
+ * plain Node, without the client's TypeScript resolve hook. */
+function runnerPrelude() {
+  const src = fs.readFileSync(path.join(root, "client/src/wasm/game-translation.ts"), "utf8");
+  const m = /^export const RUNNER_PRELUDE = ("[^"\n]*");$/m.exec(src);
+  if (!m) throw new Error("client/src/wasm/game-translation.ts: no `export const RUNNER_PRELUDE = \"…\";` line");
+  return JSON.parse(m[1]);
+}
+
 const probeText = (g, key = "probe") => {
   const gj = gameJson(g);
   if (!gj) throw new Error(`${g.id}: no game.json (run the games lane or stage the game first)`);
   const p = g[key];
   if (!p) throw new Error(`${g.id}: no ${key} in its catalog row`);
-  return `import Game\nimport GameServer.Runner\nRunner "${gj.json.name}" "${p.world}" ${p.level} (difficulty := 1) (inventory := []) := by\n${p.proof}\n`;
+  return `import Game\nimport GameServer.Runner\n${runnerPrelude()}Runner "${gj.json.name}" "${p.world}" ${p.level} (difficulty := 1) (inventory := []) := by\n${p.proof}\n`;
 };
 
 const mode = process.argv[2];

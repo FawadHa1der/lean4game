@@ -1,5 +1,5 @@
 // Run: node client/src/wasm/game-translation.test.ts  (Node ≥22 type stripping)
-import { GameTranslation, shiftLines, rebaseSemanticTokens, PROOF_START_LINE } from "./game-translation.ts";
+import { GameTranslation, shiftLines, rebaseSemanticTokens, PROOF_START_LINE, RUNNER_PRELUDE } from "./game-translation.ts";
 import assert from "node:assert";
 import { levelUri, parseLevelUri } from "./level-uri";
 
@@ -58,6 +58,16 @@ assert.deepEqual(parseLevelUri("file:///Tutorial/3.lean"), { worldId: "Tutorial"
     const text: string = open.params.textDocument.text;
     assert.ok(text.startsWith("import Game.Levels.TestWorld.L01_X import GameServer.Runner \n"));
     assert.ok(text.includes('Runner "MyGame" "TestWorld" 1 (difficulty := 1) (inventory := ["rfl"]) := by\nrfl\n'));
+    // Elab.async on for the Runner command (RUNNER_PRELUDE): a command of its
+    // own on the Runner's line — never `… in`, never a line of its own (the
+    // proof stays at PROOF_START_LINE, which GameServer's getProofState
+    // assumes too) — and the header line stays import lines only.
+    assert.equal(RUNNER_PRELUDE, "set_option Elab.async true ");
+    const lines = text.split("\n");
+    assert.equal(lines[0], "import Game.Levels.TestWorld.L01_X import GameServer.Runner ");
+    assert.ok(lines[1].startsWith('set_option Elab.async true Runner "MyGame" '), lines[1]);
+    assert.ok(!lines[1].includes(" in Runner"));
+    assert.equal(lines[PROOF_START_LINE], "rfl");
     assert.equal(hover.params.position.line, 0 + PROOF_START_LINE);
     assert.equal(hover.params.textDocument.uri, "file:///game/Metadata.lean");
 

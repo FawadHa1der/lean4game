@@ -18,10 +18,11 @@
  *  - didOpen of the level uri (level-uri.ts) — and every FULL-text didChange
  *    (the resident front door syncs whole documents): rewrite the text to
  *      import {level module} import GameServer.Runner \n
- *      Runner "{game}" "{world}" {level} (difficulty := d) (inventory := [..]) := by\n
+ *      set_option Elab.async true Runner "{game}" "{world}" {level} (difficulty := d) (inventory := [..]) := by\n
  *      {player text}\n
  *    so player content starts at line 2 (PROOF_START_LINE), and point every
- *    uri at the single constant worker document.
+ *    uri at the single constant worker document. (`set_option Elab.async
+ *    true` is the one wasm64 addition to upstream's text: RUNNER_PRELUDE.)
  *  - all positions shifted +2 lines; server→client shifted −2, uris mapped
  *    back, range semanticTokens disabled, full semanticTokens rebased.
  */
@@ -55,6 +56,25 @@ export interface GameTranslationConfig {
 }
 
 export const PROOF_START_LINE = 2;
+/** The command the worker document puts before `Runner`, on the Runner's own
+ * line. `Runner` elaborates the proof in the level file's scope, which the
+ * native compile captured with Elab.async on (Lean's command-line and
+ * language-server default), so the proof runs as asynchronous tasks; the
+ * qed64 worker starts its FileWorker with `-DElab.async=false` (its
+ * HARDENING #70). With the document's own commands synchronous, the
+ * linters of the Runner command run before the proof's tasks report their
+ * info trees, and every tactic of a correct proof gets a false
+ * linter.unusedTactic / unreachableTactic warning — a warning keeps the
+ * level from completing. This command turns Elab.async back on for the one
+ * Runner command (as stock lean4game's `lake serve` runs it, and as the
+ * level scope already does). A separate command, not `set_option … in`:
+ * an `in` reaches only the inner command, not the linters of the outer
+ * one. On the Runner's line, not a line of its own: GameServer's
+ * getProofState counts the proof from line 2 too (RpcHandlers.lean,
+ * compiled into every snapshot), and line 0 stays the header qed64 reads.
+ * scripts/games-manifest.mjs reads this constant for the bake lane's probe
+ * documents, so the lane checks the document the browser sends. */
+export const RUNNER_PRELUDE = "set_option Elab.async true ";
 /** N1: vscode-jsonrpc's ErrorCodes.PendingResponseRejected — what upstream's
  * client answers its own orphaned requests with when the websocket drops.
  * vscode-languageclient's handleFailedRequest swallows it (and -32096,
@@ -374,12 +394,13 @@ export class GameTranslation {
   }
 
   /** The worker document for the player's text: the level's import line,
-   * GameServer.Runner, and the Runner command whose proof block is the text
-   * (PROOF_START_LINE lines above it). Used for didOpen and for every
-   * full-text didChange, so the worker never sees the bare player text. */
+   * GameServer.Runner, and the Runner command (after RUNNER_PRELUDE) whose
+   * proof block is the text (PROOF_START_LINE lines above it). Used for
+   * didOpen and for every full-text didChange, so the worker never sees the
+   * bare player text. */
   private wrapDocument(content: string): string {
     return (
-      `import ${this.module} import GameServer.Runner \nRunner ` +
+      `import ${this.module} import GameServer.Runner \n${RUNNER_PRELUDE}Runner ` +
       `${JSON.stringify(this.config.gameName)} ${JSON.stringify(this.worldId)} ${this.levelId} ` +
       `(difficulty := ${this.difficulty}) ` +
       `(inventory := [${(this.inventory ?? []).map((s) => JSON.stringify(s)).join(",")}]) ` +
