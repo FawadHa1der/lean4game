@@ -2547,7 +2547,8 @@ is "Live: Lean 4.34 …" above.
   each, the last 16.4 s); a first `.snapz` request ends `ERR_ABORTED` at
   4.09 s; the real snapshot transfer starts at 49.4 s and takes 24.7 s;
   boot 74.8 s. Invisible on localhost; no 4.34 live timeline exists to
-  compare.
+  compare. (Later explained: the `ERR_ABORTED` row is the pairing HEAD, a
+  200; four further cold boots took 23.4–30.6 s with no stall. See Open.)
 - **Cold boots are slower than live 4.34.** The games lane's RAG moved
   ~280 MB in 40.3 s (~7 MB/s); the security lane measured ~11 MB/s, as in
   the 4.34 run. The link was not measured during the games lane (to avoid
@@ -2600,13 +2601,40 @@ is "Live: Lean 4.34 …" above.
   these small files, or the service worker answering from its copy while it
   revalidates. Not yet known whether the time is in R2 or the worker; not
   reproduced at 16:01Z (0.17–1.58 s, idle and during one snapshot
-  download).
+  download), nor at 20:29–21:00Z: 434 host requests every 30 s (maximum
+  TTFB 0.42 s small R2, 0.55 s a 1-byte Range of a large R2 object, 0.35 s
+  static; all colo EWR) and the R2 rows of four cold boots (0.07–0.20 s).
+  What did show: a small request sent while a download runs queues behind
+  it on the page's one HTTP/2 connection (0.4–0.5 s median, static and R2
+  alike; 1.1–2.0 s during a short link dip), so an index fetch or HEAD
+  during a download costs about 0.4 s. No change proposed while the slow
+  episode stays unexplained; the stall probe
+  (`v435/coldboot/stalls/probe-stall.mjs` in the session scratchpad, with
+  a same-connection canary tab) classifies it if it recurs.
 - **Cold first visit: runtime chunks one at a time, the snapshot after the
   last one (live 4.35).** NNG4 from a fresh profile booted in 74.8 s: 8
-  chunks back to back 6.4–48.9 s, then the 24.7 s snapshot transfer; an
-  early `.snapz` request ended `ERR_ABORTED` at 4.09 s. Check whether the
-  snapshot prefetch is meant to overlap the runtime download, and why the
-  early request aborts.
+  chunks back to back 6.4–48.9 s, then the 24.7 s snapshot transfer.
+  - Cause, both in the QED64 library (pin 73d7f3b): `lean.worker.js`
+    `materialize` awaits each chunk before requesting the next (since
+    QED64's first commit, no recorded reason), and `ResidentSession`
+    boots the runtime before it loads the snapshot (QED64 HARDENING #63
+    describes the order; `tests/unit/network-preboot.test.ts` pins it; no
+    memory or request limit depends on it).
+  - The early `.snapz` "`ERR_ABORTED`" at 4.09 s is not a download: it is
+    the pairing check's HEAD (`client/src/wasm/game-boot.ts`
+    `checkSnapshotPairing`), answered 200; Chromium logs a fetch whose
+    body nobody reads as aborted. The worker-script HEADs of
+    `preflightWorkerScripts` show the same.
+  - Worth: four more live cold boots (2026-10-23 20:32–21:00Z, fresh
+    profiles, CDP timing) were ready in 23.4 / 27.0 / 29.6 / 30.6 s with no
+    stall (chunk TTFB ≤ 0.19 s, no gap over 0.42 s), one stream filling the
+    link at 9.9–13.2 MB/s; fetching 3–4 chunks at once would save about
+    0.6 s, overlapping the snapshot about 1.3 s. The 74.8 s sample's
+    multi-second waits did not recur and stay unclassified.
+  - No change proposed. If such stalls recur and prove per request, the
+    change belongs in QED64 (bounded chunk concurrency first); a
+    lean4game-only early `prefetchRaw` would bring back PAR-2 (a joined
+    download that fails leaves the session no retry).
 - **Minor: "QED64: the document changed before this request…" console
   errors in editor mode on the live site** (1–5 per run; 0 locally). The
   proofs complete.
