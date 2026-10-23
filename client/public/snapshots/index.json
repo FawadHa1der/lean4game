@@ -3,15 +3,15 @@
  "snapshots": [
   {
    "name": "testgame",
-   "url": "/snapshots/testgame.8433a313ff78eb4e.snapz",
-   "digest": "sha256:8433a313ff78eb4e1fdc6ed9a4a6fdc89e364ab733893ac64416ef0bce7e542b",
-   "bytes": 553457285,
-   "transfer": 149933562,
+   "url": "/snapshots/testgame.8c34115c6d4b983f.snapz",
+   "digest": "sha256:8c34115c6d4b983f83c5efd960be3d71cf45d7e5919c02896d9bdacc9ca6e132",
+   "bytes": 545144253,
+   "transfer": 148334432,
    "imports": [
     "Game",
     "GameServer.Runner"
    ],
-   "runtime": "wasm64-57ae00dc5f6ce958",
+   "runtime": "wasm64-36d7f415704473d9",
    "roots": [
     "Game",
     "GameServer.Runner"
@@ -19,111 +19,15 @@
   },
   {
    "name": "nng4",
-   "url": "/snapshots/nng4.bc6dd28c66d74472.snapz",
-   "digest": "sha256:bc6dd28c66d7447236235c400b29a5b3ad04e62e8f802f581b21296d9e2e4c9e",
-   "bytes": 574944789,
-   "transfer": 155458190,
+   "url": "/snapshots/nng4.d45f2982ffc7562a.snapz",
+   "digest": "sha256:d45f2982ffc7562ab606a7e6443a2df9325f1827d49aaf2db15d5f8438dce815",
+   "bytes": 571686925,
+   "transfer": 155205162,
    "imports": [
     "Game",
     "GameServer.Runner"
    ],
-   "runtime": "wasm64-57ae00dc5f6ce958",
-   "roots": [
-    "Game",
-    "GameServer.Runner"
-   ]
-  },
-  {
-   "name": "reintro",
-   "url": "/snapshots/reintro.bc6f2128cc1cc485.snapz",
-   "digest": "sha256:bc6f2128cc1cc485b9b3555199ce6a7dfb691b79839196ef24700162e16b7ef3",
-   "bytes": 569043773,
-   "transfer": 153935953,
-   "imports": [
-    "Game",
-    "GameServer.Runner"
-   ],
-   "runtime": "wasm64-57ae00dc5f6ce958",
-   "roots": [
-    "Game",
-    "GameServer.Runner"
-   ]
-  },
-  {
-   "name": "knights",
-   "url": "/snapshots/knights.8ea2d33a8d34cfef.snapz",
-   "digest": "sha256:8ea2d33a8d34cfeff461df078452df36a126fc5c94e7d81165cb5aab9d14441b",
-   "bytes": 731165541,
-   "transfer": 199307181,
-   "imports": [
-    "Game",
-    "GameServer.Runner"
-   ],
-   "runtime": "wasm64-57ae00dc5f6ce958",
-   "roots": [
-    "Game",
-    "GameServer.Runner"
-   ]
-  },
-  {
-   "name": "ntg",
-   "url": "/snapshots/ntg.9388dabeb0256514.snapz",
-   "digest": "sha256:9388dabeb0256514da5e7be9102a20c801068e59db6c872a7f1b2cb796f96b4d",
-   "bytes": 1277174557,
-   "transfer": 364475324,
-   "imports": [
-    "Game",
-    "GameServer.Runner"
-   ],
-   "runtime": "wasm64-57ae00dc5f6ce958",
-   "roots": [
-    "Game",
-    "GameServer.Runner"
-   ]
-  },
-  {
-   "name": "logic",
-   "url": "/snapshots/logic.7e3d110a189e05e4.snapz",
-   "digest": "sha256:7e3d110a189e05e437ace930644ec81cabc1566adaab130a665d42d5ffb680fd",
-   "bytes": 1276723429,
-   "transfer": 364270851,
-   "imports": [
-    "Game",
-    "GameServer.Runner"
-   ],
-   "runtime": "wasm64-57ae00dc5f6ce958",
-   "roots": [
-    "Game",
-    "GameServer.Runner"
-   ]
-  },
-  {
-   "name": "lag",
-   "url": "/snapshots/lag.b182a732c6ac90e2.snapz",
-   "digest": "sha256:b182a732c6ac90e209830b40c3b5579ee09a7598a4a36b4e9004c2950254b4a8",
-   "bytes": 1279213317,
-   "transfer": 364958176,
-   "imports": [
-    "Game",
-    "GameServer.Runner"
-   ],
-   "runtime": "wasm64-57ae00dc5f6ce958",
-   "roots": [
-    "Game",
-    "GameServer.Runner"
-   ]
-  },
-  {
-   "name": "robo",
-   "url": "/snapshots/robo.4f71c4d1a5e28ec7.snapz",
-   "digest": "sha256:4f71c4d1a5e28ec70101ee6363b5f19a58867970860eb9565ebb000c6998ab8a",
-   "bytes": 1012231501,
-   "transfer": 283000792,
-   "imports": [
-    "Game",
-    "GameServer.Runner"
-   ],
-   "runtime": "wasm64-57ae00dc5f6ce958",
+   "runtime": "wasm64-36d7f415704473d9",
    "roots": [
     "Game",
     "GameServer.Runner"
@@ -131,15 +35,47 @@
   },
   {
    "name": "stg4",
-   "url": "/snapshots/stg4.6a37164df3414c9c.snapz",
-   "digest": "sha256:6a37164df3414c9c26993b618e90f842d77c66655d9ac9c02c0afce85f152d14",
-   "bytes": 669599797,
-   "transfer": 181606426,
+   "url": "/snapshots/stg4.48ccba5a8be93e36.snapz",
+   "digest": "sha256:48ccba5a8be93e36d8b6080318ac515055501e7e988a9086655d8ecba3cdcaab",
+   "bytes": 663665797,
+   "transfer": 180766754,
    "imports": [
     "Game",
     "GameServer.Runner"
    ],
-   "runtime": "wasm64-57ae00dc5f6ce958",
+   "runtime": "wasm64-36d7f415704473d9",
+   "roots": [
+    "Game",
+    "GameServer.Runner"
+   ]
+  },
+  {
+   "name": "reintro",
+   "url": "/snapshots/reintro.07da70bf9ac61b41.snapz",
+   "digest": "sha256:07da70bf9ac61b4116734e6297077ade8b4ec51bcbf42b73e7916de5bdc12a31",
+   "bytes": 565917437,
+   "transfer": 153741634,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-36d7f415704473d9",
+   "roots": [
+    "Game",
+    "GameServer.Runner"
+   ]
+  },
+  {
+   "name": "ntg",
+   "url": "/snapshots/ntg.3348e313e1e88224.snapz",
+   "digest": "sha256:3348e313e1e882240b1a747f682c1dcd7da1044d5319645656df06f6eb68e3b9",
+   "bytes": 1263706005,
+   "transfer": 361314473,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-36d7f415704473d9",
    "roots": [
     "Game",
     "GameServer.Runner"
@@ -147,15 +83,79 @@
   },
   {
    "name": "rag",
-   "url": "/snapshots/rag.ba04198e01c50752.snapz",
-   "digest": "sha256:ba04198e01c50752b6cef2f5e582952f11dd73394cc4e7e221dfa258c913febc",
-   "bytes": 1014552989,
-   "transfer": 283605481,
+   "url": "/snapshots/rag.1543a662b845afc1.snapz",
+   "digest": "sha256:1543a662b845afc1573757f5313a8f1a4de92469e67591528d4dff9c740cdbbb",
+   "bytes": 999811797,
+   "transfer": 280800504,
    "imports": [
     "Game",
     "GameServer.Runner"
    ],
-   "runtime": "wasm64-57ae00dc5f6ce958",
+   "runtime": "wasm64-36d7f415704473d9",
+   "roots": [
+    "Game",
+    "GameServer.Runner"
+   ]
+  },
+  {
+   "name": "robo",
+   "url": "/snapshots/robo.92ce7e2103d5f6ba.snapz",
+   "digest": "sha256:92ce7e2103d5f6ba039a26f13f90b19134927c85a1a4f179657cdba662ff714f",
+   "bytes": 997790909,
+   "transfer": 280304343,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-36d7f415704473d9",
+   "roots": [
+    "Game",
+    "GameServer.Runner"
+   ]
+  },
+  {
+   "name": "logic",
+   "url": "/snapshots/logic.2a2f6c7bc14a7dd1.snapz",
+   "digest": "sha256:2a2f6c7bc14a7dd1d59b40e8e60f398e512f550ad49eefcf87a6d4395ba260a6",
+   "bytes": 1263266405,
+   "transfer": 361131525,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-36d7f415704473d9",
+   "roots": [
+    "Game",
+    "GameServer.Runner"
+   ]
+  },
+  {
+   "name": "lag",
+   "url": "/snapshots/lag.fe55552ee963523f.snapz",
+   "digest": "sha256:fe55552ee963523f731bb71f11e95d4d2fffc0eba3c9d1e12cfe618599ab744e",
+   "bytes": 1265726077,
+   "transfer": 361833154,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-36d7f415704473d9",
+   "roots": [
+    "Game",
+    "GameServer.Runner"
+   ]
+  },
+  {
+   "name": "knights",
+   "url": "/snapshots/knights.ab5bbdc3a72773bc.snapz",
+   "digest": "sha256:ab5bbdc3a72773bc1f54d7958f35f6a130232d8b87284d2518147f9c624bda3d",
+   "bytes": 724048693,
+   "transfer": 198243195,
+   "imports": [
+    "Game",
+    "GameServer.Runner"
+   ],
+   "runtime": "wasm64-36d7f415704473d9",
    "roots": [
     "Game",
     "GameServer.Runner"
