@@ -7,7 +7,8 @@ invocation, e.g. "-Dlinter.all=false -Dtactic.hygienic=false" — a game's
 lakefile `leanOptions`, which the catalog row carries (wasm/catalog.json
 leanOptions → build-from-source.sh); compile-time options are captured in
 each level's scope, so nothing else has to replay them at play time.
-Stops at the first module that fails; prints its full stderr."""
+Stops at the first module that fails; prints its full stderr. The messages
+of a module that compiles (warnings) are echoed after its line."""
 import os, re, subprocess, sys
 src, out = sys.argv[1], sys.argv[2]
 roots = sys.argv[3:]
@@ -43,4 +44,10 @@ for i, mod in enumerate(order):
     if r.returncode != 0:
         print(r.stdout[-3000:]); print(r.stderr[-3000:])
         sys.exit(1)
+    # A module that compiles can still print warnings (a deprecated module or
+    # tactic, a missing doc): echo them, so a toolchain bump's new ones show
+    # in the lane log, not only its errors.
+    msgs = (r.stdout + r.stderr).strip()
+    if msgs:
+        print(msgs[:20000] + ("\n… (truncated)" if len(msgs) > 20000 else ""), flush=True)
 print("package complete")

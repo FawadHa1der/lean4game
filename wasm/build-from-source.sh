@@ -5,8 +5,10 @@
 #                        runtime, the library packs, the native compiler and
 #                        the module lists)
 #             → trees   (olean trees: the release's packs unpacked fat for
-#                        compiling and slim for baking; lean-i18n and
-#                        GameServer compiled with the release's native64)
+#                        compiling and slim for baking; lean-i18n,
+#                        GameServer and, while the packs lack it, the
+#                        vendored Batteries.Tactic.OpenPrivate compiled with
+#                        the release's native64)
 #             → games   (each selected catalog game compiled → gamedata + a
 #                        slim per-game olean tree)
 #             → bake    (one environment snapshot per selected game, against
@@ -45,15 +47,14 @@
 #                          snapshot staging dir is wiped and every game is
 #                          rebaked (slim, see SLIM_TREES) — the release-bump path.
 #   --tag <tag>            bundle tag (default artifacts-<runtime build id>)
-#   --verify-snapshots     run each selected game's catalog probe (a Runner
-#                          document, games-manifest.mjs --probe) through
-#                          snapshot-probe.mjs --via-mem — the browser worker's
-#                          load path — against its baked snapshot, and every
-#                          catalog probe of the game (probe, probe2, …: --probes)
+#   --verify-snapshots     run every catalog probe of each selected game
+#                          (probe, probe2, …: --probes; each a Runner document
+#                          as the browser sends it, games-manifest.mjs --probe)
+#                          through snapshot-probe.mjs --via-mem — the browser
+#                          worker's load path — against its baked snapshot and
 #                          through the native compiler against the same
-#                          per-game tree, with a negative control (the wasm
-#                          one-shot compile does not see the errors of a
-#                          Runner proof; lane_bake)
+#                          per-game tree: each must close with no message; and
+#                          a negative control that must fail on both (lane_bake)
 #
 # Inputs (environment, all optional):
 #   RELEASE_FROM  where the release is fetched from. Default: the GitHub release
@@ -62,7 +63,10 @@
 #                 directory (a kernel fix under test, before its owner
 #                 publishes it: copy its release.json over the tracked record
 #                 and install its tools tgz first). The id and digest checks
-#                 are the same for all.
+#                 are the same for all. When the lockfile pins the tools by
+#                 path (devDependency "file:<release dir>/tools/<tgz>", a
+#                 staged release before it is published), the default is
+#                 that release directory.
 #   QED64_DIR     pipeline scripts (bake-snapshot.mjs, snapshot-probe.mjs).
 #                 Default: the installed qed64 package (the SHA pinned in
 #                 client/package.json; `npm ci` installs it), run in place —
@@ -105,7 +109,10 @@
 #
 # Provenance rules (wasm/scripts/tree-stamp.py): the trees lane stamps the
 # base trees with the packs' rawSha256 and the native compiler's tarball
-# sha256 from the record; the games lane stamps each per-game tree with
+# sha256 from the record, plus the sha256 of the sources it compiles into
+# them (BASE_INPUTS: GameServer, lean-i18n, the vendored Batteries leaf; a
+# per-game tree built on older base trees is not caught by its own stamp —
+# rerun the games lane after the trees lane); the games lane stamps each per-game tree with
 # those plus the game's source pin (catalog rev + the patch's sha256), after
 # checking that an existing games-src checkout is exactly rev + patch. The
 # games lane refuses base trees, and the bake lane per-game trees, whose
@@ -145,7 +152,7 @@ done
 # The toolchain release: the tracked record (its id and digest are the pin)
 # and the tools package that reads it, resolved from the repo root.
 REC="$G/wasm/lean4-wasm64-release.json"
-L4W="$(node -p "require('path').dirname(require.resolve('lean4-wasm64/package.json', { paths: [process.argv[1]] }))" "$G" 2>/dev/null || true)"
+L4W="$(cd "$G" && node -p "require('path').dirname(require.resolve('lean4-wasm64/package.json', { paths: [process.argv[1]] }))" "$G" 2>/dev/null || true)"
 [ -n "$L4W" ] || { echo "the lean4-wasm64 tools are not installed — run npm ci in $G" >&2; exit 2; }
 [ -f "$REC" ] || { echo "no toolchain release record at $REC" >&2; exit 2; }
 # The record's fields the lanes read, as KEY=value lines (every value a plain
@@ -167,15 +174,27 @@ eval "$RECORD_VARS"
 # GitHub release download URL), unless RELEASE_FROM names another copy.
 L4W_URL="$(node -p 'require(process.argv[1]).packages?.["node_modules/lean4-wasm64"]?.resolved ?? ""' "$G/package-lock.json" 2>/dev/null || true)"
 [ -n "${RELEASE_FROM:-}" ] || [ -n "$L4W_URL" ] || { echo "package-lock.json pins no lean4-wasm64 tgz — run npm install (or set RELEASE_FROM)" >&2; exit 2; }
-RELEASE_FROM="${RELEASE_FROM:-${L4W_URL%/*}/}"
+if [ -z "${RELEASE_FROM:-}" ]; then
+  case "$L4W_URL" in
+    # The staged release's own tools, pinned by path before its owner
+    # publishes it (file:<release dir>/tools/<tgz>, relative to the repo
+    # root): the release directory, in the served layout, is the tgz's
+    # grandparent.
+    file:*) p="${L4W_URL#file:}"; case "$p" in /*) ;; *) p="$G/$p" ;; esac
+            RELEASE_FROM="$(cd "$(dirname "$p")/.." 2>/dev/null && pwd)/" || { echo "package-lock.json pins lean4-wasm64 at $L4W_URL, whose release directory is missing (or set RELEASE_FROM)" >&2; exit 2; } ;;
+    *) RELEASE_FROM="${L4W_URL%/*}/" ;;
+  esac
+fi
 # The packs a game environment is built from: the browser core (Init), the
 # Mathlib closure QED64 serves (Lean, Std, Mathlib and its dependencies) and
 # the game-only Mathlib leaves (the Mathlib.Tactic umbrella, Have, Cases,
 # Generalize, the *.Star instances, NormNum.Prime, …: release lists/extra-*).
 PACKS="lean-core mathlib-essential mathlib-game-extra"
 # Pipeline scripts: the qed64 package's, resolved the way the bundler resolves
-# `qed64/embed` (from client/, wherever npm put it), run in place.
-QED64_PKG="$(node -p "require('path').dirname(require.resolve('qed64/package.json', { paths: [process.argv[1]] }))" "$G/client" 2>/dev/null || true)"
+# `qed64/embed` (from client/, wherever npm put it), run in place. Resolved
+# from the repo (both lookups): started inside a qed64 checkout, Node's
+# package self-reference would answer `qed64` with that checkout instead.
+QED64_PKG="$(cd "$G/client" && node -p "require('path').dirname(require.resolve('qed64/package.json', { paths: [process.argv[1]] }))" "$G/client" 2>/dev/null || true)"
 QED64_DIR="${QED64_DIR:-$QED64_PKG}"
 [ -n "$QED64_DIR" ] || { echo "the qed64 package is not installed — run npm ci in $G (or set QED64_DIR to a qed64 checkout)" >&2; exit 2; }
 OUT="$G/wasm/out"; TREES="$OUT/trees"; LOGS="$OUT/logs"; PKGS="$OUT/pkgs"
@@ -206,7 +225,10 @@ esac
 DOCKER_LANES="release trees games"; [ "$VERIFY" = 0 ] || DOCKER_LANES="$DOCKER_LANES bake"
 # The provenance stamps of the olean trees (header, "Provenance rules").
 STAMP_TOOL="$G/wasm/scripts/tree-stamp.py"
-BASE_STAMP="$TREES/gamebase.stamp"   # lib-tree{,-slim}, lib-tree-gamebase{,-slim}, pkgs/{i18n,gameserver}
+BASE_STAMP="$TREES/gamebase.stamp"   # lib-tree{,-slim}, lib-tree-gamebase{,-slim}, pkgs/{batteries,i18n,gameserver}
+# The sources the trees lane compiles into the base trees (relative to the
+# repo): part of the base stamp, so editing one makes the base trees stale.
+BASE_INPUTS="vendor/batteries/Batteries vendor/i18n/I18n.lean vendor/i18n/I18n server/GameServer.lean server/GameServer"
 # The modules every game environment is baked with: the bake probe's header,
 # and so the index entry's `imports`, and its `roots` (the module roots the
 # entry serves).
@@ -264,7 +286,7 @@ ensure_image() { # the native compiler's image on this host (built from wasm/doc
 # Provenance stamps (wasm/scripts/tree-stamp.py): what the base trees and a
 # per-game tree must have been built from, by the pinned record (and the
 # catalog row in R_*).
-base_stamp() { python3 "$STAMP_TOOL" "$REC" $PACKS; }
+base_stamp() { (cd "$G" && python3 "$STAMP_TOOL" "$REC" $PACKS --inputs $BASE_INPUTS); }
 game_stamp() { python3 "$STAMP_TOOL" "$REC" $PACKS --source "$R_REV" "$([ "$R_PATCH" = "-" ] && echo - || echo "$G/$R_PATCH")"; }
 stamp_state() { # stamp_state <stamp file> <expected stamp> → ok | stale | missing
   if [ ! -f "$1" ]; then echo missing; elif [ "$(cat "$1")" = "$2" ]; then echo ok; else echo stale; fi
@@ -351,7 +373,7 @@ lane_preflight() {
   # leaves one out shows up here; and the deleted kernel submodule's gitlink.
   if [ "$PLAN" = 0 ] && git -C "$G" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     local f untracked=""
-    for f in wasm/lean4-wasm64-release.json wasm/docker/Dockerfile wasm/scripts/tree-stamp.py $(node "$G/scripts/games-manifest.mjs" --list | cut -f10 | grep -v '^-$'); do
+    for f in wasm/lean4-wasm64-release.json wasm/docker/Dockerfile wasm/scripts/tree-stamp.py vendor/batteries/Batteries/Tactic/OpenPrivate.lean $(node "$G/scripts/games-manifest.mjs" --list | cut -f10 | grep -v '^-$'); do
       git -C "$G" ls-files --error-unmatch -- "$f" >/dev/null 2>&1 || untracked="$untracked $f"
     done
     [ -z "$untracked" ] || warn "not tracked by git — a clone would not have them (git add them with the change that needs them):$untracked"
@@ -447,7 +469,7 @@ lane_release() {
 
 # ------------------------------------------------------------------ trees --
 lane_trees() {
-  say "trees: unpack $PACKS (fat + slim), compile lean-i18n + GameServer with native64, assemble the game base trees"
+  say "trees: unpack $PACKS (fat + slim), compile lean-i18n + GameServer (+ the vendored Batteries.Tactic.OpenPrivate while the packs lack it) with native64, assemble the game base trees"
   local p
   for p in $PACKS; do check "$p manifest fetched (release lane)" test -f "$MIRROR/profiles/$p.manifest.json"; done
   check "native compiler unpacked (release lane)" test -x "$LEAN_BIN"
@@ -485,16 +507,29 @@ for d, _, fs in os.walk(lake):
             if filecmp.cmp(p, q, shallow=False): same += 1
             else: bad.append(os.path.relpath(p, lake))
 print(f'{same} Lake facets in both, identical; {len(bad)} differ', bad[:5]); sys.exit(1 if bad else 0)" "$lakedir" "$TREES/lib-tree"
-  [ "$PLAN" = 1 ] || rm -rf "$TREES/lib-tree-gamebase" "$TREES/lib-tree-gamebase-slim" "$PKGS/i18n" "$PKGS/gameserver"
+  [ "$PLAN" = 1 ] || rm -rf "$TREES/lib-tree-gamebase" "$TREES/lib-tree-gamebase-slim" "$PKGS/i18n" "$PKGS/gameserver" "$PKGS/batteries"
   overlay trees "$TREES/lib-tree" "$TREES/lib-tree-gamebase" 0 "$lakedir"
+  # Batteries.Tactic.OpenPrivate (`open private`, imported by GameServer and
+  # by three games' tactic wrappers): the packs shipped it up to Lean 4.34,
+  # inside Mathlib's closure, which no longer holds it at v4.35. Compiled from
+  # the vendored copy (vendor/batteries/README.md) and merged INTO the base
+  # tree, which already holds the Batteries root — only when the packs lack it.
+  local extra_pkgs=()
+  if [ "$PLAN" = 0 ] && [ -f "$TREES/lib-tree/Batteries/Tactic/OpenPrivate.olean" ]; then
+    note "the release's packs ship Batteries.Tactic.OpenPrivate: vendor/batteries is not compiled (it can be deleted)"
+  else
+    compile_pkg trees "$G/vendor/batteries" "$PKGS/batteries" Batteries.Tactic.OpenPrivate "$TREES/lib-tree-gamebase"
+    run trees "$G" -- rsync -a "$PKGS/batteries/" "$TREES/lib-tree-gamebase/"
+    extra_pkgs=("$PKGS/batteries")
+  fi
   compile_pkg trees "$G/vendor/i18n" "$PKGS/i18n" I18n "$TREES/lib-tree-gamebase:$PKGS/i18n"
   compile_pkg trees "$G/server" "$PKGS/gameserver" GameServer "$TREES/lib-tree-gamebase:$PKGS/i18n:$PKGS/gameserver"
   check "GameServer.Runner compiled" test -f "$PKGS/gameserver/GameServer/Runner.olean"
   run trees "$G" -- rsync -a "$PKGS/i18n/" "$PKGS/gameserver/" "$TREES/lib-tree-gamebase/"
-  # The slim game base: the slim packs plus the same Lake / i18n / GameServer
-  # oleans without their private facets.
-  overlay trees "$TREES/lib-tree-slim" "$TREES/lib-tree-gamebase-slim" 1 "$lakedir" "$PKGS/i18n" "$PKGS/gameserver"
-  if [ "$PLAN" = 1 ]; then note "write $BASE_STAMP: python3 wasm/scripts/tree-stamp.py <record> $PACKS"
+  # The slim game base: the slim packs plus the same Lake / Batteries leaf /
+  # i18n / GameServer oleans without their private facets.
+  overlay trees "$TREES/lib-tree-slim" "$TREES/lib-tree-gamebase-slim" 1 "$lakedir" ${extra_pkgs[@]+"${extra_pkgs[@]}"} "$PKGS/i18n" "$PKGS/gameserver"
+  if [ "$PLAN" = 1 ]; then note "write $BASE_STAMP: python3 wasm/scripts/tree-stamp.py <record> $PACKS --inputs $BASE_INPUTS"
   else base_stamp > "$BASE_STAMP" || die "cannot write $BASE_STAMP"; note "base trees stamped ($BASE_STAMP)"; fi
 }
 
@@ -540,16 +575,20 @@ lane_games() {
     row_vars "$row"
     ensure_source "$R_SRC" "$R_URL" "$R_REV" "$R_PATCH"
     [ "$PLAN" = 1 ] || { rm -f "$TREES/lib-tree-$R_SNAP.stamp"; rm -rf "$PKGS/$R_SNAP"; mkdir -p "$G/$R_SRC/.lake/gamedata"; }
+    # The compile rewrites the .pot translation template (creation date, msgid
+    # order); put the templates back afterwards from a copy taken here, so the
+    # tree stays as it was (clean for the next checkout / git am, and no git
+    # command touches the repo's own TestGame). Only the templates: the
+    # translations tracked beside them (.i18n/<lang>/Game.{po,json}) may hold
+    # uncommitted work. (A game whose .i18n/config.json sets useJson=true
+    # writes .i18n/<sourceLang>/Game.json as its template instead — none in
+    # the catalog does.)
+    local pots="$OUT/pot-templates/$R_SNAP"
+    [ "$PLAN" = 1 ] || rm -rf "$pots"
+    run games "$G" -- bash -c '[ ! -d "$1" ] || rsync -a --include="*/" --include="*.pot" --exclude="*" --prune-empty-dirs "$1/" "$2/"' _ "$G/$R_SRC/.i18n" "$pots"
     compile_pkg games "$G/$R_SRC" "$PKGS/$R_SNAP" Game "$TREES/lib-tree-gamebase:$PKGS/$R_SNAP" "$(lean_flags "$R_OPTS")"
     check "$R_ID gamedata written" test -f "$G/$R_SRC/.lake/gamedata/game.json"
-    # The compile rewrites the .pot translation template (creation date, msgid
-    # order); restore it so the tree stays clean for the next checkout / git am.
-    # Only the templates: the translations tracked beside them
-    # (.i18n/<lang>/Game.{po,json}) may hold uncommitted work. (A game whose
-    # .i18n/config.json sets useJson=true writes .i18n/<sourceLang>/Game.json
-    # as its template instead — none in the catalog does.)
-    if [ -d "$G/$R_SRC/.git" ] || { [ "$PLAN" = 1 ] && [ "$R_URL" != "-" ]; }; then run games "$G" -- bash -c "git -C '$G/$R_SRC' checkout -- '.i18n/*/*.pot' 2>/dev/null || true"
-    else run games "$G" -- bash -c "git -C '$G' checkout -- '$R_SRC/.i18n/*/*.pot' 2>/dev/null || true"; fi
+    run games "$G" -- bash -c '[ ! -d "$1" ] || rsync -a "$1/" "$2/"' _ "$pots" "$G/$R_SRC/.i18n"
     [ "$PLAN" = 1 ] || rm -rf "$TREES/lib-tree-$R_SNAP"
     overlay games "$base" "$TREES/lib-tree-$R_SNAP" "$SLIM_TREES" "$PKGS/$R_SNAP"
     if [ "$PLAN" = 1 ]; then note "write $TREES/lib-tree-$R_SNAP.stamp: the base stamp + source $R_REV <sha256 of $R_PATCH>"
@@ -643,35 +682,70 @@ PY
       # header == the baked import list (anything else is a cache miss, over
       # budget by design); the Runner document is the catalog row's probe.
       if [ "$PLAN" = 1 ]; then note "write $pf from: node scripts/games-manifest.mjs --probe $R_SNAP"
-      else node "$G/scripts/games-manifest.mjs" --probe "$R_SNAP" > "$pf" || die "no probe for $R_SNAP (no game.json yet — games lane not run?)"; fi
-      run bake "$QED64_DIR" -- node --stack-size=8192 "$QED64_DIR/pipeline/snapshot/snapshot-probe.mjs" --via-mem --artifact "$ART" --snap "$BAKE_WORK/$R_SNAP.snap" --lib "$TREES/lib-tree-$R_SNAP" --workspace "$G/$R_SRC" --probe-file "$pf" --budget-ms 600000
-      # That probe proves the snapshot loads and seeds the environment cache
-      # (the compile stays within budget); it cannot judge the proof. Its
-      # one-shot compile (the runtime's lean_wasm_compile) collects each
-      # command's own messages, and under Lean 4.34 the errors of the theorem
-      # `Runner` elaborates never reach them: a wrong proof compiles with
-      # errors=0 there. The release's native compiler runs the same Runner
-      # document against the same per-game tree (cwd = the game, for its
-      # gamedata): the catalog proof must close with no message at all, and
-      # the negative control (the proof replaced by an unknown identifier)
-      # must fail with an error — a silent harness is not a pass. The row's
-      # further probes (probe2, … : a mid-game level's own solution, e.g. the
-      # level that teaches a wrapped tactic) run natively too: a warning there
-      # is a level a player finishes "with warnings", never completed.
+      else write_probe "$R_SNAP" probe "$pf" || die "no probe for $R_SNAP (no game.json yet — games lane not run?)"; fi
+      # The probe runs twice: on the snapshot, loaded as the browser worker
+      # loads it (--via-mem; the compile must stay within budget, which also
+      # proves the environment cache is hit), and with the release's native
+      # compiler against the same per-game tree (cwd = the game, for its
+      # gamedata). On both the catalog proof must close with no message at
+      # all — a warning is a level a player finishes "with warnings", never
+      # completed — and the negative control (the proof replaced by an
+      # unknown identifier) must fail with an error: a silent harness is not
+      # a pass. The wasm one-shot compile (the runtime's lean_wasm_compile)
+      # reports the errors of the theorem `Runner` elaborates since kernel
+      # patch 0037 (adopted with lean-v4.34.0-e1a79c1; QED64 HARDENING #61);
+      # before it a wrong proof compiled there with errors=0, so the native
+      # run was the only verdict. The row's further probes (probe2, … : a
+      # mid-game level's own solution, e.g. the level that teaches a wrapped
+      # tactic) run on both too.
+      wasm_probe "$R_SNAP" "$R_SRC" "$pf" pass
       native_probe "$R_SNAP" "$R_SRC" "$pf" pass
       local nf="$OUT/verify-$R_SNAP.negative.lean"
       if [ "$PLAN" = 1 ]; then note "write $nf: $pf with its proof replaced by 'exact this_is_not_a_proof_of_the_goal'"
       else awk '/:= by$/ { print; print "exact this_is_not_a_proof_of_the_goal"; exit } { print }' "$pf" > "$nf"; fi
+      wasm_probe "$R_SNAP" "$R_SRC" "$nf" fail
       native_probe "$R_SNAP" "$R_SRC" "$nf" fail
       local k kf
       for k in $(node "$G/scripts/games-manifest.mjs" --probes "$R_SNAP"); do
         [ "$k" != probe ] || continue
         kf="$OUT/verify-$R_SNAP.$k.lean"
         if [ "$PLAN" = 1 ]; then note "write $kf from: node scripts/games-manifest.mjs --probe $R_SNAP $k"
-        else node "$G/scripts/games-manifest.mjs" --probe "$R_SNAP" "$k" > "$kf" || die "no $k for $R_SNAP"; fi
+        else write_probe "$R_SNAP" "$k" "$kf" || die "no $k for $R_SNAP"; fi
+        wasm_probe "$R_SNAP" "$R_SRC" "$kf" pass
         native_probe "$R_SNAP" "$R_SRC" "$kf" pass
       done
     done
+  fi
+}
+write_probe() { # write_probe <snapshot> <probe key> <file>   the catalog's Runner document, as the browser sends it
+  # games-manifest.mjs writes the Runner command after the client's
+  # RUNNER_PRELUDE (client/src/wasm/game-translation.ts: `set_option
+  # Elab.async true`, on the Runner's line), read from the client itself, so
+  # the probe is the document the game's worker checks. Without it the wasm
+  # path (synchronous, like qed64's FileWorker) and the level's scope
+  # (captured natively with Elab.async on) disagree, and every tactic of a
+  # correct proof gets a linter.unusedTactic / unreachableTactic warning.
+  node "$G/scripts/games-manifest.mjs" --probe "$1" "$2" > "$3" || { rm -f "$3"; return 1; }
+}
+wasm_probe() { # wasm_probe <snapshot> <src> <probe file under wasm/out> <pass|fail>   the snapshot loaded as the browser worker loads it (--via-mem), the probe compiled on it
+  local name="$1" src="$2" pf="$3" want="$4"
+  local cmd=(node --stack-size=8192 "$QED64_DIR/pipeline/snapshot/snapshot-probe.mjs" --via-mem --dump-messages --artifact "$ART" --snap "$BAKE_WORK/$name.snap" --lib "$TREES/lib-tree-$name" --workspace "$G/$src" --probe-file "$pf" --budget-ms 600000)
+  if [ "$PLAN" = 1 ]; then
+    run bake "$QED64_DIR" -- "${cmd[@]}"
+    note "check: wasm Runner probe $(basename "$pf") $([ "$want" = pass ] && echo 'compiles with no message' || echo 'fails with an error')"; return 0
+  fi
+  local out rc=0 msgs errs
+  printf '   $ %s\n' "${cmd[*]}"
+  out="$(cd "$QED64_DIR" && "${cmd[@]}" 2>&1)" || rc=$?
+  printf '%s\n' "$out" >> "$LOGS/bake.log"
+  msgs="$(grep -c '^\[lean:stdout\]' <<<"$out" || true)"
+  errs="$(grep '^\[lean:stdout\]' <<<"$out" | grep -c '"severity":"error"' || true)"
+  if [ "$want" = pass ]; then
+    [ "$rc" = 0 ] && [ "$msgs" = 0 ] || die "wasm Runner probe $(basename "$pf") of $name: exit $rc, $msgs message(s) — want exit 0 and none: $(grep -m3 -e '^\[lean:stdout\]' -e 'SNAPSHOT PROBE' <<<"$out" | cut -c1-300)"
+    note "wasm Runner probe $(basename "$pf") of $name: proof closes, no message ($(grep -m1 '^compile:' <<<"$out"))"
+  else
+    [ "$rc" != 0 ] && [ "$errs" -ge 1 ] || die "wasm negative control of $name did not fail with an error (exit $rc, $errs error(s))"
+    note "wasm negative control of $name: rejected ($errs error(s))"
   fi
 }
 native_probe() { # native_probe <snapshot> <src> <probe file under wasm/out> <pass|fail>
