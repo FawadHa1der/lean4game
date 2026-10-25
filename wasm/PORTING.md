@@ -93,6 +93,7 @@ LinearAlgebraGame's "297 missing" into 0 with a 40-line import patch.
   "src": "games-src/STG4",
   "source": { "url": "https://github.com/djvelleman/STG4", "rev": "<full sha>", "patch": null },
   "leanOptions": ["linter.all=false", "tactic.hygienic=false"],
+  "runnerOptions": ["linter.tacticAnalysis.introMerge=false"],
   "probe": { "world": "Subset", "level": 1, "proof": "exact h" },
   "probe2": { "world": "…", "level": 5, "proof": "…", "teaches": "…" },
   "expectedRaw": null }
@@ -118,13 +119,33 @@ LinearAlgebraGame's "297 missing" into 0 with a 40-line import patch.
   `linter.all=false` does not cover: an unconditional `logWarning` (Mathlib
   `de3a9cf`'s `push_neg` deprecation — RAG wraps the tactic, §3) and
   command-level linters, which run with the play-time document's own scope
-  — the wasm worker document (`client/src/wasm/game-translation.ts`
-  ~243-245) carries no options, so LAG Tutorial 5 still shows `Try this:
-  intro h1 h2 h3` (the level completes; a client-side fix would apply to
-  every game). Ignore `moreLeanArgs`/`moreServerOptions` (`trace.debug`
-  toggles; `linter.unusedVariables.funArgs` is inert under
-  `linter.all=false` — lean4game-logic's row carries it, Robo's does not,
-  neither matters).
+  — the wasm worker document carries only `RUNNER_PRELUDE` and the row's
+  `runnerOptions` (next bullet), not `leanOptions`. Ignore
+  `moreLeanArgs`/`moreServerOptions` (`trace.debug` toggles;
+  `linter.unusedVariables.funArgs` is inert under `linter.all=false` —
+  lean4game-logic's row carries it, Robo's does not, neither matters).
+- `runnerOptions` (optional, default none): options for the play-time
+  document itself, `option=value` with a value of `true`, `false` or a
+  numeral (`RUNNER_OPTION` in `client/src/wasm/game-translation.ts`; `--check`
+  rejects anything else, because the value is pasted into Lean source and
+  `x=--1` would comment out the `Runner`). `--api` copies them into the
+  game's `/api/games` row; the client writes each as `set_option <option>
+  <value> ` on line 2, after `RUNNER_PRELUDE` and before `Runner`
+  (`runnerOptionCommands`, `wrapDocument`), and `--probe` writes the same
+  text into the probe documents (§5). They are for command-level linters,
+  which `leanOptions` cannot reach: Mathlib's intro-merge linter
+  (`linter.tacticAnalysis.introMerge`) runs on the `Runner` command, so
+  without it a reference proof that starts `intro x` / `intro h` completes
+  "with warnings" and `Try this: intro x h` (51 levels at the Lean 4.35
+  sweep: reintro 26, robo 9, rag 8, stg4 4, logic 2, lag 2). The nine
+  Mathlib games carry `linter.tacticAnalysis.introMerge=false` (user
+  decision 2026-10-25, `wasm/UX-PARITY.md`, "Intro-merge linter off for the
+  Mathlib games"). Per game, not in `RUNNER_PRELUDE`: an option exists only
+  where its declaring module is imported, and `set_option` of an unknown
+  option is an error — TestGame (no Mathlib) must not carry it, or every one
+  of its levels fails with `Unknown option`. A new game's options must be
+  known in every level module's own import closure (line 1 imports the
+  level module, not `Game`); a game-wide mistake shows at the probes.
 - `expectedRaw`: `null` until the first bake, then `{runtime, bytes}` as
   printed; keyed to the runtime (a runtime bump clears it).
 - `probe`: see §5. `probe2`, `probe3`, … (optional): further levels whose
@@ -278,7 +299,8 @@ with the port that hit it (4.33.0-pre unless marked 4.34):
   tactic is never executed") — "Level completed with warnings", never
   completed. Not a game change: the worker document's Runner line starts
   with the command `set_option Elab.async true`
-  (`client/src/wasm/game-translation.ts` `RUNNER_PRELUDE`; not `… in`,
+  (`client/src/wasm/game-translation.ts` `RUNNER_PRELUDE`, followed by the
+  row's `runnerOptions`, §2; not `… in`,
   which does not reach the outer command's linters; not a line of its own,
   GameServer's `getProofState` counts the proof from line 2), and the
   probe documents carry it (§5). A wasm probe without it reproduces the
@@ -344,10 +366,12 @@ importing it. The rules that survive:
 
 The probe is one level and one proof, used twice: the bake lane's
 `snapshot-probe` (`--probe <snapshot>` prints
-`import Game\nimport GameServer.Runner\nset_option Elab.async true Runner "<game.json name>" "<world>" <level> (difficulty := 1) (inventory := []) := by\n<proof>`
-— the `set_option` is the client's `RUNNER_PRELUDE`, read from
-`client/src/wasm/game-translation.ts`, so the probe is the document the
-browser sends; §3, "false unused-tactic warnings")
+`import Game\nimport GameServer.Runner\nset_option Elab.async true [set_option <option> <value> …]Runner "<game.json name>" "<world>" <level> (difficulty := 1) (inventory := []) := by\n<proof>`
+— the first `set_option` is the client's `RUNNER_PRELUDE`, read from
+`client/src/wasm/game-translation.ts`; §3, "false unused-tactic warnings";
+the bracketed ones are the row's `runnerOptions`, written as the client
+writes them, §2 — so the probe is the document the browser sends, apart
+from its `import Game` line)
 and the browser smoke (`qed64/work/games-smoke.mjs`), which clears the
 level's stored progress, opens
 `/#/g/<owner>/<game>/world/<world>/level/<level>`, types the proof and
@@ -507,7 +531,8 @@ every negative control is rejected on both: since kernel patch 0037 (QED64
 HARDENING #61) the wasm one-shot compile reports the errors of a `Runner`
 proof, so the wasm probe is a verdict of its own; the probe documents are the
 browser's, with the client's `RUNNER_PRELUDE` (`set_option Elab.async true`
-before `Runner`; §3, "false unused-tactic warnings"). An all-level sweep ran
+before `Runner`; §3, "false unused-tactic warnings") and, since 2026-10-25,
+the row's `runnerOptions` (§2). An all-level sweep ran
 the 826 model solutions natively and on the snapshots (`wasm/UX-PARITY.md`,
 "Lean 4.35 on the toolchain release"): identical messages on both sides.
 TestGame (6 modules, 26 s): 545,144,253 B raw (−1.5 %), 148,334,432 B

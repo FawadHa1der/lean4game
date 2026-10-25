@@ -2424,14 +2424,15 @@ mutation control; 826 levels):
   KnightsAndKnaves2/8's `#check` lines, RAG L8Pset/3's `norm_num`). Checked
   in the browser on both builds: ReintroductionToProofs QuantifierWorld/7
   and ProductWorld/6 end "Level completed with warnings 🎭" on 4.34 and
-  4.35 alike.
+  4.35 alike. The 51 introMerge levels have passed since 2026-10-25
+  ("Intro-merge linter off for the Mathlib games" below).
 
-Not changed, by decision or as pre-existing (all in "Open" below): the
-introMerge warnings, the QB-2 page errors, the busy tile's ~20 ms
-"Prepare offline" flash between "caching the checker there…" and "Ready"
-during a two-tab Prepare (`client/src/wasm/game-cache.ts` drops the remote
-state on `prepare-ended` before its re-probe lands; unchanged since 4.34),
-and RAG's two upstream level defects.
+Not changed, by decision or as pre-existing (all in "Open" below): the QB-2
+page errors, the busy tile's ~20 ms "Prepare offline" flash between
+"caching the checker there…" and "Ready" during a two-tab Prepare
+(`client/src/wasm/game-cache.ts` drops the remote state on `prepare-ended`
+before its re-probe lands; unchanged since 4.34), and RAG's two upstream
+level defects.
 
 ### Live: Lean 4.35 on the toolchain release (wasm64-port f81943a, 2026-10-23)
 
@@ -2590,6 +2591,87 @@ is "Live: Lean 4.34 …" above.
   Cypress. Every lane and skeptic profile was deleted; nothing was written
   to R2 or a repository.
 
+### Intro-merge linter off for the Mathlib games (lean-v4.35, 2026-10-25)
+
+**Decision (user, 2026-10-25):** switch Mathlib's
+`linter.tacticAnalysis.introMerge` off in the play-time document, and only
+that linter ("Intro-merge off only"; `linter.all=false` for the document was
+the alternative not taken, see "Open"). Resolves the Open item "Reference
+proofs that finish with warnings" for its 51 introMerge levels.
+
+**Mechanism (no rebake, no GameServer change):** an optional catalog field,
+`runnerOptions` (`wasm/PORTING.md` §2). The nine Mathlib games carry
+`["linter.tacticAnalysis.introMerge=false"]`; TestGame carries none (the
+option is unknown there, and `set_option` of it is an error).
+
+- `scripts/games-manifest.mjs --api` copies the field into the game's
+  `/api/games` row.
+- `client/src/wasm/game-boot.ts` `resolveRunnerOptions` reads the row (the
+  same fetch as the snapshot name) and passes it to the translation.
+- `client/src/wasm/game-translation.ts` `wrapDocument` writes each entry as
+  `set_option <option> <value> ` on line 2, after `RUNNER_PRELUDE` and
+  before `Runner`. Line 1 and `PROOF_START_LINE` are unchanged.
+- `--probe` writes the same text, so the bake lane's probes check this
+  document.
+- Entries must match `RUNNER_OPTION`: a dotted name, and `true`, `false` or
+  a numeral. The value is pasted into Lean source, so `x=--1` would comment
+  out the Runner. `--check`, `--api` and `--probe` refuse any other entry,
+  and the client skips it with a console warning.
+- `/api/games` is precached by the service worker, so offline play keeps
+  the options. A page that cannot read `/api/games` boots without them:
+  the intro-merge warnings come back, nothing else changes.
+
+**All-level sweep** (826 levels, the "Lean 4.35 on the toolchain release"
+method with the option added after `Elab.async`; native and wasm):
+
+| | pass | pass, warnings | a | b (error / `sorry`) | c |
+|---|---|---|---|---|---|
+| before (after the Knights re-cut) | 761 | 53 | 0 | 2 / 10 | 0 |
+| after | **812** | **2** | 0 | 2 / 10 | 0 |
+
+- All 51 introMerge levels moved from "pass, warnings" to pass: reintro
+  26, Robo 9, RAG 8, STG4 4, lean4game-logic 2, LAG 2.
+- No other level's messages changed on either side (each side compared to
+  its baseline minus the introMerge warnings; severity, line, column,
+  text, information messages included). Native and wasm agree on all 826
+  levels. The mutation control fails on all 826, with identical messages.
+- **Kept, by decision:** the 2 genuine unused-tactic warnings. Knights
+  KnightsAndKnaves2/8 (4 "`#check …` does nothing" on its `#check` lines)
+  and RAG L8Pset/3 (`norm_num` does nothing) still finish "with
+  warnings", with their messages unchanged.
+- In the browser's own layout (options on the Runner's line, level-module
+  imports), 822 of the 823 played level modules accept the option with no
+  message natively. The 823rd is RAG L24Pset/2, which has no module
+  (`[anonymous]`; already on the b-list).
+
+**Lane probes:** all 24 catalog probes and 10 negative controls on the
+snapshots (`snapshot-probe --via-mem`) and natively: 34/34 on both sides.
+Line 3 of every probe document equals the line 2 the real
+`GameTranslation` writes.
+
+**Browser (local `:3009`, not deployed):**
+
+- Ten-game smoke 10/10 "Level completed! 🎉" with 0 warning diagnostics.
+  Line 2 carries the option in the nine Mathlib games and not in TestGame.
+- Former introMerge levels, reference proofs: reintro QuantifierWorld/7
+  and ProductWorld/6, Robo Samarkand/1, RAG RealAnalysisStory/6, STG4
+  Subset/5, logic ImpTactic/6 and LAG TutorialWorld/5 all finish "🎉" with
+  no warning. Before, QuantifierWorld/7 and ProductWorld/6 showed "with
+  warnings 🎭" and `Try this: intro …`.
+- A player typing `intro p`, `intro h`, … key by key: reintro
+  ImplicationWorld/9 and logic ImpTactic/6 complete with no warning.
+- Knights KnightsAndKnaves2/8 and RAG L8Pset/3 still finish "with warnings
+  🎭", each warning on its own line.
+- No `Unknown option` anywhere; TestGame and NNG4 complete.
+- RAG Lecture10/1, the `decide` stack check, error lines and hovers are
+  unchanged.
+- Offline: reintro prepared, then booted with every connection refused.
+  The row came from the shell cache and both reintro levels completed
+  "🎉".
+- After the hardening of the entry pattern (bundle `index-ICO6rk6D.js`, SW
+  `2f3dc883f12e`), a re-check: QuantifierWorld/7 "🎉" with the option on
+  line 2, TestGame TestWorld/1 "🎉" without it, no warnings.
+
 ## Open
 
 - **Edge latency on the R2-backed `must-revalidate` files (live 4.35,
@@ -2638,19 +2720,28 @@ is "Live: Lean 4.34 …" above.
 - **Minor: "QED64: the document changed before this request…" console
   errors in editor mode on the live site** (1–5 per run; 0 locally). The
   proofs complete.
-- **Reference proofs that finish "with warnings" (Lean 4.35 sweep, 53
-  levels, the same on the live 4.34 site).** 51 trip Mathlib's
-  `linter.tacticAnalysis.introMerge` ("Try this: intro x h") on
-  consecutive `intro`s — ReintroductionToProofs 26, RAG 9, Robo 9, STG4
-  4, lean4game-logic 2, LAG 2 (lists in "Lean 4.35 on the toolchain
-  release") — and a player who writes `intro x` then `intro h` meets the
-  same; 2 are genuine unused tactics (Knights KnightsAndKnaves2/8, RAG
-  L8Pset/3). Such a level is never marked completed and its new tiles are
-  not added to the inventory; at difficulty ≥ 2 Next stays disabled. A UX
-  decision: switching the linter off for Runner documents needs a
-  GameServer / level-scope change (a ten-game rebake); it cannot go into
-  the client's `RUNNER_PRELUDE`, since the option exists only where Mathlib
-  is imported (TestGame would get "unknown option").
+- **Reference proofs that finish "with warnings": resolved 2026-10-25**
+  for the 51 introMerge levels, by user decision: the nine Mathlib games set
+  `linter.tacticAnalysis.introMerge=false` through the catalog's
+  `runnerOptions`, written on the Runner's line per game. This needed no
+  GameServer change and no rebake, and TestGame gets no option. Sweep:
+  pass-with-warnings 53 → 2. The 2 left are genuine and kept on purpose:
+  Knights KnightsAndKnaves2/8 and RAG L8Pset/3, unused tactics. Details
+  in "Intro-merge linter off for the Mathlib games" above.
+- **Upstream parity: play-time linter options (recorded for a later
+  decision).** Upstream's `lake serve` gives each game's document the
+  package's server options. Lake's `Package.moreServerOptions` is
+  `leanOptions ++ moreServerOptions` (Lake `Config/Package.lean`
+  288-289, Lean 4.35). So upstream players of the seven games whose
+  lakefile sets `linter.all=false` (NNG4, STG4, ReintroductionToProofs,
+  Knights, NTG, RAG, Robo) see no linter warnings at all. That includes the
+  2 unused-tactic levels above. Our document applies only `RUNNER_PRELUDE`
+  and the row's `runnerOptions`, not `leanOptions`. lean4game-logic and LAG
+  set no `linter.all` upstream either: their lakefiles have only
+  `moreServerOptions`, and the catalog adds `linter.all=false` to their
+  `leanOptions`, PORTING.md §2. Not adopted: the user chose intro-merge
+  only. Adopting it would mean writing each game's `linter.all=false` (or
+  all its `leanOptions`) as `runnerOptions`.
 - **RAG upstream level defects (report upstream):** Lecture22/3's model
   solution uses Finset's scoped `#(range n)`, which the Runner document
   does not open (a parse error; other routes work), and L24Pset/2 has no

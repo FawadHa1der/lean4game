@@ -258,7 +258,11 @@ browser-lock hold per bake); what changed in the sources:
   why: "The qed64 dependency", pin `73d7f3b`), and the bake lane's probe
   documents read that prelude from the client
   (`scripts/games-manifest.mjs --probe`), so the lane checks what the browser
-  sends.
+  sends. Since 2026-10-25 the prelude is followed by the game's catalog
+  `runnerOptions` (served in `/api/games`, also written into the probe
+  documents): `linter.tacticAnalysis.introMerge=false` for the nine Mathlib
+  games (`wasm/PORTING.md` §2; `wasm/UX-PARITY.md`, "Intro-merge linter off
+  for the Mathlib games").
 - **Lane**: `--verify-snapshots` now gives the wasm probe a verdict of its
   own (every catalog probe closes with no message on the snapshot, and the
   negative control fails there — possible since patch 0037); the base stamp
@@ -975,7 +979,9 @@ since the Lean 4.35 port the wasm probe is a verdict too (no message; the
 negative control fails); the native run stays as the cross-check. The
 probe documents carry the client's `RUNNER_PRELUDE`: without it the
 one-shot compile, synchronous like QED64's FileWorker, printed 1, 22 and 50
-false unused/unreachable-tactic warnings on three correct probes.
+false unused/unreachable-tactic warnings on three correct probes. They also
+carry the catalog row's `runnerOptions`, written as the client writes them
+(`wasm/PORTING.md` §2).
 
 The trees are the browser's: the bake mounts `unpack --slim` of the very
 packs whose fat copies the games were compiled against (Init from
