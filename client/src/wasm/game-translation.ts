@@ -18,11 +18,12 @@
  *  - didOpen of the level uri (level-uri.ts) — and every FULL-text didChange
  *    (the resident front door syncs whole documents): rewrite the text to
  *      import {level module} import GameServer.Runner \n
- *      set_option Elab.async true Runner "{game}" "{world}" {level} (difficulty := d) (inventory := [..]) := by\n
+ *      set_option Elab.async true [set_option … ]Runner "{game}" "{world}" {level} (difficulty := d) (inventory := [..]) := by\n
  *      {player text}\n
  *    so player content starts at line 2 (PROOF_START_LINE), and point every
- *    uri at the single constant worker document. (`set_option Elab.async
- *    true` is the one wasm64 addition to upstream's text: RUNNER_PRELUDE.)
+ *    uri at the single constant worker document. (The `set_option` commands
+ *    are the wasm64 additions to upstream's text: RUNNER_PRELUDE, then the
+ *    game's runnerOptions.)
  *  - all positions shifted +2 lines; server→client shifted −2, uris mapped
  *    back, range semanticTokens disabled, full semanticTokens rebased.
  */
@@ -53,6 +54,9 @@ export interface GameTranslationConfig {
    * relay's approach — goes stale and forces reconnects upstream). */
   difficulty?: () => number;
   inventory?: () => string[];
+  /** The game's catalog `runnerOptions` (`option=value`, from /api/games):
+   * set before `Runner` after RUNNER_PRELUDE (runnerOptionCommands). */
+  runnerOptions?: string[];
 }
 
 export const PROOF_START_LINE = 2;
@@ -75,6 +79,39 @@ export const PROOF_START_LINE = 2;
  * scripts/games-manifest.mjs reads this constant for the bake lane's probe
  * documents, so the lane checks the document the browser sends. */
 export const RUNNER_PRELUDE = "set_option Elab.async true ";
+/** One catalog `runnerOptions` entry: a dotted option name, `=`, and a value
+ * Lean's `set_option` reads as a plain token (`true`, `false` or a numeral).
+ * The value is pasted into Lean source unescaped, so anything wider could
+ * comment out or swallow the Runner (`x=--1`, `x=/-1`, `x="1`, `x=«1`) or
+ * break line 2. scripts/games-manifest.mjs reads this literal (`--check`,
+ * `--api`, `--probe`), so the catalog, the probe documents and the browser
+ * accept exactly the same entries. Keep it on one line, without `/`. */
+export const RUNNER_OPTION = /^([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)=(true|false|[0-9]+)$/;
+/** The game's own options for the Runner command, after RUNNER_PRELUDE and on
+ * the same line, one `set_option` command each: wasm/catalog.json
+ * `runnerOptions` (`option=value`), served in /api/games and written the same
+ * way by scripts/games-manifest.mjs for the lane's probe documents. Today
+ * `linter.tacticAnalysis.introMerge=false` for the Mathlib games: Mathlib's
+ * intro-merge linter runs on the Runner command with the document's options
+ * (the level scope's `linter.all=false` does not reach it) and turned 51
+ * reference proofs into "completed with warnings" ("Try this: intro x h").
+ * Per game, because the option exists only where Mathlib is imported — in
+ * TestGame `set_option` of it is an error. An entry that does not match
+ * RUNNER_OPTION (a malformed or foreign /api/games), or a value that is not
+ * a list at all, is skipped with a warning, never written. */
+export function runnerOptionCommands(options: readonly unknown[] | undefined): string {
+  let out = "";
+  if (options != null && !Array.isArray(options)) {
+    console.warn(`[game-translation] runnerOptions ${JSON.stringify(options)} is not a list — skipped`);
+    return out;
+  }
+  for (const o of options ?? []) {
+    const m = typeof o === "string" ? RUNNER_OPTION.exec(o) : null;
+    if (m) out += `set_option ${m[1]} ${m[2]} `;
+    else console.warn(`[game-translation] runner option ${JSON.stringify(o)} is not option=true|false|numeral — skipped`);
+  }
+  return out;
+}
 /** N1: vscode-jsonrpc's ErrorCodes.PendingResponseRejected — what upstream's
  * client answers its own orphaned requests with when the websocket drops.
  * vscode-languageclient's handleFailedRequest swallows it (and -32096,
@@ -394,13 +431,13 @@ export class GameTranslation {
   }
 
   /** The worker document for the player's text: the level's import line,
-   * GameServer.Runner, and the Runner command (after RUNNER_PRELUDE) whose
-   * proof block is the text (PROOF_START_LINE lines above it). Used for
-   * didOpen and for every full-text didChange, so the worker never sees the
-   * bare player text. */
+   * GameServer.Runner, and the Runner command (after RUNNER_PRELUDE and the
+   * game's runnerOptionCommands) whose proof block is the text
+   * (PROOF_START_LINE lines above it). Used for didOpen and for every
+   * full-text didChange, so the worker never sees the bare player text. */
   private wrapDocument(content: string): string {
     return (
-      `import ${this.module} import GameServer.Runner \n${RUNNER_PRELUDE}Runner ` +
+      `import ${this.module} import GameServer.Runner \n${RUNNER_PRELUDE}${runnerOptionCommands(this.config.runnerOptions)}Runner ` +
       `${JSON.stringify(this.config.gameName)} ${JSON.stringify(this.worldId)} ${this.levelId} ` +
       `(difficulty := ${this.difficulty}) ` +
       `(inventory := [${(this.inventory ?? []).map((s) => JSON.stringify(s)).join(",")}]) ` +

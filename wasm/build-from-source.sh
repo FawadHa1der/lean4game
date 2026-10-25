@@ -725,6 +725,9 @@ write_probe() { # write_probe <snapshot> <probe key> <file>   the catalog's Runn
   # path (synchronous, like qed64's FileWorker) and the level's scope
   # (captured natively with Elab.async on) disagree, and every tactic of a
   # correct proof gets a linter.unusedTactic / unreachableTactic warning.
+  # Then the row's runnerOptions (`set_option <option> <value> ` each, as the
+  # client writes them from /api/games; wasm/PORTING.md §2), also on the
+  # Runner's line.
   node "$G/scripts/games-manifest.mjs" --probe "$1" "$2" > "$3" || { rm -f "$3"; return 1; }
 }
 wasm_probe() { # wasm_probe <snapshot> <src> <probe file under wasm/out> <pass|fail>   the snapshot loaded as the browser worker loads it (--via-mem), the probe compiled on it

@@ -1,5 +1,5 @@
 // Run: node client/src/wasm/game-translation.test.ts  (Node ≥22 type stripping)
-import { GameTranslation, shiftLines, rebaseSemanticTokens, PROOF_START_LINE, RUNNER_PRELUDE } from "./game-translation.ts";
+import { GameTranslation, shiftLines, rebaseSemanticTokens, PROOF_START_LINE, RUNNER_PRELUDE, runnerOptionCommands } from "./game-translation.ts";
 import assert from "node:assert";
 import { levelUri, parseLevelUri } from "./level-uri";
 
@@ -28,6 +28,47 @@ assert.deepEqual(parseLevelUri("file:///Tutorial/3.lean"), { worldId: "Tutorial"
   assert.equal(out[0], 0);          // line 2 - PROOF_START_LINE
   assert.equal(out.length, 10);     // two tokens survive
   assert.deepEqual(rebaseSemanticTokens([0,0,6,1,0]), []); // all header
+}
+
+// runnerOptionCommands: catalog `option=value` → one `set_option` command
+// each, in order; anything else is skipped (it could break the Runner's line,
+// or comment out / swallow the Runner: the value is pasted unescaped).
+{
+  assert.equal(runnerOptionCommands(undefined), "");
+  assert.equal(runnerOptionCommands([]), "");
+  assert.equal(runnerOptionCommands(["linter.tacticAnalysis.introMerge=false"]), "set_option linter.tacticAnalysis.introMerge false ");
+  assert.equal(runnerOptionCommands(["a.b=1", "c=true"]), "set_option a.b 1 set_option c true ");
+  const warn = console.warn; let warned = 0; console.warn = () => { warned++; };
+  try {
+    const bad = ["x=1\nRunner", "y = 2", "=3", "z=", "x=--1", "x=/-1", 'x="1', "x=«1", "x=1--", "1x=true", "a..b=1", "x.=1", 5, null];
+    assert.equal(runnerOptionCommands([...bad, "linter.all=false"] as unknown[]), "set_option linter.all false ");
+    assert.equal(warned, bad.length);
+    // Not a list (a hand-edited or foreign /api/games row): nothing, no throw.
+    for (const v of [5, { a: 1 }, "x=1"]) assert.equal(runnerOptionCommands(v as unknown as string[]), "");
+    assert.equal(runnerOptionCommands(null as unknown as string[]), "");
+  } finally { console.warn = warn; }
+}
+
+// A game with runnerOptions (the Mathlib games: intro-merge off): the
+// commands follow RUNNER_PRELUDE on the Runner's own line; the proof stays at
+// PROOF_START_LINE.
+{
+  const upstream = new MessageChannel();
+  const gt = new GameTranslation({ gameName: "MyGame", levelData: (w, l) => ({ module: `Game.Levels.${w}.L0${l}_X` }) });
+  gt.configure({ runnerOptions: ["linter.tacticAnalysis.introMerge=false"] });
+  gt.attachServer(upstream.port1);
+  const toWorker: any[] = [];
+  upstream.port2.onmessage = (e) => toWorker.push(e.data);
+  upstream.port2.start?.();
+  gt.clientPort.start?.();
+  (gt.clientPort as any).postMessage({ jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: "file:///levels/QuantifierWorld__7.lean", languageId: "lean4", version: 1, text: "intro h\nintro a" } } });
+  setTimeout(() => {
+    const lines: string[] = toWorker[0].params.textDocument.text.split("\n");
+    assert.equal(lines[0], "import Game.Levels.QuantifierWorld.L07_X import GameServer.Runner ");
+    assert.equal(lines[1], 'set_option Elab.async true set_option linter.tacticAnalysis.introMerge false Runner "MyGame" "QuantifierWorld" 7 (difficulty := 1) (inventory := []) := by');
+    assert.equal(lines[PROOF_START_LINE], "intro h");
+    upstream.port1.close(); upstream.port2.close(); gt.clientPort.close();
+  }, 30);
 }
 
 // Full round trip through the ports

@@ -27,6 +27,7 @@ const games = (catalog.games ?? []).map((g) => ({
   id: `g/${g.owner}/${g.game}`,
   reserveBytes: g.reserveBytes ?? catalog.defaults?.reserveBytes ?? 2147483648,
   leanOptions: g.leanOptions ?? [],
+  runnerOptions: g.runnerOptions ?? [],
 }));
 const uiLanguages = () => JSON.parse(fs.readFileSync(path.join(root, "client/src/config.json"), "utf8")).languages.map((l) => l.iso);
 
@@ -58,6 +59,7 @@ function check() {
     }
     if (!Array.isArray(g.leanOptions) || g.leanOptions.some((o) => typeof o !== "string" || !/^[A-Za-z0-9_.]+=[^\s]+$/.test(o)))
       errors.push(`${where} leanOptions must be an array of "option=value" strings`);
+    try { runnerOptionsOf(g); } catch (e) { errors.push(e.message); }
     if (g.source === null || g.source === undefined) {
       if (!fs.existsSync(path.join(root, g.src))) errors.push(`${where} src '${g.src}' is missing and no source {url, rev} is set`);
     } else {
@@ -98,12 +100,39 @@ function runnerPrelude() {
   return JSON.parse(m[1]);
 }
 
+/** The pattern one `runnerOptions` entry must match, read from the client
+ * (client/src/wasm/game-translation.ts RUNNER_OPTION) like RUNNER_PRELUDE:
+ * the browser skips any entry that does not match it, so a catalog entry
+ * outside it would make the probe documents differ from what players get. */
+function runnerOptionPattern() {
+  const src = fs.readFileSync(path.join(root, "client/src/wasm/game-translation.ts"), "utf8");
+  const m = /^export const RUNNER_OPTION = \/([^/\n]+)\/;$/m.exec(src);
+  if (!m) throw new Error("client/src/wasm/game-translation.ts: no `export const RUNNER_OPTION = /…/;` line");
+  return new RegExp(m[1]);
+}
+
+/** The row's validated `runnerOptions` ([name, value] pairs). Every mode that
+ * uses them goes through here (`--check`, `--api`, `--probe`), so a manual
+ * `--api` or `--probe` cannot write what the browser would skip. */
+function runnerOptionsOf(g) {
+  const re = runnerOptionPattern();
+  const parsed = Array.isArray(g.runnerOptions) ? g.runnerOptions.map((o) => (typeof o === "string" ? re.exec(o) : null)) : [null];
+  if (parsed.some((m) => !m))
+    throw new Error(`${g.id}: runnerOptions must be an array of "option=value" strings matching ${re} (value true, false or a numeral)`);
+  return parsed.map((m) => [m[1], m[2]]);
+}
+
+/** The row's `runnerOptions` as the browser writes them before `Runner`
+ * (client/src/wasm/game-translation.ts runnerOptionCommands, which reads the
+ * same list from /api/games): `option=value` → `set_option option value `. */
+const runnerOptionCommands = (g) => runnerOptionsOf(g).map(([k, v]) => `set_option ${k} ${v} `).join("");
+
 const probeText = (g, key = "probe") => {
   const gj = gameJson(g);
   if (!gj) throw new Error(`${g.id}: no game.json (run the games lane or stage the game first)`);
   const p = g[key];
   if (!p) throw new Error(`${g.id}: no ${key} in its catalog row`);
-  return `import Game\nimport GameServer.Runner\n${runnerPrelude()}Runner "${gj.json.name}" "${p.world}" ${p.level} (difficulty := 1) (inventory := []) := by\n${p.proof}\n`;
+  return `import Game\nimport GameServer.Runner\n${runnerPrelude()}${runnerOptionCommands(g)}Runner "${gj.json.name}" "${p.world}" ${p.level} (difficulty := 1) (inventory := []) := by\n${p.proof}\n`;
 };
 
 const mode = process.argv[2];
@@ -122,7 +151,9 @@ if (mode === "--check") {
   for (const g of games) {
     const gj = gameJson(g);
     if (!gj) { console.warn(`api/games: ${g.id} has no game.json yet — skipped`); continue; }
-    out.push({ owner: g.owner, game: g.game, listed: g.listed, snapshot: g.snapshot, tile: gj.json.tile, settings: gj.json.settings ?? undefined });
+    runnerOptionsOf(g); // throws on an entry the browser would skip
+    out.push({ owner: g.owner, game: g.game, listed: g.listed, snapshot: g.snapshot, tile: gj.json.tile, settings: gj.json.settings ?? undefined,
+      runnerOptions: g.runnerOptions.length ? g.runnerOptions : undefined });
   }
   const dst = path.join(root, "client/public/api/games");
   fs.mkdirSync(path.dirname(dst), { recursive: true });

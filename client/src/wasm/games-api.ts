@@ -33,6 +33,9 @@ export interface ApiGame extends GameTileWithName {
   listed: boolean;
   snapshot: string;
   settings?: GameInfo["settings"];
+  /** `option=value` entries the worker document sets before `Runner`
+   * (catalog `runnerOptions`; absent when the game has none). */
+  runnerOptions?: string[];
 }
 
 export const gameIdOf = (row: Pick<ApiGame, "owner" | "game">): string => `g/${row.owner}/${row.game}`;

@@ -98,6 +98,22 @@ async function resolveSnapshotName(gameId: string): Promise<string> {
   return fallback;
 }
 
+/** The game's catalog `runnerOptions` (the /api/games row, read once per page
+ * like the snapshot name): `set_option` commands the worker document puts
+ * before `Runner` (game-translation.ts runnerOptionCommands, which also skips
+ * any entry that is not a valid option). None for a game the catalog does not
+ * know, a row whose field is not a list, or a page that cannot read
+ * /api/games: the document then only lacks those options (e.g. intro-merge
+ * warnings return). Never throws. */
+async function resolveRunnerOptions(gameId: string): Promise<string[]> {
+  try {
+    const v: unknown = (await findApiGame(gameId))?.runnerOptions;
+    if (v === undefined || Array.isArray(v)) return (v as string[] | undefined) ?? [];
+    console.warn(`[game-boot] ${gameId}: /api/games runnerOptions is not a list; ignored`);
+  } catch { /* resolveSnapshotName already warned about /api/games */ }
+  return [];
+}
+
 /** The environment this page's session is bound to, once the pairing check
  * has passed: the level pane reads the transfer size from it ("about N MB")
  * instead of a literal. Null on the landing page and until the check ran. */
@@ -1053,6 +1069,10 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     // Bind the snapshot from the catalog and check its pairing before the
     // gamedata (80 small files for NNG4) and long before any artifact byte.
     ui.busy("checking this game's environment");
+    // Started first so both read ONE /api/games fetch (findApiGame shares an
+    // in-flight request; a failed one is not memoised, so a later start
+    // would fetch — and maybe stall — a second time).
+    const runnerOptions = resolveRunnerOptions(boundGameId!);
     const snapshot = await resolveSnapshotName(boundGameId!);
     const { entry, index } = await checkSnapshotPairing(snapshot);
     boundEntry = entry;
@@ -1088,6 +1108,7 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     }).catch(() => {}));
     translation.configure({
       gameName: bundle.gameName,
+      runnerOptions: await runnerOptions,
       levelData: (w, l) => bundle.levels.get(`${w}/${l}`),
       difficulty: () => store.get(difficultyAtom),
       inventory: () => store.get(progressAtom)?.inventory ?? [],

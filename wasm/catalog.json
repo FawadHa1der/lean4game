@@ -37,6 +37,7 @@
         "linter.all=false",
         "tactic.hygienic=false"
       ],
+      "runnerOptions": ["linter.tacticAnalysis.introMerge=false"],
       "probe": {
         "world": "Tutorial",
         "level": 1,
@@ -68,6 +69,7 @@
         "linter.all=false",
         "tactic.hygienic=false"
       ],
+      "runnerOptions": ["linter.tacticAnalysis.introMerge=false"],
       "probe": {
         "world": "Subset",
         "level": 1,
@@ -106,6 +108,7 @@
         "pp.showLetValues=true",
         "tactic.hygienic=false"
       ],
+      "runnerOptions": ["linter.tacticAnalysis.introMerge=false"],
       "probe": {
         "world": "TypeWorld",
         "level": 1,
@@ -137,6 +140,7 @@
         "linter.all=false",
         "tactic.hygienic=false"
       ],
+      "runnerOptions": ["linter.tacticAnalysis.introMerge=false"],
       "probe": {
         "world": "EquationalReasoning",
         "level": 1,
@@ -187,6 +191,7 @@
         "pp.showLetValues=true",
         "tactic.hygienic=false"
       ],
+      "runnerOptions": ["linter.tacticAnalysis.introMerge=false"],
       "probe": {
         "world": "Divisibility",
         "level": 1,
@@ -218,6 +223,7 @@
         "linter.all=false",
         "tactic.hygienic=false"
       ],
+      "runnerOptions": ["linter.tacticAnalysis.introMerge=false"],
       "probe": {
         "world": "RealAnalysisStory",
         "level": 1,
@@ -259,6 +265,7 @@
         "linter.all=false",
         "tactic.hygienic=false"
       ],
+      "runnerOptions": ["linter.tacticAnalysis.introMerge=false"],
       "probe": {
         "world": "Logo",
         "level": 1,
@@ -291,6 +298,7 @@
         "tactic.hygienic=false",
         "linter.unusedVariables.funArgs=true"
       ],
+      "runnerOptions": ["linter.tacticAnalysis.introMerge=false"],
       "probe": {
         "world": "AndIntro",
         "level": 1,
@@ -324,6 +332,7 @@
         "trace.debug=false",
         "linter.all=false"
       ],
+      "runnerOptions": ["linter.tacticAnalysis.introMerge=false"],
       "probe": {
         "world": "TutorialWorld",
         "level": 1,
