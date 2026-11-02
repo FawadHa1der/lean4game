@@ -50,7 +50,7 @@ import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing, p
 import { rememberGamedata } from "./gamedata-cache";
 import { NETWORK_WAIT_LABEL, STALE_INITIALIZE_LABEL, STARTING_LABEL, deathWords, haltFacts, haltedNote, isNetworkDeath, isRuntimeVerdict, isStalePageDeath, networkInEpisode, readDeath, rebootLabel, rebootNote, staleInitialize, type DeathLike } from "./death-kind";
 import { stageLabel } from "./boot-labels";
-import { preflightScripts, type Preflight } from "./head-checks";
+import { headThroughHolds, preflightScripts, snapshotMissing, type Preflight } from "./head-checks";
 import { MiB, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
 import { endDownload, heldButNotRevalidated, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareRunning, preparesDownloading, prepareStatusesAtom, reportDownload, runWhenOnline, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
 import { embeddedImageUrls, fetchGameDataUrls } from "./game-data-urls";
@@ -136,12 +136,13 @@ export const boundEnvironmentAtom = atom<BoundEnvironment | null>(null);
  * "index says yes, object missing" case (a publish window, a failed upload)
  * is one HEAD away (infra/worker.js serves HEAD from R2). A region already
  * inflated into OPFS needs no object, so the HEAD is skipped for it and an
- * offline reload keeps working. The thrown message is the reason only: the
- * boot's catch prefixes "Lean failed to start: " and the level pane shows
- * it as the failure card. SEC1: qed64's loader refused the index whole if
- * any url left this origin (fetchSnapshotIndexOnce), so the HEAD stays on
- * this site. */
-async function checkSnapshotPairing(snapshot: string): Promise<{ entry: SnapshotEntry; index: SnapshotIndex; buildId: string }> {
+ * offline reload keeps working. A HEAD the network cut is no such answer: the
+ * boot holds for the connection, as the worker-script preflight does, and asks
+ * again (head-checks.ts). The thrown message is the reason only: the boot's
+ * catch prefixes "Lean failed to start: " and the level pane shows it as the
+ * failure card. SEC1: qed64's loader refused the index whole if any url left
+ * this origin (fetchSnapshotIndexOnce), so the HEAD stays on this site. */
+async function checkSnapshotPairing(snapshot: string, ui: StatusSink): Promise<{ entry: SnapshotEntry; index: SnapshotIndex; buildId: string }> {
   const [buildId, index] = await Promise.all([resolveRuntimeBuildId(), fetchSnapshotIndexOnce()]);
   const unpublished = (why: string) => new Error(`the environment "${snapshot}" is not published for this build (${why})`);
   if (!index) throw unpublished(`the snapshot index could not be read; this shell runs ${buildId}`);
@@ -149,20 +150,28 @@ async function checkSnapshotPairing(snapshot: string): Promise<{ entry: Snapshot
   if (!entry) throw unpublished(`no entry in the snapshot index; this shell runs ${buildId}`);
   if (entry.runtime !== buildId) throw unpublished(`baked for ${entry.runtime ?? "an unknown runtime"}, this shell runs ${buildId}`);
   if (!(await isRawCached(entry))) {
-    const head = await fetch(entry.url, { method: "HEAD" }).catch(() => null);
-    // A static host answers 404 for a missing object; a single-page fallback
-    // (scripts/serve-dist.mjs, the vite dev server) answers 200 with the
-    // app's HTML — neither is the snapshot. Any other refusal (405/501/5xx:
-    // a host that does not serve HEAD) is no evidence of a missing object,
-    // so it is logged and the download itself reports.
-    const html = /text\/html/i.test(head?.headers.get("content-type") ?? "");
-    if (!head || html || head.status === 404 || head.status === 410) {
-      throw unpublished(`${head ? `HTTP ${head.status}${html ? ", HTML page" : ""}` : "unreachable"} for ${entry.url}`);
-    }
-    if (!head.ok) console.warn(`[game-boot] HEAD ${entry.url}: HTTP ${head.status} — not treated as missing; the download will report`);
+    const head = await headThroughHolds(
+      () => fetch(entry.url, { method: "HEAD" }),
+      async () => {
+        const why = `HEAD ${entry.url} failed`;
+        console.warn(`[game-boot] ${why} — holding for the connection`);
+        const verdict = await holdForNetwork(why);
+        ui.busy(CHECKING_ENVIRONMENT); // the hold's label would outlast it: the next stage is the gamedata's
+        return verdict;
+      },
+      () => new Promise((r) => window.setTimeout(r, 2000)),
+    );
+    if (head === "deploy") throw new Error(deployProblem);
+    const missing = head && snapshotMissing(head);
+    if (missing) throw unpublished(`${missing} for ${entry.url}`);
+    // No evidence of a missing object: logged, and the download itself reports.
+    if (!head) console.warn(`[game-boot] HEAD ${entry.url} keeps failing with the origin up — not treated as missing; the download will report`);
+    else if (!head.ok) console.warn(`[game-boot] HEAD ${entry.url}: HTTP ${head.status} — not treated as missing; the download will report`);
   }
   return { entry, index, buildId };
 }
+
+const CHECKING_ENVIRONMENT = "checking this game's environment";
 
 /** Worker cwd is /workspace (lean.worker.js boots there); Runner reads
  * `./.lake/gamedata/...` relative to it. */
@@ -1061,13 +1070,13 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
     const translation = ensureTranslation();
     // Bind the snapshot from the catalog and check its pairing before the
     // gamedata (80 small files for NNG4) and long before any artifact byte.
-    ui.busy("checking this game's environment");
+    ui.busy(CHECKING_ENVIRONMENT);
     // Started first so both read ONE /api/games fetch (findApiGame shares an
     // in-flight request; a failed one is not memoised, so a later start
     // would fetch — and maybe stall — a second time).
     const runnerOptions = resolveRunnerOptions(boundGameId!);
     const snapshot = await resolveSnapshotName(boundGameId!);
-    const { entry, index } = await checkSnapshotPairing(snapshot);
+    const { entry, index } = await checkSnapshotPairing(snapshot, ui);
     boundEntry = entry;
     const store = getDefaultStore();
     store.set(boundEnvironmentAtom, { gameId: boundGameId!, snapshot, bytes: entry.bytes, transfer: entry.transfer ?? entry.bytes });
