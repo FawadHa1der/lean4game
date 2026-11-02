@@ -43,6 +43,7 @@
 import { LspRelay, ResidentSession, WORKER_URLS, installArtifacts, isRawCached, type ProgressInfo, type RelayStatus, type ResidentPolicy, type SessionFile } from "qed64/embed";
 import type { Qed64Artifacts, SnapshotEntry, SnapshotIndex, StatusSink } from "qed64/embed";
 import { atom, getDefaultStore } from "jotai";
+import { queryClientAtom } from "jotai-tanstack-query";
 import { difficultyAtom, progressAtom } from "../store/progress-atoms";
 import { preferencesAtom } from "../store/preferences-atoms";
 import { GameTranslation, type GameLevelData } from "./game-translation";
@@ -1099,6 +1100,11 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
       } catch (e) { console.warn("[game-boot] stale region sweep skipped:", e); }
     }
     const bundle = await ensureBundle();
+    // A boot the link held (a first play offline): the page's own reads of
+    // game.json, the level's file and the inventory failed meanwhile, their
+    // retries are spent and nothing asks again, so the checker would come up on
+    // a level with no statement and an empty inventory. The bundle got through.
+    void store.get(queryClientAtom).refetchQueries({ type: "active", predicate: (q) => q.state.status === "error" });
     // N5: the game data's URLs are known now. A service worker already
     // active (a returning visit) caches them at once — inventory docs first,
     // bounded concurrency — instead of after markServed's serial warm-up,
