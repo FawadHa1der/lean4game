@@ -186,7 +186,7 @@ function ExerciseStatement({ showLeanStatement = false }) {
 }
 
 /** A boot failure's detail line, shared by the typewriter's card
- * (LevelLoadingIndicator, local to TypewriterInterface) and editor mode's
+ * (LevelLoadingIndicator) and editor mode's
  * (EditorBootFailureCard). L10: neutral wording — the failure may be in the
  * middle of the checker download (then only its finished chunks are
  * cached), and an interrupted game download is fetched again (bytes the
@@ -562,6 +562,202 @@ export function TypewriterInterfaceWrapper() {
   return <TypewriterInterface />
 }
 
+/* These three are module-level on purpose (they used to be declared inside
+ * TypewriterInterface, a new atom and new component types per render, so its
+ * every re-render remounted them). Nothing here is passed down from it but
+ * the indicator's three props; the rest is read from atoms. */
+
+/** switching-only view of checker activity: flips twice per boot/switch,
+ * never per progress tick — anything gating the input must subscribe to
+ * THIS, not the raw activity atom (per-tick re-renders above the monaco
+ * input ate keystrokes; cypress caught it as 8 failing typing tests). */
+const checkerSwitchingAtom = selectAtom(checkerActivityAtom, (a) => a.switching)
+
+/** Gate v4, after three failed wrapper designs: the upstream Typewriter is
+ * rendered byte-identically (any wrapper/memo/prop composition around it
+ * ate keystrokes — 8 cypress typing tests each time), and the gate is a
+ * SIBLING overlay that physically covers the input area while the checker
+ * boots or replaces sessions. It blocks pointer interaction and explains
+ * the wait; it cannot perturb the input's React subtree because it is not
+ * part of it. */
+function LeanGateOverlay() {
+  const [switching] = useAtom(checkerSwitchingAtom)
+  const [activity] = useAtom(checkerActivityAtom)
+  if (!switching) return null
+  return <div className="lean-gate-overlay">
+    Lean is {/download|unpack|install/i.test(activity.label) ? 'downloading' : 'loading'} —
+    the input unlocks when it&apos;s ready{activity.label ? ` (${activity.label})` : ''}
+  </div>
+}
+
+/** The level pane's waiting state: a labeled, determinate-when-possible
+ * loader driven by the wasm boot status — a bare spinner reads as "hung"
+ * during the first-visit kernel download. */
+/** The level pane while there is no proof state yet. Every phase says what
+ * is happening, how long it has been going, and what to expect — a bare
+ * "Loading…" read as hung to first-time visitors (the first visit downloads
+ * the checker plus this game's environment — hundreds of MB, the exact figure
+ * comes from the bound snapshot's index entry — and the first level after
+ * start-up is elaborated cold). The last
+ * phase, "checker idle but no answer yet", is retried automatically and
+ * offers a manual retry, because a first request lost to a session switch
+ * used to leave the pane waiting forever. */
+/** The offending text's way out on an exit card (HARDENING #52): the last
+ * non-empty line of the level's text, and the action that removes it. */
+type RemoveLastLine = { text: string; remove: () => void }
+
+function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: () => void; since: number; removeLastLine?: RemoveLastLine | null }) {
+  const { t } = useTranslation()
+  const [status] = useAtom(bootStatusAtom)
+  const [haltedStep] = useAtom(haltedStepAtom)
+  const [activity] = useAtom(checkerActivityAtom)
+  const [leanMonaco] = useAtom(leanMonacoAtom)
+  const [boundEnv] = useAtom(boundEnvironmentAtom)
+  const [networkHold] = useAtom(networkHoldAtom)
+  const progress = formatProgress(status)
+  const eta = useEta(status)
+  // `since` is owned by the level (the pane re-renders its branch several
+  // times during a cold start; a mount-local timer showed "0 s" repeatedly).
+  const [elapsed, setElapsed] = React.useState(() => Math.max(0, Math.round((Date.now() - since) / 1000)))
+  // A boot failure is terminal: the clock stops and the spinner goes (a live
+  // timer and a spinning arc on "Lean could not start" read as still trying).
+  const bootFailure = status.state !== 'busy' ? /^Lean failed to start: (.*)$/s.exec(status.label)?.[1] : undefined
+  // HARDENING #52: a relay halted by FileWorker exits (the card names the
+  // exit code) or by repeated liveness stalls is terminal like a boot
+  // failure until the player restarts it — no spinner, no running clock.
+  // The halt's facts, not its label (death-kind haltFacts).
+  const haltedHere = activity.halted && !networkHold
+  const exitCode = haltedHere && activity.exitCode !== null ? activity.exitCode : undefined
+  const stalledRepeatedly = haltedHere && activity.stalled
+  // QD-API-2: a halt on a stale page is terminal too — until the reload.
+  const stalePage = haltedHere && activity.stalePage
+  const runtimeHalt = exitCode !== undefined || stalledRepeatedly || stalePage
+  React.useEffect(() => {
+    if (bootFailure !== undefined || runtimeHalt) return
+    const tick = () => setElapsed(Math.max(0, Math.round((Date.now() - since) / 1000)))
+    tick() // a restart after a halt: the clock stopped there
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [since, bootFailure !== undefined, runtimeHalt])
+  const secs = (n: number) => n < 60 ? `${n} s` : `${Math.floor(n / 60)} min ${n % 60} s`
+  const downloading = status.unit === 'bytes' || /download|unpack|install|preparing the .* environment/i.test(status.label)
+  // The "no answer yet" thresholds count from the moment the checker went
+  // idle, not from the level's load: after a four-minute first download the
+  // first idle second must not read "still no answer after 4 min — reload".
+  const idle = status.state !== 'busy' && !activity.busy
+  const waitingSince = React.useRef<number | null>(null)
+  if (!idle) waitingSince.current = null
+  else waitingSince.current ??= Date.now()
+  const waited = idle ? Math.max(0, Math.round((Date.now() - waitingSince.current!) / 1000)) : 0
+  // The language client's own view (lean4monaco LeanClient): "running" is
+  // the only state in which rpc can flow; "starting" = waiting for its
+  // initialize round trip; "stopped" = never started or torn down.
+  const clients = (leanMonaco?.clientProvider?.getClients?.() ?? []) as Array<{ isRunning?: () => boolean; isStarted?: () => boolean }>
+  const clientState = clients.length === 0 ? 'no client'
+    : clients.map((c) => c.isRunning?.() ? 'running' : c.isStarted?.() ? 'starting' : 'stopped').join(', ')
+  const noConnection = /No connection to Lean/i.test(lastLoadError.message)
+  let headline: React.ReactNode, detail: React.ReactNode
+  // Only the last phase below offers a manual retry. `idle` and `waited` are
+  // just as true on a boot failure, a halt or a held network, where a retry
+  // can only be refused: those cards have their own way out.
+  let offerRetry = false
+  if (networkHold) {
+    // L4 (networkHoldCopy): automatic recovery, Reload stays on offer.
+    ({ headline, detail } = networkHoldCopy())
+  } else if (bootFailure !== undefined) {
+    headline = <>Lean could not start in your browser</>
+    // L10 neutral wording; SEC1 refusals say what to change (bootFailureDetail).
+    detail = bootFailureDetail(bootFailure, t)
+  } else if (stalePage) {
+    ({ headline, detail } = stalePageCopy(t))
+  } else if (activity.halted && exitCode !== undefined) {
+    // HARDENING #52 "exit": the FileWorker exited on every replay of this
+    // level's text — a crash the content causes (the breaker's faithful
+    // verdict), never a connection problem. Named by its exit code.
+    // The way out is an EDIT (a halted relay re-arms on a document change):
+    // a restart or a reload replays the same text and dies again. With a
+    // step pending (finding: the step is not shown — the pane keeps the
+    // last state the checker gave), the Typewriter has put that step back
+    // into the input, cursor on its line: the next Execute replaces it.
+    // Without one (a reload with the text saved: no proof state, the input
+    // is read-only), the card removes the last line itself.
+    headline = <>The checker stopped: Lean exited with code {exitCode}</>
+    detail = haltedStep !== null
+      ? <>The step you just entered (<code>{haltedStep}</code>) made Lean exit with code {exitCode}, so the checker stopped retrying. This is a crash caused by the proof text, not a connection problem: change the step in the input below and press Execute (that restarts the checker), or restart it here.</>
+      : <>{activity.label}. This is a crash caused by the proof text, not a connection problem; restarting or reloading replays the same text. {removeLastLine
+          ? <>Remove the last line of your proof below (the checker restarts on the change), or switch to editor mode (<code>&lt;/&gt;</code>) and change the text there.</>
+          : <>Switch to editor mode (<code>&lt;/&gt;</code>) and delete or change the line that exits (the checker restarts on the change).</>}</>
+  } else if (activity.halted && stalledRepeatedly) {
+    headline = <>The checker stopped: Lean stopped answering</>
+    detail = <>{activity.label}. Your proof is kept. Restarting replays this level into a fresh checker; if it stalls again, reloading the page is safe.</>
+  } else if (activity.halted) {
+    // The relay's crash-loop breaker: three deaths in two minutes. It only
+    // re-arms on a document change, which the typewriter cannot produce
+    // while it waits for a proof state — so offer the re-arm here.
+    headline = <>The checker stopped after repeated crashes</>
+    detail = <>{activity.label}. Restarting replays this level into a fresh checker; if it crashes again, reloading the page is safe.</>
+  } else if (status.state !== 'busy' && status.label === '') {
+    // The boot status atom starts inert (the landing page binds no game);
+    // no stage has been published yet — the checker has not started.
+    headline = <>Starting the checker in your browser…</>
+    detail = <>The Lean runtime is being launched for this game (language client: {clientState}).</>
+  } else if (status.state === 'busy') {
+    headline = <>Lean is starting in your browser — {status.label}{progress ? ` · ${progress}` : ''}{eta ? ` · ${eta}` : ''}</>
+    // Chrome reports navigator.deviceMemory in {0.25 … 8}: below 8 the
+    // device really is small; 8 means "8 or more". Starting the full Lean
+    // compiler in a tab takes about 8 GB of renderer memory (measured:
+    // 3.6 GB at runtime start, 7.4 GB at runtime init, 8.3 GB at ready)
+    // and a small machine loses the tab without a word — say so before the
+    // download, not after (the landing page says it too, but deep links
+    // never render the landing page).
+    const deviceGb = (navigator as { deviceMemory?: number }).deviceMemory
+    const smallDevice = typeof deviceGb === 'number' && deviceGb < 8
+      ? <> This device reports about {deviceGb} GB of memory; the checker needs roughly 8 GB free while it starts and may not start here.</>
+      : null
+    // The environment's size is the bound snapshot's index entry, published
+    // by game-boot once the pairing check passed: the transfer bytes (what
+    // the download costs) and the raw bytes (what the banner's byte count
+    // above runs up to — the prefetch reports the inflated region).
+    // D8: decimal MB, as the tiles and the banner count.
+    const envSize = boundEnv ? ` (about ${wholeMB(boundEnv.transfer)} MB to download, ${wholeMB(boundEnv.bytes)} MB once unpacked)` : ''
+    detail = downloading
+      ? <>The first visit downloads the Lean checker (about 150 MB, once) and this game&apos;s mathematics{envSize} and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.{smallDevice}</>
+      : <>Starting the checker inside this tab: unpacking and loading the mathematics environment. On a laptop this takes about 10–30 seconds after the download.{smallDevice}</>
+  } else if (activity.busy) {
+    headline = <>Preparing this level — {activity.label}…</>
+    detail = <>The checker is elaborating the level&apos;s statement. The first level after start-up can take up to a minute while everything warms up; later levels switch in a second or two.</>
+  } else {
+    offerRetry = waited >= 15
+    headline = noConnection
+      ? <>Connecting to the checker…{waited >= 15 ? ' (retrying every few seconds)' : ''}</>
+      : <>Waiting for the checker&apos;s first answer…{waited >= 15 ? ' (retrying every few seconds)' : ''}</>
+    const attempt = lastLoadError.message ? <> (last attempt: {lastLoadError.message}; language client: {clientState})</> : null
+    detail = waited < 15
+      ? (noConnection
+          ? <>The checker is up; the editor&apos;s connection to it is being (re)established, which takes a moment (language client: {clientState}).</>
+          : <>The level is loaded and the checker is idle; its answer usually arrives within a second.</>)
+      : waited < 90
+        ? <>This is taking longer than usual{attempt}. The request is retried automatically; you can also retry now.</>
+        : <>Still no answer after {secs(waited)}{attempt}. Reloading the page is safe: your progress is saved in this browser, and what finished downloading stays cached (an interrupted download is fetched again).</>
+  }
+  return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
+    {/* explicit size + static position: the pane's spinner rule shifts it
+        off-centre and it collapsed to a dot in the level-switch state */}
+    {((bootFailure === undefined && !runtimeHalt) || networkHold) && <CircularProgress size={40} style={{ position: 'static', margin: 0 }} />}
+    <div style={{ color: '#333', fontSize: '0.95rem', textAlign: 'center', maxWidth: '30rem' }}>{headline}</div>
+    <div style={{ color: '#666', fontSize: '0.85rem', textAlign: 'center', maxWidth: '30rem' }}>{detail}</div>
+    {bootFailure === undefined && !runtimeHalt && <div style={{ color: '#888', fontSize: '0.8rem' }}>{secs(elapsed)} elapsed</div>}
+    {offerRetry && onRetry &&
+      <Button className="btn" onClick={onRetry}>Retry now</Button>}
+    {(bootFailure !== undefined || networkHold || stalePage) &&
+      <BootFailureAction reason={networkHold || stalePage ? undefined : bootFailure} />}
+    {activity.halted && !networkHold && exitCode !== undefined && haltedStep === null && removeLastLine &&
+      <Button className="btn" onClick={removeLastLine.remove}>Remove the last line (<code>{removeLastLine.text.length > 40 ? `${removeLastLine.text.slice(0, 40)}…` : removeLastLine.text}</code>)</Button>}
+    {activity.halted && !networkHold && !stalePage &&
+      <Button className="btn" onClick={() => { if (!rearmCheckerIfHalted()) window.location.reload(); else onRetry?.() }}>Restart the checker</Button>}
+  </div>
+}
+
 /** The interface in command line mode */
 export function TypewriterInterface() {
   let { t } = useTranslation()
@@ -768,201 +964,6 @@ export function TypewriterInterface() {
   }, [selectedStep])
 
   // TODO: superfluous, can be replaced with `withErr` from above
-  /** switching-only view of checker activity: flips twice per boot/switch,
- * never per progress tick — anything gating the input must subscribe to
- * THIS, not the raw activity atom (per-tick re-renders above the monaco
- * input ate keystrokes; cypress caught it as 8 failing typing tests). */
-const checkerSwitchingAtom = selectAtom(checkerActivityAtom, (a) => a.switching)
-
-/** Gate v4, after three failed wrapper designs: the upstream Typewriter is
- * rendered byte-identically (any wrapper/memo/prop composition around it
- * ate keystrokes — 8 cypress typing tests each time), and the gate is a
- * SIBLING overlay that physically covers the input area while the checker
- * boots or replaces sessions. It blocks pointer interaction and explains
- * the wait; it cannot perturb the input's React subtree because it is not
- * part of it. */
-function LeanGateOverlay() {
-  const [switching] = useAtom(checkerSwitchingAtom)
-  const [activity] = useAtom(checkerActivityAtom)
-  if (!switching) return null
-  return <div className="lean-gate-overlay">
-    Lean is {/download|unpack|install/i.test(activity.label) ? 'downloading' : 'loading'} —
-    the input unlocks when it&apos;s ready{activity.label ? ` (${activity.label})` : ''}
-  </div>
-}
-
-/** The level pane's waiting state: a labeled, determinate-when-possible
- * loader driven by the wasm boot status — a bare spinner reads as "hung"
- * during the first-visit kernel download. */
-/** The level pane while there is no proof state yet. Every phase says what
- * is happening, how long it has been going, and what to expect — a bare
- * "Loading…" read as hung to first-time visitors (the first visit downloads
- * the checker plus this game's environment — hundreds of MB, the exact figure
- * comes from the bound snapshot's index entry — and the first level after
- * start-up is elaborated cold). The last
- * phase, "checker idle but no answer yet", is retried automatically and
- * offers a manual retry, because a first request lost to a session switch
- * used to leave the pane waiting forever. */
-/** The offending text's way out on an exit card (HARDENING #52): the last
- * non-empty line of the level's text, and the action that removes it. */
-type RemoveLastLine = { text: string; remove: () => void }
-
-function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: () => void; since: number; removeLastLine?: RemoveLastLine | null }) {
-  const { t } = useTranslation()
-  const [status] = useAtom(bootStatusAtom)
-  const [haltedStep] = useAtom(haltedStepAtom)
-  const [activity] = useAtom(checkerActivityAtom)
-  const [leanMonaco] = useAtom(leanMonacoAtom)
-  const [boundEnv] = useAtom(boundEnvironmentAtom)
-  const [networkHold] = useAtom(networkHoldAtom)
-  const progress = formatProgress(status)
-  const eta = useEta(status)
-  // `since` is owned by the level (the pane re-renders its branch several
-  // times during a cold start; a mount-local timer showed "0 s" repeatedly).
-  const [elapsed, setElapsed] = React.useState(() => Math.max(0, Math.round((Date.now() - since) / 1000)))
-  // A boot failure is terminal: the clock stops and the spinner goes (a live
-  // timer and a spinning arc on "Lean could not start" read as still trying).
-  const bootFailure = status.state !== 'busy' ? /^Lean failed to start: (.*)$/s.exec(status.label)?.[1] : undefined
-  // HARDENING #52: a relay halted by FileWorker exits (the card names the
-  // exit code) or by repeated liveness stalls is terminal like a boot
-  // failure until the player restarts it — no spinner, no running clock.
-  // The halt's facts, not its label (death-kind haltFacts).
-  const haltedHere = activity.halted && !networkHold
-  const exitCode = haltedHere && activity.exitCode !== null ? activity.exitCode : undefined
-  const stalledRepeatedly = haltedHere && activity.stalled
-  // QD-API-2: a halt on a stale page is terminal too — until the reload.
-  const stalePage = haltedHere && activity.stalePage
-  const runtimeHalt = exitCode !== undefined || stalledRepeatedly || stalePage
-  React.useEffect(() => {
-    if (bootFailure !== undefined || runtimeHalt) return
-    const id = setInterval(() => setElapsed(Math.max(0, Math.round((Date.now() - since) / 1000))), 1000)
-    return () => clearInterval(id)
-  }, [since, bootFailure !== undefined, runtimeHalt])
-  const secs = (n: number) => n < 60 ? `${n} s` : `${Math.floor(n / 60)} min ${n % 60} s`
-  const downloading = status.unit === 'bytes' || /download|unpack|install|preparing the .* environment/i.test(status.label)
-  // The "no answer yet" thresholds count from the moment the checker went
-  // idle, not from the level's load: after a four-minute first download the
-  // first idle second must not read "still no answer after 4 min — reload".
-  const idle = status.state !== 'busy' && !activity.busy
-  const waitingSince = React.useRef<number | null>(null)
-  if (!idle) waitingSince.current = null
-  else waitingSince.current ??= Date.now()
-  const waited = idle ? Math.max(0, Math.round((Date.now() - waitingSince.current!) / 1000)) : 0
-  // The language client's own view (lean4monaco LeanClient): "running" is
-  // the only state in which rpc can flow; "starting" = waiting for its
-  // initialize round trip; "stopped" = never started or torn down.
-  const clients = (leanMonaco?.clientProvider?.getClients?.() ?? []) as Array<{ isRunning?: () => boolean; isStarted?: () => boolean; restart?: () => Promise<void> }>
-  const clientState = clients.length === 0 ? 'no client'
-    : clients.map((c) => c.isRunning?.() ? 'running' : c.isStarted?.() ? 'starting' : 'stopped').join(', ')
-  const noConnection = /No connection to Lean/i.test(lastLoadError.message)
-  // Self-heal: a client that is still not running 20 s after the checker
-  // went idle has lost its start (its initialize answer, typically); restart
-  // it — the same action as the editor's "Restart Lean" — at most every 30 s.
-  const lastRestart = React.useRef(0)
-  React.useEffect(() => {
-    if (!idle || !noConnection || waited < 20 || clients.length === 0) return
-    if (Date.now() - lastRestart.current < 30000) return
-    lastRestart.current = Date.now()
-    console.warn(`[lean4game] Lean client ${clientState} ${waited}s after the checker went idle — restarting it`)
-    void clients[0].restart?.()
-  }, [idle, noConnection, waited >= 20, clients.length])
-  let headline: React.ReactNode, detail: React.ReactNode
-  if (networkHold) {
-    // L4 (networkHoldCopy): automatic recovery, Reload stays on offer.
-    ({ headline, detail } = networkHoldCopy())
-  } else if (bootFailure !== undefined) {
-    headline = <>Lean could not start in your browser</>
-    // L10 neutral wording; SEC1 refusals say what to change (bootFailureDetail).
-    detail = bootFailureDetail(bootFailure, t)
-  } else if (stalePage) {
-    ({ headline, detail } = stalePageCopy(t))
-  } else if (activity.halted && exitCode !== undefined) {
-    // HARDENING #52 "exit": the FileWorker exited on every replay of this
-    // level's text — a crash the content causes (the breaker's faithful
-    // verdict), never a connection problem. Named by its exit code.
-    // The way out is an EDIT (a halted relay re-arms on a document change):
-    // a restart or a reload replays the same text and dies again. With a
-    // step pending (finding: the step is not shown — the pane keeps the
-    // last state the checker gave), the Typewriter has put that step back
-    // into the input, cursor on its line: the next Execute replaces it.
-    // Without one (a reload with the text saved: no proof state, the input
-    // is read-only), the card removes the last line itself.
-    headline = <>The checker stopped: Lean exited with code {exitCode}</>
-    detail = haltedStep !== null
-      ? <>The step you just entered (<code>{haltedStep}</code>) made Lean exit with code {exitCode}, so the checker stopped retrying. This is a crash caused by the proof text, not a connection problem: change the step in the input below and press Execute (that restarts the checker), or restart it here.</>
-      : <>{activity.label}. This is a crash caused by the proof text, not a connection problem; restarting or reloading replays the same text. {removeLastLine
-          ? <>Remove the last line of your proof below (the checker restarts on the change), or switch to editor mode (<code>&lt;/&gt;</code>) and change the text there.</>
-          : <>Switch to editor mode (<code>&lt;/&gt;</code>) and delete or change the line that exits (the checker restarts on the change).</>}</>
-  } else if (activity.halted && stalledRepeatedly) {
-    headline = <>The checker stopped: Lean stopped answering</>
-    detail = <>{activity.label}. Your proof is kept. Restarting replays this level into a fresh checker; if it stalls again, reloading the page is safe.</>
-  } else if (activity.halted) {
-    // The relay's crash-loop breaker: three deaths in two minutes. It only
-    // re-arms on a document change, which the typewriter cannot produce
-    // while it waits for a proof state — so offer the re-arm here.
-    headline = <>The checker stopped after repeated crashes</>
-    detail = <>{activity.label}. Restarting replays this level into a fresh checker; if it crashes again, reloading the page is safe.</>
-  } else if (status.state !== 'busy' && status.label === '') {
-    // The boot status atom starts inert (the landing page binds no game);
-    // no stage has been published yet — the checker has not started.
-    headline = <>Starting the checker in your browser…</>
-    detail = <>The Lean runtime is being launched for this game (language client: {clientState}).</>
-  } else if (status.state === 'busy') {
-    headline = <>Lean is starting in your browser — {status.label}{progress ? ` · ${progress}` : ''}{eta ? ` · ${eta}` : ''}</>
-    // Chrome reports navigator.deviceMemory in {0.25 … 8}: below 8 the
-    // device really is small; 8 means "8 or more". Starting the full Lean
-    // compiler in a tab takes about 8 GB of renderer memory (measured:
-    // 3.6 GB at runtime start, 7.4 GB at runtime init, 8.3 GB at ready)
-    // and a small machine loses the tab without a word — say so before the
-    // download, not after (the landing page says it too, but deep links
-    // never render the landing page).
-    const deviceGb = (navigator as { deviceMemory?: number }).deviceMemory
-    const smallDevice = typeof deviceGb === 'number' && deviceGb < 8
-      ? <> This device reports about {deviceGb} GB of memory; the checker needs roughly 8 GB free while it starts and may not start here.</>
-      : null
-    // The environment's size is the bound snapshot's index entry, published
-    // by game-boot once the pairing check passed: the transfer bytes (what
-    // the download costs) and the raw bytes (what the banner's byte count
-    // above runs up to — the prefetch reports the inflated region).
-    // D8: decimal MB, as the tiles and the banner count.
-    const envSize = boundEnv ? ` (about ${wholeMB(boundEnv.transfer)} MB to download, ${wholeMB(boundEnv.bytes)} MB once unpacked)` : ''
-    detail = downloading
-      ? <>The first visit downloads the Lean checker (about 150 MB, once) and this game&apos;s mathematics{envSize} and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.{smallDevice}</>
-      : <>Starting the checker inside this tab: unpacking and loading the mathematics environment. On a laptop this takes about 10–30 seconds after the download.{smallDevice}</>
-  } else if (activity.busy) {
-    headline = <>Preparing this level — {activity.label}…</>
-    detail = <>The checker is elaborating the level&apos;s statement. The first level after start-up can take up to a minute while everything warms up; later levels switch in a second or two.</>
-  } else {
-    headline = noConnection
-      ? <>Connecting to the checker…{waited >= 15 ? ' (retrying every few seconds)' : ''}</>
-      : <>Waiting for the checker&apos;s first answer…{waited >= 15 ? ' (retrying every few seconds)' : ''}</>
-    const attempt = lastLoadError.message ? <> (last attempt: {lastLoadError.message}; language client: {clientState})</> : null
-    detail = waited < 15
-      ? (noConnection
-          ? <>The checker is up; the editor&apos;s connection to it is being (re)established, which takes a moment (language client: {clientState}).</>
-          : <>The level is loaded and the checker is idle; its answer usually arrives within a second.</>)
-      : waited < 90
-        ? <>This is taking longer than usual{attempt}. The request is retried automatically{noConnection && waited >= 20 ? ', and the language client is restarted' : ''}; you can also retry now.</>
-        : <>Still no answer after {secs(waited)}{attempt}. Reloading the page is safe: your progress is saved in this browser, and what finished downloading stays cached (an interrupted download is fetched again).</>
-  }
-  return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '1.5rem' }}>
-    {/* explicit size + static position: the pane's spinner rule shifts it
-        off-centre and it collapsed to a dot in the level-switch state */}
-    {((bootFailure === undefined && !runtimeHalt) || networkHold) && <CircularProgress size={40} style={{ position: 'static', margin: 0 }} />}
-    <div style={{ color: '#333', fontSize: '0.95rem', textAlign: 'center', maxWidth: '30rem' }}>{headline}</div>
-    <div style={{ color: '#666', fontSize: '0.85rem', textAlign: 'center', maxWidth: '30rem' }}>{detail}</div>
-    {bootFailure === undefined && !runtimeHalt && <div style={{ color: '#888', fontSize: '0.8rem' }}>{secs(elapsed)} elapsed</div>}
-    {idle && waited >= 15 && onRetry &&
-      <Button className="btn" onClick={onRetry}>Retry now</Button>}
-    {(bootFailure !== undefined || networkHold || stalePage) &&
-      <BootFailureAction reason={networkHold || stalePage ? undefined : bootFailure} />}
-    {activity.halted && !networkHold && exitCode !== undefined && haltedStep === null && removeLastLine &&
-      <Button className="btn" onClick={removeLastLine.remove}>Remove the last line (<code>{removeLastLine.text.length > 40 ? `${removeLastLine.text.slice(0, 40)}…` : removeLastLine.text}</code>)</Button>}
-    {activity.halted && !networkHold && !stalePage &&
-      <Button className="btn" onClick={() => { if (!rearmCheckerIfHalted()) window.location.reload(); else onRetry?.() }}>Restart the checker</Button>}
-  </div>
-}
-
 let lastStepErrors = proof?.steps.length ? hasInteractiveErrors(getInteractiveDiagsAt(proof, proof?.steps.length)) : false
 
 

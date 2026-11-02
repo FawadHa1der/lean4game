@@ -1756,7 +1756,9 @@ names the pin. What changed for the game:
   reader is replaced) and sends a fresh `initialize`, which the serving
   front door answers from its table (a non-replay initialize is always
   answered and cached again). Skipped when a client is running already (the
-  pane's self-heal or the player got there first). A halt refusing the
+  player got there first; the pane's self-heal, which never fired because the
+  pane remounted on every re-render, was deleted with its hoist in the
+  architecture review's R13(a)). A halt refusing the
   initialize ("halted") is remembered too: the re-arm's `serving` restarts
   the client. Not established live (the window is tens of milliseconds on a
   first visit; the live datum is the QD-API-2 check's stranding,

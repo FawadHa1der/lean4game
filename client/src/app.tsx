@@ -57,9 +57,9 @@ function App({ children }: { children?: React.ReactNode }) {
   // Restart it — what the editor's "Restart Lean" does (lean4monaco
   // LeanClient.restart(): a client whose start failed is not running, so
   // nothing is stopped; a fresh client sends a fresh initialize). Not when a
-  // client is running already: the pane's own 20 s self-heal, or the
-  // player's restart, got there first. Each publication acts once (the
-  // instance may change identity later; that is no reason to restart again).
+  // client is running already: the player's restart got there first. Each
+  // publication acts once (the instance may change identity later; that is no
+  // reason to restart again).
   const [clientRestart] = useAtom(languageClientRestartAtom)
   const handledRestart = useRef(0)
   useEffect(() => {
