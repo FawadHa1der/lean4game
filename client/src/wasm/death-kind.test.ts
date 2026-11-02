@@ -30,13 +30,17 @@
 // the link. Both also on the REAL worker scripts (the last block).
 // QD-API-2's residual: a stale-page death that orphans the client's own
 // `initialize` is the card without a halt (staleInitialize).
+// HARDENING #72: a Lean thread that overflows the browser's stack is a pause on
+// that one death: a runtime verdict by its cause (reason "crash"), so no link
+// probe and no boot-failure card; its own fact and card; its re-arm is no crash.
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import vm from "node:vm";
-import { LeanSession, LspRelay, WORKER_SCRIPT_LOAD_FAILED, deathCause, failureCauseOf, type FailureCause, type JsonRpcMessage, type RelaySession, type RelayStatus, type WorkerStatus } from "qed64/embed";
-import { NETWORK_WAIT_LABEL, STALE_INITIALIZE_LABEL, STALE_PAGE_LABEL, STALLED_LABEL, STARTING_LABEL, WORKER_DEP_MISMATCH, deathWords, haltFacts, haltedNote, isNetworkDeath, isRuntimeVerdict, isStalePageDeath, networkInEpisode, readDeath, rebootLabel, rebootNote, staleInitialize } from "./death-kind.ts";
+import { ENGINE_STACK_OVERFLOW, LeanSession, LspRelay, WORKER_SCRIPT_LOAD_FAILED, deathCause, failureCauseOf, type FailureCause, type JsonRpcMessage, type RelaySession, type RelayStatus, type WorkerStatus } from "qed64/embed";
+import { NETWORK_WAIT_LABEL, STALE_INITIALIZE_LABEL, STALE_PAGE_LABEL, STALLED_LABEL, STARTING_LABEL, WORKER_DEP_MISMATCH, deathWords, haltFacts, haltedNote, isNetworkDeath, isRuntimeVerdict, isStackPause, isStalePageDeath, networkInEpisode, readDeath, rebootLabel, rebootNote, staleInitialize } from "./death-kind.ts";
+import { relayErrorKind } from "./game-translation";
 
 type D = { reason: string; message: string; seq: number; session: string; exitCode?: number; cause?: FailureCause };
 let seq = 0;
@@ -72,6 +76,10 @@ const frontDoorMissing = workerDied("WORKER_DEP_MISSING", "lean.worker.js needs 
 // QD-API-2: the worker's error reply refusing a sibling of another revision.
 const depMismatchMessage = "lsp-front-door.js is revision \"2\", lean.worker.js needs 1 (a deploy mixed versions; reload)";
 const depMismatch = workerDied(WORKER_DEP_MISMATCH, depMismatchMessage, { errorCode: WORKER_DEP_MISMATCH });
+// #72: lean.worker.js's words for a Lean thread's overflow, Chrome's and Firefox's.
+const stackWords = (engine: string) => `a Lean thread ran out of the browser's stack (${engine})`;
+const stackOverflow = workerDied("crash", stackWords("RangeError: Maximum call stack size exceeded"));
+const stackFirefox = workerDied("crash", stackWords("InternalError: too much recursion"));
 
 const rebooting0 = (rebootReason: string | null | undefined, lastDeath: D | null) => ({ relay: "rebooting", rebootReason, lastDeath });
 
@@ -84,13 +92,13 @@ assert.equal(isRuntimeVerdict(null), false);
 assert.equal(isRuntimeVerdict(undefined), false);
 
 // exit codes: the relay's `exitCode`, never parsed from the message
-assert.deepEqual(haltFacts(exit1), { exitCode: 1, stalled: false, stalePage: false });
-assert.deepEqual(haltFacts(exitNeg), { exitCode: -7, stalled: false, stalePage: false });
-assert.deepEqual(haltFacts(exitBare), { exitCode: null, stalled: false, stalePage: false }, "an exit that reported no code: the generic card");
-assert.deepEqual(haltFacts(wedged), { exitCode: null, stalled: true, stalePage: false });
-assert.deepEqual(haltFacts({ ...oobCrash, exitCode: 1 }), { exitCode: null, stalled: false, stalePage: false }, "only an \"exit\" death's code is an exit code");
-assert.deepEqual(haltFacts({ reason: "exit", message: "lean --worker exited with code 9" }), { exitCode: null, stalled: false, stalePage: false }, "the message is not read");
-assert.deepEqual(haltFacts(null), { exitCode: null, stalled: false, stalePage: false });
+assert.deepEqual(haltFacts(exit1), { exitCode: 1, stalled: false, stalePage: false, stack: false });
+assert.deepEqual(haltFacts(exitNeg), { exitCode: -7, stalled: false, stalePage: false, stack: false });
+assert.deepEqual(haltFacts(exitBare), { exitCode: null, stalled: false, stalePage: false, stack: false }, "an exit that reported no code: the generic card");
+assert.deepEqual(haltFacts(wedged), { exitCode: null, stalled: true, stalePage: false, stack: false });
+assert.deepEqual(haltFacts({ ...oobCrash, exitCode: 1 }), { exitCode: null, stalled: false, stalePage: false, stack: false }, "only an \"exit\" death's code is an exit code");
+assert.deepEqual(haltFacts({ reason: "exit", message: "lean --worker exited with code 9" }), { exitCode: null, stalled: false, stalePage: false, stack: false }, "the message is not read");
+assert.deepEqual(haltFacts(null), { exitCode: null, stalled: false, stalePage: false, stack: false });
 
 // reboot labels (the relay's rebootReason first: an exit reboots as "crash")
 assert.equal(rebootNote("wedged", wedged), STALLED_LABEL);
@@ -166,7 +174,7 @@ assert.equal(rebootNote(null, depMismatch), STALE_PAGE_LABEL);
 assert.equal(rebootNote("user", depMismatch), null, "lastDeath outlives its reboot: a later restart repeats nothing");
 assert.match(STALE_PAGE_LABEL, /reload the page/);
 assert.match(haltedNote(depMismatch)!, /^this site was updated while the page was open, so the checker stopped; reload the page$/);
-assert.deepEqual(haltFacts(depMismatch), { exitCode: null, stalled: false, stalePage: true });
+assert.deepEqual(haltFacts(depMismatch), { exitCode: null, stalled: false, stalePage: true, stack: false });
 // QD-API-2's residual: the client's own `initialize` taken by a stale-page
 // death — the card without a halt. Keyed on the method, the relay's word
 // (a kind) and the death; never on a request of another method, the
@@ -243,6 +251,30 @@ assert.equal(rebootLabel(rebooting("wedged", wedged), false, true), STALLED_LABE
   assert.equal(rebootLabel(rebooting("user", bare), inEpisode(bare)), STARTING_LABEL);
 }
 
+// HARDENING #72: a stack pause, by its cause: the reason is a plain "crash"
+assert.deepEqual([stackOverflow.reason, stackOverflow.cause?.kind, stackOverflow.cause?.code], ["crash", "other", ENGINE_STACK_OVERFLOW], "qed64's classification of the worker's words");
+assert.equal(stackFirefox.cause?.code, ENGINE_STACK_OVERFLOW);
+assert.equal(isStackPause(stackOverflow), true);
+assert.equal(isStackPause(stackFirefox), true);
+for (const other of [oobCrash, bare, exit1, wedged, depMismatch, null, undefined]) assert.equal(isStackPause(other), false);
+assert.equal(isStackPause(workerDied("MEMORY_FAILED", "Maximum call stack size exceeded", { errorCode: "MEMORY_FAILED" })), false, "a coded boot failure is not a stack pause, whatever its words");
+assert.equal(isRuntimeVerdict(stackOverflow), true, "networkSuspected: no probe and no hold, also in the re-arm's settle");
+assert.equal(readDeath(stackOverflow), "own");
+assert.equal(isNetworkDeath(stackOverflow), false);
+assert.equal(networkInEpisode(readDeath(stackOverflow), false, true), false, "not the link's, even inside an episode");
+assert.deepEqual(haltFacts(stackOverflow), { exitCode: null, stalled: false, stalePage: false, stack: true });
+assert.deepEqual(haltFacts({ ...stackOverflow, exitCode: 1 }), { exitCode: null, stalled: false, stalePage: false, stack: true }, "only an \"exit\" death's code is an exit code");
+// A non-null note is what classifyHalt treats as a verdict: at once, no
+// "checking the connection", the pane's card even on a page that never served.
+assert.equal(haltedNote(stackOverflow), "Lean ran out of the browser's stack while checking this level, so checking is paused");
+assert.equal(haltedNote(stackFirefox), haltedNote(stackOverflow));
+// The relay never reboots a stack death as "crash". Its re-arm reboots as
+// "user", with lastDeath still the pause: "starting", not "after a crash (…)".
+assert.equal(rebootNote("user", stackOverflow), null);
+assert.equal(rebootLabel(rebooting("user", stackOverflow), false), STARTING_LABEL);
+assert.equal(rebootLabel(rebooting("user", stackFirefox), false), STARTING_LABEL);
+assert.equal(rebootLabel({ relay: "serving", rebootReason: null, lastDeath: stackOverflow }, false), STARTING_LABEL);
+
 // The failure card's words: a snapshot boot failure says "the game snapshot"
 // (qed64 names the snapshot by its internal name); everything else verbatim.
 assert.equal(deathWords(snapCut), "the game snapshot failed to load");
@@ -285,7 +317,7 @@ assert.equal(deathWords(null), "");
   sessions[0]!.onDied(1, "exit", "lean --worker exited with code 1", deathCause("exit", "lean --worker exited with code 1", {}));
   const exitDeath = relay.status().lastDeath!;
   assert.deepEqual([exitDeath.reason, exitDeath.exitCode, exitDeath.seq, exitDeath.session], ["exit", 1, 1, sessions[0]!.id]);
-  assert.deepEqual(haltFacts(exitDeath), { exitCode: 1, stalled: false, stalePage: false });
+  assert.deepEqual(haltFacts(exitDeath), { exitCode: 1, stalled: false, stalePage: false, stack: false });
   assert.equal(rebootLabel(relay.status(), isNetworkDeath(exitDeath)), "Lean exited with code 1 — restarting the checker");
   await flush();
   const cut = relay.status().lastDeath!;
@@ -307,6 +339,66 @@ assert.equal(deathWords(null), "");
   relay.clientPort.close(); // the relay's channel would keep node running
 }
 
+// Exactly one stack pause, on the REAL LspRelay over scripted sessions: halted
+// on that one death, with no reboot and no breaker; a request is refused in the
+// pause's words; a re-arm or an edit resumes, and neither re-labels it a crash.
+{
+  const sessions: RelaySession[] = [];
+  const make = (): RelaySession => {
+    const s: RelaySession = { id: `stack${sessions.length + 1}`, onLsp() {}, onStatus() {}, onDied() {}, start: () => Promise.resolve(), arm: () => Promise.resolve(), lsp() {}, dispose() {}, terminate() {} };
+    sessions.push(s);
+    return s;
+  };
+  const flush = async () => { for (let i = 0; i < 10; i++) await new Promise<void>((r) => setImmediate(r)); };
+  const statuses: RelayStatus[] = [];
+  let settles = 0;
+  const relay = new LspRelay(make, { status: (st) => statuses.push(st) }, () => { settles += 1; return Promise.resolve(); });
+  const replies: JsonRpcMessage[] = [];
+  relay.clientPort.onmessage = (e) => replies.push(e.data as JsonRpcMessage);
+  await flush();
+  assert.equal(relay.status().relay, "serving");
+  const overflow = (i: number) => sessions[i]!.onDied(null, "crash", stackWords("RangeError: Maximum call stack size exceeded"), deathCause("crash", stackWords("RangeError: Maximum call stack size exceeded"), {}));
+
+  overflow(0);
+  const paused = relay.status();
+  assert.equal(paused.relay, "halted", "on this one death: the breaker wants three");
+  assert.equal(statuses[statuses.length - 1]!.relay, "halted", "the page hears it at once");
+  assert.equal(sessions.length, 1, "no replacement session");
+  assert.equal(settles, 0, "no settle: the page's network probe lives there");
+  assert.deepEqual([relay.stats.workerDeaths, relay.stats.stackPauses, relay.stats.breakerTrips], [1, 1, 0]);
+  assert.equal(isStackPause(paused.lastDeath), true);
+  assert.equal(isRuntimeVerdict(paused.lastDeath), true);
+  assert.deepEqual(haltFacts(paused.lastDeath), { exitCode: null, stalled: false, stalePage: false, stack: true });
+  assert.notEqual(haltedNote(paused.lastDeath), null, "classifyHalt's verdict");
+
+  // A request while paused: goals.tsx keeps the card on kind "halted".
+  relay.fromClient({ jsonrpc: "2.0", id: 7, method: "$/lean/rpc/connect", params: {} });
+  await flush();
+  const refusal = replies.find((m) => m.id === 7) as { error?: { data?: { qed64?: { reason?: unknown } } } } | undefined;
+  assert.equal(relayErrorKind(refusal?.error), "halted");
+  assert.equal(refusal?.error?.data?.qed64?.reason, "stack limit");
+
+  // "Restart the checker" (rearm): no settle hold, no crash label.
+  assert.equal(relay.rearm(), true);
+  const rearmed = relay.status();
+  assert.deepEqual([rearmed.relay, rearmed.rebootReason], ["rebooting", "user"]);
+  assert.equal(isStackPause(rearmed.lastDeath), true, "lastDeath outlives the pause: the settle reads it");
+  assert.equal(rebootLabel(rearmed, isNetworkDeath(rearmed.lastDeath)), STARTING_LABEL);
+  await flush();
+  assert.deepEqual([relay.status().relay, sessions.length, settles], ["serving", 2, 1]);
+
+  // A second overflow pauses again, uncounted; the player's edit ("Remove the
+  // last line", Execute) resumes it: a didChange while halted re-arms.
+  overflow(1);
+  assert.equal(relay.status().relay, "halted");
+  assert.deepEqual([relay.stats.workerDeaths, relay.stats.stackPauses, relay.stats.breakerTrips], [2, 2, 0]);
+  relay.fromClient({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///l.lean", version: 2 }, contentChanges: [{ text: "x" }] } });
+  assert.deepEqual([relay.status().relay, relay.status().rebootReason], ["rebooting", "user"]);
+  await flush();
+  assert.deepEqual([relay.status().relay, sessions.length], ["serving", 3]);
+  relay.clientPort.close();
+}
+
 // The halt's facts reach the level pane as data (boot-atoms CheckerActivity):
 // the card's headline reads `exitCode` / `stalled`, never the label.
 {
@@ -324,8 +416,13 @@ assert.equal(deathWords(null), "");
   assert.deepEqual([activity().halted, activity().stalePage, activity().label], [true, true, STALE_INITIALIZE_LABEL], "QD-API-2's residual: the card without a halt");
   publishCheckerActivity("ready", "Lean exited with code 3 while replaying this level", false, false, true);
   assert.deepEqual([activity().halted, activity().exitCode, activity().stalled], [true, null, false], "a plain halt names no code, whatever its label says");
+  publishCheckerActivity("ready", haltedNote(stackOverflow)!, false, false, haltFacts(stackOverflow));
+  assert.deepEqual([activity().halted, activity().exitCode, activity().stalled, activity().stalePage, activity().stack], [true, null, false, false, true], "#72: the stack card's fact");
+  publishCheckerActivity("ready", "Lean ran out of the browser's stack", false, false, true);
+  assert.equal(activity().stack, false, "a plain halt names no stack, whatever its label says");
+  publishCheckerActivity("ready", haltedNote(stackOverflow)!, false, false, haltFacts(stackOverflow));
   publishCheckerActivity("ready", "ready");
-  assert.deepEqual([activity().halted, activity().exitCode, activity().stalled, activity().stalePage], [false, null, false, false], "facts go with the halt");
+  assert.deepEqual([activity().halted, activity().exitCode, activity().stalled, activity().stalePage, activity().stack], [false, null, false, false, false], "facts go with the halt");
   // B5: the gate's `switching` is the caller's fact, else the first boot's — no label regex.
   publishCheckerActivity("busy", "loading the game environment");
   assert.equal(activity().switching, false, "a stage label alone switches nothing");
@@ -347,10 +444,12 @@ assert.equal(deathWords(null), "");
   /** What the origin serves for a sibling import right now (throws: the load failed). */
   let sibling: (name: string) => string = read;
   const tick = async (n = 30) => { for (let i = 0; i < n; i++) await new Promise<void>((r) => setImmediate(r)); };
-  type Listener = (e: { data?: unknown; message?: string }) => void;
+  type Listener = (e: { data?: unknown; message?: string; preventDefault?: () => void }) => void;
   class WorkerShim {
+    static last: WorkerShim | null = null;
     private readonly page = new Map<string, Listener[]>();
     private readonly inside: Listener[] = [];
+    private readonly insideErrors: Listener[] = [];
     private readonly loaded: Promise<void>;
     private readonly ctx: vm.Context;
     constructor(_url: string) {
@@ -362,12 +461,15 @@ assert.equal(deathWords(null), "");
       };
       sb.self = sb;
       sb.postMessage = (m: unknown) => { const data = structuredClone(m); setImmediate(() => this.emit("message", { data })); };
-      sb.addEventListener = (type: string, fn: Listener) => { if (type === "message") this.inside.push(fn); };
+      sb.addEventListener = (type: string, fn: Listener) => { if (type === "message") this.inside.push(fn); else if (type === "error") this.insideErrors.push(fn); };
       sb.importScripts = (name: string) => { vm.runInContext(sibling(name), this.ctx, { filename: name }); };
       this.ctx = vm.createContext(sb);
       const main = read("lean.worker.js");
       this.loaded = new Promise((r) => setImmediate(() => { vm.runInContext(main, this.ctx, { filename: "lean.worker.js" }); r(); }));
+      WorkerShim.last = this;
     }
+    /** An `error` event inside the worker (Emscripten's per-pthread rethrow). */
+    raise(message: string) { for (const fn of this.insideErrors) fn({ message, preventDefault() {} }); }
     private emit(type: string, e: { data?: unknown; message?: string }) { for (const fn of this.page.get(type) ?? []) fn(e); }
     addEventListener(type: string, fn: Listener) { this.page.set(type, [...(this.page.get(type) ?? []), fn]); }
     removeEventListener() {}
@@ -429,7 +531,7 @@ assert.equal(deathWords(null), "");
   assert.equal(isStalePageDeath(dm), true);
   assert.equal(readDeath(dm), "own");
   assert.equal(rebootLabel(newer, networkInEpisode(readDeath(dm), isNetworkDeath(dm), true)), STALE_PAGE_LABEL);
-  assert.deepEqual(haltFacts(dm), { exitCode: null, stalled: false, stalePage: true });
+  assert.deepEqual(haltFacts(dm), { exitCode: null, stalled: false, stalePage: true, stack: false });
   // PAR-4 (closed upstream): the link drops (or the deploy lacks the file)
   // before the first frame — the worker's own structured death, never the
   // handler's uncaught throw (which the shim would report as `crash`).
@@ -442,6 +544,27 @@ assert.equal(deathWords(null), "");
   assert.match(fl.message, /lean\.worker\.js needs lsp-front-door\.js served beside it: .*failed to load/);
   assert.equal(readDeath(fl), "silent", "probe the link — like a worker script that never loaded, not \"after a crash\" inside an episode");
   assert.equal(isStalePageDeath(fl), false);
+  // HARDENING #72: a Lean thread's overflow reaches the worker's own `error`
+  // listener. It dies once, in words qed64 classifies, and the relay pauses at
+  // once. Any other error is not that listener's: the worker stays up.
+  {
+    sibling = read;
+    const relay = new LspRelay(() => new Session(), { status: () => {} }, () => new Promise(() => {}));
+    await tick();
+    assert.equal(relay.status().relay, "serving");
+    WorkerShim.last!.raise("Uncaught RuntimeError: memory access out of bounds");
+    await tick();
+    assert.equal(relay.status().relay, "serving", "not an overflow");
+    WorkerShim.last!.raise("Uncaught RangeError: Maximum call stack size exceeded");
+    await tick();
+    const st = relay.status(), d = st.lastDeath!;
+    relay.clientPort.close();
+    assert.deepEqual([st.relay, d.reason, d.cause?.kind, d.cause?.code], ["halted", "crash", "other", ENGINE_STACK_OVERFLOW]);
+    assert.match(d.message, /^a Lean thread ran out of the browser's stack \(RangeError: Maximum call stack size exceeded\)$/);
+    assert.equal(isStackPause(d), true);
+    assert.deepEqual(haltFacts(d), { exitCode: null, stalled: false, stalePage: false, stack: true });
+    assert.deepEqual([relay.stats.workerDeaths, relay.stats.stackPauses, relay.stats.breakerTrips], [1, 1, 0]);
+  }
   delete (globalThis as { Worker?: unknown }).Worker;
 }
 

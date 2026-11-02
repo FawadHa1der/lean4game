@@ -602,8 +602,9 @@ function LeanGateOverlay() {
  * phase, "checker idle but no answer yet", is retried automatically and
  * offers a manual retry, because a first request lost to a session switch
  * used to leave the pane waiting forever. */
-/** The offending text's way out on an exit card (HARDENING #52): the last
- * non-empty line of the level's text, and the action that removes it. */
+/** The offending text's way out on an exit card (HARDENING #52) or a stack
+ * card (#72): the last non-empty line of the level's text, and the action that
+ * removes it. */
 type RemoveLastLine = { text: string; remove: () => void }
 
 function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: () => void; since: number; removeLastLine?: RemoveLastLine | null }) {
@@ -631,7 +632,9 @@ function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: (
   const stalledRepeatedly = haltedHere && activity.stalled
   // QD-API-2: a halt on a stale page is terminal too — until the reload.
   const stalePage = haltedHere && activity.stalePage
-  const runtimeHalt = exitCode !== undefined || stalledRepeatedly || stalePage
+  // HARDENING #72: so is a pause on the browser's stack — until an edit.
+  const stackPause = haltedHere && activity.stack
+  const runtimeHalt = exitCode !== undefined || stalledRepeatedly || stalePage || stackPause
   React.useEffect(() => {
     if (bootFailure !== undefined || runtimeHalt) return
     const tick = () => setElapsed(Math.max(0, Math.round((Date.now() - since) / 1000)))
@@ -670,6 +673,20 @@ function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: (
     detail = bootFailureDetail(bootFailure, t)
   } else if (stalePage) {
     ({ headline, detail } = stalePageCopy(t))
+  } else if (stackPause) {
+    // HARDENING #72: a Lean thread ran out of the browser's stack, and the
+    // relay paused on that one death (no replay, no breaker). The meaning is
+    // qed64's STACK_NOTE: a limit of the browser, so the proof may still be
+    // correct; never the words of a crash. The way out is an EDIT, as on the
+    // exit card, whose paths these are: a restart replays the same text and
+    // pauses again, so it is not on offer while an edit is.
+    headline = <>Checking paused: Lean ran out of the browser&apos;s stack</>
+    const mayBeCorrect = <>A browser gives Lean far less stack than desktop Lean has, so the proof may still be correct.</>
+    detail = haltedStep !== null
+      ? <>Checking the step you just entered (<code>{haltedStep}</code>) ran out of the browser&apos;s stack. {mayBeCorrect} Change the step in the input below and press Execute: that checks again.</>
+      : <>{activity.label}. {mayBeCorrect} Restarting or reloading replays the same text. {removeLastLine
+          ? <>Remove the last line of your proof below (checking resumes on the change), or switch to editor mode (<code>&lt;/&gt;</code>) and change the text there.</>
+          : <>Switch to editor mode (<code>&lt;/&gt;</code>) and change the text (checking resumes on the change).</>}</>
   } else if (activity.halted && exitCode !== undefined) {
     // HARDENING #52 "exit": the FileWorker exited on every replay of this
     // level's text — a crash the content causes (the breaker's faithful
@@ -751,9 +768,9 @@ function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: (
       <Button className="btn" onClick={onRetry}>Retry now</Button>}
     {(bootFailure !== undefined || networkHold || stalePage) &&
       <BootFailureAction reason={networkHold || stalePage ? undefined : bootFailure} />}
-    {activity.halted && !networkHold && exitCode !== undefined && haltedStep === null && removeLastLine &&
+    {activity.halted && !networkHold && (exitCode !== undefined || stackPause) && haltedStep === null && removeLastLine &&
       <Button className="btn" onClick={removeLastLine.remove}>Remove the last line (<code>{removeLastLine.text.length > 40 ? `${removeLastLine.text.slice(0, 40)}…` : removeLastLine.text}</code>)</Button>}
-    {activity.halted && !networkHold && !stalePage &&
+    {activity.halted && !networkHold && !stalePage && !(stackPause && (haltedStep !== null || removeLastLine)) &&
       <Button className="btn" onClick={() => { if (!rearmCheckerIfHalted()) window.location.reload(); else onRetry?.() }}>Restart the checker</Button>}
   </div>
 }
@@ -897,9 +914,10 @@ export function TypewriterInterface() {
    * text (and any blank lines after it). The edit is a full-text didChange,
    * which re-arms the halted relay with the shortened text; the pane's
    * activity effect then reloads the proof state. Offered while the checker
-   * is halted on an exit: the input is read-only without a proof state (a
-   * reload with the exiting text saved), so this is the typewriter-mode way
-   * out — "Restart" and "Reload" replay the same text and die again. */
+   * is halted on an exit or (#72) paused on the browser's stack: the input is
+   * read-only without a proof state (a reload with the exiting text saved), so
+   * this is the typewriter-mode way out — "Restart" and "Reload" replay the
+   * same text and die again. */
   function lastLineAction(): RemoveLastLine | null {
     const m = editor?.getModel()
     if (!m) return null

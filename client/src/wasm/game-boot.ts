@@ -693,10 +693,11 @@ async function preflightWorkerScripts(): Promise<Preflight> {
  * every reboot — such a reboot during a cut is three bare deaths, the link's
  * doing. A deploy problem is not the link. */
 async function networkSuspected(death: DeathLike): Promise<boolean> {
-  // HARDENING #52: a liveness verdict ("wedged") or a FileWorker exit
-  // ("exit") is decided inside a worker that loaded and ran — never the
-  // link's doing, never held, never probed (death-kind.ts). Nor is a stale
-  // page (QD-API-2): its worker loaded every script, of two versions.
+  // HARDENING #52: a liveness verdict ("wedged"), a FileWorker exit ("exit")
+  // or (#72) a stack pause, whose lastDeath the re-arm's settle still reads, is
+  // decided inside a worker that loaded and ran — never the link's doing, never
+  // held, never probed (death-kind.ts). Nor is a stale page (QD-API-2): its
+  // worker loaded every script, of two versions.
   if (isRuntimeVerdict(death) || isStalePageDeath(death)) return false;
   if (isNetworkDeath(death)) return true;
   if (deployProblem || !boundEntry) return false;
@@ -860,8 +861,9 @@ async function classifyHalt(st: RelayStatus, ui: StatusSink): Promise<void> {
   const death = st.lastDeath ? `${st.lastDeath.message || st.lastDeath.reason}` : "";
   // HARDENING #52: an "exit" (the content makes Lean exit on every replay)
   // or a repeated "wedged" is a crash — straight to the card, no
-  // "checking the connection" detour and no network re-arm. QD-API-2: so is
-  // a stale page (WORKER_DEP_MISMATCH) — its card asks for a reload.
+  // "checking the connection" detour and no network re-arm. #72: so is a stack
+  // pause, on its first death. QD-API-2: so is a stale page
+  // (WORKER_DEP_MISMATCH) — its card asks for a reload.
   const runtimeNote = haltedNote(st.lastDeath);
   const reason = runtimeNote || (st.lastDeath?.message ? deathWords(st.lastDeath) : "") || deployProblem || death || "the checker crashed repeatedly while starting";
   let network = isNetworkDeath(st.lastDeath);
@@ -884,13 +886,13 @@ async function classifyHalt(st: RelayStatus, ui: StatusSink): Promise<void> {
   // replay). Not the boot-failure card ("Lean could not start … Reloading the
   // page retries" — it would replay the same text and die again, with the
   // input disabled by bootFailed): the level pane's exit / stall card, which
-  // offers removing the offending line. A stale page's halt (QD-API-2) takes
-  // the same path to its own card, served or not.
+  // offers removing the offending line. A stack pause (#72) and a stale page's
+  // halt (QD-API-2) take the same path to their own cards, served or not.
   if (!everServed && !runtimeNote) {
     publishHaltedFailure(`Lean failed to start: ${reason}`, ui);
   } else {
     const label = runtimeNote ?? `the checker halted after repeated crashes${death ? ` (${death.slice(0, 80)})` : ""}`;
-    // The card's facts (an exit's code, a repeated stall, a stale page) as data.
+    // The card's facts (an exit's code, a repeated stall, a stale page, a stack pause) as data.
     publishCheckerActivity("ready", label, false, false, haltFacts(st.lastDeath));
     publishBootStatus({ state: "ready", label });
   }

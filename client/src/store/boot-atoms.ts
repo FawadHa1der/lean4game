@@ -69,6 +69,9 @@ export interface CheckerActivity {
   /** QD-API-2, while halted: the site was updated under this page (a worker
    * refused a sibling of another revision) — the card asks for a reload. */
   stalePage: boolean;
+  /** HARDENING #72, while halted: Lean ran out of the browser's stack, and the
+   * relay paused on that one death — the stack card; the proof may be correct. */
+  stack: boolean;
 }
 
 export const checkerActivityAtom = atom<CheckerActivity>({
@@ -79,10 +82,11 @@ export const checkerActivityAtom = atom<CheckerActivity>({
   exitCode: null,
   stalled: false,
   stalePage: false,
+  stack: false,
 });
 
 /** What halted the relay (death-kind haltFacts), for a halted status. */
-export type HaltFacts = Pick<CheckerActivity, "exitCode" | "stalled" | "stalePage">;
+export type HaltFacts = Pick<CheckerActivity, "exitCode" | "stalled" | "stalePage" | "stack">;
 
 /** `booting`: the first boot has not finished — every stage is a switch then
  * (the stage labels vary: module names, "Starting the Emscripten runtime",
@@ -90,7 +94,7 @@ export type HaltFacts = Pick<CheckerActivity, "exitCode" | "stalled" | "stalePag
  * `switching` is the relay's fact when given (a session is being replaced).
  * `halted`: true, or the halt's facts. */
 export function publishCheckerActivity(state: "busy" | "ready", label: string, booting = false, switching?: boolean, halted: boolean | HaltFacts = false): void {
-  const facts: HaltFacts = typeof halted === "object" ? halted : { exitCode: null, stalled: false, stalePage: false };
+  const facts: HaltFacts = typeof halted === "object" ? halted : { exitCode: null, stalled: false, stalePage: false, stack: false };
   const next: CheckerActivity = {
     busy: state === "busy",
     switching: state === "busy" && (switching ?? booting),
@@ -99,11 +103,12 @@ export function publishCheckerActivity(state: "busy" | "ready", label: string, b
     exitCode: halted !== false ? facts.exitCode : null,
     stalled: halted !== false && facts.stalled,
     stalePage: halted !== false && facts.stalePage,
+    stack: halted !== false && facts.stack,
   };
   const store = getDefaultStore();
   const cur = store.get(checkerActivityAtom);
   if (cur.busy === next.busy && cur.switching === next.switching && cur.label === next.label && cur.halted === next.halted
-      && cur.exitCode === next.exitCode && cur.stalled === next.stalled && cur.stalePage === next.stalePage) return;
+      && cur.exitCode === next.exitCode && cur.stalled === next.stalled && cur.stalePage === next.stalePage && cur.stack === next.stack) return;
   store.set(checkerActivityAtom, next);
 }
 

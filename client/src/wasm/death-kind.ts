@@ -18,17 +18,28 @@
  *    `exitOnMainThread`), its code in `exitCode`. It is a CRASH: the replay
  *    runs the same content, dies again, and the relay's breaker halts it —
  *    the faithful behaviour; the card names the code.
- * Neither is ever held for the network nor probed as a link problem (the D1
- * probe exists for workers whose script did not load; a worker that ran a
- * liveness probe or proxied an exit had loaded).
+ * qed64 HARDENING #72 adds a third verdict, a cause rather than a reason: a
+ * Lean thread overflowed the browser's engine stack (reason "crash", cause
+ * code ENGINE_STACK_OVERFLOW, the 0-based document line in `cause.line` when
+ * known). The same text would only overflow again, so the relay does not
+ * reboot: it pauses at once, on this one death, uncounted by the breaker, and
+ * an edit (or a re-arm) resumes. It is a limit of the browser, not a verdict on
+ * the proof: the note says so (qed64 lsp-relay.ts STACK_NOTE, EMBEDDING §7.2).
+ * None of the three is ever held for the network nor probed as a link problem
+ * (the D1 probe exists for workers whose script did not load; a worker that ran
+ * a liveness probe, proxied an exit or overflowed a Lean thread had loaded).
  */
-import { WORKER_SCRIPT_LOAD_FAILED, type Death } from "qed64/embed";
+import { ENGINE_STACK_OVERFLOW, WORKER_SCRIPT_LOAD_FAILED, type Death } from "qed64/embed";
 import type { RelayErrorKind } from "./game-translation";
 
 export type DeathLike = (Pick<Death, "reason" | "message"> & Partial<Pick<Death, "seq" | "session" | "exitCode" | "cause">>) | null | undefined;
 
-/** A death the worker's own liveness / exit hook decided (HARDENING #52). */
-export const isRuntimeVerdict = (d: DeathLike): boolean => d?.reason === "wedged" || d?.reason === "exit";
+/** A pause on the browser's stack running out (HARDENING #72). Keyed as the
+ * relay keys its pause; `lastDeath` outlives it into the re-arm's reboot. */
+export const isStackPause = (d: DeathLike): boolean => d?.cause?.code === ENGINE_STACK_OVERFLOW;
+
+/** A death the worker's own liveness / exit / stack hook decided (HARDENING #52, #72). */
+export const isRuntimeVerdict = (d: DeathLike): boolean => d?.reason === "wedged" || d?.reason === "exit" || isStackPause(d);
 
 /** QED64 docs/EMBEDDING.md §7.7: lean.worker.js refused a sibling script of
  * another revision. The three worker scripts are served under stable names
@@ -189,7 +200,9 @@ export const STARTING_LABEL = "starting the Lean checker";
  * status put "waiting for the connection" back between "starting Lean" and
  * "verifying" for a moment after link-back. A status with no death, or not
  * a relay reboot (a serving relay's booting phase), is "starting the Lean
- * checker". */
+ * checker". Nor is a stack pause's re-arm (the player's edit, a level switch,
+ * Restart) "after a crash": the pause is a limit of the browser, and the proof
+ * may be correct. */
 export function rebootLabel(st: { relay: string; rebootReason?: string | null; lastDeath?: DeathLike }, networkDeath: boolean, linkConfirmed = false): string {
   const d = st.lastDeath;
   if (st.relay === "rebooting") {
@@ -197,17 +210,18 @@ export function rebootLabel(st: { relay: string; rebootReason?: string | null; l
     if (note) return note;
   }
   const death = d ? `${d.message || d.reason}` : "";
-  if (!death || st.relay !== "rebooting") return STARTING_LABEL;
+  if (!death || st.relay !== "rebooting" || isStackPause(d)) return STARTING_LABEL;
   if (networkDeath) return st.rebootReason === "user" || st.rebootReason === "boot" || linkConfirmed ? STARTING_LABEL : NETWORK_WAIT_LABEL;
   return `restarting the checker after a crash (${death.slice(0, 80)})`;
 }
 
-/** The halted relay's label (the failure card's detail) after a #52 death
- * or a stale page's; null for any other death. An exit names its code.
+/** The halted relay's label (the failure card's detail) after a #52 death, a
+ * stack pause or a stale page's; null for any other death. An exit names its code.
  * Only what the LAST death backs: the breaker's 120 s window can mix death
  * kinds (a wedge, then two exits), so no "each time". A non-null note is a
  * verdict: game-boot classifyHalt shows it at once — no network probe. */
 export function haltedNote(d: DeathLike): string | null {
+  if (isStackPause(d)) return "Lean ran out of the browser's stack while checking this level, so checking is paused";
   if (d?.reason === "exit") return `${exitWords(d)} while replaying this level, so the checker stopped retrying`;
   if (d?.reason === "wedged") return "the checker stalled repeatedly (Lean stopped answering) and stopped retrying";
   if (isStalePageDeath(d)) return "this site was updated while the page was open, so the checker stopped; reload the page";
@@ -217,11 +231,11 @@ export function haltedNote(d: DeathLike): string | null {
 /** The halt's facts for the level pane's card (boot-atoms CheckerActivity):
  * the exit code of an "exit" halt (the card's headline names it; null for an
  * exit that reported none — the generic card), whether repeated liveness
- * stalls halted it, and whether a stale page did (QD-API-2: the reload
- * card). Structured: the pane used to parse them back out of haltedNote's
- * label. */
-export function haltFacts(d: DeathLike): { exitCode: number | null; stalled: boolean; stalePage: boolean } {
-  return { exitCode: d?.reason === "exit" && typeof d.exitCode === "number" ? d.exitCode : null, stalled: d?.reason === "wedged", stalePage: isStalePageDeath(d) };
+ * stalls halted it, whether a stale page did (QD-API-2: the reload card), and
+ * whether the browser's stack ran out (#72: the stack card). Structured: the
+ * pane used to parse them back out of haltedNote's label. */
+export function haltFacts(d: DeathLike): { exitCode: number | null; stalled: boolean; stalePage: boolean; stack: boolean } {
+  return { exitCode: d?.reason === "exit" && typeof d.exitCode === "number" ? d.exitCode : null, stalled: d?.reason === "wedged", stalePage: isStalePageDeath(d), stack: isStackPause(d) };
 }
 
 /** A death as the failure card words it: the message, except a boot that
