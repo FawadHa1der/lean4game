@@ -36,12 +36,22 @@
 #    kernel.patch is that runtime's patch id), so a qed64 bump whose workers
 #    need a newer kernel is refused here — before a deploy ships workers the
 #    served runtime cannot run. Patch ids are NNNN plus an optional lowercase
-#    letter (0035b), ordered by the release tools' comparePatchIds.
+#    letter (0035b), ordered by the release tools' comparePatchIds;
+#  - the runtime schema: the workers state the runtime manifest schemas they
+#    read (closure.json runtime.manifestSchemas; an absent key means
+#    org.lean-browser64.runtime/v1 only) and refuse any other at boot, so the
+#    schema of the runtime this site serves (the same record's runtime.schema;
+#    absent means v1) must be listed. Without this an old worker passes
+#    staging, downloads the whole runtime and then fails every boot (QED64's
+#    review, M3: gzip runtime parts are schema v2).
 #
 #   scripts/stage-workers.sh           check, then stage them
 #   scripts/stage-workers.sh --check   check only (the from-source preflight)
 #   scripts/stage-workers.sh --list    print their served paths (relative to the
 #                                      site root) — deploy-app.sh's completeness check
+# STAGE_WORKERS_RECORD and STAGE_WORKERS_CLOSURE replace the record and the
+# closure in the floor and schema checks: scripts/stage-workers.test.mjs points
+# them at temp copies. Nothing else sets them.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 # Resolved the way the bundler resolves `qed64/embed` (npm may hoist the
@@ -88,20 +98,26 @@ node -e '
   if (!target || target !== real(entry)) fail(`client/tsconfig.json maps qed64/embed to ${mapped ?? "nothing"}, but the installed package\u2019s entry is ${path.relative(clientDir, entry)} (closure.json entry) — update the paths entry`);
 ' "$PKG" "$PWD/client"
 # The floor, compared by the release tools (the root devDependency
-# lean4-wasm64; resolved from the repo root, this script's cwd).
+# lean4-wasm64; resolved from the repo root, this script's cwd), and the
+# runtime schema.
 FLOOR="$(node --input-type=module -e '
   import fs from "node:fs";
   import { comparePatchIds, parsePatchId } from "lean4-wasm64";
-  const [pkg, rec] = process.argv.slice(1);
+  const [closure, rec] = process.argv.slice(1);
   const fail = (why) => { process.stderr.write(`stage-workers: ${why}\n`); process.exit(2); };
-  const min = JSON.parse(fs.readFileSync(`${pkg}/embedding/closure.json`, "utf8")).runtime?.minKernelPatch ?? "";
+  const runtime = JSON.parse(fs.readFileSync(closure, "utf8")).runtime;
+  const min = runtime?.minKernelPatch ?? "";
   let r; try { r = JSON.parse(fs.readFileSync(rec, "utf8")); } catch { fail(`${rec} (the pinned toolchain release record) is missing or unreadable`); }
   const have = r.kernel?.patch ?? "";
   try { parsePatchId(min); } catch { fail(`the qed64 closure states no valid runtime.minKernelPatch (${JSON.stringify(min)})`); }
   try { parsePatchId(have); } catch { fail(`${rec} names no valid kernel.patch (${JSON.stringify(have)})`); }
   if (comparePatchIds(have, min) < 0) fail(`the qed64 workers need kernel patch ${min} or newer (closure.json runtime.minKernelPatch), this site serves the runtime of ${r.id}, patch ${have} (wasm/lean4-wasm64-release.json) — pin a newer toolchain release (a full rebake) or an older qed64`);
   console.log(`qed64 workers: kernel patch ${have} (${r.id}, runtime ${r.runtime?.buildId}) meets their floor ${min}`);
-' "$PKG" wasm/lean4-wasm64-release.json)" || exit 2
+  const V1 = "org.lean-browser64.runtime/v1";
+  const schema = r.runtime?.schema ?? V1, read = runtime?.manifestSchemas ?? [V1];
+  if (!Array.isArray(read) || !read.includes(schema)) fail(`the qed64 workers read runtime manifest schemas ${JSON.stringify(read)} (closure.json runtime.manifestSchemas; an absent key means v1 only), this site serves the runtime of ${r.id}, schema ${JSON.stringify(schema)} (wasm/lean4-wasm64-release.json runtime.schema; absent means v1) — pin a qed64 whose workers read it, or a toolchain release they can read`);
+  console.log(`qed64 workers: they read runtime schema ${schema} (${r.id})`);
+' "${STAGE_WORKERS_CLOSURE:-$PKG/embedding/closure.json}" "${STAGE_WORKERS_RECORD:-wasm/lean4-wasm64-release.json}")" || exit 2
 if [ "${1:-}" = --check ]; then echo "$FLOOR"; exit 0; fi
 PUB=client/public
 # Generated and gitignored: whatever the closure does not name goes (every

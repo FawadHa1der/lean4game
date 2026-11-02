@@ -99,7 +99,9 @@ What the pin is checked against, and where:
 - `scripts/stage-workers.sh` (every build and deploy): the record's
   `kernel.patch` meets the qed64 workers' floor (`closure.json`
   `runtime.minKernelPatch`), compared with the tools' `comparePatchIds`
-  (`0035b` > `0035` > `0034`);
+  (`0035b` > `0035` > `0034`), and the record's `runtime.schema` (absent means
+  `org.lean-browser64.runtime/v1`) is one the workers read (`closure.json`
+  `runtime.manifestSchemas`; an absent key means v1 only);
 - preflight and the release lane: the record's Mathlib packs
   (`mathlib-essential`, `mathlib-game-extra`) name `native64.commit` as their
   `lean.compiler` — the compiler that compiles the games against them
@@ -368,6 +370,12 @@ library API, §10 lean4game's migration list) and `embedding/closure.json`
   build and deploy — and the from-source preflight refuse a qed64 whose
   workers need a newer kernel than ours (patch ids ordered by the release
   tools' `comparePatchIds`: `0035b` > `0035`).
+- **runtime schema**: `closure.json` `runtime.manifestSchemas` lists the
+  runtime manifest schemas the workers read (an absent key, as at this pin,
+  means `org.lean-browser64.runtime/v1` only), and they refuse any other at
+  boot. The same two refuse a pair whose record's `runtime.schema` (absent
+  means v1) is not listed: without that, an old worker would pass staging and
+  fail every boot on a gzip (v2) runtime (`scripts/stage-workers.test.mjs`).
 
 Current pin: qed64 **`73d7f3b`** (`73d7f3b363b49909d6d1ac0fade8885b0312dc6c`,
 QED64 `main`, committed 2026-10-19, pinned here with the Lean 4.35 port
@@ -707,8 +715,9 @@ Bump (one commit for `client/package.json` + `package-lock.json`):
    old package — run `npm ci`), a `client/tsconfig.json` `paths` entry for
    `qed64/embed` that is not the package's `closure.json` `entry` (tsc
    reads that file; Vite reads the exports map — if the entry moved, update
-   the `paths` entry), and a kernel floor above ours. It also removes a
-   staged worker the closure no longer names.
+   the `paths` entry), a kernel floor above ours, and a runtime schema the
+   workers do not read. It also removes a staged worker the closure no longer
+   names.
 4. The unit tests — `scripts/test-all.sh` (`worker-liveness.test.ts` runs
    the new `lean.worker.js`; `death-kind.test.ts` runs the new worker
    scripts' deaths through the real relay) — then the browser smoke (a
