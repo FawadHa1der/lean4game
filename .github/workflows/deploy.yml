@@ -10,17 +10,38 @@
 #      deploy step has finished (the mutable indexes). For a runtime change
 #      it refuses until the new worker is live; for a same-runtime change it
 #      cannot tell, so wait for this job.
-# This job has no R2 credentials and runs neither; scripts/deploy-app.sh
-# logs the reminder for step 2 and annotates the run with it. Runs only when
-# the repo has the CLOUDFLARE_API_TOKEN secret (Workers Scripts: Edit — no
-# R2 permission needed) and CLOUDFLARE_ACCOUNT_ID.
+# This workflow has no R2 credentials and runs neither; scripts/deploy-app.sh
+# logs the reminder for step 2 and annotates the run with it. The deploy job
+# runs only after the test job has passed, and deploys only when the repo has
+# the CLOUDFLARE_API_TOKEN secret (Workers Scripts: Edit — no R2 permission
+# needed) and CLOUDFLARE_ACCOUNT_ID. The test job needs no secrets.
 name: deploy
 on:
   push:
     branches: [wasm64-port]
   workflow_dispatch:
+# One deploy at a time: a run waits for the deploy before it, and a newer run
+# replaces one still waiting, so deploys land in push order. A running deploy
+# is never cancelled midway.
+concurrency:
+  group: lean4game-deploy
+  cancel-in-progress: false
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: scripts/test-all.sh
   deploy:
+    needs: test
+    # workflow_dispatch runs on whatever branch it is given: only wasm64-port deploys.
+    if: github.ref == 'refs/heads/wasm64-port'
     runs-on: ubuntu-latest
     steps:
       - id: secrets
@@ -36,8 +57,10 @@ jobs:
           cache: npm
       - if: steps.secrets.outputs.present == 'true'
         run: npm ci
+      # A re-run of an older run, or one that waited behind a newer push, must
+      # not deploy over a newer commit: only the current head of wasm64-port deploys.
       - if: steps.secrets.outputs.present == 'true'
-        run: node --import ./client/src/wasm/ts-resolve-hook.mjs client/src/wasm/game-translation.test.ts
+        run: test "$(git ls-remote origin refs/heads/wasm64-port | cut -f1)" = "$GITHUB_SHA" || { echo "deploy refused, $GITHUB_SHA is no longer the head of wasm64-port (the newer head deploys in its own run)" >&2; exit 1; }
       - if: steps.secrets.outputs.present == 'true'
         run: SKIP_BUILD=0 scripts/deploy-app.sh
         env:

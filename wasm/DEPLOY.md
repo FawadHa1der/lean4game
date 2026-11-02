@@ -174,6 +174,19 @@ has finished puts the new shell live against R2's outgoing index (every
 game boot fails, and step 3 refuses until R2 holds step 1's objects) for as
 long as the multi-GB upload takes, not seconds.
 
+The workflow's test job runs first and needs no secrets: `npm ci` and
+`scripts/test-all.sh`, every `*.test.ts` and `*.test.mjs` under `client/src`,
+`infra` and `scripts` (found there, so a new file needs no list). The deploy
+job `needs:` it, so a failing test deploys nothing. Deploys go one at a time,
+in push order: the runs share one concurrency group (`lean4game-deploy`,
+`cancel-in-progress: false`), so a run waits for the deploy before it, a newer
+push replaces a run still waiting, and a running deploy is never cancelled
+midway. A manual 'Run workflow' deploys only on `wasm64-port`, and just before
+`scripts/deploy-app.sh` a one-line `git ls-remote` check refuses unless the
+run's commit is still that branch's head. So a 'Re-run jobs' of an older run
+never deploys over a newer commit, and it is no way to roll back ("Rollback"
+below deploys from a checkout): the newer head deploys in its own run.
+
 ### Per-runtime index copies (QED64 HARDENING #64)
 
 | Copy | Bytes of | Written by |

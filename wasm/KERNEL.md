@@ -709,13 +709,10 @@ Bump (one commit for `client/package.json` + `package-lock.json`):
    reads that file; Vite reads the exports map — if the entry moved, update
    the `paths` entry), and a kernel floor above ours. It also removes a
    staged worker the closure no longer names.
-4. The unit tests — `for t in client/src/wasm/*.test.ts
-   client/src/components/infoview/*.test.ts; do node --import
-   ./client/src/wasm/ts-resolve-hook.mjs "$t"; done` and `node --test
-   infra/worker.test.mjs` (`worker-liveness.test.ts` runs the new
-   `lean.worker.js`; `death-kind.test.ts` runs the new worker scripts'
-   deaths through the real relay) — then the browser smoke (a Mathlib game
-   and NNG4) and cypress.
+4. The unit tests — `scripts/test-all.sh` (`worker-liveness.test.ts` runs
+   the new `lean.worker.js`; `death-kind.test.ts` runs the new worker
+   scripts' deaths through the real relay) — then the browser smoke (a
+   Mathlib game and NNG4) and cypress.
 
 A bump whose workers need a newer kernel (a higher `minKernelPatch`) is a
 pairing bump: a newer toolchain release (both pins, "Toolchain dependency")
