@@ -667,7 +667,8 @@ let linkConfirmedSeq: number | null = null;
 let boundEntry: SnapshotEntry | null = null;
 /** A worker script the deployment does not serve (404 / HTML page), found
  * by a preflight: the halted card's text when the death itself has none,
- * and the reason no hold/re-arm applies. Reset by a served boot. */
+ * and the reason no hold/re-arm applies. Reset by a served boot, and when a
+ * boot starts: a hold's verdict must not outlive the boot it failed. */
 let deployProblem = "";
 
 /** HEAD every worker script, all at once (head-checks.ts: the first failure in
@@ -1047,6 +1048,7 @@ export function bootGameRuntime(ui: StatusSink = consoleSink): Promise<GameRunti
   boundGameId ??= here;
   bootPromise ??= (async () => {
    try {
+    deployProblem = "";
     // L11: an id this site does not serve (no /api/games row AND game.json
     // refused) boots nothing and publishes no failure — the router shows the
     // not-found page. Unbound again, so a real game entered later binds
