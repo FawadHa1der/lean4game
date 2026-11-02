@@ -9,13 +9,14 @@ tier: R2 10 GB with zero egress, Workers 100 k requests/day.
 `infra/worker.js` is QED64's edge-worker library, `qed64/edge` from the
 pinned `qed64` package (QED64 `docs/DEPLOY.md`, "Using qed64/edge in your
 own Worker", since the QED64 `385a1ac` pin): `createWorker({ r2Prefix:
-"lean4game/", release, isImmutable, decorate })` with the hardened defaults
-on (`siteWorker(record)` builds it; the default export is
+"lean4game/", release, isImmutable, decorate, extraRoutes })` with the
+hardened defaults on (`siteWorker(record)` builds it; the default export is
 `siteWorker()` for `wasm/lean4-wasm64-release.json`). The site adds the
-SEC1 `Content-Security-Policy` (`decorate`) and vite's hashed `/assets/`
+SEC1 `Content-Security-Policy` (`decorate`), vite's hashed `/assets/`
 bundles as immutable (`isImmutable` is the library's own `isImmutable`,
-imported, plus that one rule); everything below (routing, caching, ranges,
-HEAD) is the library's. Wrangler bundles it from the workspace's hoisted
+imported, plus that one rule) and its two indexes from the deploy's assets
+(`extraRoutes`, "Deploy, in order" below); everything else below (routing,
+caching, ranges, HEAD) is the library's. Wrangler bundles it from the workspace's hoisted
 `node_modules/qed64` (`infra/worker.test.mjs` checks it is the client's
 install). Next to the pre-library worker it is stricter or adds in four
 places: GET and HEAD only on artifacts (anything else 405 with `Allow: GET,
@@ -28,24 +29,34 @@ library's rules (a re-cut `-r<N>` id is accepted).
 
 | Piece | Where | Size |
 |---|---|---|
-| App shell (`client/dist` minus artifact dirs) | Workers static assets, `wasm/out/deploy` | ~40 MB, 450 files, largest 22.9 MiB (cap 25 MiB) |
+| App shell (`client/dist` minus artifact dirs) and the site's two indexes (`/snapshots/index.json`, `/profiles/index.json`) | Workers static assets, `wasm/out/deploy` | ~40 MB, 450 files, largest 22.9 MiB (cap 25 MiB) |
 | Lean runtime chunks, Lean core pack (`/runtime/*`, `/profiles/*`) | R2 bucket `qed64-artifacts`, prefix `lean4-wasm64/<release id>/`: the lean4 fork's toolchain release, shared with the QED64 editor and the widgets showcase, uploaded once by the release owner | runtime 159 MB, core pack ~121 MB |
-| Game snapshots, the site's pack list (`/snapshots/*`, `/profiles/index.json`) | R2 bucket `qed64-artifacts`, prefix `lean4game/` | ten slim game snapshots ~2.1 GB on the wire (each game is downloaded only when first played) |
+| Game snapshots (`/snapshots/*.snapz`, digest-named) | R2 bucket `qed64-artifacts`, prefix `lean4game/` | ten slim game snapshots ~2.1 GB on the wire (each game is downloaded only when first played) |
 
 Two owners, two prefixes (the release's hosting rules,
 `wasm64-build/js/formats/HOSTING.md` in the lean4 fork). The release id and
 the mapping come from `wasm/lean4-wasm64-release.json`, the release record
 the bake pins: `infra/worker.js` imports it, maps `/runtime/*` and
 `/profiles/*` onto the release's `runtime/` and `profiles/`
-(`hosting.mount`) and keeps `hosting.siteOwned` (`/profiles/index.json`,
-`/snapshots/*`) under `lean4game/`. The browser only sees this origin; the
-release prefix is proxied, never linked. A toolchain bump is therefore one
-file (the record) plus a rebake; the worker follows it on the next deploy.
-The bucket is shared with the editor; the `lean4game/` prefix keeps the two
-sites' mutable pointers apart and lets the existing bucket-scoped upload
-token serve both.
+(`hosting.mount`), keeps `hosting.siteOwned` (`/profiles/index.json`,
+`/snapshots/*`) off the release, and reads site-owned objects under
+`lean4game/`. The browser only sees this origin; the release prefix is proxied,
+never linked. A toolchain bump is therefore one file (the record) plus a
+rebake; the worker follows it on the next deploy. The bucket is shared with the
+editor; the `lean4game/` prefix keeps the two sites' objects apart and lets the
+existing bucket-scoped upload token serve both.
 
 ## Deploy, in order
+
+One `wrangler deploy` carries everything a boot reads that is not
+digest-named: the shell (`client/dist`), the Worker with the release record it
+bundles (`wasm/lean4-wasm64-release.json`), and the site's two indexes,
+`/snapshots/index.json` and `/profiles/index.json`. Workers static assets are
+versioned with the Worker, so a deploy switches the three together (QED64's
+architecture review D2; its `docs/DEPLOY.md` "Atomic deploys" is the model).
+This replaced the two-step upload of 2026-10-08 (`wasm/UX-PARITY.md`, "Atomic
+deploys"). An upload changes nothing a deployed shell reads: a new `.snapz` is
+inert in R2 until the deploy of the index that names it.
 
 0. **The toolchain release in R2** (once per release, by its owner): the
    staged release directory under `lean4-wasm64/<release id>/`, with the
@@ -59,121 +70,62 @@ token serve both.
    push there (`wasm/KERNEL.md`, "The pin" — the Lean 4.35 pin
    `lean-v4.35.0-b081e7c` was staged, not published, when this branch was
    built).
-1. `scripts/upload-artifacts.sh` — **before the deploy**. Preflights
+1. `scripts/upload-artifacts.sh` — **before the push**. Preflights
    `client/public` (`scripts/preflight-artifacts.mjs`: every chunk, profile
-   part and snapshot present and paired to the manifest's build id, and the
-   two per-runtime index copies present, byte-identical to their indexes and
-   none for another runtime; see "Per-runtime index copies" below), checks
+   part and snapshot present and paired to the manifest's build id), checks
    that the served runtime is the release record's and that R2's
    `lean4-wasm64/<release id>/release.json` is byte-identical to
    `wasm/lean4-wasm64-release.json` (else it prints the release upload and
-   stops), then `rclone copy` (never sync) into `lean4game/` of only what
-   no deployed shell reads yet: the digest-named `.snapz` first, then this
-   runtime's copies `snapshots/index.<buildId>.json` and
-   `snapshots/profiles-index.<buildId>.json` — so a browser never learns a
-   name whose object is not there yet (R2 has no multi-object atomic
-   publish). It never writes `snapshots/index.json` or
-   `profiles/index.json`, and ends by printing steps 2 and 3. Needs the
+   stops), then `rclone copy` (never sync) of every `.snapz` into
+   `lean4game/snapshots/`, and nothing else: no index, no copy. Needs the
    `qed64-r2` rclone remote (R2 API token scoped to the bucket, see the
    QED64 doc). Later runs transfer only changed snapshots.
-2. `scripts/deploy-app.sh` — stages the worker scripts the qed64 package's
+2. `scripts/deploy-app.sh`, which is what a push to `wasm64-port` runs in CI —
+   stages the worker scripts the qed64 package's
    `embedding/closure.json` names into `client/public/workers/` (gitignored, generated;
    `scripts/stage-workers.sh` — a clean checkout has none and a shell
-   deployed without them hangs at "starting Lean"), builds the client (the vite `define` pins
-   `__QED64_BUILD_ID__` to the shipped manifest's build id, so the shell asks
-   R2 for the manifest of the exact runtime it was built against), copies
-   `client/dist` without `runtime/ profiles/ snapshots/` into
-   `wasm/out/deploy`, refuses files over 25 MiB, runs the guard
-   (`scripts/deploy-guard.mjs`, below) and runs `wrangler deploy`
-   (wrangler 4.125.0 is a root dev dependency; `npx wrangler login` once),
-   then prints the reminder for step 3 (it never runs it: CI has no R2
-   credentials). Live at `https://lean4game.<account>.workers.dev`.
-3. `scripts/upload-artifacts.sh --post-deploy` — **immediately after the
-   deploy**. Refuses (exit 3, nothing written) unless
-   `$SITE_URL/runtime/runtime-manifest.json` (default
-   `https://lean4game.fawadworkaddress.workers.dev`) already names the
-   record's runtime — the old worker answers its own runtime's manifest, the
-   new one the release's — and R2 already holds every `.snapz` the local
-   index names (by name and size, from an `rclone lsf` listing; each name
-   carries its digest) and both copies of step 1 (byte for byte). That live
-   check compares only the runtime build id, so it proves the deploy only
-   for a runtime change (see below for a same-runtime change). Then it pins
-   what R2 serves now: when R2's `snapshots/index.json` or
-   `profiles/index.json` pairs with a runtime that has no copy in R2 yet,
-   that object is copied to `snapshots/index.<its id>.json` /
-   `snapshots/profiles-index.<its id>.json` inside R2 (`rclone copyto`
-   remote to remote; an existing copy is never overwritten). The snapshot
-   copy keeps a paired snapshot index for shells still paired with the
-   outgoing runtime that read copies (every shell from the QED64 `385a1ac`
-   pin on); the profile copy is for a rollback, not for those shells (see
-   "Per-runtime index copies"). Then
-   it uploads `snapshots/index.json`, then `profiles/index.json`. Every R2
-   read fails closed: a failure that is not rclone's "not found" refuses
-   before the first write. Re-runs write nothing.
+   deployed without them hangs at "starting Lean"), builds the client, copies
+   `client/dist` into `wasm/out/deploy` without `runtime/ profiles/ snapshots/`
+   but for exactly `snapshots/index.json` and `profiles/index.json`, refuses
+   (exit 3) a tree that lacks one of the two or holds other bytes than the
+   tracked `client/public` file (a stale `SKIP_BUILD=1` tree) and files over 25
+   MiB, runs the guard (`scripts/deploy-guard.mjs`, below) and runs `wrangler
+   deploy` (wrangler 4.125.0 is a root dev dependency; `npx wrangler login`
+   once). Live at `https://lean4game.<account>.workers.dev`.
 
-Release first, then what no shell reads yet, then the shell, then the
-pointers: a shell only ever references objects that already exist, and the
-mutable indexes never change ahead of the shell that pairs with them. Both
-shells read `/snapshots/index.json` at every game boot and refuse an entry
-baked for another runtime than their own ("the environment … is not
-published for this build", the failure card; it does not reload into a new
-shell). So publishing a new runtime's `snapshots/index.json` before the
-deploy breaks every game boot on the live shell until the deploy lands.
-QED64 did exactly
-that on 2026-10-08 (its `docs/HARDENING.md` #64: upload, then the push;
-about ten minutes of failed boots), and this page used to say the opposite.
-With the two upload steps:
+Release first, then the `.snapz`, then the one deploy: a shell only ever
+references objects that already exist, and the indexes never change ahead of
+the shell that pairs with them. `infra/worker.js` answers a GET or HEAD of
+exactly those two index paths from `ASSETS` (one `extraRoutes` entry); any
+other method, an overlay's own `/snapshots/<dir>/index.json` and R2's frozen
+files stay on the artifact route. The boot reads the fixed names:
+`/runtime/runtime-manifest.json`, which the Worker reads from the release it
+bundles, and `/snapshots/index.json`. No pinned manifest and no per-build copy:
+the build defines no `__QED64_BUILD_ID__`, the option-less `qed64` loaders then
+read only those names (QED64 EMBEDDING §6.1), and `client/src/wasm/boot-params.test.ts`
+pins it. The service worker precaches the two indexes and the runtime manifest
+at install, so the offline path finds them (`scripts/build-sw.mjs`).
 
-- the live shell keeps working through step 1 and up to the deploy (the
-  live one on `wasm64-port` predates #64 and reads only the mutable
-  indexes);
-- between the deploy and step 3 the new shell reads the outgoing
-  `snapshots/index.json`, finds it names another runtime, and reads its
-  own copy `snapshots/index.<buildId>.json`, which step 1 uploaded (the
-  client reads copies since the QED64 `385a1ac` pin, "Per-runtime index
-  copies" below). Game boots work through that window; a shell from before
-  that pin read the outgoing index there and failed "not published for
-  this build" until step 3. Still run step 3 the moment the deploy is
-  live (with a CI deploy, a push to `wasm64-port`, the moment the
-  workflow's deploy step has finished): until it runs the mutable indexes
-  are the outgoing runtime's, so every new visit pays the copy request,
-  and a shell without the copy (one whose step 1 did not finish) refuses.
-  For a RUNTIME change step 3 refuses (exit 3, nothing written) until the
-  new worker answers, so a run that comes too early is safe and is simply
-  rerun. For a same-runtime change it cannot tell (below);
-- a tab still open on the outgoing shell after a runtime deploy talks to
-  the new worker (its `/runtime/*` maps to the new release, which has no
-  manifest of the outgoing runtime, so the tab resolves the new runtime)
-  and needs a reload: its game boot refuses "not published for this
-  build" with a Reload button. A shell that reads copies keeps a snapshot
-  index paired with its own runtime through step 3 (step 3 pins it), but
-  the runtime it would boot is the new worker's.
+Tabs left open across a runtime deploy still break, as they did; a reload is
+the cure. From the code (not yet seen in a browser): a tab that already resolved its
+manifest and index (memoised per page) asks for the outgoing runtime's chunks,
+which the new worker's release does not hold, unless the service worker has
+them; a tab that has not resolved them yet reads the new manifest and the new
+index, which pair, and boots them on its old page code, unless QED64's worker
+revision check refuses first (the stale-page card). A tab of a shell from
+before this scheme reads R2's frozen per-runtime copy and refuses "not published
+for this build" with its Reload button.
 
 Shell-only changes (this repo's client code) need step 2 alone. A snapshot
-rebake or a new game for the SAME runtime takes the same three steps: step 1
-uploads the new `.snapz` and rewrites this runtime's copies (no shell reads
-them while its mutable index is paired), step 3's live check passes at once
-(the live manifest is already this runtime) and it pins nothing (R2's index
-already pairs with it). Because the check passes before the deploy too, it
-does not tell whether step 2 has landed (step 3 prints a note saying so):
-when the change also ships a shell change, run step 3 only once the deploy
-is confirmed by hand (`deploy-app.sh` printed `deployed.`, or the
-workflow's deploy step finished). An early step 3 for a new game is
-harmless (the old shell's `api/games` does not list it), but for a rebake
-whose level data changed in the shell it makes the old shell boot the new
-snapshot with its old level data. With no shell change at all, step 3 may
-follow step 1 directly. A runtime rebuild needs all of 0–3.
+rebake or a new game for the SAME runtime takes steps 1 and 2, and is visible
+at the deploy. A runtime rebuild needs all of 0-2.
 
 `.github/workflows/deploy.yml` runs step 2 on every push to `wasm64-port`
 when the fork has the `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit only)
 and `CLOUDFLARE_ACCOUNT_ID` secrets; without them it logs a skip. It has no
-R2 credentials, so it can neither run nor check steps 1 and 3: for a
-runtime or snapshot change, finish step 1 BEFORE the push and run step 3
-once the workflow's deploy step has finished (the job logs the reminder
-and annotates the run with it). For a runtime change, a push before step 1
-has finished puts the new shell live against R2's outgoing index (every
-game boot fails, and step 3 refuses until R2 holds step 1's objects) for as
-long as the multi-GB upload takes, not seconds.
+R2 credentials, so it can neither run step 1 nor check the release in R2:
+finish step 1 BEFORE the push. A push before step 1 has finished deploys nothing
+(the guard refuses; 'Run workflow' after the upload).
 
 **The guard** (`scripts/deploy-guard.mjs`, QED64's review R19a; also under
 `--dry-run`, and in CI, which deploys through `deploy-app.sh`): before the
@@ -203,74 +155,87 @@ midway. A manual 'Run workflow' deploys only on `wasm64-port`, and just before
 `scripts/deploy-app.sh` a one-line `git ls-remote` check refuses unless the
 run's commit is still that branch's head. So a 'Re-run jobs' of an older run
 never deploys over a newer commit, and it is no way to roll back ("Rollback"
-below deploys from a checkout): the newer head deploys in its own run.
+below): the newer head deploys in its own run. With the indexes inside the
+deploy, an older commit deployed over a newer one would serve the older index,
+which is why this matters.
 
-### Per-runtime index copies (QED64 HARDENING #64)
+### R2's frozen indexes and the per-runtime copies
 
-| Copy | Bytes of | Written by |
-|---|---|---|
-| `/snapshots/index.<buildId>.json` | `/snapshots/index.json` | `scripts/stage-snapshots.py` after every merge (from the MERGED index, never a staging dir's own copy) |
-| `/snapshots/profiles-index.<buildId>.json` | `/profiles/index.json` | the bundle lane of `wasm/build-from-source.sh`, next to `profiles/index.json` |
+From the two-step upload (2026-10-08 to 2026-11), R2 still holds, under
+`lean4game/`:
 
-- `<buildId>` is the runtime the index pairs with (its snapshot entries'
-  `runtime`, the profile index's `runtime.buildId`). Both live under
-  `/snapshots/`, which `hosting.siteOwned` leaves to the site under every
-  worker; `/profiles/index.<id>.json` would be routed to the release prefix,
-  which does not carry it.
-- Locally they are derived and gitignored, like
-  `runtime-manifest.<buildId>.json`: `scripts/stage-snapshots.py` removes
-  another runtime's local copies (R2 keeps its own; locally they would name
-  `.snapz` that are gone), `scripts/stage-snapshots.py --copies` rewrites
-  all three (the two index copies and the pinned runtime manifest) from the
-  tree as it is, `scripts/fetch-artifacts.sh` runs that after
-  an extract, and the upload's preflight refuses copies that are missing,
-  stale or another runtime's.
-- In R2: step 1 writes this runtime's; step 3 writes the outgoing runtime's
-  when R2 has none yet, from the live objects, server side. Nothing deletes
-  them. The two pinned copies are not equally useful. The snapshot copy
-  names digest-named `.snapz` under `/snapshots/`, which every worker
-  routes to `lean4game/`, so it stays a paired snapshot index under the new
-  worker. The profile copy names `/profiles/lean-core.manifest.json`, and
-  every `/profiles/*` path but `index.json` follows the deployed worker's
-  release: under the new worker it resolves to the NEW release's core
-  pack. So the outgoing runtime's profile copy is a usable profile index
-  only beside its own worker, that is, for a rollback ("Rollback" below),
-  not for an outgoing shell's open tabs.
-- Caching: `infra/worker.js` serves both `must-revalidate` with QED64's rule
-  (`/\/(?:profiles-)?index(\.[^/]*)?\.json$/` is never immutable): the
-  16-hex build id in the name would otherwise make them `immutable` for a
-  year, and a rebake for the same runtime rewrites them. A 404 is `no-store`,
-  as every error (the rule is `qed64/edge`'s own `isImmutable`, imported).
-  The service worker fetches them network-first, like the indexes, and its
-  install precaches this shell's two copies with the pinned runtime manifest
-  (`scripts/build-sw.mjs`; a host without them answers 404, which the
-  install tolerates): learned on use, a first visit inside a pairing window
-  never stored its copy (the page read it before the worker controlled the
-  page), and an offline revisit then refused every game. The live pre-#64
-  worker on `wasm64-port` would still serve them `immutable` (and its 404s
-  too): no deployed shell asks for them, so do not open their URLs on the
-  live site before the deploy.
-- The reader (QED64's `loadSnapshotIndex(url, { pairedBuildId })`): read
-  `index.json` first; only when an entry names a runtime other than the
-  paired build id, read `index.<pairedBuildId>.json` with the same HTML,
-  schema and origin checks and use it when every one of its entries pairs
-  with that id. A 404, HTML, a network error, an empty, mixed or mispaired
-  copy keeps `index.json`, and the pairing check refuses as before; a paired
-  index costs no extra request. This client reads it so since the QED64
-  `385a1ac` pin: `fetchSnapshotIndexOnce` (`client/src/wasm/games-api.ts`)
-  passes as `pairedBuildId` the runtime the page boots, the `?runtime=`
-  override when one is set, else the shell's pin (`__QED64_BUILD_ID__`);
-  `?snapshots=` reads only its own index. So the index side of the gap
-  above is closed for shells from that pin on: the new shell reads its copy
-  (step 1) until step 3, and an outgoing shell's open tabs read their
-  snapshot copy (step 3's pin; their `/runtime/*` still follows the new
-  worker's release, so after a runtime deploy they still need a reload).
-  The game boot installs no profile (`installArtifacts` with `profiles:
-  "none"`): it reads `/profiles/index.json` and, when that names another
-  runtime, `installArtifacts` reads the profile copy, but neither is
-  used. The profile copies are published for the shared format (QED64's
-  `installArtifacts` reads them) and, for the outgoing runtime, for a
-  rollback (see "In R2" above).
+| Key | What it was |
+|---|---|
+| `snapshots/index.json`, `profiles/index.json` | the mutable pointers |
+| `snapshots/index.<buildId>.json`, `snapshots/profiles-index.<buildId>.json` | the per-runtime copies (QED64 HARDENING #64) |
+
+- Only a Worker version from before the change reads the two pointers, and only
+  a shell from before it reads the copies. Nothing writes them any more
+  (`scripts/upload-artifacts.sh` sends `.snapz` alone and takes no arguments), and
+  they stay **frozen** while such a version is a rollback target. Never run an
+  `upload-artifacts.sh` from before the change: it would rewrite them.
+- Locally nothing writes the copies either: `scripts/stage-snapshots.py` and
+  the bundle lane stopped, and the next staging removes leftovers. QED64's bake
+  still writes `index.<buildId>.json` beside its index in the staging dir; it
+  is never staged or uploaded. `.gitignore` keeps the names for such leftovers.
+  `runtime/runtime-manifest.<buildId>.json` is the release's own file: it stays
+  in the release, and a `?runtime=<id>` override reads it, but this site neither
+  copies it nor reads it otherwise.
+- Caching: `qed64/edge`'s rule keeps revalidating the frozen copies despite the
+  hex in their names, and QED64 keeps `resolveRuntimeManifest`'s
+  `pinnedBuildId`, `loadSnapshotIndex`'s `pairedBuildId` and that rule until this
+  site and the showcase have retired their copies.
+
+### R2 clean-up
+
+Nothing in this repo deletes from R2; a delete is the user's, by exact keys only
+(`rclone delete --files-from-raw <list> --dry-run` first), and only of keys no
+rollback-target version names. A version from this change on names its `.snapz`
+in `git show <commit>:client/public/snapshots/index.json`; a version from before
+names them through R2's frozen `snapshots/index.json`.
+
+The Worker version that was live when this change was first pushed stays a
+rollback target until the next runtime adoption after it is live and stable
+(QED64's default, chosen 2026-11-01). Then the four kinds of key in the table
+above can go, which leaves only digest-named `.snapz` under `lean4game/`.
+Superseded `.snapz` are garbage-collected the same way, deliberately, once no
+rollback needs them.
+
+### The first deploy of this scheme
+
+The live Worker is the pre-change one (`wasm64-port` `1771ed3`, or whatever is
+live by then).
+
+1. Before pushing, both commands must print nothing:
+
+   ```bash
+   curl -s https://lean4game.fawadworkaddress.workers.dev/snapshots/index.json | cmp - client/public/snapshots/index.json
+   curl -s https://lean4game.fawadworkaddress.workers.dev/profiles/index.json | cmp - client/public/profiles/index.json
+   ```
+
+   If one differs, R2 serves an uncommitted pairing: resolve it before pushing.
+   (Checked by HEAD on 2026-11-02: both ETags are the tracked files' MD5.) Note
+   the live commit: it is the pre-change rollback target.
+2. No upload is needed (the same pairing).
+3. Push the guard, `deploy.yml`'s fixes and this change in one push. The guard
+   checks the ten `.snapz` through the old Worker; the key is the same under both
+   Workers (run on 2026-11-02: 10 of 10 live, sizes equal).
+4. Run the live checks below.
+5. From then on, upload only with an `upload-artifacts.sh` from this change on.
+
+**Live checks** (`…` is `https://lean4game.fawadworkaddress.workers.dev`,
+`<snapz>` a name from `client/public/snapshots/index.json`):
+
+- `curl -sI …/snapshots/index.json`, `curl -sI …/profiles/index.json`: 200,
+  `public, max-age=0, must-revalidate`, `application/json`, COOP, COEP, CORP
+  and the CSP. `curl -s` of each, `cmp` with the tracked file: no output.
+- `curl -sI "…/snapshots/index.json?probe=1"`: 200 (the page's network probe).
+- `curl -s -o /dev/null -w '%{http_code}\n' -X POST …/snapshots/index.json`: 405.
+- `curl -sI …/snapshots/<snapz>`: 200, immutable, `content-length` the entry's
+  `transfer`; `curl -s -o /dev/null -w '%{http_code}\n' -r 0-9 …/snapshots/<snapz>`: 206.
+- `curl -sI …/snapshots/x.0123456789abcdef.snapz`: 404, `no-store`.
+- `curl -sI …/runtime/chunks/x.part-000`: 404, `no-store`.
+- Open a level on a fresh profile, then reload it offline ("Verify a deploy").
 
 ## Adding a game
 
@@ -294,82 +259,41 @@ port itself — survey, source pin and patch, options, probe, languages — is
    host's browser lock (`with-browser-lock.sh lean4game …`), one game per
    hold.
 3. **Stage**: `--lanes bundle`, i.e. `scripts/stage-snapshots.py
-   wasm/out/staging/<build id>/snapshots <snapshot>` (copies the `.snapz`, upserts
-   `client/public/snapshots/index.json` and rewrites its copy
-   `index.<build id>.json`), `scripts/stage-game-assets.sh`
+   wasm/out/staging/<build id>/snapshots <snapshot>` (copies the `.snapz` and
+   upserts `client/public/snapshots/index.json`), `scripts/stage-game-assets.sh`
    (`client/public/{data,i18n}/<id>` and `api/games` for every catalog
    row) and the client build. Smoke it locally with
    `node /Users/fawadhaider/code/wasm64-lean-fable/qed64/work/games-smoke.mjs http://localhost:3006`
    (the script lives in the QED64 checkout's `work/`, not in this repo)
    over `scripts/serve-dist.mjs`, commit locally, do not push.
 4. **Upload, before the deploy**: `scripts/upload-artifacts.sh` — the new
-   `.snapz` and this runtime's index copies; the live index is untouched.
-5. **Deploy**: `scripts/deploy-app.sh` — refuses a tree that lacks
+   `.snapz`; nothing a visitor reads changes.
+5. **Deploy**: `scripts/deploy-app.sh` (or the push) — refuses a tree that lacks
    `api/games` or any listed game's `game.json`
-   (`games-manifest.mjs --required-files`).
-6. **Upload, right after the deploy**: `scripts/upload-artifacts.sh
-   --post-deploy` — the index that names the new `.snapz` (until then the
-   new shell lists the game but the live index has no entry for it). For
-   the same runtime its live check passes before the deploy too, so run it
-   once step 5 is confirmed (see "Deploy, in order"); in a step that also
-   rebakes an existing game whose level data changed, an early run makes
-   the old shell boot the new snapshot with its old level data.
-7. **Verify** with the smoke against the live URL (below).
+   (`games-manifest.mjs --required-files`), and, through the guard, an index
+   naming a `.snapz` that is not live yet. The game list, its level data and the
+   index that names its snapshot switch together.
+6. **Verify** with the smoke against the live URL (below).
 
 ## Rollback
 
-R2 is copy-only (`rclone copy`, never `sync`), so every previously
-published digest-named object — chunks, profile parts, `.snapz` — is still
-there after a promote; rolling back is re-publishing the previous *names*.
+**Revert and push.** One deploy restores an earlier commit's shell, release
+record and indexes together. Nothing is uploaded: R2 is copy-only (`rclone copy`,
+never `sync`), so every previously published digest-named object is still
+there, the guard finds the old `.snapz` live, and the release's owner keeps its
+immutable prefix.
 
-A rollback follows the same order as a promote: copies, shell, pointers.
-
-- **A snapshot publish** (a game added or rebaked, same runtime): take the
-  previous tracked index from git, put it back as this runtime's copy,
-  redeploy the previous shell, then put it back as the pointer:
-
-  ```bash
-  R2=qed64-r2:qed64-artifacts/lean4game
-  git show <previous-deploy-commit>:client/public/snapshots/index.json > /tmp/index.json
-  RT=$(node -p 'require("/tmp/index.json").snapshots[0].runtime')
-  rclone copyto /tmp/index.json $R2/snapshots/index.$RT.json --s3-no-check-bucket
-  git worktree add ../lean4game-rollback <previous-deploy-commit>
-  (cd ../lean4game-rollback && scripts/deploy-app.sh)
-  rclone copyto /tmp/index.json $R2/snapshots/index.json --s3-no-check-bucket
-  ```
-
-  `rclone copyto` on purpose, not `scripts/upload-artifacts.sh`: its
-  preflight (`scripts/preflight-artifacts.mjs`) requires every `.snapz` the
-  index names to exist locally, and `scripts/stage-snapshots.py` unlinks
-  the superseded local `.snapz` when a rebake is staged (`*.snapz` is
-  gitignored, so git holds no copy) — the local tree cannot preflight the
-  old index, but R2 still has the objects. The shell must go back too:
-  a newer shell lists (`api/games`) and boots games the old index no
-  longer names.
-- **A toolchain release bump**: the previous shell's worker names its own
-  release (its `wasm/lean4-wasm64-release.json`), whose prefix is immutable
-  and still in R2, so redeploying that shell (worktree as above) is the
-  runtime half of the rollback. Right after it, put the site's pointers
-  back. R2 keeps the previous runtime's copies (step 3 of the promote pinned
-  them from the live objects, or an earlier step 1 wrote them), so this is
-  two copies inside R2:
-
-  ```bash
-  R2=qed64-r2:qed64-artifacts/lean4game; PREV=<previous runtime build id>
-  (cd ../lean4game-rollback && scripts/deploy-app.sh)
-  rclone copyto $R2/snapshots/index.$PREV.json $R2/snapshots/index.json --s3-no-check-bucket
-  rclone copyto $R2/snapshots/profiles-index.$PREV.json $R2/profiles/index.json --s3-no-check-bucket
-  ```
-
-  (`rclone lsf $R2/snapshots | grep index` lists the copies there; without
-  one, `rclone copyto` the file from git instead, as above.) Not that
-  commit's `scripts/upload-artifacts.sh`: before the two steps it replaced
-  the pointers BEFORE its deploy. The gap is the same seconds as a
-  promote's; the rolled-back-from runtime's copies stay in R2 for the roll
-  forward. (Shells from before the shared release read the runtime from
-  `lean4game/runtime/`, which is still there.)
-- Roll forward the same way: the two upload steps around the deploy, from
-  the fixed commit, re-publish only what changed.
+- **In an emergency**, `npx wrangler rollback` restores a Worker version's own
+  assets, record and indexes in seconds. Follow it with a revert and push, so
+  `wasm64-port` is what is live and the next push does not undo the rollback.
+- **A version from before this scheme** (see "The first deploy of this scheme")
+  serves R2's frozen indexes, which still name its pairing.
+- **Revert this scheme's commits together** (the deploy change and the clean-ups
+  after it). Reverting the Worker change alone, after a later pairing was
+  deployed, would put the old route in front of R2's indexes frozen at the
+  old pairing.
+- **Roll forward** the same way: from the fixed commit, the upload if a
+  `.snapz` changed, then the push.
 
 ## Verify a deploy
 
@@ -381,10 +305,9 @@ A rollback follows the same order as a promote: copies, shell, pointers.
   …/runtime/runtime-manifest.json | grep buildId` → the record's
   `runtime.buildId`. A missing object is `404` with `no-store` (errors are
   never cached, so a URL requested before its upload landed recovers).
-- After step 3: `curl -s …/snapshots/index.json | cmp - <(curl -s
-  …/snapshots/index.<buildId>.json)` → no output (the pointer and this
-  runtime's copy are the same bytes), and `curl -sI` of the copy →
-  `must-revalidate`.
+- `curl -s …/snapshots/index.json | cmp - client/public/snapshots/index.json`
+  from the deployed commit → no output (the deploy's index, not R2's), and
+  `curl -sI` of it → `must-revalidate`.
 - Open `/#/g/hhu-adam/NNG4/world/Tutorial/level/1`: first visit downloads
   the runtime plus the game's snapshot (the loading pane shows the phases),
   later visits boot in ~10–20 s. The headless check for every listed game
@@ -395,9 +318,11 @@ A rollback follows the same order as a promote: copies, shell, pointers.
 ## The service worker
 
 `client/dist/sw.js` (generated by `scripts/build-sw.mjs` after `vite build`;
-the deploy script refuses a tree without it) precaches the app shell and
-caches the runtime chunks and manifests on first use, so a reload with the
-network off still boots (the snapshots and library pack live in OPFS).
+the deploy script refuses a tree without it) precaches the app shell, the
+runtime manifest and the two indexes, and caches the runtime chunks on first
+use, so a reload with the network off still boots (the snapshots and library
+pack live in OPFS). The indexes count in its version, so a deploy that changes
+one reaches returning visitors.
 It must be served `must-revalidate`, which `infra/worker.js` does for
 every non-digest path, so a new build's worker (new version hash) replaces
 the old one on the next online load; the old shell cache is deleted on
@@ -411,7 +336,7 @@ so a prepared game's runtime is cached before any boot.
 
 Digest-named files (`*.part-NNN`, `*.snapz`, 16+ hex in the name) and
 vite's hashed `/assets/*` are `immutable`; `runtime-manifest*.json`,
-every `index.json` and the per-runtime index copies (`index.<buildId>.json`,
+every `index.json` and R2's frozen per-runtime copies (`index.<buildId>.json`,
 `profiles-index.<buildId>.json`, despite the hex in their names) revalidate.
 The chunks are `application/octet-stream`,
 so the edge never recompresses them and the client's SHA-256 verification

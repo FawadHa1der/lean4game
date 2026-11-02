@@ -456,6 +456,10 @@ brought, and what this side changed for it:
   (`scripts/build-sw.mjs`), so an offline revisit inside a pairing window
   has them. The site already published the copies from its merged index
   (`scripts/stage-snapshots.py`, the preflight, the two-step upload).
+  (Retired 2026-11-02, QED64's review D2: the indexes ship in the deploy, so
+  `fetchSnapshotIndexOnce` reads the one index, `resolveRuntimeManifest` the
+  fixed manifest name, and vite defines no `__QED64_BUILD_ID__`, because
+  qed64's resolver would pin on it. No copy is written; wasm/DEPLOY.md.)
 - **`qed64/edge`**: `infra/worker.js` is the library's `createWorker`
   (`siteWorker(record)`), with the site's CSP as `decorate` and the
   library's own `isImmutable` (imported) plus vite's hashed bundles

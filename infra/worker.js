@@ -134,9 +134,10 @@ const VITE_HASHED = /^\/assets\/[^/]+[-.][A-Za-z0-9_-]{8}\.[a-z0-9]+$/;
  * inside) and R2's frozen per-runtime index copies
  * /snapshots/index.<buildId>.json and /snapshots/profiles-index.<buildId>.json
  * (QED64 HARDENING #64: this site writes no more of them, wasm/DEPLOY.md);
- * digest-named artifact files are immutable. The vite rule adds only /assets/ paths, whose names
- * (`<name>-<hash>.<ext>`) are never a manifest or index name, so on every
- * other path this IS the library's rule (worker.test.mjs checks both). */
+ * digest-named artifact files are immutable. The vite rule adds only /assets/
+ * paths, whose names (`<name>-<hash>.<ext>`) are never a manifest or index
+ * name, so on every other path this IS the library's rule (worker.test.mjs
+ * checks both). */
 export function isImmutable(pathname) {
   return edgeIsImmutable(pathname) || VITE_HASHED.test(pathname);
 }

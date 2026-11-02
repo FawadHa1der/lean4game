@@ -2675,10 +2675,68 @@ Line 3 of every probe document equals the line 2 the real
   `2f3dc883f12e`), a re-check: QuantifierWorld/7 "🎉" with the option on
   line 2, TestGame TestWorld/1 "🎉" without it, no warnings.
 
+## Atomic deploys (QED64's review D2, 2026-11-02)
+
+**Decision (user, 2026-11-01): D2 replaces the two-step upload the user chose
+on 2026-10-08.** The static-asset variant: the tracked
+`client/public/snapshots/index.json` and `profiles/index.json` ship in the
+Worker's deploy at their existing URLs, so one deploy switches the shell, the
+release record the Worker bundles and the indexes together, and an upload
+changes nothing a deployed shell reads. What took sites down was a mutable index
+ahead of its shell: QED64's ten minutes on 2026-10-08 (its HARDENING #64) and
+this site's 90 s on 2026-10-09 ("Live: Lean 4.34" above).
+
+**What went:**
+- `scripts/upload-artifacts.sh --post-deploy` and `deploy-app.sh`'s reminders
+  (now an unknown argument, exit 2); the upload sends every `.snapz` and nothing
+  else;
+- the per-runtime copies `snapshots/index.<buildId>.json` and
+  `snapshots/profiles-index.<buildId>.json`: `stage-snapshots.py --copies`, the
+  bundle lane, the preflight, `fetch-artifacts.sh` and the service worker's list;
+- `pairedBuildId` and `pinnedBuildId` in `games-api.ts`, and the pinned runtime
+  manifest with them. Nothing else read that manifest here. Stopping the
+  option was not enough: qed64's resolver defaults it to the
+  `__QED64_BUILD_ID__` define, so the define went too, and a test pins that.
+
+**What stays:** R2's mutable indexes and copies, frozen, while a pre-change
+Worker version is a rollback target (`wasm/DEPLOY.md`, "R2's frozen indexes and
+the per-runtime copies"; nothing here deletes them). The service worker's
+precache of the two indexes and the runtime manifest, and every reader's URLs:
+the landing tiles and the boot read through `fetchSnapshotIndexOnce`, the
+network probe HEADs `/snapshots/index.json?probe=…`, `?snapshots=` reads its
+overlay's own index. Rollback is now a revert and push; `wrangler rollback` is
+for emergencies and is followed by a revert. The guard
+(`scripts/deploy-guard.mjs`, review R19a) refuses a deploy whose `.snapz` are not
+live yet.
+
+**Checked (2026-11-02, branch `arch-review-impl`, no browser):**
+`scripts/test-all.sh` (20/20), `npm run build:client`, `wrangler deploy --dry-run`
+(nothing uploaded), and the guard against the live origin (10 of 10, sizes equal).
+The real worker under local `wrangler dev` (workerd) with the real deploy tree
+as its assets answered both indexes 200 with the tracked bytes, `application/json`,
+must-revalidate, COOP, COEP, CORP and the CSP, HEAD and the `?probe=` query alike,
+304 on `If-None-Match`, 405 on POST, PUT, DELETE and OPTIONS, and 404 `no-store`
+from its empty local R2 for an overlay's index, a per-runtime copy and a
+`.snapz`. That run needed a scratch entry that re-exports only the default:
+`wrangler dev` refuses `infra/worker.js` itself ("Incorrect type for map entry
+'CONTENT_SECURITY_POLICY'"), because workerd takes every named export for an
+entrypoint. Those exports date from before this change and live deploys have
+taken them.
+
+**Not yet checked:** a browser against a Worker running this route (boot, the
+offline reload, the network hold), and the live checks of `wasm/DEPLOY.md`,
+which wait for the push. A tab left open across a runtime deploy changes
+behaviour here: with no pin, a tab that has not resolved its manifest yet can pair
+the new manifest with the new index and boot them on old page code, where it
+used to refuse "not published for this build". That comes from reading the code and
+needs a browser run.
+
 ## Open
 
 - **Edge latency on the R2-backed `must-revalidate` files (live 4.35,
-  2026-10-23).** `/runtime/runtime-manifest*.json`, `/snapshots/index.json`
+  2026-10-23).** (2026-11-02: since "Atomic deploys" above, the two indexes
+  are static assets; the runtime manifests are still R2-backed. Not yet
+  measured.) `/runtime/runtime-manifest*.json`, `/snapshots/index.json`
   and `/profiles/index.json` took 0.4–17.5 s to first byte, intermittently,
   against 0.1–0.7 s for static files, and every boot waits for them (warm
   NNG4 editor boots 5.6–16.7 s against 2.2–3.2 s for warm smoke boots).
