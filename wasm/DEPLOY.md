@@ -131,9 +131,8 @@ path repeats it.
 when the fork has the `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit only)
 and `CLOUDFLARE_ACCOUNT_ID` secrets; without them it logs a skip. A fork with
 its own Worker also sets the repository variable `LEAN4GAME_DEPLOY_ORIGIN` to
-its origin, or the guard asks this site's. The workflow has no
-R2 credentials, so it can neither run step 1 nor check the release in R2:
-finish step 1 BEFORE the push. A push that names a `.snapz` before step 1 has
+its origin, or the guard asks this site's. The workflow has no R2 credentials,
+so it can neither run step 1 nor check the release in R2: finish step 1 BEFORE the push. A push that names a `.snapz` before step 1 has
 sent it deploys nothing (the guard refuses; after the upload, 'Re-run failed
 jobs' on the refused run, or a new push).
 
@@ -150,13 +149,12 @@ its rebake) would make every boot refuse every game. Keep them in one commit.
 test job catches it first.
 
 Then, before the deploy, one HEAD on the live origin for every `.snapz` that the
-tracked index names. A 404, a size other than the
-index's, or a 5xx or network error after three tries (2 s, then 4 s) refuses,
-exit 1, and nothing deploys: upload, then re-run the deploy ('Re-run failed
-jobs' in CI: the refused run's commit is still the head). `LEAN4GAME_DEPLOY_ORIGIN=<url>` or `--origin <url>` asks
-another origin, and `none` skips this live check, never the pairing (a first
-deploy to a new origin).
-It checks only site-owned files, which every Worker of this site serves from
+tracked index names. A 404, a size other than the index's, or a 5xx or network
+error after three tries (2 s, then 4 s) refuses, exit 1, and nothing deploys:
+upload, then re-run the deploy ('Re-run failed jobs' in CI: the refused run's
+commit is still the head). `LEAN4GAME_DEPLOY_ORIGIN=<url>` or `--origin <url>`
+asks another origin, and `none` skips this live check, never the pairing (a first
+deploy to a new origin). It checks only site-owned files, which every Worker of this site serves from
 the same key under `lean4game/`. Release-mapped files (`/runtime/*`,
 `/profiles/<not index.json>`) are never checked through the live origin: the
 live Worker maps them into its own release, so a new release's chunks would 404
@@ -315,8 +313,8 @@ immutable prefix.
   `wasm64-port` is what is live and the next push does not undo the rollback.
 - **If the live Worker is what broke** (`/snapshots/*` answers 404 or 5xx), the
   guard asks that same Worker and refuses the revert, and a 404 says "upload it
-  first", which is not the fault here. Run `npx wrangler rollback` first (the guard then
-  passes), or deploy the revert from a checkout with
+  first", which is not the fault here. Run `npx wrangler rollback` first (the
+  guard then passes), or deploy the revert from a checkout with
   `LEAN4GAME_DEPLOY_ORIGIN=none scripts/deploy-app.sh` (the pairing check still
   runs).
 - **A version from before this scheme** (see "The first deploy of this scheme")

@@ -151,6 +151,23 @@ Docker-memory preflights. The lane no longer copies QED64's pipeline into
 `wasm/out/pipeline` either: `bake-snapshot.mjs` takes `--work`/`--out`/
 `--lib`/`--artifact` explicitly and runs in place in `node_modules/qed64`.
 
+### Trying a candidate runtime (`?runtime=X`)
+
+For a kernel candidate on a clone of a built `client/dist`, never on the live
+site. Add the candidate's `runtime/runtime-manifest.X.json` and its chunks to the
+clone, then its index and `.snapz` in one of two ways:
+
+- `?runtime=X&snapshots=<dir>`, with `index.json` and the `.snapz` under `<dir>/`
+  in the clone (the loader re-roots the entries' `/snapshots/` urls onto it); or
+- `?runtime=X` alone, with the clone's `snapshots/index.json` overwritten by the
+  candidate's and the `.snapz` in `snapshots/`.
+
+A copy beside the pin's index is not read. Until QED64's review D2 (2026-11-02)
+the page also read `/snapshots/index.X.json`, and the older trial workflows in
+QED64's `work/lean4game-workflows/` still add one. On a dist from D2 on, that
+recipe shows every tile as unavailable and every boot refuses with "baked for
+<pin>, this shell runs X". It reads like a kernel fault and is not one.
+
 ### The Lean 4.34 port (branch `lean-v4.34`, 2026-10-06)
 
 Adopting the release IS the 4.34 port: the game moves from its own

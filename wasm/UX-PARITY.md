@@ -2140,7 +2140,9 @@ the same 4.34 build on QED64 `bf9d947` with the pinned-manifest fix
   here, so it was checked only by `boot-params.test.ts`. That test runs
   three cases: an index already on X is used as served; X's own copy
   replaces an index on the pin; with no copy for X, the index is kept and
-  X's tile reads unavailable.
+  X's tile reads unavailable. (Since QED64's review D2, 2026-11-02, no copy is
+  read: the first and last cases stand, and a trial brings its index another way,
+  `wasm/KERNEL.md`, "Trying a candidate runtime".)
 - Not re-run: deep play, editor crash bursts, pace, the reload storm,
   Cypress.
 
