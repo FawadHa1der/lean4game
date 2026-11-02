@@ -50,6 +50,7 @@ import { publishBootStatus, publishCheckerActivity, publishDocumentProcessing, p
 import { rememberGamedata } from "./gamedata-cache";
 import { NETWORK_WAIT_LABEL, STALE_INITIALIZE_LABEL, STARTING_LABEL, deathWords, haltFacts, haltedNote, isNetworkDeath, isRuntimeVerdict, isStalePageDeath, networkInEpisode, readDeath, rebootLabel, rebootNote, staleInitialize, type DeathLike } from "./death-kind";
 import { stageLabel } from "./boot-labels";
+import { preflightScripts, type Preflight } from "./head-checks";
 import { MiB, fallbackSnapshotName, fetchSnapshotIndexOnce, findApiGame, findSnapshotEntry, gameKnownCheck, gameMemoryPolicy, resolveRuntimeBuildId, resolveRuntimeManifest } from "./games-api";
 import { endDownload, heldButNotRevalidated, notifyCacheChanged, inFlightPrepare, inFlightRegions, prepareRunning, preparesDownloading, prepareStatusesAtom, reportDownload, runWhenOnline, sweepStaleSnapshots, warmDataEarly, warmRuntimeCacheOutcome, type PrepareStatus } from "./game-cache";
 import { embeddedImageUrls, fetchGameDataUrls } from "./game-data-urls";
@@ -660,26 +661,16 @@ let boundEntry: SnapshotEntry | null = null;
  * and the reason no hold/re-arm applies. Reset by a served boot. */
 let deployProblem = "";
 
-type Preflight = { ok: true } | { ok: false; kind: "link" | "deploy"; detail: string };
-/** HEAD every worker script: generated into public/workers from the qed64
- * package (gitignored), a shell deployed without them (the first CI-built
- * deploy, 2026-09-07) hangs at "starting Lean" with no error — `new
+/** HEAD every worker script, all at once (head-checks.ts: the first failure in
+ * WORKER_URLS order, whichever answers first): generated into public/workers
+ * from the qed64 package (gitignored), a shell deployed without them (the first
+ * CI-built deploy, 2026-09-07) hangs at "starting Lean" with no error — `new
  * Worker(404)` never answers. A static host answers 404; a single-page
  * fallback answers 200 with the app's HTML — neither is a worker script; a
  * fetch that fails outright is the link, not the deploy. */
-async function preflightWorkerScripts(): Promise<Preflight> {
+function preflightWorkerScripts(): Promise<Preflight> {
   // qed64's list of the scripts a page spawns or a worker imports (§7.5).
-  for (const script of WORKER_URLS) {
-    const r = await fetch(script, { method: "HEAD", cache: "no-cache" }).catch(() => null);
-    if (!r) return { ok: false, kind: "link", detail: `${script} is unreachable` };
-    // Missing ONLY on 404/410 or a 2xx single-page-fallback HTML answer (the
-    // rule checkSnapshotPairing / gameKnownCheck follow): a 5xx/429/403 from
-    // the edge or a proxy while the link recovers is transient — the link.
-    const html = r.ok && /text\/html/i.test(r.headers.get("content-type") ?? "");
-    if (r.status === 404 || r.status === 410 || html) return { ok: false, kind: "deploy", detail: `this deployment is missing ${script} (HTTP ${r.status}${html ? ", HTML page" : ""}) — the site needs a rebuild that stages the worker scripts` };
-    if (!r.ok) return { ok: false, kind: "link", detail: `${script}: HTTP ${r.status}` };
-  }
-  return { ok: true };
+  return preflightScripts(WORKER_URLS, (script) => fetch(script, { method: "HEAD", cache: "no-cache" }));
 }
 
 /** Is this death the link's doing? By its text when it has one; otherwise
