@@ -3,6 +3,17 @@ import { GameTranslation, shiftLines, rebaseSemanticTokens, PROOF_START_LINE, RU
 import assert from "node:assert";
 import { levelUri, parseLevelUri } from "./level-uri";
 
+/** A MessageChannel delivers when it delivers (about 100 ms for a first message
+ * on an emulated or loaded host): wait for the messages a step needs, never for a
+ * fixed time. Throws after 30 s; the test job has its own timeout. */
+async function until(what: string, ready: () => boolean): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  while (!ready()) {
+    if (Date.now() > deadline) throw new Error(`game-translation test: 30 s waiting for ${what}`);
+    await new Promise((r) => setTimeout(r, 2));
+  }
+}
+
 // level-uri: flat scheme round-trips; the legacy nested shape still parses.
 assert.equal(levelUri("Tutorial", 3), "file:///levels/Tutorial__3.lean");
 assert.deepEqual(parseLevelUri("file:///levels/Tutorial__3.lean"), { worldId: "Tutorial", levelId: "3" });
@@ -62,13 +73,12 @@ assert.deepEqual(parseLevelUri("file:///Tutorial/3.lean"), { worldId: "Tutorial"
   upstream.port2.start?.();
   gt.clientPort.start?.();
   (gt.clientPort as any).postMessage({ jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: "file:///levels/QuantifierWorld__7.lean", languageId: "lean4", version: 1, text: "intro h\nintro a" } } });
-  setTimeout(() => {
-    const lines: string[] = toWorker[0].params.textDocument.text.split("\n");
-    assert.equal(lines[0], "import Game.Levels.QuantifierWorld.L07_X import GameServer.Runner ");
-    assert.equal(lines[1], 'set_option Elab.async true set_option linter.tacticAnalysis.introMerge false Runner "MyGame" "QuantifierWorld" 7 (difficulty := 1) (inventory := []) := by');
-    assert.equal(lines[PROOF_START_LINE], "intro h");
-    upstream.port1.close(); upstream.port2.close(); gt.clientPort.close();
-  }, 30);
+  await until("didOpen", () => toWorker.length >= 1);
+  const lines: string[] = toWorker[0].params.textDocument.text.split("\n");
+  assert.equal(lines[0], "import Game.Levels.QuantifierWorld.L07_X import GameServer.Runner ");
+  assert.equal(lines[1], 'set_option Elab.async true set_option linter.tacticAnalysis.introMerge false Runner "MyGame" "QuantifierWorld" 7 (difficulty := 1) (inventory := []) := by');
+  assert.equal(lines[PROOF_START_LINE], "intro h");
+  upstream.port1.close(); upstream.port2.close(); gt.clientPort.close();
 }
 
 // Full round trip through the ports
@@ -91,86 +101,84 @@ assert.deepEqual(parseLevelUri("file:///Tutorial/3.lean"), { worldId: "Tutorial"
   post({ jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean", languageId: "lean4", version: 1, text: "rfl" } } });
   post({ jsonrpc: "2.0", id: 7, method: "textDocument/hover", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean" }, position: { line: 0, character: 2 } } });
 
-  setTimeout(() => {
-    assert.equal(toWorker.length, 3);
-    const [init, open, hover] = toWorker;
-    assert.equal(init.params.rootUri, "MyGame");
-    assert.equal(open.params.textDocument.uri, "file:///game/Metadata.lean");
-    const text: string = open.params.textDocument.text;
-    assert.ok(text.startsWith("import Game.Levels.TestWorld.L01_X import GameServer.Runner \n"));
-    assert.ok(text.includes('Runner "MyGame" "TestWorld" 1 (difficulty := 1) (inventory := ["rfl"]) := by\nrfl\n'));
-    // Elab.async on for the Runner command (RUNNER_PRELUDE): a command of its
-    // own on the Runner's line — never `… in`, never a line of its own (the
-    // proof stays at PROOF_START_LINE, which GameServer's getProofState
-    // assumes too) — and the header line stays import lines only.
-    assert.equal(RUNNER_PRELUDE, "set_option Elab.async true ");
-    const lines = text.split("\n");
-    assert.equal(lines[0], "import Game.Levels.TestWorld.L01_X import GameServer.Runner ");
-    assert.ok(lines[1].startsWith('set_option Elab.async true Runner "MyGame" '), lines[1]);
-    assert.ok(!lines[1].includes(" in Runner"));
-    assert.equal(lines[PROOF_START_LINE], "rfl");
-    assert.equal(hover.params.position.line, 0 + PROOF_START_LINE);
-    assert.equal(hover.params.textDocument.uri, "file:///game/Metadata.lean");
+  await until("initialize, didOpen and hover", () => toWorker.length >= 3);
+  assert.equal(toWorker.length, 3);
+  const [init, open, hover] = toWorker;
+  assert.equal(init.params.rootUri, "MyGame");
+  assert.equal(open.params.textDocument.uri, "file:///game/Metadata.lean");
+  const text: string = open.params.textDocument.text;
+  assert.ok(text.startsWith("import Game.Levels.TestWorld.L01_X import GameServer.Runner \n"));
+  assert.ok(text.includes('Runner "MyGame" "TestWorld" 1 (difficulty := 1) (inventory := ["rfl"]) := by\nrfl\n'));
+  // Elab.async on for the Runner command (RUNNER_PRELUDE): a command of its
+  // own on the Runner's line — never `… in`, never a line of its own (the
+  // proof stays at PROOF_START_LINE, which GameServer's getProofState
+  // assumes too) — and the header line stays import lines only.
+  assert.equal(RUNNER_PRELUDE, "set_option Elab.async true ");
+  const lines = text.split("\n");
+  assert.equal(lines[0], "import Game.Levels.TestWorld.L01_X import GameServer.Runner ");
+  assert.ok(lines[1].startsWith('set_option Elab.async true Runner "MyGame" '), lines[1]);
+  assert.ok(!lines[1].includes(" in Runner"));
+  assert.equal(lines[PROOF_START_LINE], "rfl");
+  assert.equal(hover.params.position.line, 0 + PROOF_START_LINE);
+  assert.equal(hover.params.textDocument.uri, "file:///game/Metadata.lean");
 
-    // full-text didChange (resident front door: change = 1) is wrapped like the
-    // didOpen; a ranged change is only line-shifted.
-    post({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean", version: 2 }, contentChanges: [{ text: "rw [h]\nrfl" }] } });
-    post({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean", version: 3 }, contentChanges: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 2 } }, text: "rfl" }] } });
-    setTimeout(() => {
-      const full = toWorker[3], ranged = toWorker[4];
-      assert.equal(full.params.textDocument.uri, "file:///game/Metadata.lean");
-      assert.ok(full.params.contentChanges[0].text.startsWith("import Game.Levels.TestWorld.L01_X import GameServer.Runner \n"), "full-text change carries the header");
-      assert.ok(full.params.contentChanges[0].text.endsWith(':= by\nrw [h]\nrfl\n'));
-      assert.equal(ranged.params.contentChanges[0].text, "rfl");
-      assert.equal(ranged.params.contentChanges[0].range.start.line, 0 + PROOF_START_LINE);
-    }, 20);
-    // level switch: didClose + didOpen of another level, then a full-text
-    // didChange — the wrapper must carry the NEW level's header and command,
-    // and the version must pass through.
-    post({ jsonrpc: "2.0", method: "textDocument/didClose", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean" } } });
-    post({ jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: "file:///levels/Other__2.lean", languageId: "lean4", version: 1, text: "simp" } } });
-    post({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///levels/Other__2.lean", version: 2 }, contentChanges: [{ text: "simp\nrfl" }] } });
-    setTimeout(() => {
-      const [close, open2, change2] = toWorker.slice(5, 8);
-      assert.equal(close.method, "textDocument/didClose");
-      assert.equal(close.params.textDocument.uri, "file:///game/Metadata.lean");
-      assert.ok(open2.params.textDocument.text.startsWith("import Game.Levels.Other.L02_X import GameServer.Runner \n"));
-      assert.ok(open2.params.textDocument.text.includes('Runner "MyGame" "Other" 2 '));
-      assert.equal(change2.params.textDocument.version, 2);
-      assert.ok(change2.params.contentChanges[0].text.includes('Runner "MyGame" "Other" 2 '), "full-text change after a switch carries the new level's command");
-      assert.ok(change2.params.contentChanges[0].text.endsWith(":= by\nsimp\nrfl\n"));
-    }, 30);
-    // returning to a level whose model still exists: the editor sends only a
-    // full-text didChange of THAT uri — it must become a re-open carrying that
-    // level's header, never the previous level's.
-    post({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean", version: 7 }, contentChanges: [{ text: "rfl" }] } });
-    setTimeout(() => {
-      const back = toWorker[8];
-      assert.equal(back.method, "textDocument/didOpen", "cross-level change re-opens the worker document");
-      assert.equal(back.params.textDocument.uri, "file:///game/Metadata.lean");
-      assert.equal(back.params.textDocument.version, 7);
-      assert.ok(back.params.textDocument.text.startsWith("import Game.Levels.TestWorld.L01_X import GameServer.Runner \n"));
-      assert.ok(back.params.textDocument.text.includes('Runner "MyGame" "TestWorld" 1 '), "the header is the level of the uri, not of the last didOpen");
-      assert.ok(back.params.textDocument.text.endsWith(":= by\nrfl\n"));
-    }, 40);
-    // fileProgress → onProcessing: ranges in flight = true; a lone kind-2 (fatal
-    // error) entry is a verdict, not work; empty = false.
-    const seen: boolean[] = [];
-    gt.onProcessing = (b) => seen.push(b);
-    for (const processing of [[{ range: {}, kind: 1 }], [{ range: {}, kind: 2 }], []]) {
-      gt["toClient"]({ jsonrpc: "2.0", method: "$/lean/fileProgress", params: { textDocument: { uri: "file:///game/Metadata.lean" }, processing } } as any);
-    }
-    assert.deepEqual(seen, [true, false, false]);
-    // server → client: diagnostics on the wrapped doc come back rebased + re-uri'd
-    upstream.port2.postMessage({ jsonrpc: "2.0", method: "textDocument/publishDiagnostics",
-      params: { uri: "file:///game/Metadata.lean", diagnostics: [{ range: { start: { line: 2, character: 0 }, end: { line: 2, character: 3 } }, message: "boom" }] } });
-    setTimeout(() => {
-      assert.equal(fromServer.length, 1);
-      const d = fromServer[0];
-      assert.equal(d.params.uri, "file:///levels/TestWorld__1.lean");
-      assert.equal(d.params.diagnostics[0].range.start.line, 0);
-      console.log("game-translation: ALL TESTS PASS");
-      process.exit(0);
-    }, 50);
-  }, 50);
+  // full-text didChange (resident front door: change = 1) is wrapped like the
+  // didOpen; a ranged change is only line-shifted.
+  post({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean", version: 2 }, contentChanges: [{ text: "rw [h]\nrfl" }] } });
+  post({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean", version: 3 }, contentChanges: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 2 } }, text: "rfl" }] } });
+  await until("the two didChanges", () => toWorker.length >= 5);
+  const full = toWorker[3], ranged = toWorker[4];
+  assert.equal(full.params.textDocument.uri, "file:///game/Metadata.lean");
+  assert.ok(full.params.contentChanges[0].text.startsWith("import Game.Levels.TestWorld.L01_X import GameServer.Runner \n"), "full-text change carries the header");
+  assert.ok(full.params.contentChanges[0].text.endsWith(':= by\nrw [h]\nrfl\n'));
+  assert.equal(ranged.params.contentChanges[0].text, "rfl");
+  assert.equal(ranged.params.contentChanges[0].range.start.line, 0 + PROOF_START_LINE);
+
+  // level switch: didClose + didOpen of another level, then a full-text
+  // didChange — the wrapper must carry the NEW level's header and command,
+  // and the version must pass through.
+  post({ jsonrpc: "2.0", method: "textDocument/didClose", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean" } } });
+  post({ jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: "file:///levels/Other__2.lean", languageId: "lean4", version: 1, text: "simp" } } });
+  post({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///levels/Other__2.lean", version: 2 }, contentChanges: [{ text: "simp\nrfl" }] } });
+  await until("the level switch", () => toWorker.length >= 8);
+  const [close, open2, change2] = toWorker.slice(5, 8);
+  assert.equal(close.method, "textDocument/didClose");
+  assert.equal(close.params.textDocument.uri, "file:///game/Metadata.lean");
+  assert.ok(open2.params.textDocument.text.startsWith("import Game.Levels.Other.L02_X import GameServer.Runner \n"));
+  assert.ok(open2.params.textDocument.text.includes('Runner "MyGame" "Other" 2 '));
+  assert.equal(change2.params.textDocument.version, 2);
+  assert.ok(change2.params.contentChanges[0].text.includes('Runner "MyGame" "Other" 2 '), "full-text change after a switch carries the new level's command");
+  assert.ok(change2.params.contentChanges[0].text.endsWith(":= by\nsimp\nrfl\n"));
+
+  // returning to a level whose model still exists: the editor sends only a
+  // full-text didChange of THAT uri — it must become a re-open carrying that
+  // level's header, never the previous level's.
+  post({ jsonrpc: "2.0", method: "textDocument/didChange", params: { textDocument: { uri: "file:///levels/TestWorld__1.lean", version: 7 }, contentChanges: [{ text: "rfl" }] } });
+  await until("the return to the level", () => toWorker.length >= 9);
+  const back = toWorker[8];
+  assert.equal(back.method, "textDocument/didOpen", "cross-level change re-opens the worker document");
+  assert.equal(back.params.textDocument.uri, "file:///game/Metadata.lean");
+  assert.equal(back.params.textDocument.version, 7);
+  assert.ok(back.params.textDocument.text.startsWith("import Game.Levels.TestWorld.L01_X import GameServer.Runner \n"));
+  assert.ok(back.params.textDocument.text.includes('Runner "MyGame" "TestWorld" 1 '), "the header is the level of the uri, not of the last didOpen");
+  assert.ok(back.params.textDocument.text.endsWith(":= by\nrfl\n"));
+
+  // fileProgress → onProcessing: ranges in flight = true; a lone kind-2 (fatal
+  // error) entry is a verdict, not work; empty = false.
+  const seen: boolean[] = [];
+  gt.onProcessing = (b) => seen.push(b);
+  for (const processing of [[{ range: {}, kind: 1 }], [{ range: {}, kind: 2 }], []]) {
+    gt["toClient"]({ jsonrpc: "2.0", method: "$/lean/fileProgress", params: { textDocument: { uri: "file:///game/Metadata.lean" }, processing } } as any);
+  }
+  assert.deepEqual(seen, [true, false, false]);
+  // server → client: diagnostics on the wrapped doc come back rebased + re-uri'd
+  upstream.port2.postMessage({ jsonrpc: "2.0", method: "textDocument/publishDiagnostics",
+    params: { uri: "file:///game/Metadata.lean", diagnostics: [{ range: { start: { line: 2, character: 0 }, end: { line: 2, character: 3 } }, message: "boom" }] } });
+  await until("the diagnostics", () => fromServer.length >= 1);
+  assert.equal(fromServer.length, 1);
+  const d = fromServer[0];
+  assert.equal(d.params.uri, "file:///levels/TestWorld__1.lean");
+  assert.equal(d.params.diagnostics[0].range.start.line, 0);
+  console.log("game-translation: ALL TESTS PASS");
+  process.exit(0);
 }
