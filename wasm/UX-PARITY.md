@@ -2586,7 +2586,12 @@ is "Live: Lean 4.34 …" above.
   skeptic's first rerun it closed the browser with the region still
   `.raw.partial` (907.9 MB; tile "Preparing… 254 / 281 MB"), and the
   offline boot was then correctly refused ("not published for this build
-  (unreachable …)"). Waiting for `prepare rag: region done` passed 3/3.
+  (unreachable …)"). (2026-11-02, architecture review R13(d): no longer a
+  refusal. A `.snapz` HEAD the network cut is a hold, so that boot now shows the
+  network-hold card and goes on by itself when the link returns; seen in a
+  browser on a first play offline, with Chromium offline and with every
+  connection reset. A probe that expects the refusal needs updating.) Waiting
+  for `prepare rag: region done` passed 3/3.
 - Minor: the "R2 view" printed by `scripts/upload-artifacts.sh` stopped at
   `head -40` and hid `testgame.8c34115c6d4b983f.snapz`, which the site
   serves (206); it now prints the whole listing. `/index.html` still 307s
