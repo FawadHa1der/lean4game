@@ -11,6 +11,7 @@
     "cypress": "^15.12.0",
     "cypress-iframe": "^1.0.1",
     "lean4-wasm64": "https://github.com/FawadHa1der/lean4/releases/download/lean-v4.35.0-b081e7c/lean4-wasm64-4.35.0-b081e7c.tgz",
+    "playwright": "1.62.1",
     "typescript": "^5.9.3",
     "wrangler": "4.125.0"
   },
