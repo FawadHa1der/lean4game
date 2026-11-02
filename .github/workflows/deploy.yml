@@ -11,7 +11,9 @@
 #      it refuses until the new worker is live; for a same-runtime change it
 #      cannot tell, so wait for this job.
 # This workflow has no R2 credentials and runs neither; scripts/deploy-app.sh
-# logs the reminder for step 2 and annotates the run with it. The deploy job
+# logs the reminder for step 2 and annotates the run with it, and its guard
+# (scripts/deploy-guard.mjs) refuses the deploy until every .snapz the tracked
+# index names answers on the live origin. The deploy job
 # runs only after the test job has passed, and deploys only when the repo has
 # the CLOUDFLARE_API_TOKEN secret (Workers Scripts: Edit — no R2 permission
 # needed) and CLOUDFLARE_ACCOUNT_ID. The test job needs no secrets.

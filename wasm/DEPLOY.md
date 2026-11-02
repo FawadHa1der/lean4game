@@ -83,7 +83,8 @@ token serve both.
    `__QED64_BUILD_ID__` to the shipped manifest's build id, so the shell asks
    R2 for the manifest of the exact runtime it was built against), copies
    `client/dist` without `runtime/ profiles/ snapshots/` into
-   `wasm/out/deploy`, refuses files over 25 MiB, and runs `wrangler deploy`
+   `wasm/out/deploy`, refuses files over 25 MiB, runs the guard
+   (`scripts/deploy-guard.mjs`, below) and runs `wrangler deploy`
    (wrangler 4.125.0 is a root dev dependency; `npx wrangler login` once),
    then prints the reminder for step 3 (it never runs it: CI has no R2
    credentials). Live at `https://lean4game.<account>.workers.dev`.
@@ -173,6 +174,23 @@ and annotates the run with it). For a runtime change, a push before step 1
 has finished puts the new shell live against R2's outgoing index (every
 game boot fails, and step 3 refuses until R2 holds step 1's objects) for as
 long as the multi-GB upload takes, not seconds.
+
+**The guard** (`scripts/deploy-guard.mjs`, QED64's review R19a; also under
+`--dry-run`, and in CI, which deploys through `deploy-app.sh`): before the
+deploy, one HEAD on the live origin for every `.snapz` that the tracked
+`client/public/snapshots/index.json` names. A 404, a size other than the
+index's, or a 5xx or network error after three tries (2 s, then 4 s) refuses,
+exit 1, and nothing deploys: upload, then re-run the deploy (a manual 'Run
+workflow' in CI). `LEAN4GAME_DEPLOY_ORIGIN=<url>` or `--origin <url>` asks
+another origin, and `none` skips the check (a first deploy to a new origin).
+It checks only site-owned files, which every Worker of this site serves from
+the same key under `lean4game/`. Release-mapped files (`/runtime/*`,
+`/profiles/<not index.json>`) are never checked through the live origin: the
+live Worker maps them into its own release, so a new release's chunks would 404
+and its fixed-name manifests would give a false pass. That check is step 1's
+(R2's `release.json` against the record). An adoption rebakes every snapshot
+under a new name, so the guard also refuses one pushed before its upload.
+Tests: `scripts/deploy-guard.test.mjs`, `scripts/deploy-app.test.mjs`.
 
 The workflow's test job runs first and needs no secrets: `npm ci` and
 `scripts/test-all.sh`, every `*.test.ts` and `*.test.mjs` under `client/src`,

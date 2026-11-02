@@ -43,6 +43,13 @@ node -e '
   console.log("sw.js precache: " + l.length + " entries, all present");
 ' "$OUT"
 echo "shell: $(find "$OUT" -type f | wc -l | tr -d ' ') files, $(du -sh "$OUT" | cut -f1)"
+# Every .snapz the tracked index names must already answer on the live origin,
+# or nothing deploys (QED64's review R19a; CI deploys through this script too).
+# It only reads, so a --dry-run runs it as well. LEAN4GAME_DEPLOY_ORIGIN
+# overrides the origin (none: skip, for a first deploy to a new origin).
+# Release-mapped files are never checked through the live origin: its Worker
+# maps them into ITS release; scripts/upload-artifacts.sh checks the release.
+node scripts/deploy-guard.mjs
 npx wrangler deploy "$@"
 echo "deployed. If scripts/upload-artifacts.sh ran for this deploy (a runtime or snapshot change), run NOW:"
 echo "  scripts/upload-artifacts.sh --post-deploy"
