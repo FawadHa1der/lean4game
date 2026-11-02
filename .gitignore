@@ -16,10 +16,8 @@ wasm/snapshots/
 dist/
 games-src/
 
-# per-build immutable manifest copy written by scripts/upload-artifacts.sh
+# per-runtime copies a tree staged before 2026-11 may still hold (nothing writes
+# or reads them now: wasm/DEPLOY.md), and a ?runtime= dev runtime's own manifest
 client/public/runtime/runtime-manifest.*.json
-# per-runtime index copies (QED64 HARDENING #64), derived from the tracked
-# snapshots/index.json and profiles/index.json by scripts/stage-snapshots.py
-# and the bundle lane; byte-identical to them (preflight-artifacts.mjs checks)
 client/public/snapshots/index.*.json
 client/public/snapshots/profiles-index.*.json

@@ -776,18 +776,6 @@ lane_bundle() {
   check "client dependencies installed (npm ci)" test -d "$G/node_modules"
   check "staged snapshots present (bake lane)" test -f "$STG/snapshots/index.json"
   check "release runtime + core pack fetched (release lane)" test -f "$MIRROR/profiles/lean-core.manifest.json"
-  # The pinned runtime manifest, runtime/runtime-manifest.<build id>.json: the
-  # release ships it beside runtime-manifest.json (the same bytes), a QED64
-  # boot fetches it first and the service worker precaches it. Refused before
-  # anything is copied when the mirror lacks it, names another runtime or
-  # differs from the release's runtime-manifest.json.
-  check "the release's pinned runtime/runtime-manifest.$BUILD_ID.json names $BUILD_ID, the bytes of $RUNTIME_MANIFEST" python3 -c "
-import json, sys
-pin, plain, rid = sys.argv[1:]
-try: got = json.load(open(pin)).get('buildId')
-except (OSError, ValueError) as e: sys.exit(f'no pinned runtime manifest: {e}')
-if got != rid: sys.exit(f'{pin} names {got}, the record {rid}')
-if open(pin, 'rb').read() != open(plain, 'rb').read(): sys.exit(f'{pin} differs from {plain}')" "$MIRROR/runtime/runtime-manifest.$BUILD_ID.json" "$MIRROR/$RUNTIME_MANIFEST" "$BUILD_ID"
   # The served index must pair with ONE runtime, the release's: refuse before
   # anything is copied when a snapshot it would keep (a game not restaged
   # now) was baked against another one — after a release bump that is every
@@ -807,44 +795,26 @@ if bad or missing: print('unpaired:', ', '.join(sorted(bad)) or '-', '| not in s
   # The runtime and the core pack: the release's bytes as published (served
   # layout; chunk and part URLs are already /runtime/chunks/… and /profiles/…).
   run bundle "$G" -- bash -c "rm -rf '$PUB/runtime/chunks' && mkdir -p '$PUB/runtime' && cp '$MIRROR/$RUNTIME_MANIFEST' '$PUB/runtime/runtime-manifest.json' && cp -R '$MIRROR/runtime/chunks' '$PUB/runtime/'"
-  # The pinned manifest too (gitignored, like the index copies below): without
-  # it serve-dist answers /runtime/runtime-manifest.<id>.json with index.html,
-  # the service worker's install leaves one critical shell file uncached and
-  # an offline boot fails with "Failed to fetch". Other runtimes' pinned
-  # copies go (their releases keep their own); scripts/preflight-artifacts.mjs
-  # checks it.
-  run bundle "$G" -- bash -c "find '$PUB/runtime' -maxdepth 1 -name 'runtime-manifest.wasm64-*.json' ! -name 'runtime-manifest.$BUILD_ID.json' -print -delete && cp '$MIRROR/runtime/runtime-manifest.$BUILD_ID.json' '$PUB/runtime/'"
+  # A tree staged before 2026-11 holds a pinned manifest copy: no shell reads it
+  # any more, and pack-artifacts.sh would publish it.
+  run bundle "$G" -- bash -c "find '$PUB/runtime' -maxdepth 1 -name 'runtime-manifest.wasm64-*.json' -print -delete"
   run bundle "$G" -- bash -c "rm -f '$PUB'/profiles/lean-core.pack.gzip.* && mkdir -p '$PUB/profiles' && cp '$MIRROR'/profiles/lean-core.manifest.json '$MIRROR'/profiles/lean-core.pack.gzip.* '$PUB/profiles/'"
-  # /profiles/index.json is the site's own (release.json hosting.siteOwned).
-  # Its per-runtime copy, snapshots/profiles-index.<build id>.json, gets the
-  # same bytes (QED64 HARDENING #64: a shell paired with this runtime reads it
-  # while R2's mutable index still names another one; under /snapshots/
-  # because every Worker leaves that prefix to the site, while
-  # /profiles/index.<id>.json would be routed to the release). Other runtimes'
-  # copies go (R2 keeps its own); scripts/preflight-artifacts.mjs checks both.
-  run bundle "$G" -- python3 - "$PUB/profiles" "$BUILD_ID" "$LEAN_VERSION" "$PUB/snapshots" <<'PY'
-import json, os, re, sys
-d, rid, lv, snap = sys.argv[1:]
+  # /profiles/index.json is the site's own (release.json hosting.siteOwned); the
+  # deploy serves it, like snapshots/index.json (scripts/deploy-app.sh).
+  run bundle "$G" -- python3 - "$PUB/profiles" "$BUILD_ID" "$LEAN_VERSION" <<'PY'
+import json, os, sys
+d, rid, lv = sys.argv[1:]
 c = json.load(open(os.path.join(d, "lean-core.manifest.json"))).get("content") or {}
 bad = [p.get("url", "") for p in ((c.get("pack") or {}).get("transport") or {}).get("parts", []) if not p.get("url", "").startswith("/profiles/")]
 if bad: sys.exit(f"lean-core part urls outside /profiles/: {bad[:3]}")
 idx = {"schema": "qed64.profile-index/v1", "runtime": {"buildId": rid, "leanVersion": lv},
        "profiles": [{"id": "core", "manifest": "/profiles/lean-core.manifest.json", "release": c.get("release") or "lean-core", "modules": len(c.get("modules") or {})}]}
-text = json.dumps(idx, indent=1)
-open(os.path.join(d, "index.json"), "w").write(text)
+open(os.path.join(d, "index.json"), "w").write(json.dumps(idx, indent=1))
 print("profiles/index.json written for", rid)
-os.makedirs(snap, exist_ok=True)
-for f in sorted(os.listdir(snap)):
-    m = re.fullmatch(r"profiles-index\.(wasm64-[0-9a-f]{16})\.json", f)
-    if m and m.group(1) != rid:
-        os.unlink(os.path.join(snap, f)); print("removed", f, "(another runtime's copy; R2 keeps its own)")
-open(os.path.join(snap, f"profiles-index.{rid}.json"), "w").write(text)
-print(f"snapshots/profiles-index.{rid}.json written (the bytes of profiles/index.json)")
 PY
   # shellcheck disable=SC2086  # SELECTED_NAMES is a word list
   run bundle "$G" -- python3 "$G/scripts/stage-snapshots.py" "$STG/snapshots" $SELECTED_NAMES
   check "served runtime id == $BUILD_ID" bash -c "python3 -c \"import json,sys; sys.exit(0 if json.load(open('$PUB/runtime/runtime-manifest.json'))['buildId']=='$BUILD_ID' else 1)\""
-  check "served pinned runtime-manifest.$BUILD_ID.json == runtime-manifest.json" cmp -s "$PUB/runtime/runtime-manifest.$BUILD_ID.json" "$PUB/runtime/runtime-manifest.json"
   run bundle "$G" -- npm --workspace client run build
   run bundle "$G" -- bash "$G/scripts/pack-artifacts.sh" "$TAG"
   note "tracked files to review + commit: client/public/runtime/runtime-manifest.json, profiles/{index,lean-core.manifest}.json, snapshots/index.json, api/games, data/, i18n/, wasm/artifacts/BUNDLE.json, wasm/catalog.json (expectedRaw lines printed by the bake lane)"

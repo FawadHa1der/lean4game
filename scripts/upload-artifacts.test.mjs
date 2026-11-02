@@ -122,7 +122,7 @@ before(() => {
   bin = path.join(tmp, "bin");
   fs.mkdirSync(path.join(repo, "scripts"), { recursive: true });
   fs.mkdirSync(bin, { recursive: true });
-  for (const f of ["upload-artifacts.sh", "preflight-artifacts.mjs"]) fs.copyFileSync(path.join(root, "scripts", f), path.join(repo, "scripts", f));
+  for (const f of ["upload-artifacts.sh", "preflight-artifacts.mjs", "stage-snapshots.py"]) fs.copyFileSync(path.join(root, "scripts", f), path.join(repo, "scripts", f));
   fs.writeFileSync(path.join(bin, "rclone"), FAKE_RCLONE, { mode: 0o755 });
   fs.symlinkSync(process.execPath, path.join(bin, "node"));
 });
@@ -171,6 +171,25 @@ test("a local tree's leftovers go nowhere: the bake's or an earlier staging's pe
   assert.deepEqual(r.writes, WRITES);
   assert.equal(r2Bytes(`snapshots/index.${OLD}.json`), R2_SNAPSHOT_INDEX, "the frozen copy, not the local file");
   assert.ok(!fs.existsSync(r2key(`${SITE}/snapshots/index.${NEW}.json`)));
+});
+
+test("stage-snapshots.py publishes no per-runtime copy: the bake's stays in staging, a leftover goes, and the upload sends the new .snapz alone", () => {
+  const NEWER = "nng4.2222222222222222.snapz";
+  const entry = { name: "nng4", url: `/snapshots/${NEWER}`, digest: `sha256:${"2".repeat(64)}`, bytes: 40, transfer: 10, runtime: NEW };
+  const staging = path.join(tmp, "staging");
+  write(staging, "index.json", json({ schema: "qed64.snapshot-index/v1", snapshots: [entry] }));
+  write(staging, `index.${NEW}.json`, json({ schema: "qed64.snapshot-index/v1", snapshots: [entry] }));
+  write(staging, NEWER, "newer snapz");
+  write(repo, `client/public/snapshots/index.${OLD}.json`, "{}");
+  write(repo, `client/public/snapshots/profiles-index.${OLD}.json`, "{}");
+  const r = spawnSync("python3", [path.join(repo, "scripts/stage-snapshots.py"), staging], { cwd: tmp, encoding: "utf8", env: { PATH: process.env.PATH, PYTHONDONTWRITEBYTECODE: "1" } });
+  fs.rmSync(staging, { recursive: true });
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(fs.readdirSync(pub("snapshots")).sort(), ["index.json", NEWER, SNAPZ[1]].sort());
+  assert.deepEqual(JSON.parse(fs.readFileSync(pub("snapshots/index.json"), "utf8")).snapshots.map((e) => e.url).sort(), [`/snapshots/${NEWER}`, `/snapshots/${SNAPZ[1]}`]);
+  const up = run();
+  assert.equal(up.status, 0, up.stderr);
+  assert.deepEqual(up.writes, [NEWER, SNAPZ[1]].map((f) => `PUT ${SITE}/snapshots/${f} <- client/public/snapshots/${f}`));
 });
 
 test("the upload is idempotent: a re-run writes nothing", () => {

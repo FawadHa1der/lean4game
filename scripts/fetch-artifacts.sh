@@ -94,16 +94,6 @@ if os.path.exists(ip) and os.path.exists(rp):
     if changed:
         json.dump(idx, open(ip, "w"), indent=1); open(ip, "a").write("\n"); print(f"snapshot index: stamped runtime {rid} on {changed} entries")
 PY
-# The per-runtime index copies (QED64 HARDENING #64) and the pinned runtime
-# manifest runtime/runtime-manifest.<buildId>.json are derived, gitignored
-# files: a bundle packed before them has none, and a stamp above rewrites
-# index.json under them, so all three are (re)written from the tree as it now
-# is. Not fatal here (a local tree still serves online without them — offline
-# boots need the pinned manifest); the upload's preflight refuses a tree
-# whose copies are missing or stale.
-if [ -f "$PUB/snapshots/index.json" ] && [ -f "$PUB/profiles/index.json" ]; then
-  python3 "$ROOT/scripts/stage-snapshots.py" --copies || echo "warning: no per-runtime copies written (scripts/preflight-artifacts.mjs will refuse to upload this tree)" >&2
-fi
 # Cross-check the extracted runtime against its tracked manifest (the loader
 # verifies every chunk again at boot; this fails early instead).
 python3 - "$PUB" <<'PY'
