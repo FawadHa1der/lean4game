@@ -1,5 +1,5 @@
 # CD: pushes to wasm64-port redeploy the app shell to Cloudflare Workers
-# (seconds, ~25 MB of static files): one Worker version with the shell, the
+# (seconds, ~127 MB of static files): one Worker version with the shell, the
 # release record it bundles and the site's two indexes (wasm/DEPLOY.md, "Deploy,
 # in order"). Artifacts (multi-GB in R2) are uploaded manually when the release
 # record or a snapshot changes: scripts/upload-artifacts.sh BEFORE pushing. It

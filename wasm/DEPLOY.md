@@ -29,9 +29,9 @@ library's rules (a re-cut `-r<N>` id is accepted).
 
 | Piece | Where | Size |
 |---|---|---|
-| App shell (`client/dist` minus artifact dirs) and the site's two indexes (`/snapshots/index.json`, `/profiles/index.json`) | Workers static assets, `wasm/out/deploy` | ~40 MB, 450 files, largest 22.9 MiB (cap 25 MiB) |
-| Lean runtime chunks, Lean core pack (`/runtime/*`, `/profiles/*`) | R2 bucket `qed64-artifacts`, prefix `lean4-wasm64/<release id>/`: the lean4 fork's toolchain release, shared with the QED64 editor and the widgets showcase, uploaded once by the release owner | runtime 159 MB, core pack ~121 MB |
-| Game snapshots (`/snapshots/*.snapz`, digest-named) | R2 bucket `qed64-artifacts`, prefix `lean4game/` | ten slim game snapshots ~2.1 GB on the wire (each game is downloaded only when first played) |
+| App shell (`client/dist` minus artifact dirs) and the site's two indexes (`/snapshots/index.json`, `/profiles/index.json`) | Workers static assets, `wasm/out/deploy` | ~127 MB, ~2,200 files, largest 22.9 MiB (cap 25 MiB) |
+| Lean runtime chunks, Lean core pack (`/runtime/*`, `/profiles/*`) | R2 bucket `qed64-artifacts`, prefix `lean4-wasm64/<release id>/`: the lean4 fork's toolchain release, shared with the QED64 editor and the widgets showcase, uploaded once by the release owner | runtime 106 MB, core pack 119 MB |
+| Game snapshots (`/snapshots/*.snapz`, digest-named) | R2 bucket `qed64-artifacts`, prefix `lean4game/` | ten slim game snapshots ~2.5 GB on the wire (each game is downloaded only when first played) |
 
 Two owners, two prefixes (the release's hosting rules,
 `wasm64-build/js/formats/HOSTING.md` in the lean4 fork). The release id and
