@@ -107,15 +107,27 @@ read only those names (QED64 EMBEDDING §6.1), and `client/src/wasm/boot-params.
 pins it. The service worker precaches the two indexes and the runtime manifest
 at install, so the offline path finds them (`scripts/build-sw.mjs`).
 
-Tabs left open across a runtime deploy still break, as they did; a reload is
-the cure. From the code (not yet seen in a browser): a tab that already resolved its
-manifest and index (memoised per page) asks for the outgoing runtime's chunks,
-which the new worker's release does not hold, unless the service worker has
-them; a tab that has not resolved them yet reads the new manifest and the new
-index, which pair, and boots them on its old page code, unless QED64's worker
-revision check refuses first (the stale-page card). A tab of a shell from
-before this scheme reads R2's frozen per-runtime copy and refuses "not published
-for this build" with its Reload button.
+A tab left open across a runtime deploy mostly plays on, and where it cannot, a
+reload is the cure. Seen in a browser on the real Worker under local workerd with
+a simulated second runtime (2026-11-02). Both sides had the same bundle and worker
+scripts, so a lazy chunk gone from the new deploy and QED64's worker revision check
+(the stale-page card) did not come into it; those are still read from the code.
+
+- A tab already playing goes on. A restart after a stack pause reads the outgoing
+  chunks from the service worker or the browser's HTTP cache, and the new Worker is
+  not asked.
+- A tab that resolved its manifest and index (memoised per page; the landing page
+  does it) boots the outgoing runtime and plays, if this browser holds its chunks.
+  If nothing does (a first visit still on the landing page), the new Worker's release
+  answers 404: three tries in about 3 s, nothing on the world map, then on a level
+  "Lean could not start in your browser: lean.js chunk 0: HTTP 404" with Reload,
+  which boots the new runtime.
+- A tab that resolved neither reads the new manifest and the new index, which pair,
+  and boots the new runtime on its old page code.
+
+A tab of a shell from before this scheme, across a later runtime deploy: from the
+code, not seen, it reads R2's frozen per-runtime copy and refuses "not published for
+this build" with its Reload button.
 
 Shell-only changes (this repo's client code) need step 2 alone. A snapshot
 rebake or a new game for the SAME runtime takes steps 1 and 2, and is visible
@@ -247,6 +259,14 @@ live by then).
    Workers (run on 2026-11-02: 10 of 10 live, sizes equal).
 4. Run the live checks below.
 5. From then on, upload only with an `upload-artifacts.sh` from this change on.
+
+Seen in a local simulation (2026-11-02): 1771ed3's own Worker and shell over a local
+R2 holding its pointers, copies and pinned manifest, then this Worker and deploy tree
+over the same R2, with no upload at any switch. Tabs of the old shell left open keep
+playing, boot another game, and one that had read nothing boots. A reload gets the
+new shell, which asks for no copy, and plays, offline too. The old Worker back, as
+`wrangler rollback` would restore it, serves R2's frozen index and the old shell and
+plays; forward again plays.
 
 **Live checks** (`…` is `https://lean4game.fawadworkaddress.workers.dev`,
 `<snapz>` a name from `client/public/snapshots/index.json`):

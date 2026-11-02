@@ -2730,13 +2730,45 @@ from its empty local R2 for an overlay's index, a per-runtime copy and a
 entrypoint. Those exports date from before this change and live deploys have
 taken them.
 
-**Not yet checked:** a browser against a Worker running this route (boot, the
-offline reload, the network hold), and the live checks of `wasm/DEPLOY.md`,
-which wait for the push. A tab left open across a runtime deploy changes
-behaviour here: with no pin, a tab that has not resolved its manifest yet can pair
-the new manifest with the new index and boot them on old page code, where it
-used to refuse "not published for this build". That comes from reading the code and
-needs a browser run.
+**Checked in a browser (2026-11-02, Playwright and Chromium against the real
+`infra/worker.js` under local workerd, the real deploy tree, a local R2 with neither
+index in it; nothing deployed):**
+- First visit: the service worker fetched both indexes through the route, 200 from
+  the assets (no `Accept-Ranges`, the tracked bytes in its cache), ready in about 3 s
+  on localhost, proof complete.
+- No request to a per-build name in 1,116 context requests, 500 page requests and 581
+  Worker log lines over the first visit, the offline reloads and a hold.
+  `typeof __QED64_BUILD_ID__` is `undefined` in the page, and no boot error.
+- Offline reload of the level, under `setOffline` and with the Worker stopped: boots
+  from the caches and the proof completes. `setOffline` does not stop the browser's own
+  update check of `/sw.js`, and `navigator.onLine` stays true under it.
+- A hold on an uncached nng4, the link cut before the `.snapz` HEAD, under `setOffline`
+  and with the Worker stopped: a spinner and the banner's "waiting for the connection"
+  for the first ~8 s while the page's own reads spend their retries, then the card,
+  never "not published"; boot and proof about 5 s after the link is back.
+- An older index in the deploy's assets, decoys at R2's two frozen keys: the deployed
+  index answers for itself, the tile reads "Not available on this build" and does not
+  navigate, a direct link shows the "not published" card and asks nothing of the
+  `.snapz`, a returning visitor gets the same and the older deploy's service worker;
+  the next deploy restores all of it with R2's object list unchanged.
+- The same boot on `scripts/serve-dist.mjs` with a local tree.
+- The first deploy, the rollback from it and a tab across a runtime deploy:
+  `wasm/DEPLOY.md`.
+
+**A harness trap on the way:** under Playwright, a reload or a `new Worker` that meets a
+service worker upgrade can wedge. Its request stays pending (over 7 minutes once),
+`page.evaluate` may not return, a new tab on the origin is fine, and a second reload
+cures it in about 1 s. It came in the first or second round of flipping two deploy trees
+on chrome-headless-shell (3 of 3 runs, the service worker's network inspection on or
+off) and on new headless with that inspection on (30 clean rounds with it off). The same
+flips with the browser started by hand and one CDP connection to the page, no Playwright,
+gave no hang in 320 steps on either build, reload gaps of 0 to 420 ms swept, index-only
+deploys of a version the profile had never seen included. So a lane that crosses a deploy
+puts a timer on every step, and a hang like this is not read as the page's without that
+control. `sw.template.js` and `sw-client.ts` are unchanged since before this work.
+
+**Not yet checked:** the live checks of `wasm/DEPLOY.md`, which wait for the push; a tab
+across a deploy that changes the worker scripts' revision or drops lazy chunks.
 
 ## Open
 
