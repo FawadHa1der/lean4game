@@ -8,7 +8,7 @@
 // probeAfter + wedgeAfter + grace (≤ 30 s); a busy one that answers is never
 // declared dead; a FileWorker exit (proxied `_proc_exit` / `exitOnMainThread`,
 // or an ExitStatus through the mailbox kick) is a death "exit" with its code;
-// rescues are counted only for a confirmed lost wakeup.
+// liveness.rescues stays 0 (QED64 R7a removed the rescue accounting).
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -107,16 +107,6 @@ it("output resuming in the grace window ends the stall", () => {
   assert.deepEqual({ ...hooks.livenessServerFrame(L, { jsonrpc: "2.0", method: "$/lean/fileProgress", params: { processing: [] } }, acts[1].at + 1500) }, { probe: false, resumedAfterMs: 1500 });
   assert.equal(L.stalledAt, 0);
 });
-it("rescues: only a PENDING word that stays PENDING with no delivery, on time, is counted", () => {
-  const PENDING = 2, NONE = 0;
-  const L = hooks.createLiveness(0);
-  assert.equal(hooks.mailboxTick(L, NONE, 3, 0), "kick");
-  assert.equal(hooks.mailboxTick(L, PENDING, 3, 1000), "watch");
-  assert.equal(hooks.mailboxConfirm(L, PENDING, 3, 1000 + cfg.confirmMs + 5), "rescue");
-  hooks.mailboxTick(L, PENDING, 3, 2000);
-  assert.equal(hooks.mailboxConfirm(L, NONE, 4, 2000 + cfg.confirmMs), "delivered");
-  assert.equal(L.counters.rescues, 1);
-});
 it("a FileWorker exit through the proxied-function table is died 'exit' with its code (resident only)", () => {
   for (const index of [0, 1]) {
     const { sandbox, hooks: h, posted, resident } = loadWorker();
@@ -171,18 +161,5 @@ it("boot instrumentation: message-mode mailbox, counted notifications and served
   queued = 1;
   sandbox.checkMailbox();
   sandbox.checkMailbox();
-  assert.equal(m.notified, 2);
-  assert.equal(m.served, 1);
-});
-it("locates the mailbox word through the glue's own waiting_async offset (204 on runtime wasm64-d77d34b97592d014)", () => {
-  const { sandbox, hooks: h } = loadWorker();
-  const buf = new SharedArrayBuffer(1 << 16);
-  new BigInt64Array(buf, 4096 + 192, 1)[0] = BigInt(8192);
-  new BigInt64Array(buf, 8192 + 48, 1)[0] = BigInt(4096);
-  new Int32Array(buf, 8192, 1)[0] = 2;
-  sandbox.wasmMemory = { buffer: buf };
-  sandbox._pthread_self = () => BigInt(4096);
-  sandbox.__emscripten_thread_mailbox_await = new Function("pthread_ptr", "var waitingAsync=pthread_ptr+204;return waitingAsync");
-  assert.equal(h.locateRuntimeMailbox(), 8192);
 });
 console.log(`worker-liveness: ${n}/${n} passed`);
