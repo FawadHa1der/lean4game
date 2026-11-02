@@ -1,13 +1,12 @@
 #!/bin/bash
-# Build the app shell and deploy it to Cloudflare Workers (seconds). The
-# multi-GB artifacts live in R2 and are uploaded separately and rarely
-# (scripts/upload-artifacts.sh) — run that FIRST whenever the runtime,
-# profile pack or snapshots changed, so the shell never points at objects
-# that are not there yet, and `scripts/upload-artifacts.sh --post-deploy`
-# right AFTER this deploy: it replaces the mutable snapshot and profile
-# indexes, which must not change before the shell that pairs with them is
-# live (QED64 HARDENING #64; wasm/DEPLOY.md). Not run from here: CI has no R2
-# credentials, and a shell-only deploy needs nothing.
+# Build the app shell and deploy it to Cloudflare Workers (seconds). One deploy
+# carries the shell, the Worker (which bundles the release record) and the
+# site's two indexes, so they switch together (wasm/DEPLOY.md, "Deploy, in
+# order"). The multi-GB artifacts live in R2 and are uploaded separately and
+# rarely (scripts/upload-artifacts.sh) — run that FIRST whenever the runtime or
+# the snapshots changed, so the shell never points at objects that are not
+# there yet; the guard below refuses the deploy otherwise. Not run from here: CI
+# has no R2 credentials, and a shell-only deploy needs nothing.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -d client/node_modules ] || npm ci
@@ -18,10 +17,19 @@ scripts/stage-workers.sh
 if [ "${SKIP_BUILD:-0}" != 1 ]; then npm run build:client; fi
 # Workers assets cap files at 25 MiB: ship client/dist WITHOUT the artifact
 # directories, in a separate tree so client/dist stays complete for the local
-# server (scripts/serve-dist.mjs).
+# server (scripts/serve-dist.mjs). Of those directories the deploy keeps exactly
+# the site's two indexes (infra/worker.js serves them from this deploy).
 OUT=wasm/out/deploy
 rm -rf "$OUT"; mkdir -p "$OUT"
-rsync -a --delete --exclude '/runtime/' --exclude '/profiles/' --exclude '/snapshots/' client/dist/ "$OUT/"
+rsync -a --delete --exclude '/runtime/' \
+  --include '/profiles/' --include '/profiles/index.json' --exclude '/profiles/*' \
+  --include '/snapshots/' --include '/snapshots/index.json' --exclude '/snapshots/*' \
+  client/dist/ "$OUT/"
+# Another index than the tracked one would serve another pairing, or none.
+for idx in snapshots/index.json profiles/index.json; do
+  [ -f "$OUT/$idx" ] || { echo "deploy tree incomplete: $idx missing — the build must copy the tracked client/public/$idx" >&2; exit 3; }
+  cmp -s "$OUT/$idx" "client/public/$idx" || { echo "deploy tree refused: $idx is not byte-identical to the tracked client/public/$idx (a stale build?)" >&2; exit 3; }
+done
 big=$(find "$OUT" -type f -size +25M | head -3)
 [ -z "$big" ] || { echo "files over the 25 MiB asset cap:" >&2; echo "$big" >&2; exit 3; }
 # The game files come from the catalog (api/games + every listed game's
@@ -29,8 +37,8 @@ big=$(find "$OUT" -type f -size +25M | head -3)
 REQUIRED_GAME_FILES=$(node scripts/games-manifest.mjs --required-files)
 # The worker names are the closure's (stage-workers.sh --list), not a copy here.
 REQUIRED_WORKERS=$(scripts/stage-workers.sh --list)
-for f in sw.js $REQUIRED_WORKERS runtime/runtime-manifest.json snapshots/index.json profiles/index.json $REQUIRED_GAME_FILES; do
-  case "$f" in runtime/*|snapshots/*|profiles/*) src="client/dist/$f" ;; *) src="$OUT/$f" ;; esac
+for f in sw.js $REQUIRED_WORKERS runtime/runtime-manifest.json $REQUIRED_GAME_FILES; do
+  case "$f" in runtime/*) src="client/dist/$f" ;; *) src="$OUT/$f" ;; esac
   [ -f "$src" ] || { echo "deploy tree incomplete: $f missing — the shell would hang at start-up" >&2; exit 3; }
 done
 # The service worker's precache list must describe THIS tree (a stale
@@ -51,12 +59,3 @@ echo "shell: $(find "$OUT" -type f | wc -l | tr -d ' ') files, $(du -sh "$OUT" |
 # maps them into ITS release; scripts/upload-artifacts.sh checks the release.
 node scripts/deploy-guard.mjs
 npx wrangler deploy "$@"
-echo "deployed. If scripts/upload-artifacts.sh ran for this deploy (a runtime or snapshot change), run NOW:"
-echo "  scripts/upload-artifacts.sh --post-deploy"
-echo "(it replaces snapshots/index.json and profiles/index.json in R2; until then this shell reads the outgoing ones)"
-# In CI the log above is easy to miss: also annotate the run, which shows on
-# its summary page (a GitHub Actions workflow command; nothing elsewhere).
-# The title is a property: no ':' or ',' in it unescaped.
-if [ "${GITHUB_ACTIONS:-}" = true ]; then
-  echo "::notice title=Shell deployed - run the post-deploy upload::If scripts/upload-artifacts.sh ran before this deploy (a runtime or snapshot change), run scripts/upload-artifacts.sh --post-deploy now (wasm/DEPLOY.md, Deploy in order)."
-fi

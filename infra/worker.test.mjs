@@ -119,13 +119,109 @@ test("full GET: 200, whole body, Accept-Ranges, one R2 get and no head", async (
   assert.deepEqual(env.ARTIFACTS.calls, [{ op: "get", key: "lean4game" + SNAPZ, range: null }]);
 });
 
-test("mutable index: 200, must-revalidate, Accept-Ranges", async () => {
+/* QED64's architecture review D2: the site's two indexes are static assets of
+ * the deploy, so one Worker version switches them with the shell and the release
+ * record. Exactly these paths, GET and HEAD only; R2's frozen copies of the same
+ * names (makeEnv's bucket has one) are never asked. */
+const INDEXES = [INDEX, "/profiles/index.json"];
+const DEPLOYED_BODY = '{"deployed":true}';
+
+/** makeEnv with an ASSETS that serves the deploy's index bytes as Workers assets do. */
+function deployedEnv({ notModified = false } = {}) {
   const env = makeEnv();
-  const response = await call(env, INDEX);
+  const assets = [];
+  env.ASSETS = {
+    async fetch(request) {
+      assets.push(`${request.method} ${new URL(request.url).pathname}${new URL(request.url).search}`);
+      if (notModified) return new Response(null, { status: 304, headers: { etag: '"deployed"' } });
+      return new Response(request.method === "HEAD" ? null : DEPLOYED_BODY, { headers: { "content-type": "application/json", etag: '"deployed"' } });
+    },
+  };
+  return { env, assets };
+}
+
+test("D2: a GET of an index answers from ASSETS with this deploy's bytes, must-revalidate, the headers; R2 is never asked", async () => {
+  for (const p of INDEXES) {
+    const { env, assets } = deployedEnv();
+    const response = await call(env, p);
+    assert.equal(response.status, 200, p);
+    assert.equal(await response.text(), DEPLOYED_BODY, p);
+    assert.equal(response.headers.get("content-type"), "application/json", p);
+    assert.equal(response.headers.get("cache-control"), REVALIDATE, p);
+    assertIsolated(response);
+    assert.deepEqual(assets, [`GET ${p}`]);
+    assert.deepEqual(env.ARTIFACTS.calls, [], p);
+  }
+});
+
+test("D2: a HEAD of an index answers from ASSETS too, with the length a GET would have; R2 is never asked", async () => {
+  for (const p of INDEXES) {
+    const { env, assets } = deployedEnv();
+    const response = await call(env, p, { method: "HEAD" });
+    assert.equal(response.status, 200, p);
+    assert.equal(response.headers.get("content-length"), String(DEPLOYED_BODY.length), p);
+    assert.equal(response.headers.get("cache-control"), REVALIDATE, p);
+    assert.equal(response.body, null, p);
+    assertIsolated(response);
+    assert.equal(assets[0], `HEAD ${p}`);
+    assert.deepEqual(env.ARTIFACTS.calls, [], p);
+  }
+});
+
+test("D2: the page's network probe (a query on the index path) takes the same route", async () => {
+  const { env, assets } = deployedEnv();
+  const response = await call(env, `${INDEX}?probe=1785000000000`, { method: "HEAD" });
   assert.equal(response.status, 200);
+  assert.equal(assets[0], `HEAD ${INDEX}?probe=1785000000000`);
+  assert.deepEqual(env.ARTIFACTS.calls, []);
+});
+
+test("D2: a revalidation answered 304 by ASSETS stays a 304 with the headers", async () => {
+  const { env } = deployedEnv({ notModified: true });
+  const response = await call(env, INDEX, { headers: { "if-none-match": '"deployed"' } });
+  assert.equal(response.status, 304);
+  assert.equal(response.headers.get("etag"), '"deployed"');
   assert.equal(response.headers.get("cache-control"), REVALIDATE);
-  assert.equal(response.headers.get("accept-ranges"), "bytes");
-  assert.equal(await response.text(), '{"snapshots":[]}');
+  assertIsolated(response);
+  assert.deepEqual(env.ARTIFACTS.calls, []);
+});
+
+test("D2: a deploy that lacks an index is a 404 no-store; R2's frozen copy never stands in", async () => {
+  const env = { ...makeEnv(), ASSETS: { fetch: async () => new Response("nope", { status: 404 }) } };
+  const response = await call(env, INDEX);
+  assert.equal(response.status, 404);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.deepEqual(env.ARTIFACTS.calls, []);
+});
+
+test("D2: any other method on an index path takes the artifact route: 405, neither binding asked", async () => {
+  for (const p of INDEXES) {
+    for (const method of ["POST", "PUT", "DELETE", "OPTIONS"]) {
+      const { env, assets } = deployedEnv();
+      const response = await call(env, p, { method });
+      assert.equal(response.status, 405, `${method} ${p}`);
+      assert.equal(response.headers.get("allow"), "GET, HEAD");
+      assert.equal(response.headers.get("cache-control"), "no-store");
+      assertIsolated(response);
+      assert.deepEqual(assets, [], `${method} ${p}`);
+      assert.deepEqual(env.ARTIFACTS.calls, [], `${method} ${p}`);
+    }
+  }
+});
+
+test("D2: only the exact paths: an overlay's index, a frozen per-runtime copy, a .snapz and a near-miss still go to R2", async () => {
+  for (const p of ["/snapshots/staging/index.json", `/snapshots/index.wasm64-57ae00dc5f6ce958.json`, "/snapshots/profiles-index.wasm64-57ae00dc5f6ce958.json", SNAPZ, "/snapshots/index.json.bak", "/profiles/staging/index.json"]) {
+    const key = artifactKey(p);
+    const ARTIFACTS = fakeBucket({ [key]: { bytes: BYTES, etag: ETAG, contentType: "application/octet-stream" } });
+    const { env, assets } = deployedEnv();
+    const response = await call({ ...env, ARTIFACTS }, p);
+    assert.equal(response.status, 200, p);
+    assert.deepEqual(assets, [], p);
+    assert.deepEqual(ARTIFACTS.calls, [{ op: "get", key, range: null }], p);
+    assert.deepEqual(await bodyBytes(response), BYTES);
+  }
+  // A release-mapped path keeps its release, not this route: /profiles/index.json is the only one of its directory.
+  assert.equal(artifactKey("/profiles/lean-core.manifest.json"), `${REL}profiles/lean-core.manifest.json`);
 });
 
 test("HEAD: metadata from head() only (no body is opened), 200 with size, etag, Accept-Ranges", async () => {
@@ -320,9 +416,9 @@ test("isImmutable is unchanged", () => {
   assert.equal(isImmutable("/sw.js"), false);
 });
 
-/** QED64 HARDENING #64: the per-runtime index copies scripts/upload-artifacts.sh
- * publishes before the deploy. A 16-hex build id is in their names, but a
- * rebake for the same runtime rewrites them, so they revalidate. */
+/** QED64 HARDENING #64: the per-runtime index copies. This site writes no more
+ * of them (D2 above), but R2 keeps the ones it has, frozen, for a Worker version
+ * and open tabs from before that change, and qed64/edge still revalidates them. */
 const BUILD = "wasm64-57ae00dc5f6ce958";
 const COPIES = [`/snapshots/index.${BUILD}.json`, `/snapshots/profiles-index.${BUILD}.json`];
 
@@ -336,7 +432,7 @@ test("#64: the per-runtime index copies revalidate; .snapz, runtime chunks and p
   assert.equal(isImmutable("/assets/index-SkPbkzVH.js"), true, "vite's hashed index bundle is not an index");
 });
 
-test("#64: the copies are the site's (lean4game/), served must-revalidate; a missing copy is a 404 with no-store", async () => {
+test("#64: R2's frozen copies are the site's (lean4game/), served must-revalidate; a missing copy is a 404 with no-store", async () => {
   const objects = {};
   for (const p of COPIES) {
     assert.equal(artifactKey(p), "lean4game" + p, p);
@@ -352,7 +448,7 @@ test("#64: the copies are the site's (lean4game/), served must-revalidate; a mis
       if (method === "GET") assert.equal(await response.text(), `{"copy":"${p}"}`);
     }
   }
-  // Before its upload (or for a runtime the site never published): never cached, so it is found once it lands.
+  // For a runtime the site never published: never cached.
   for (const p of [`/snapshots/index.wasm64-0123456789abcdef.json`, `/snapshots/profiles-index.wasm64-0123456789abcdef.json`]) {
     for (const method of ["GET", "HEAD"]) {
       const response = await call(makeEnv(), p, { method });
@@ -564,8 +660,6 @@ test("qed64/edge: a re-cut release (-r<N>) through the site's own worker — R2 
     ["/runtime/chunks/lean.wasm.0123456789abcdef.part-000", `${prefix}runtime/chunks/lean.wasm.0123456789abcdef.part-000`],
     ["/profiles/lean-core.manifest.json", `${prefix}profiles/lean-core.manifest.json`],
     ["/profiles/lean-core.pack.gzip.0123456789abcdef.part-000", `${prefix}profiles/lean-core.pack.gzip.0123456789abcdef.part-000`],
-    ["/profiles/index.json", "lean4game/profiles/index.json"],
-    [INDEX, "lean4game" + INDEX],
     ...COPIES.map((p) => [p, "lean4game" + p]),
     [SNAPZ, "lean4game" + SNAPZ],
   ];

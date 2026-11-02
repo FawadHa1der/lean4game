@@ -3,17 +3,17 @@
  * package client/package.json pins; docs/DEPLOY.md "Using qed64/edge in
  * your own Worker") configured for this site.
  *
- * The built client (client/dist minus the artifact directories) ships as
- * Workers static assets; the multi-hundred-MB artifacts stream from the
- * shared R2 bucket. Two owners, two prefixes (the toolchain release's
- * hosting rules, wasm64-build/js/formats/HOSTING.md in the lean4 fork):
+ * The built client (client/dist minus the artifact directories, the site's
+ * two indexes kept) ships as Workers static assets; the multi-hundred-MB
+ * artifacts stream from the shared R2 bucket. Two owners, two prefixes (the
+ * toolchain release's hosting rules, wasm64-build/js/formats/HOSTING.md in
+ * the lean4 fork):
  *   - the Lean runtime and the Lean core pack are the lean4 fork's release,
  *     uploaded once under `lean4-wasm64/<release id>/` and shared by every
  *     site; `/runtime/*` and `/profiles/*` map onto its `runtime/` and
  *     `profiles/` (release.json hosting.mount), no manifest rewritten;
- *   - the site's own mutable pointers and products (hosting.siteOwned:
- *     `/profiles/index.json`, `/snapshots/*`) stay under `lean4game/`, so
- *     the editor's and the game's manifests never collide.
+ *   - the site's own products (hosting.siteOwned: `/snapshots/*`) stay under
+ *     `lean4game/`, so the editor's and the game's objects never collide.
  * The release id and the mapping come from wasm/lean4-wasm64-release.json,
  * the release record the bake pins (one file names the toolchain), handed
  * to the library as its `release`. The browser only ever sees this origin:
@@ -33,8 +33,15 @@
  * (405 otherwise); a thrown binding answered 500 no-store with the headers.
  *
  * What this site adds: the SEC1 Content-Security-Policy on every response
- * (`decorate`), and vite's content-hashed bundles under /assets/ as
- * immutable (`isImmutable`).
+ * (`decorate`), vite's content-hashed bundles under /assets/ as immutable
+ * (`isImmutable`), and its two indexes from this deploy's static assets
+ * (`extraRoutes`; QED64's architecture review D2, wasm/DEPLOY.md "Deploy, in
+ * order"): scripts/deploy-app.sh ships the tracked
+ * client/public/snapshots/index.json and profiles/index.json, so a deploy, a
+ * `wrangler rollback` and a revert-and-push switch the shell, the release
+ * record and the indexes together, and an upload changes nothing a deployed
+ * shell reads. R2 holds only digest-named lean4game/ objects, plus the
+ * indexes frozen there for a Worker version from before this change.
  */
 
 import release from "../wasm/lean4-wasm64-release.json" with { type: "json" };
@@ -51,7 +58,7 @@ import {
 // the library), exported for worker.test.mjs.
 export { parseRange, resolveRange };
 
-/** The site's own prefix: snapshots and the site's pointers. */
+/** The site's own prefix: its snapshots. */
 export const SITE_PREFIX = "lean4game/";
 
 /** Where each artifact path lives, from a lean4-wasm64.release/v1 record:
@@ -87,7 +94,8 @@ const ROUTES = releaseRoutes(release);
  * order createWorker's `release` routes by (edge-worker.d.ts, `release`
  * rules 1-3). For tests and scripts; the worker itself routes inside the
  * library (worker.test.mjs checks the keys it asks R2 for are these, for the
- * committed record and a re-cut `-r<N>` one). */
+ * committed record and a re-cut `-r<N>` one). A GET or HEAD of a deployed
+ * index never gets here (DEPLOYED_INDEXES). */
 export function artifactKey(pathname, routes = ROUTES) {
   const rel = safeArtifactKey(pathname);
   if (rel === null) return null;
@@ -123,16 +131,21 @@ const VITE_HASHED = /^\/assets\/[^/]+[-.][A-Za-z0-9_-]{8}\.[a-z0-9]+$/;
  * hashed bundles. The library's rule: manifests and indexes revalidate,
  * INCLUDING runtime-manifest.<buildId>.json (the buildId is sha256(lean.wasm)
  * alone; a relink of lean.js keeps the name and rewrites the chunk digests
- * inside) and the per-runtime index copies /snapshots/index.<buildId>.json
- * and /snapshots/profiles-index.<buildId>.json (QED64 HARDENING #64: their
- * 16-hex build id would make them immutable for a year, but a rebake for the
- * same runtime rewrites them under the same name); digest-named artifact
- * files are immutable. The vite rule adds only /assets/ paths, whose names
+ * inside) and R2's frozen per-runtime index copies
+ * /snapshots/index.<buildId>.json and /snapshots/profiles-index.<buildId>.json
+ * (QED64 HARDENING #64: this site writes no more of them, wasm/DEPLOY.md);
+ * digest-named artifact files are immutable. The vite rule adds only /assets/ paths, whose names
  * (`<name>-<hash>.<ext>`) are never a manifest or index name, so on every
  * other path this IS the library's rule (worker.test.mjs checks both). */
 export function isImmutable(pathname) {
   return edgeIsImmutable(pathname) || VITE_HASHED.test(pathname);
 }
+
+/** The site's two indexes, static assets of this deploy. Exact paths, GET and
+ * HEAD only: an overlay's /snapshots/<dir>/index.json, R2's frozen per-runtime
+ * copies and any other method fall through to the artifact route (R2; 405 for
+ * other methods). */
+const DEPLOYED_INDEXES = new Set(["/snapshots/index.json", "/profiles/index.json"]);
 
 /** This site's worker for a release record: what the default export is for
  * wasm/lean4-wasm64-release.json, built the same way for another record
@@ -143,6 +156,10 @@ export function siteWorker(record = release) {
     release: record,
     isImmutable,
     decorate: (headers) => headers.set("Content-Security-Policy", CONTENT_SECURITY_POLICY),
+    extraRoutes: [{
+      match: (url, request) => DEPLOYED_INDEXES.has(url.pathname) && (request.method === "GET" || request.method === "HEAD"),
+      handle: (request, env, ctx, kit) => kit.serveAsset(request),
+    }],
   });
 }
 
