@@ -1564,7 +1564,8 @@ so the expectation for the session's coalescer:
 
 Every run's last forwarded text carries the typed line. The pool can still
 grow a little (28) on a burst; the cap on live dedicated threads is QED64's
-to add (#55's remedies).
+to add (#55's remedies). (2026-11-01: closed, no such cap will be added; the
+bounds are QED64's: "Editor mode crash" under "Open" below.)
 
 **NEW-3: fixed.** The flash was the replacement worker's own status
 (`booting`) arriving after "starting Lean": the relay's status still read
@@ -2786,6 +2787,18 @@ Line 3 of every probe document equals the line 2 the real
   seen), the pool never shrinks, and a sustained 150 ms/char pace above work
   that ignores cancellation still crashes QED64's own page (HARDENING #59,
   open); #55's remedies (a cap on live dedicated threads, smaller isolates).
+  **The cap: closed 2026-11-01** (the user, QED64's architecture review D14;
+  QED64 `2a4a57b`): there will be no kernel cap on live dedicated threads and
+  no pool ceiling, so nothing here waits for one. Smaller isolates shipped as
+  kernel 0039. The bounds are QED64's: #59's hold and in-flight cap together,
+  #69's thread budget and `-DElab.async=false` (#70). QED64's R16 confirmed
+  that the hold is needed: with it off (`?edithold=0`, 20.7 s of typing on
+  runtime `wasm64-36d7f415704473d9`) the pool grew by 12-13 Workers and never
+  shrank; with it on, by 2. Known gap, accepted by D14: Runner documents run
+  with async on (`RUNNER_PRELUDE`, `client/src/wasm/game-translation.ts`), so
+  `-DElab.async=false` does not bound their Runner command. A thread-growth
+  lane (the heaviest Mathlib levels plus an edit burst, recording the relay's
+  peak `pool.running` and `.unused`) is to cover it; it does not exist yet.
 - **NEW-2: closed**, **NEW-3: closed** ("QED64 as a dependency" above).
 - **The 30 ms "waiting for another tab to finish preparing the game
   environment" on every region download: closed upstream** in `84d594e`
