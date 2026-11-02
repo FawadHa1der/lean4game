@@ -30,8 +30,12 @@ const write = (rel, data, mode) => {
   fs.mkdirSync(path.dirname(f), { recursive: true });
   fs.writeFileSync(f, data, mode ? { mode } : undefined);
 };
-const SNAPSHOT_INDEX = JSON.stringify({ schema: "qed64.snapshot-index/v1", snapshots: [{ name: "nng4", url: `/snapshots/${SNAPZ}`, transfer: SIZE, bytes: 40 }] });
-const PROFILE_INDEX = JSON.stringify({ schema: "qed64.profile-index/v1", profiles: [] });
+const BUILD_ID = "wasm64-0123456789abcdef";
+const OTHER_BUILD_ID = "wasm64-ffffffffffffffff";
+const SNAPSHOT_INDEX = JSON.stringify({ schema: "qed64.snapshot-index/v1", snapshots: [{ name: "nng4", url: `/snapshots/${SNAPZ}`, transfer: SIZE, bytes: 40, runtime: BUILD_ID }] });
+const PROFILE_INDEX = JSON.stringify({ schema: "qed64.profile-index/v1", runtime: { buildId: BUILD_ID }, profiles: [] });
+const MANIFEST = JSON.stringify({ buildId: BUILD_ID });
+const RECORD = JSON.stringify({ id: "lean-v1.0.0-abcdef0", runtime: { buildId: BUILD_ID } });
 
 /** The tracked files and a complete build of them. */
 function layout() {
@@ -42,8 +46,9 @@ function layout() {
     write(`${base}/snapshots/index.json`, SNAPSHOT_INDEX);
     write(`${base}/profiles/index.json`, PROFILE_INDEX);
     write(`${base}/profiles/lean-core.manifest.json`, "{}");
-    write(`${base}/runtime/runtime-manifest.json`, "{}");
+    write(`${base}/runtime/runtime-manifest.json`, MANIFEST);
   }
+  write("wasm/lean4-wasm64-release.json", RECORD);
   write(`client/dist/snapshots/${SNAPZ}`, "0123456789");
   write("client/dist/profiles/lean-core.pack.gzip.0123456789abcdef.part-000", "part");
   write("client/dist/runtime/chunks/lean.wasm.0123456789abcdef.part-000", "chunk");
@@ -123,13 +128,36 @@ test("--dry-run runs the guard too and reaches wrangler as --dry-run", async () 
   assert.deepEqual(refused.npx, []);
 });
 
-test("LEAN4GAME_DEPLOY_ORIGIN=none skips the guard (a first deploy to a new origin)", async () => {
+test("LEAN4GAME_DEPLOY_ORIGIN=none skips the live check (a first deploy to a new origin); the pairing still runs", async () => {
   snapzStatus = 404;
   const r = await run([], { LEAN4GAME_DEPLOY_ORIGIN: "none" });
   assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stderr, /deploy-guard: paired 1 snapshot\(s\)/);
   assert.match(r.stderr, /deploy-guard: SKIPPED: /);
   assert.deepEqual(originRequests, []);
   assert.deepEqual(r.npx, ["wrangler deploy"]);
+});
+
+test("a mispaired tree with every .snapz live: the guard refuses before any HEAD, exit 1, wrangler never runs, also with the origin none", async () => {
+  // Each of the tracked files, as a partial revert or a record pushed without its rebake leaves them.
+  const other = (json) => json.replaceAll(BUILD_ID, OTHER_BUILD_ID);
+  for (const [files, who] of [
+    [["wasm/lean4-wasm64-release.json"], "client/public/runtime/runtime-manifest.json"],
+    [["client/public/runtime/runtime-manifest.json"], "client/public/runtime/runtime-manifest.json"],
+    [["client/public/profiles/index.json", "client/dist/profiles/index.json"], "client/public/profiles/index.json"],
+    [["client/public/snapshots/index.json", "client/dist/snapshots/index.json"], "snapshot nng4"],
+  ]) {
+    for (const extra of [{}, { LEAN4GAME_DEPLOY_ORIGIN: "none" }]) {
+      layout();
+      for (const f of files) write(f, other(fs.readFileSync(path.join(repo, f), "utf8")));
+      originRequests.length = 0;
+      const r = await run([], extra);
+      assert.equal(r.status, 1, `${files[0]}: ${r.stderr}`);
+      assert.ok(r.stderr.includes(`deploy-guard: REFUSED: ${who}`), r.stderr);
+      assert.deepEqual(originRequests, [], files[0]);
+      assert.deepEqual(r.npx, [], files[0]);
+    }
+  }
 });
 
 /* QED64's architecture review D2: the deploy carries the site's two indexes. */

@@ -3,7 +3,18 @@
 // runs it right before wrangler, also with --dry-run (it only reads), and CI
 // deploys through that script.
 //
-// Before every deploy, every .snapz that the tracked snapshot index
+// First, with no network, the pairing: the record's runtime.buildId
+// (wasm/lean4-wasm64-release.json, the runtime the new Worker will serve), the
+// buildId of client/public/runtime/runtime-manifest.json, the runtime.buildId
+// of client/public/profiles/index.json and the runtime of every snapshot-index
+// entry (there must be one) are one id. They all ride in one deploy, so a
+// mispaired commit (a partial revert, a record bump pushed without its rebake)
+// would otherwise go live through a push alone, and every boot would refuse
+// every game ("baked for X, this shell runs Y") with no upload to end it.
+// scripts/deploy-guard.test.mjs runs this on the tracked files too, so CI's test
+// job catches it before the deploy job starts.
+//
+// Then, before every deploy, every .snapz that the tracked snapshot index
 // (client/public/snapshots/index.json) names must already answer on the live
 // origin. scripts/upload-artifacts.sh uploads them before the push; a push that
 // comes before its upload deploys nothing (this site's 90 s window on
@@ -29,18 +40,23 @@
 // Usage: [LEAN4GAME_DEPLOY_ORIGIN=<url>|none] node scripts/deploy-guard.mjs [--index <file>] [--origin <url>|none]
 //   --index   the snapshot index (default <repo>/client/public/snapshots/index.json)
 //   --origin  the live origin (default $LEAN4GAME_DEPLOY_ORIGIN, else the live site)
-//   none      skips the check (a first deploy to a new origin: nothing live to ask)
-// Every line goes to stderr, each starting `deploy-guard: `: one `live …` line
-// per snapshot, then `OK …`, or a last `deploy-guard: REFUSED: …` line.
-// Exit 0 every snapshot is live (or skipped), 1 refused, 2 a bad argument (with
-// the usage line). --help prints the usage on stdout and exits 0. Read-only;
-// Node built-ins only.
+//   none      skips the live check (a first deploy to a new origin: nothing live
+//             to ask); the pairing still runs
+// Every line goes to stderr, each starting `deploy-guard: `: a `paired …` line,
+// one `live …` line per snapshot, then `OK …`, or a last `deploy-guard: REFUSED: …`
+// line. Exit 0 paired and every snapshot live (or skipped), 1 refused, 2 a bad
+// argument (with the usage line). --help prints the usage on stdout and exits 0.
+// Read-only; Node built-ins only.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const DEFAULT_ORIGIN = "https://lean4game.fawadworkaddress.workers.dev";
-export const DEFAULT_INDEX = path.join(fileURLToPath(new URL("..", import.meta.url)), "client", "public", "snapshots", "index.json");
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
+export const DEFAULT_INDEX = path.join(ROOT, "client", "public", "snapshots", "index.json");
+const RECORD = "wasm/lean4-wasm64-release.json";
+const MANIFEST = "client/public/runtime/runtime-manifest.json";
+const PROFILES = "client/public/profiles/index.json";
 export const USAGE = "usage: [LEAN4GAME_DEPLOY_ORIGIN=<url>|none] node scripts/deploy-guard.mjs [--index <file>] [--origin <url>|none]";
 const PREFIX = "deploy-guard: ";
 const INDEX_SCHEMA = "qed64.snapshot-index/v1";
@@ -54,20 +70,24 @@ export class Refusal extends Error {}
 
 const show = (v) => JSON.stringify(v) ?? String(v);
 
-/** The .snapz entries of a snapshot index, `{ name, url, size }` (size = transfer ?? bytes). Throws a Refusal. */
-export function entriesOf(indexFile) {
+/** A JSON file's value. `what` names it in the Refusal it throws. */
+function readJson(file, what) {
   let text;
   try {
-    text = fs.readFileSync(indexFile, "utf8");
+    text = fs.readFileSync(file, "utf8");
   } catch (e) {
-    throw new Refusal(`index ${indexFile} cannot be read (${e?.code ?? e?.message ?? e})`);
+    throw new Refusal(`${what} ${file} cannot be read (${e?.code ?? e?.message ?? e})`);
   }
-  let index;
   try {
-    index = JSON.parse(text);
+    return JSON.parse(text);
   } catch (e) {
-    throw new Refusal(`index ${indexFile} is not JSON (${e?.message ?? e})`);
+    throw new Refusal(`${what} ${file} is not JSON (${e?.message ?? e})`);
   }
+}
+
+/** The .snapz entries of a snapshot index, `{ name, url, size, runtime }` (size = transfer ?? bytes). Throws a Refusal. */
+export function entriesOf(indexFile) {
+  const index = readJson(indexFile, "index");
   if (index === null || typeof index !== "object" || index.schema !== INDEX_SCHEMA || !Array.isArray(index.snapshots)) {
     throw new Refusal(`index ${indexFile} is not a ${INDEX_SCHEMA} index with a snapshots array`);
   }
@@ -81,8 +101,31 @@ export function entriesOf(indexFile) {
     if (!Number.isSafeInteger(size) || size <= 0) {
       throw new Refusal(`snapshot ${name} (${entry.url}) gives ${show(size)} as its size (transfer ?? bytes), not a positive integer`);
     }
-    return { name, url: entry.url, size };
+    return { name, url: entry.url, size, runtime: entry.runtime };
   });
+}
+
+/** The pairing of the files one deploy carries: the record, the runtime manifest,
+ * the profile index and the snapshot index all name one runtime, and the snapshot
+ * index names at least one snapshot. Reads files under `root` only. Returns
+ * `{ ok, lines }` (each line starts `deploy-guard: `); never throws. */
+export function checkPairing({ index = DEFAULT_INDEX, root = ROOT } = {}) {
+  try {
+    const record = readJson(path.join(root, RECORD), "release record");
+    const buildId = record?.runtime?.buildId;
+    if (typeof buildId !== "string" || !buildId) throw new Refusal(`${RECORD} names ${show(buildId)} as runtime.buildId, not a build id`);
+    const unpaired = (who, id) => new Refusal(`${who} names runtime ${show(id)}, but ${RECORD} (${record.id}) names ${buildId}: every boot would refuse every game. They belong in one commit (wasm/DEPLOY.md, "The guard")`);
+    const manifestId = readJson(path.join(root, MANIFEST), "runtime manifest")?.buildId;
+    if (manifestId !== buildId) throw unpaired(MANIFEST, manifestId);
+    const profilesId = readJson(path.join(root, PROFILES), "profile index")?.runtime?.buildId;
+    if (profilesId !== buildId) throw unpaired(PROFILES, profilesId);
+    const entries = entriesOf(index);
+    if (entries.length === 0) throw new Refusal(`index ${index} names no snapshot: every game would be unavailable`);
+    for (const e of entries) if (e.runtime !== buildId) throw unpaired(`snapshot ${e.name} (${e.url})`, e.runtime);
+    return { ok: true, lines: [`${PREFIX}paired ${entries.length} snapshot(s), the manifest and the profile index with ${record.id} (${buildId})`] };
+  } catch (e) {
+    return { ok: false, lines: [`${PREFIX}REFUSED: ${e instanceof Refusal ? e.message : `unexpected error: ${e?.stack ?? e}`}`] };
+  }
 }
 
 const why = (e) => {
@@ -158,7 +201,7 @@ const defaultIo = {
   err: (line) => process.stderr.write(`${line}\n`),
 };
 
-/** The CLI: 0 every snapshot live (or skipped), 1 refused, 2 a bad argument.
+/** The CLI: 0 paired and every snapshot live (or skipped), 1 refused, 2 a bad argument.
  * Lines go to io.err, the usage of --help to io.out. io.fetchImpl and io.sleep
  * replace fetch and the retry wait (tests). */
 export async function main(argv = process.argv.slice(2), env = process.env, io = defaultIo) {
@@ -179,12 +222,16 @@ export async function main(argv = process.argv.slice(2), env = process.env, io =
     flags[m[1]] = value;
   }
   const origin = flags.origin ?? (env.LEAN4GAME_DEPLOY_ORIGIN || DEFAULT_ORIGIN);
+  const index = flags.index === undefined ? DEFAULT_INDEX : path.resolve(flags.index);
+  const paired = checkPairing({ index });
+  for (const line of paired.lines) io.err(line);
+  if (!paired.ok) return 1;
   if (origin === "none") {
     io.err(`${PREFIX}SKIPPED: the origin is none (a first deploy: no live origin to ask yet)`);
     return 0;
   }
   const result = await checkLiveSnapshots({
-    index: flags.index === undefined ? DEFAULT_INDEX : path.resolve(flags.index),
+    index,
     origin,
     ...(io.fetchImpl ? { fetchImpl: io.fetchImpl } : {}),
     ...(io.sleep ? { sleep: io.sleep } : {}),

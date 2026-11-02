@@ -1,6 +1,7 @@
 /* scripts/deploy-guard.mjs (QED64's architecture review R19a): before every
- * deploy, every .snapz the tracked snapshot index names must answer on the live
- * origin. `node --test scripts/deploy-guard.test.mjs`.
+ * deploy, the record, the runtime manifest and both indexes must pair, and every
+ * .snapz the tracked snapshot index names must answer on the live origin.
+ * `node --test scripts/deploy-guard.test.mjs`.
  *
  * Against an HTTP server in this process with a per-path answer table that
  * records every method and path; the index files live in an OS temp dir; the
@@ -15,12 +16,16 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_INDEX, DEFAULT_ORIGIN, Refusal, USAGE, checkLiveSnapshots, entriesOf, main } from "./deploy-guard.mjs";
+import { DEFAULT_INDEX, DEFAULT_ORIGIN, Refusal, USAGE, checkLiveSnapshots, checkPairing, entriesOf, main } from "./deploy-guard.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCRIPT = path.join(root, "scripts/deploy-guard.mjs");
 const NNG4 = "/snapshots/nng4.0123456789abcdef.snapz";
 const RAG = "/snapshots/rag.fedcba9876543210.snapz";
+/** main() checks the pairing against the tracked files: an index of the tracked runtime passes it. */
+const RECORD = JSON.parse(fs.readFileSync(path.join(root, "wasm/lean4-wasm64-release.json"), "utf8"));
+const BUILD_ID = RECORD.runtime.buildId;
+const PAIRED_LINE = (n) => `deploy-guard: paired ${n} snapshot(s), the manifest and the profile index with ${RECORD.id} (${BUILD_ID})`;
 
 /** How the server answers a path: `statuses`, one per request (the last repeats), and a Content-Length or none. */
 const answers = new Map();
@@ -67,7 +72,7 @@ function indexFile(content) {
   fs.writeFileSync(file, typeof content === "string" ? content : JSON.stringify(content));
   return file;
 }
-const entry = (name, url, transfer, bytes = transfer * 4) => ({ name, url, digest: `sha256:${"0".repeat(64)}`, bytes, transfer, imports: [], runtime: "wasm64-0123456789abcdef" });
+const entry = (name, url, transfer, bytes = transfer * 4) => ({ name, url, digest: `sha256:${"0".repeat(64)}`, bytes, transfer, imports: [], runtime: BUILD_ID });
 const schema = "qed64.snapshot-index/v1";
 const twoEntries = () => indexFile({ schema, snapshots: [entry("nng4", NNG4, 1000), entry("rag", RAG, 5000)] });
 const check = (index, o = origin) => checkLiveSnapshots({ index, origin: o, sleep });
@@ -204,7 +209,7 @@ test("an origin that is not http(s) refuses before any request", async () => {
 });
 
 test("entriesOf: an index's entries or a Refusal; the tracked index names only .snapz directly under /snapshots/", () => {
-  assert.deepEqual(entriesOf(twoEntries()), [{ name: "nng4", url: NNG4, size: 1000 }, { name: "rag", url: RAG, size: 5000 }]);
+  assert.deepEqual(entriesOf(twoEntries()), [{ name: "nng4", url: NNG4, size: 1000, runtime: BUILD_ID }, { name: "rag", url: RAG, size: 5000, runtime: BUILD_ID }]);
   assert.throws(() => entriesOf(path.join(tmp, "absent.json")), Refusal);
   assert.equal(DEFAULT_INDEX, path.join(root, "client/public/snapshots/index.json"));
   const tracked = entriesOf(DEFAULT_INDEX);
@@ -212,21 +217,120 @@ test("entriesOf: an index's entries or a Refusal; the tracked index names only .
   for (const e of tracked) assert.match(e.url, /^\/snapshots\/[^/]+\.snapz$/);
 });
 
+/* The pairing: what one deploy carries names one runtime. */
+const ID = "wasm64-0123456789abcdef";
+const OTHER = "wasm64-ffffffffffffffff";
+/** A scratch tree of the four files (each a value, written as JSON, or absent as undefined). */
+function tree(files = {}) {
+  const dir = fs.mkdtempSync(path.join(tmp, "tree-"));
+  const all = {
+    "wasm/lean4-wasm64-release.json": { id: "lean-v1.0.0-abcdef0", runtime: { buildId: ID } },
+    "client/public/runtime/runtime-manifest.json": { buildId: ID },
+    "client/public/profiles/index.json": { schema: "qed64.profile-index/v1", runtime: { buildId: ID }, profiles: [] },
+    "client/public/snapshots/index.json": { schema, snapshots: [{ ...entry("nng4", NNG4, 1000), runtime: ID }, { ...entry("rag", RAG, 5000), runtime: ID }] },
+    ...files,
+  };
+  for (const [rel, value] of Object.entries(all)) {
+    if (value === undefined) continue;
+    fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+    fs.writeFileSync(path.join(dir, rel), typeof value === "string" ? value : JSON.stringify(value));
+  }
+  return { root: dir, index: path.join(dir, "client/public/snapshots/index.json") };
+}
+
+test("pairing: one runtime everywhere passes, with one line naming it", () => {
+  assert.deepEqual(checkPairing(tree()), { ok: true, lines: [`deploy-guard: paired 2 snapshot(s), the manifest and the profile index with lean-v1.0.0-abcdef0 (${ID})`] });
+});
+
+test("pairing: the tracked record, runtime manifest and both indexes pair (CI's test job runs this before the deploy job)", () => {
+  assert.deepEqual(checkPairing(), { ok: true, lines: [PAIRED_LINE(entriesOf(DEFAULT_INDEX).length)] });
+});
+
+test("pairing: a record, manifest, profile index or snapshot on another runtime refuses, naming both ids", () => {
+  const bump = (runtime) => ({ schema, snapshots: [{ ...entry("nng4", NNG4, 1000), runtime: ID }, { ...entry("rag", RAG, 5000), runtime }] });
+  for (const [files, who, names] of [
+    [{ "wasm/lean4-wasm64-release.json": { id: "lean-v1.0.0-abcdef0", runtime: { buildId: OTHER } } }, "client/public/runtime/runtime-manifest.json", ID],
+    [{ "client/public/runtime/runtime-manifest.json": { buildId: OTHER } }, "client/public/runtime/runtime-manifest.json", OTHER],
+    [{ "client/public/profiles/index.json": { schema: "qed64.profile-index/v1", runtime: { buildId: OTHER }, profiles: [] } }, "client/public/profiles/index.json", OTHER],
+    [{ "client/public/snapshots/index.json": bump(OTHER) }, `snapshot rag (${RAG})`, OTHER],
+  ]) {
+    const r = checkPairing(tree(files));
+    assert.equal(r.ok, false, who);
+    assert.equal(r.lines.length, 1);
+    assert.match(r.lines[0], /^deploy-guard: REFUSED: /);
+    assert.ok(r.lines[0].includes(`${who} names runtime ${JSON.stringify(names)}, but wasm/lean4-wasm64-release.json (lean-v1.0.0-abcdef0) names `), r.lines[0]);
+    assert.match(r.lines[0], /every boot would refuse every game/);
+  }
+});
+
+test("pairing: an absent id is no pass (no id in the manifest, the profile index or an entry)", () => {
+  for (const [files, re] of [
+    [{ "client/public/runtime/runtime-manifest.json": {} }, /runtime-manifest\.json names runtime undefined,/],
+    [{ "client/public/profiles/index.json": { schema: "qed64.profile-index/v1", profiles: [] } }, /profiles\/index\.json names runtime undefined,/],
+    [{ "client/public/snapshots/index.json": { schema, snapshots: [{ ...entry("nng4", NNG4, 1000), runtime: undefined }] } }, /snapshot nng4 .* names runtime undefined,/],
+    [{ "wasm/lean4-wasm64-release.json": { id: "x" } }, /lean4-wasm64-release\.json names undefined as runtime\.buildId/],
+  ]) {
+    const r = checkPairing(tree(files));
+    assert.equal(r.ok, false, String(re));
+    assert.match(r.lines[0], re);
+  }
+});
+
+test("pairing: an index with no snapshot refuses", () => {
+  const t = tree({ "client/public/snapshots/index.json": { schema, snapshots: [] } });
+  assert.deepEqual(checkPairing(t), { ok: false, lines: [`deploy-guard: REFUSED: index ${t.index} names no snapshot: every game would be unavailable`] });
+});
+
+test("pairing: a file missing or not JSON refuses, naming it", () => {
+  for (const [files, re] of [
+    [{ "wasm/lean4-wasm64-release.json": undefined }, /^deploy-guard: REFUSED: release record .* cannot be read \(ENOENT\)$/],
+    [{ "client/public/runtime/runtime-manifest.json": "{ not json" }, /^deploy-guard: REFUSED: runtime manifest .* is not JSON \(/],
+    [{ "client/public/profiles/index.json": undefined }, /^deploy-guard: REFUSED: profile index .* cannot be read \(ENOENT\)$/],
+    [{ "client/public/snapshots/index.json": undefined }, /^deploy-guard: REFUSED: index .* cannot be read \(ENOENT\)$/],
+  ]) {
+    const r = checkPairing(tree(files));
+    assert.equal(r.ok, false, String(re));
+    assert.match(r.lines[0], re);
+  }
+});
+
 const io = (extra = {}) => {
   const out = [], err = [];
   return { out, err, io: { out: (l) => out.push(l), err: (l) => err.push(l), sleep, ...extra } };
 };
 
-test("main: none skips with exit 0 and asks nothing, from the variable or the flag", async () => {
+test("main: none skips the live check with exit 0 and asks nothing, from the variable or the flag", async () => {
   let fetched = 0;
   const fetchImpl = async () => { fetched++; return new Response(null); };
   for (const [argv, env] of [[[], { LEAN4GAME_DEPLOY_ORIGIN: "none" }], [["--origin", "none"], {}]]) {
     const t = io({ fetchImpl });
     assert.equal(await main(argv, env, t.io), 0);
-    assert.deepEqual(t.err, ["deploy-guard: SKIPPED: the origin is none (a first deploy: no live origin to ask yet)"]);
+    assert.deepEqual(t.err, [PAIRED_LINE(entriesOf(DEFAULT_INDEX).length), "deploy-guard: SKIPPED: the origin is none (a first deploy: no live origin to ask yet)"]);
     assert.deepEqual(t.out, []);
   }
   assert.equal(fetched, 0);
+  assert.deepEqual(seen, []);
+});
+
+test("main: a mispaired index refuses with exit 1 before any HEAD, also with the origin none", async () => {
+  answers.set(NNG4, { statuses: [200], length: 1000 });
+  const index = indexFile({ schema, snapshots: [{ ...entry("nng4", NNG4, 1000), runtime: OTHER }] });
+  for (const argv of [["--index", index, "--origin", origin], ["--index", index, "--origin", "none"]]) {
+    const t = io();
+    assert.equal(await main(argv, {}, t.io), 1, argv.join(" "));
+    assert.equal(t.err.length, 1);
+    assert.match(t.err[0], /^deploy-guard: REFUSED: snapshot nng4 .* names runtime "wasm64-ffffffffffffffff", but /);
+  }
+  assert.deepEqual(seen, []);
+});
+
+test("main: an index with no snapshot refuses with exit 1, also with the origin none", async () => {
+  const index = indexFile({ schema, snapshots: [] });
+  for (const argv of [["--index", index, "--origin", origin], ["--index", index, "--origin", "none"]]) {
+    const t = io();
+    assert.equal(await main(argv, {}, t.io), 1, argv.join(" "));
+    assert.match(t.err.at(-1), /names no snapshot/);
+  }
   assert.deepEqual(seen, []);
 });
 
@@ -286,6 +390,7 @@ test("as a CLI: the exit code is main's, every line on stderr", async () => {
   assert.equal(r.code, 0, r.stderr);
   assert.equal(r.stdout, "");
   assert.deepEqual(r.stderr.trimEnd().split("\n"), [
+    PAIRED_LINE(2),
     `deploy-guard: live ${NNG4} (1000 bytes)`,
     `deploy-guard: live ${RAG} (5000 bytes)`,
     `deploy-guard: OK 2 snapshot(s) live on ${origin}`,
@@ -296,7 +401,7 @@ test("as a CLI: the exit code is main's, every line on stderr", async () => {
   assert.match(r.stderr.trimEnd().split("\n").at(-1), /^deploy-guard: REFUSED: .* answers 1 bytes, the index says 5000/);
   r = await run([], { LEAN4GAME_DEPLOY_ORIGIN: "none" });
   assert.equal(r.code, 0);
-  assert.match(r.stderr, /^deploy-guard: SKIPPED: /);
+  assert.match(r.stderr, /^deploy-guard: paired .*\ndeploy-guard: SKIPPED: /);
   r = await run(["--nope"]);
   assert.equal(r.code, 2);
 });
