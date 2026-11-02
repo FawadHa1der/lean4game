@@ -489,7 +489,7 @@ test("SEC1: client/public/_headers and scripts/serve-dist.mjs send the same poli
 
 test("release routing: /runtime/* and /profiles/* are the shared release's, /profiles/index.json and /snapshots/* the site's", () => {
   assert.equal(SITE_PREFIX, "lean4game/");
-  assert.match(RELEASE.id, /^lean-v\d+\.\d+\.\d+.*-[0-9a-f]{7}$/);
+  assert.match(RELEASE.id, /^lean-v\d+\.\d+\.\d+.*-[0-9a-f]{7}(-r\d+)?$/);
   const runtimeManifest = `runtime-manifest.${RELEASE.runtime.buildId}.json`;
   const cases = [
     [`/runtime/${runtimeManifest}`, `${REL}runtime/${runtimeManifest}`],
