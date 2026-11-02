@@ -19,9 +19,11 @@ on:
   workflow_dispatch:
 # One deploy at a time: a run waits for the deploy before it, and a newer run
 # replaces one still waiting, so deploys land in push order. A running deploy
-# is never cancelled midway.
+# is never cancelled midway. Per ref: a run on another branch deploys nothing and
+# must not replace wasm64-port's waiting run. A re-run of an older wasm64-port run
+# still can: if the head's run shows cancelled, re-run it.
 concurrency:
-  group: lean4game-deploy
+  group: lean4game-deploy-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   test:
@@ -40,6 +42,7 @@ jobs:
     # workflow_dispatch runs on whatever branch it is given: only wasm64-port deploys.
     if: github.ref == 'refs/heads/wasm64-port'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - id: secrets
         run: echo "present=${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}" >> "$GITHUB_OUTPUT"
@@ -63,3 +66,5 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # A fork's own Worker: the guard's origin. Unset, it asks this site's.
+          LEAN4GAME_DEPLOY_ORIGIN: ${{ vars.LEAN4GAME_DEPLOY_ORIGIN }}

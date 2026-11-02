@@ -129,10 +129,13 @@ path repeats it.
 
 `.github/workflows/deploy.yml` runs step 2 on every push to `wasm64-port`
 when the fork has the `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit only)
-and `CLOUDFLARE_ACCOUNT_ID` secrets; without them it logs a skip. It has no
+and `CLOUDFLARE_ACCOUNT_ID` secrets; without them it logs a skip. A fork with
+its own Worker also sets the repository variable `LEAN4GAME_DEPLOY_ORIGIN` to
+its origin, or the guard asks this site's. The workflow has no
 R2 credentials, so it can neither run step 1 nor check the release in R2:
-finish step 1 BEFORE the push. A push before step 1 has finished deploys nothing
-(the guard refuses; 'Run workflow' after the upload).
+finish step 1 BEFORE the push. A push that names a `.snapz` before step 1 has
+sent it deploys nothing (the guard refuses; after the upload, 'Re-run failed
+jobs' on the refused run, or a new push).
 
 **The guard** (`scripts/deploy-guard.mjs`, QED64's review R19a; also under
 `--dry-run`, and in CI, which deploys through `deploy-app.sh`). First, with no
@@ -149,8 +152,8 @@ test job catches it first.
 Then, before the deploy, one HEAD on the live origin for every `.snapz` that the
 tracked index names. A 404, a size other than the
 index's, or a 5xx or network error after three tries (2 s, then 4 s) refuses,
-exit 1, and nothing deploys: upload, then re-run the deploy (a manual 'Run
-workflow' in CI). `LEAN4GAME_DEPLOY_ORIGIN=<url>` or `--origin <url>` asks
+exit 1, and nothing deploys: upload, then re-run the deploy ('Re-run failed
+jobs' in CI: the refused run's commit is still the head). `LEAN4GAME_DEPLOY_ORIGIN=<url>` or `--origin <url>` asks
 another origin, and `none` skips this live check, never the pairing (a first
 deploy to a new origin).
 It checks only site-owned files, which every Worker of this site serves from
@@ -167,14 +170,19 @@ The workflow's test job runs first and needs no secrets: `npm ci` and
 `scripts/test-all.sh`, every `*.test.ts` and `*.test.mjs` under `client/src`,
 `infra` and `scripts` (found there, so a new file needs no list). The deploy
 job `needs:` it, so a failing test deploys nothing. Deploys go one at a time,
-in push order: the runs share one concurrency group (`lean4game-deploy`,
-`cancel-in-progress: false`), so a run waits for the deploy before it, a newer
-push replaces a run still waiting, and a running deploy is never cancelled
-midway. A manual 'Run workflow' deploys only on `wasm64-port`, and just before
+in push order: the runs of `wasm64-port` share one concurrency group
+(`lean4game-deploy-<ref>`, `cancel-in-progress: false`), so a run waits for the
+deploy before it, a newer push replaces a run still waiting, and a running deploy
+is never cancelled midway. A run on another branch sits in its own group and
+deploys nothing. GitHub offers 'Run workflow' only for a workflow on the default
+branch, and `main` has `test.yml` but not `deploy.yml`, so re-run a refused deploy
+with 'Re-run failed jobs' or a new push. Should the file reach `main`, a manual
+run still deploys only on `wasm64-port`. Just before
 `scripts/deploy-app.sh` a one-line `git ls-remote` check refuses unless the
 run's commit is still that branch's head. So a 'Re-run jobs' of an older run
 never deploys over a newer commit, and it is no way to roll back ("Rollback"
-below): the newer head deploys in its own run. With the indexes inside the
+below). It does join the group and can replace the head's waiting run: if the
+head's run shows cancelled, re-run it. With the indexes inside the
 deploy, an older commit deployed over a newer one would serve the older index,
 which is why this matters.
 
@@ -305,6 +313,12 @@ immutable prefix.
 - **In an emergency**, `npx wrangler rollback` restores a Worker version's own
   assets, record and indexes in seconds. Follow it with a revert and push, so
   `wasm64-port` is what is live and the next push does not undo the rollback.
+- **If the live Worker is what broke** (`/snapshots/*` answers 404 or 5xx), the
+  guard asks that same Worker and refuses the revert, and a 404 says "upload it
+  first", which is not the fault here. Run `npx wrangler rollback` first (the guard then
+  passes), or deploy the revert from a checkout with
+  `LEAN4GAME_DEPLOY_ORIGIN=none scripts/deploy-app.sh` (the pairing check still
+  runs).
 - **A version from before this scheme** (see "The first deploy of this scheme")
   serves R2's frozen indexes, which still name its pairing.
 - **Revert this scheme's commits together** (the deploy change and the clean-ups
