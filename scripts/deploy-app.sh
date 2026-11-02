@@ -3,10 +3,11 @@
 # carries the shell, the Worker (which bundles the release record) and the
 # site's two indexes, so they switch together (wasm/DEPLOY.md, "Deploy, in
 # order"). The multi-GB artifacts live in R2 and are uploaded separately and
-# rarely (scripts/upload-artifacts.sh) — run that FIRST whenever the runtime or
-# the snapshots changed, so the shell never points at objects that are not
-# there yet; the guard below refuses the deploy otherwise. Not run from here: CI
-# has no R2 credentials, and a shell-only deploy needs nothing.
+# rarely (scripts/upload-artifacts.sh) — run that FIRST whenever the release
+# record or the snapshots changed, so the shell never points at objects that are
+# not there yet; the guard below refuses the deploy when a .snapz is missing, but
+# it cannot see a release missing from R2. Not run from here: CI has no R2
+# credentials, and a shell-only deploy needs nothing.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -d client/node_modules ] || npm ci

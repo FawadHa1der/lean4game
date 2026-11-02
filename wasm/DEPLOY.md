@@ -42,7 +42,8 @@ the bake pins: `infra/worker.js` imports it, maps `/runtime/*` and
 `/snapshots/*`) off the release, and reads site-owned objects under
 `lean4game/`. The browser only sees this origin; the release prefix is proxied,
 never linked. A toolchain bump is therefore one file (the record) plus a
-rebake; the worker follows it on the next deploy. The bucket is shared with the
+rebake, or the record alone for a tools re-cut of the same runtime and packs
+(`<id>-r<N>`); the worker follows it on the next deploy. The bucket is shared with the
 editor; the `lean4game/` prefix keeps the two sites' objects apart and lets the
 existing bucket-scoped upload token serve both.
 
@@ -118,7 +119,13 @@ for this build" with its Reload button.
 
 Shell-only changes (this repo's client code) need step 2 alone. A snapshot
 rebake or a new game for the SAME runtime takes steps 1 and 2, and is visible
-at the deploy. A runtime rebuild needs all of 0-2.
+at the deploy. A runtime rebuild needs all of 0-2, and so does **any other change
+to the release record**, even one with the same runtime and no rebake (a tools
+re-cut, `<id>-r<N>`). The Worker maps `/runtime/*` and `/profiles/*` by the
+record's id, so a push before that release is in R2 answers 404 to every runtime
+manifest fetch and takes down every boot. With no new `.snapz` the guard passes
+it: step 1 is the only check that R2 holds the release, and nothing on the push
+path repeats it.
 
 `.github/workflows/deploy.yml` runs step 2 on every push to `wasm64-port`
 when the fork has the `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit only)
@@ -128,20 +135,32 @@ finish step 1 BEFORE the push. A push before step 1 has finished deploys nothing
 (the guard refuses; 'Run workflow' after the upload).
 
 **The guard** (`scripts/deploy-guard.mjs`, QED64's review R19a; also under
-`--dry-run`, and in CI, which deploys through `deploy-app.sh`): before the
-deploy, one HEAD on the live origin for every `.snapz` that the tracked
-`client/public/snapshots/index.json` names. A 404, a size other than the
+`--dry-run`, and in CI, which deploys through `deploy-app.sh`). First, with no
+network, the pairing: `wasm/lean4-wasm64-release.json`'s `runtime.buildId`,
+`client/public/runtime/runtime-manifest.json`'s `buildId`,
+`client/public/profiles/index.json`'s `runtime.buildId` and every entry's
+`runtime` in `client/public/snapshots/index.json` must be one id, and that index
+must name a snapshot; otherwise exit 1 and nothing deploys. These files ride in
+one deploy, so a mispaired commit (a partial revert, a record bump pushed without
+its rebake) would make every boot refuse every game. Keep them in one commit.
+`scripts/deploy-guard.test.mjs` runs the same check on the tracked files, so the
+test job catches it first.
+
+Then, before the deploy, one HEAD on the live origin for every `.snapz` that the
+tracked index names. A 404, a size other than the
 index's, or a 5xx or network error after three tries (2 s, then 4 s) refuses,
 exit 1, and nothing deploys: upload, then re-run the deploy (a manual 'Run
 workflow' in CI). `LEAN4GAME_DEPLOY_ORIGIN=<url>` or `--origin <url>` asks
-another origin, and `none` skips the check (a first deploy to a new origin).
+another origin, and `none` skips this live check, never the pairing (a first
+deploy to a new origin).
 It checks only site-owned files, which every Worker of this site serves from
 the same key under `lean4game/`. Release-mapped files (`/runtime/*`,
 `/profiles/<not index.json>`) are never checked through the live origin: the
 live Worker maps them into its own release, so a new release's chunks would 404
 and its fixed-name manifests would give a false pass. That check is step 1's
-(R2's `release.json` against the record). An adoption rebakes every snapshot
-under a new name, so the guard also refuses one pushed before its upload.
+(R2's `release.json` against the record). A release adopted with a rebake has new
+`.snapz` names, so the guard also refuses it when pushed before its upload; with
+no rebake (see above) the guard passes it, in R2 or not.
 Tests: `scripts/deploy-guard.test.mjs`, `scripts/deploy-app.test.mjs`.
 
 The workflow's test job runs first and needs no secrets: `npm ci` and

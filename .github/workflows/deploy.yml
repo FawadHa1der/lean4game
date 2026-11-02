@@ -1,15 +1,17 @@
 # CD: pushes to wasm64-port redeploy the app shell to Cloudflare Workers
 # (seconds, ~25 MB of static files): one Worker version with the shell, the
 # release record it bundles and the site's two indexes (wasm/DEPLOY.md, "Deploy,
-# in order"). Artifacts (multi-GB in R2) are uploaded manually when a runtime or
-# snapshot actually changes: scripts/upload-artifacts.sh BEFORE pushing. It
+# in order"). Artifacts (multi-GB in R2) are uploaded manually when the release
+# record or a snapshot changes: scripts/upload-artifacts.sh BEFORE pushing. It
 # changes nothing a deployed shell reads.
-# This workflow has no R2 credentials and does not run it, but the guard in
-# scripts/deploy-app.sh (scripts/deploy-guard.mjs) refuses the deploy until every
-# .snapz the tracked index names answers on the live origin. The deploy job
-# runs only after the test job has passed, and deploys only when the repo has
-# the CLOUDFLARE_API_TOKEN secret (Workers Scripts: Edit — no R2 permission
-# needed) and CLOUDFLARE_ACCOUNT_ID. The test job needs no secrets.
+# This workflow has no R2 credentials and does not run it, so nothing here checks
+# that R2 holds the record's release. The guard in scripts/deploy-app.sh
+# (scripts/deploy-guard.mjs) refuses the deploy unless the record, the runtime
+# manifest and both indexes pair, and until every .snapz the tracked index names
+# answers on the live origin. The deploy job runs only after the test job has
+# passed, and deploys only when the repo has the CLOUDFLARE_API_TOKEN secret
+# (Workers Scripts: Edit — no R2 permission needed) and CLOUDFLARE_ACCOUNT_ID.
+# The test job needs no secrets.
 name: deploy
 on:
   push:

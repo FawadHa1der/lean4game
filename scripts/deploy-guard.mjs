@@ -29,8 +29,12 @@
 // release's chunk names would 404 and its fixed-name manifests would give a
 // false pass. That check lives in scripts/upload-artifacts.sh, which refuses
 // to run until R2's lean4-wasm64/<id>/release.json equals
-// wasm/lean4-wasm64-release.json. Every adoption rebakes the snapshots under
-// new names, so the guard also refuses an adoption pushed before its upload.
+// wasm/lean4-wasm64-release.json. A release adopted with a rebake has new .snapz
+// names, so this guard also refuses it when pushed before its upload. One with
+// no rebake (the same runtime under a new id, a tools re-cut <id>-r2) names the
+// same .snapz, and this guard passes it whether R2 holds that release or not: any
+// change to the record needs the upload's check before the push
+// (wasm/DEPLOY.md, "Deploy, in order").
 //
 // One HEAD per entry (redirects not followed, 20 s each); a 5xx, a network
 // error or a timeout is retried after 2 s and again after 4 s (three tries),
