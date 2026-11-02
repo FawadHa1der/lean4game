@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite'
-import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react-swc'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 import { normalizePath } from 'vite'
@@ -37,15 +36,6 @@ const crossOriginIsolation = {
 };
 
 // https://vitejs.dev/config/
-function runtimeBuildId(): string {
-  try {
-    const m = JSON.parse(readFileSync(new URL("./public/runtime/runtime-manifest.json", import.meta.url), "utf8"))
-    return typeof m.buildId === "string" && m.buildId ? m.buildId : "dev"
-  } catch {
-    return "dev"
-  }
-}
-
 export default defineConfig({
   build: {
     // Relative to the root
@@ -83,14 +73,9 @@ export default defineConfig({
       },
     }),
   ],
-  define: {
-    // qed64-boot asks first for the runtime manifest pinned to the build id of
-    // the manifest we ship (public/runtime/runtime-manifest.json) — the
-    // atomic-promote scheme of QED64's docs/DEPLOY.md: a shell deploy never
-    // races the mutable manifest in R2. Falls back to "dev" (404s the pinned
-    // name, then reads the mutable manifest) when no manifest is staged.
-    __QED64_BUILD_ID__: JSON.stringify(runtimeBuildId()),
-  },
+  // No __QED64_BUILD_ID__ define: it would make qed64's boot ask for a pinned
+  // runtime manifest and per-build index copies, which this site no longer has
+  // or needs (wasm/DEPLOY.md, "Deploy, in order").
   publicDir: "public",
   base: "/", // setting this to `/leangame/` means the server is now accessible at `localhost:3000/leangame`
   optimizeDeps: {

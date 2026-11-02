@@ -60,22 +60,11 @@ const files = [];
   }
 })(dist);
 // The artifact manifests: the boot fetches them before the worker controls
-// the page on a first visit, so they must be precached, not learned on use.
-// The pinned names come from the shipped manifest's build id (the same file
-// vite's __QED64_BUILD_ID__ is read from): the pinned runtime manifest, and
-// QED64 HARDENING #64's per-build index copies, which the page reads when
-// the mutable index names another runtime (an upload of the next pairing ran
-// ahead of the deploy) — learned on use, a first visit's copy was never
-// cached and an offline revisit in that window refused every game. A staged
-// tree has the files (the bundle lane copies the release's manifest,
-// scripts/stage-snapshots.py --copies writes all three); a bare checkout
-// (CI's deploy build) does not — they are gitignored, and R2 serves them.
-// A host without one answers 404, which the install tolerates.
-const rt = JSON.parse(readFileSync(join(dist, "runtime/runtime-manifest.json"), "utf8"));
-const PINNED = [`/runtime/runtime-manifest.${rt.buildId}.json`, `/snapshots/index.${rt.buildId}.json`, `/snapshots/profiles-index.${rt.buildId}.json`];
-for (const p of ["/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json", "/profiles/lean-core.manifest.json", ...PINNED]) {
-  let size = 0; try { size = statSync(join(dist, p)).size; } catch { /* a pinned copy, in a checkout that has none */ }
-  files.push({ path: p, size });
+// the page on a first visit, so they must be precached, not learned on use. The
+// two indexes ship in the deploy (scripts/deploy-app.sh), the other two are the
+// release's, served from R2; all four are tracked, so every built tree has them.
+for (const p of ["/runtime/runtime-manifest.json", "/snapshots/index.json", "/profiles/index.json", "/profiles/lean-core.manifest.json"]) {
+  files.push({ path: p, size: statSync(join(dist, p)).size });
 }
 files.sort((a, b) => a.path.localeCompare(b.path));
 // The critical subset (see the header). The entry chunks are whatever the
@@ -93,10 +82,9 @@ const critical = files.filter((f) =>
 for (const p of entry) if (!files.some((f) => f.path === p)) throw new Error(`build-sw: index.html references ${p}, which is not in the precache list`);
 if (!critical.some((f) => /^\/assets\/.*\.js$/.test(f.path))) throw new Error("build-sw: no entry script found in index.html");
 // The version hashes CONTENT (a same-size edit to an unhashed shell file
-// must still reach returning users); the pinned manifest, when this tree
-// has none, contributes its name.
+// must still reach returning users).
 const h = createHash("sha256");
-for (const f of files) { h.update(f.path); try { h.update(readFileSync(join(dist, f.path))); } catch { h.update(""); } }
+for (const f of files) { h.update(f.path); h.update(readFileSync(join(dist, f.path))); }
 const version = h.digest("hex").slice(0, 12);
 const template = readFileSync(join(root, "client/src/sw/sw.template.js"), "utf8");
 const out = template.replace("__VERSION__", version).replace("__PRECACHE__", JSON.stringify(files.map((f) => f.path))).replace("__CRITICAL__", JSON.stringify(critical.map((f) => f.path)));

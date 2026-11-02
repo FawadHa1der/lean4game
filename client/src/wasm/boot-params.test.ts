@@ -17,6 +17,7 @@
 // index naming another origin is refused with SEC1's code, and a dev index
 // that cannot be read is a named failure.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 const SITE = "https://lean4game.example";
 const PAGE = `${SITE}/#/g/hhu-adam/NNG4/world/Tutorial/level/1`;
@@ -188,7 +189,7 @@ await test("a runtime manifest with a chunk on another origin is refused, with a
 
 /* ---- the real games-api.ts against a recording fetch ------------------- */
 let seen: string[] = [];
-let served: { index?: unknown; manifest?: unknown; status?: number; copies?: Record<string, unknown> } = {};
+let served: { index?: unknown; manifest?: unknown; status?: number } = {};
 const json = (v: unknown) => new Response(JSON.stringify(v), { status: 200, headers: { "content-type": "application/json" } });
 // runtime/v1: buildId is "wasm64-" + sha256(lean.wasm)[:16], which qed64's resolveRuntimeManifest checks (since qed64 80ddbf6).
 const WASM_SHA256 = "d77d34b97592d014" + "0".repeat(48);
@@ -201,9 +202,6 @@ const manifestOf = (buildId: string) => ({ buildId, leanVersion: "4", files: { "
   // runtime-manifest.<id>.json is that build's manifest; the mutable one is wasm64-d77d34b97592d014's.
   if (u.pathname.startsWith("/runtime/runtime-manifest")) return json(served.manifest ?? manifestOf(/^\/runtime\/runtime-manifest\.(wasm64-[0-9a-f]{16})\.json$/.exec(u.pathname)?.[1] ?? "wasm64-d77d34b97592d014"));
   if (u.pathname.endsWith("/index.json")) return served.status ? new Response("", { status: served.status }) : json(served.index ?? index(entry("nng4", "/snapshots/nng4.db264c5f3eb7c69c.snapz")));
-  // HARDENING #64's per-runtime copies (what scripts/stage-snapshots.py --copies publishes): a 404 unless the case serves one.
-  const copy = /^\/snapshots\/index\.(wasm64-[0-9a-f]{16})\.json$/.exec(u.pathname)?.[1];
-  if (copy !== undefined) return served.copies?.[copy] !== undefined ? json(served.copies[copy]) : new Response("not found", { status: 404, headers: { "content-type": "text/plain" } });
   return new Response("<html>", { status: 200, headers: { "content-type": "text/html" } });
 };
 let n = 0;
@@ -296,117 +294,60 @@ await test("games-api: ?profiles= goes through the same rule", async () => {
   assert.deepEqual(seen, []);
 });
 
-/* ---- HARDENING #64: the served index paired with the shell's pinned build --
- * An upload of the next pairing replaces /snapshots/index.json before this
- * shell's deploy; the shell (vite's __QED64_BUILD_ID__, here a global) then
- * reads its own build's copy /snapshots/index.<buildId>.json through qed64's
- * loadSnapshotIndex `pairedBuildId`, and keeps the mutable index whenever the
- * copy is not an index paired with that build. */
-const PINNED = "wasm64-d77d34b97592d014";
+/* ---- QED64's review D2: the fixed names, no pin, no per-build copy -------
+ * The deploy carries the index and the Worker bundles the release record, so
+ * a page reads /runtime/runtime-manifest.json and /snapshots/index.json and
+ * nothing else. qed64's loaders ask for a pinned manifest or a per-build copy
+ * only when the bundler defines __QED64_BUILD_ID__ or the caller passes an id. */
 const NEXT = "wasm64-0123456789abcdef";
 const runtimeEntry = (name: string, url: string, runtime: string) => ({ ...entry(name, url), runtime });
-const NNG4_PINNED = "/snapshots/nng4.db264c5f3eb7c69c.snapz";
 const NNG4_NEXT = "/snapshots/nng4.1111111111111111.snapz";
 const TILE = [{ snapshot: "nng4", gameId: "g/hhu-adam/NNG4" }];
-async function pinned(body: () => Promise<void>): Promise<void> {
-  const g = globalThis as { __QED64_BUILD_ID__?: string };
-  g.__QED64_BUILD_ID__ = PINNED;
-  try { await body(); } finally { delete g.__QED64_BUILD_ID__; served = {}; }
-}
 
-await test("games-api #64: an index.json naming another runtime is replaced by the pinned build's index.<buildId>.json", () => pinned(async () => {
-  served.index = index(runtimeEntry("nng4", NNG4_NEXT, NEXT));
-  served.copies = { [PINNED]: index(runtimeEntry("nng4", NNG4_PINNED, PINNED)) };
+await test("games-api D2: the runtime manifest and the index come from their fixed names, one request each", async () => {
   const g = await api("");
+  assert.equal((await g.resolveRuntimeManifest()).buildId, "wasm64-d77d34b97592d014");
+  assert.deepEqual(seen, ["/runtime/runtime-manifest.json"], "no pinned manifest first");
+  seen = [];
   const idx = await g.fetchSnapshotIndexOnce();
-  assert.deepEqual(seen, ["/snapshots/index.json", `/snapshots/index.${PINNED}.json`], "the mutable index first, then the pinned build's copy");
-  assert.deepEqual(idx!.snapshots.map((e) => [e.url, e.runtime]), [[NNG4_PINNED, PINNED]], "the copy is used");
-  const tiles = await g.tileSnapshotStates(TILE);
-  assert.equal(tiles.get("nng4")?.state, "download", "the tile offers this build's snapshot, not 'unavailable'");
-}));
+  assert.deepEqual(seen, ["/snapshots/index.json"]);
+  assert.equal(idx!.snapshots[0]!.runtime, "wasm64-d77d34b97592d014");
+  assert.equal((await g.tileSnapshotStates(TILE)).get("nng4")?.state, "download", "paired: offered");
+  await g.resolveRuntimeManifest();
+  await g.fetchSnapshotIndexOnce();
+  assert.deepEqual(seen, ["/snapshots/index.json"], "memoised: the one resolution per page");
+});
 
-await test("games-api #64: the copy missing (404) — the mutable index is kept, and its unpaired entry stays unavailable", () => pinned(async () => {
-  served.index = index(runtimeEntry("nng4", NNG4_NEXT, NEXT));
-  const g = await api("");
-  const idx = await g.fetchSnapshotIndexOnce();
-  assert.deepEqual(seen, ["/snapshots/index.json", `/snapshots/index.${PINNED}.json`]);
-  assert.deepEqual(idx!.snapshots.map((e) => [e.url, e.runtime]), [[NNG4_NEXT, NEXT]], "the mutable index, as read");
-  assert.equal((await g.tileSnapshotStates(TILE)).get("nng4")?.state, "unavailable", "refused as before #64");
-  // a copy that is mixed, of another runtime, or empty is no better than none
-  for (const bad of [index(runtimeEntry("nng4", NNG4_PINNED, PINNED), runtimeEntry("rag", "/snapshots/rag.2222222222222222.snapz", NEXT)), index(runtimeEntry("nng4", NNG4_NEXT, NEXT)), index()]) {
-    served.copies = { [PINNED]: bad };
-    const again = await (await api("")).fetchSnapshotIndexOnce();
-    assert.deepEqual(again!.snapshots.map((e) => e.runtime), [NEXT], JSON.stringify(bad));
-  }
-}));
-
-await test("games-api #64: a paired index costs no copy request; no pinned build (no define) never asks for one", async () => {
-  await pinned(async () => {
-    served.index = index(runtimeEntry("nng4", NNG4_PINNED, PINNED));
-    await (await api("")).fetchSnapshotIndexOnce();
-    assert.deepEqual(seen, ["/snapshots/index.json"]);
-  });
+await test("games-api D2: an index naming another runtime is read as it is, no copy asked for, and its entries are unavailable", async () => {
   try {
     served.index = index(runtimeEntry("nng4", NNG4_NEXT, NEXT));
-    served.copies = { [PINNED]: index(runtimeEntry("nng4", NNG4_PINNED, PINNED)) };
-    const idx = await (await api("")).fetchSnapshotIndexOnce();
-    assert.deepEqual(seen, ["/snapshots/index.json"], "no __QED64_BUILD_ID__: exactly as before #64");
-    assert.equal(idx!.snapshots[0]!.runtime, NEXT);
+    const g = await api("");
+    const idx = await g.fetchSnapshotIndexOnce();
+    assert.deepEqual(seen, ["/snapshots/index.json"], "no /snapshots/index.<buildId>.json");
+    assert.deepEqual(idx!.snapshots.map((e) => e.runtime), [NEXT]);
+    assert.equal((await g.tileSnapshotStates(TILE)).get("nng4")?.state, "unavailable");
   } finally { served = {}; }
 });
 
-await test("games-api #64: SEC1 holds — a foreign mutable index is refused before any copy; a foreign copy is never used; ?snapshots= reads only its own", () => pinned(async () => {
-  served.index = index(runtimeEntry("nng4", NNG4_NEXT, NEXT), runtimeEntry("rag", "https://cdn.attacker.example/snapshots/rag.snapz", NEXT));
-  served.copies = { [PINNED]: index(runtimeEntry("nng4", NNG4_PINNED, PINNED)) };
-  await assert.rejects((await api("")).fetchSnapshotIndexOnce(), (e: unknown) => isSec1Refusal(e) && (e as { code: string }).code === "SNAPSHOT_INDEX_FOREIGN_URL");
-  assert.deepEqual(seen, ["/snapshots/index.json"], "refused whole, no copy asked for");
-  served.index = index(runtimeEntry("nng4", NNG4_NEXT, NEXT));
-  served.copies = { [PINNED]: index(runtimeEntry("nng4", "https://cdn.attacker.example/snapshots/nng4.snapz", PINNED)) };
-  const idx = await (await api("")).fetchSnapshotIndexOnce();
-  assert.deepEqual(seen, ["/snapshots/index.json", `/snapshots/index.${PINNED}.json`]);
-  assert.deepEqual(idx!.snapshots.map((e) => e.url), [NNG4_NEXT], "the off-site copy is refused by the loader, the mutable index kept");
-  served.index = index(runtimeEntry("nng4", NNG4_NEXT, NEXT));
-  await (await api("?snapshots=staging")).fetchSnapshotIndexOnce();
-  assert.deepEqual(seen, ["/staging/index.json"], "an overlay is read as it is, never paired");
-}));
+await test("games-api D2: ?runtime=X reads X's own manifest and the one index; X's entries are offered", async () => {
+  try {
+    served.index = index(runtimeEntry("nng4", NNG4_NEXT, NEXT));
+    const g = await api(`?runtime=${NEXT}`);
+    assert.equal((await g.resolveRuntimeManifest()).buildId, NEXT);
+    assert.deepEqual(seen, [`/runtime/runtime-manifest.${NEXT}.json`]);
+    seen = [];
+    await g.fetchSnapshotIndexOnce();
+    assert.deepEqual(seen, ["/snapshots/index.json"]);
+    assert.equal((await g.tileSnapshotStates(TILE)).get("nng4")?.state, "download");
+  } finally { served = {}; }
+});
 
-/* `?runtime=X` boots X, not the pin (qed64's resolver: the override wins),
- * and the tiles and the pairing check compare entries with the resolved
- * manifest's buildId, so the index is paired with X (qed64 EMBEDDING §7.0:
- * "the buildId of the runtime it boots"). Paired with the pin, an index.json
- * already on X was replaced by the pin's copy and every X entry refused. */
-await test("games-api #64: ?runtime= pairs the index with the runtime it boots, not the shell's pin", () => pinned(async () => {
-  // index.json already on X, the pin's copy present: no copy is read, X's entry is offered.
-  served.index = index(runtimeEntry("nng4", NNG4_NEXT, NEXT));
-  served.copies = { [PINNED]: index(runtimeEntry("nng4", NNG4_PINNED, PINNED)) };
-  let g = await api(`?runtime=${NEXT}`);
-  let idx = await g.fetchSnapshotIndexOnce();
-  assert.deepEqual(seen, ["/snapshots/index.json"], "paired with X: no copy request");
-  assert.deepEqual(idx!.snapshots.map((e) => [e.url, e.runtime]), [[NNG4_NEXT, NEXT]], "the index as served");
-  assert.equal((await g.resolveRuntimeManifest()).buildId, NEXT, "the page boots X");
-  assert.equal((await g.tileSnapshotStates(TILE)).get("nng4")?.state, "download", "X's snapshot is offered, not 'unavailable'");
-  // index.json still on the pin (X uploaded ahead of its deploy): X's own copy is read and used.
-  served.index = index(runtimeEntry("nng4", NNG4_PINNED, PINNED));
-  served.copies = { [NEXT]: index(runtimeEntry("nng4", NNG4_NEXT, NEXT)) };
-  g = await api(`?runtime=${NEXT}`);
-  idx = await g.fetchSnapshotIndexOnce();
-  assert.deepEqual(seen, ["/snapshots/index.json", `/snapshots/index.${NEXT}.json`], "X's copy, never the pin's");
-  assert.deepEqual(idx!.snapshots.map((e) => [e.url, e.runtime]), [[NNG4_NEXT, NEXT]]);
-  assert.equal((await g.tileSnapshotStates(TILE)).get("nng4")?.state, "download");
-  // X has no copy: the mutable index is kept and its pin entry refused for X, as before #64.
-  served.copies = {};
-  g = await api(`?runtime=${NEXT}`);
-  idx = await g.fetchSnapshotIndexOnce();
-  assert.deepEqual(seen, ["/snapshots/index.json", `/snapshots/index.${NEXT}.json`]);
-  assert.deepEqual(idx!.snapshots.map((e) => e.runtime), [PINNED]);
-  assert.equal((await g.tileSnapshotStates(TILE)).get("nng4")?.state, "unavailable");
-  // ?runtime= equal to the pin changes nothing.
-  served.index = index(runtimeEntry("nng4", NNG4_NEXT, NEXT));
-  served.copies = { [PINNED]: index(runtimeEntry("nng4", NNG4_PINNED, PINNED)) };
-  idx = await (await api(`?runtime=${PINNED}`)).fetchSnapshotIndexOnce();
-  assert.deepEqual(seen, ["/snapshots/index.json", `/snapshots/index.${PINNED}.json`]);
-  assert.equal(idx!.snapshots[0]!.runtime, PINNED);
-}));
+await test("D2: the build defines no __QED64_BUILD_ID__ (qed64's resolver would pin on it, passed or not)", () => {
+  const config = readFileSync(new URL("../../vite.config.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(config.replace(/^\s*\/\/.*$/gm, ""), /__QED64_BUILD_ID__/);
+  const apiSource = readFileSync(new URL("./games-api.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(apiSource, /pinnedBuildId|pairedBuildId/);
+});
 
 if (failures) { console.log(`boot-params: ${failures} FAILED`); process.exit(1); }
 console.log("boot-params: ALL TESTS PASS");
