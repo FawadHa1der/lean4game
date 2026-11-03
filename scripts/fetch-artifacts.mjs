@@ -5,7 +5,7 @@
 // what each file must be (a chunk: bytes and sha256, as served; a .snapz: transfer
 // and digest, which covers the served gzip bytes). A file takes its name from
 // <name>.partial only when it matches; one already there and matching is skipped.
-// Two at a time, chunks first, three tries each; a failed chunk stops the run.
+// Two at a time, three tries each. No snapshot starts until every chunk is verified.
 //
 // It works for a checkout of what is live: the live Worker maps /runtime/* into
 // its own release, so a chunk of another runtime answers 404.
@@ -43,11 +43,9 @@ const unknown = (only ?? []).filter((n) => !names.includes(n));
 if (unknown.length) die(`--only: no snapshot named ${unknown.join(", ")}; the index has ${names.join(", ")}`, 2);
 
 const entry = (dir, url, bytes, sha256) => ({ url, bytes, sha256, isChunk: dir !== "snapshots", name: path.posix.basename(url), dest: path.join(out, dir, path.posix.basename(url)) });
-const queue = [
-  ...Object.values(runtime.files).flatMap((f) => f.chunks).map((c) => entry("runtime/chunks", c.url, c.bytes, c.sha256)),
-  ...index.snapshots.filter((s) => !only || only.includes(s.name)).map((s) => entry("snapshots", s.url, s.transfer, s.digest.replace(/^sha256:/, ""))),
-];
-const total = queue.length;
+const chunks = Object.values(runtime.files).flatMap((f) => f.chunks).map((c) => entry("runtime/chunks", c.url, c.bytes, c.sha256));
+const snapshots = index.snapshots.filter((s) => !only || only.includes(s.name)).map((s) => entry("snapshots", s.url, s.transfer, s.digest.replace(/^sha256:/, "")));
+const total = chunks.length + snapshots.length;
 const IF_404 = `This works for a checkout of what is live: git pull to get there, or build the artifacts from source (README.md, "Building the artifacts from source").`;
 
 /** Why this file is not the tracked one, or null when it is. */
@@ -77,7 +75,7 @@ async function download(e) {
 
 const failed = [];
 let skipped = 0;
-async function worker() {
+async function worker(queue) {
   for (let e = queue.shift(); e; e = queue.shift()) {
     fs.mkdirSync(path.dirname(e.dest), { recursive: true });
     if (!(await mismatch(e.dest, e))) { skipped++; continue; }
@@ -98,6 +96,7 @@ async function worker() {
     }
   }
 }
-await Promise.all([worker(), worker()]);
+await Promise.all([worker(chunks), worker(chunks)]);
+if (!failed.length) await Promise.all([worker(snapshots), worker(snapshots)]); // no game runs without the runtime
 if (failed.length) die(`FAILED: ${failed.join(", ")}; a rerun redoes only what is missing`, 1);
 console.log(`fetch-artifacts: ${total} files verified (${total - skipped} fetched, ${skipped} already there) in ${out}: runtime ${runtime.buildId}, snapshots ${(only ?? names).join(", ")}`);

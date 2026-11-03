@@ -160,6 +160,14 @@ test("a 404 on a runtime chunk says the live site serves another runtime, and wh
   assert.equal(fs.existsSync(inPublic("snapshots/testgame.dd.snapz")), false);
 });
 
+test("no snapshot starts until every chunk is verified, whichever chunk fails", async () => {
+  fault["/runtime/chunks/lean.wasm.cc.part-001"] = (res) => { res.writeHead(404).end("not found"); return true; };
+  const r = await run();
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /lean\.wasm\.cc\.part-001: 404: .* serves another runtime/);
+  assert.deepEqual(urls().sort(), Object.keys(CHUNKS).sort());
+});
+
 test("a 404 on a snapshot fails that file, says so and lets the others finish", async () => {
   fault[TESTGAME] = (res) => { res.writeHead(404).end("not found"); return true; };
   const r = await run();

@@ -901,8 +901,8 @@ nothing outside this repository and its lockfile.
 `scripts/fetch-artifacts.mjs` reads the tracked
 `client/public/runtime/runtime-manifest.json` and
 `client/public/snapshots/index.json` and GETs each chunk and `.snapz` they name
-from the live origin (`--origin <url>` for another), two at a time, chunks first,
-three tries each. A file goes to `<name>.partial` and takes its name only when
+from the live origin (`--origin <url>` for another), two at a time, three tries
+each, and starts no snapshot until every chunk is verified. A file goes to `<name>.partial` and takes its name only when
 its size and sha256 match the tracked values (a chunk: `bytes` and `sha256`, as
 served; a `.snapz`: `transfer` and `digest`, which covers the served gzip bytes).
 A rerun skips what is there and matches, and fetches the rest whole: there is no
