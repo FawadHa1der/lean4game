@@ -1,8 +1,9 @@
-# Large served artifacts live outside git (published as the artifact bundle,
-# see wasm/KERNEL.md and scripts/fetch-artifacts.sh). Their DIGEST MANIFESTS
-# are tracked so any downloaded copy can be verified.
+# Large served artifacts live outside git (fetched from the live site by
+# scripts/fetch-artifacts.mjs, or built: wasm/KERNEL.md). Their DIGEST MANIFESTS
+# are tracked so any copy can be verified.
 public/runtime/chunks/
 public/profiles/*.part-*
 public/snapshots/*.snapz
+public/snapshots/*.snapz.partial
 # worker scripts are staged from the qed64 package (scripts/stage-workers.sh)
 public/workers/
