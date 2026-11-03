@@ -71,11 +71,18 @@ scripts/stage-workers.sh            # the qed64 worker scripts -> client/public/
 npm --workspace client run build    # -> client/dist
 ```
 
-To play locally, fetch the runtime and the game snapshots first
-(`scripts/fetch-artifacts.sh`, ~2.8 GB for the ten games; the bundle named in
-`wasm/artifacts/BUNDLE.json` must have been published) and serve the build
-with `node scripts/serve-dist.mjs` — [wasm/KERNEL.md](wasm/KERNEL.md),
-"Rebuilding from a clone".
+To play locally, fetch the runtime and the game snapshots from the live site
+before that build, then serve it:
+
+```bash
+node scripts/fetch-artifacts.mjs     # the runtime and all ten games, 2.6 GB (--only nng4 for one game: 260 MB)
+npm --workspace client run build     # copies them into client/dist
+node scripts/serve-dist.mjs          # http://localhost:3006 with the COOP/COEP headers the worker needs
+```
+
+This works for a checkout of what is live: the live site serves one runtime, and
+a checkout that names another gets a 404 and a message saying what to do
+([wasm/KERNEL.md](wasm/KERNEL.md), "Rebuilding from a clone").
 
 ### Building the artifacts from source
 

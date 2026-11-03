@@ -788,11 +788,9 @@ files), then rebuild the client.
 Built by `wasm/build-from-source.sh --verify-snapshots` from kernel pin
 `992dc94` (patch series through 0032) with the qed64 `32e5e62` pipeline
 (then vendored), for the resident-transport port of the closure (see the pin
-section above). Bundle tag `artifacts-wasm64-d77d34b97592d014`
-(`wasm/artifacts/BUNDLE.json`; tarballs in
-`wasm/out/artifacts/artifacts-wasm64-d77d34b97592d014/`, uploaded by the
-operator as the GitHub release of that name and into R2 with
-`scripts/upload-artifacts.sh`).
+section above). Bundle tag `artifacts-wasm64-d77d34b97592d014`, uploaded by
+the operator as the GitHub release of that name and into R2 (the bundle is gone
+since: "Rebuilding from a clone").
 
 | artifact | digest / build id | transfer bytes | raw bytes |
 | --- | --- | --- | --- |
@@ -851,7 +849,7 @@ Compat modules compiled into the game base tree by the `compat` lane
 (`wasm/compat/`): Mathlib.Tactic (umbrella of the pack's 244 tactic
 leaves), .Have, .Cases (full de3a9cf), .Generalize, Algebra.Order.Ring.Star,
 Data.Int.Star, Data.Rat.Star. Bundle tarballs repacked
-(`snapshots.tar` 2,141,870,080 B, 11 files); the release and R2 uploads are the
+(`snapshots.tar` 2,141,870,080 B, 11 files); the release and R2 uploads were the
 operator's. Lane economics on this Mac: compiles 3–30 min per game (Robo
 189 modules ≈ 30 min uncontended; the 7.6 GiB Docker VM OOM-kills `lean`
 silently when several compiles share it — the games lane is sequential by
@@ -862,7 +860,7 @@ design, port agents must not run in parallel), bakes 8–15 min each, probes
 
 The repo now serves the artifacts produced by `wasm/build-from-source.sh`
 from the pinned kernel (`852d1b9`) and pipeline (`8e708dc`) submodules, bundle
-tag **`artifacts-from-source-2026-09-03`** (`wasm/artifacts/BUNDLE.json`):
+tag **`artifacts-from-source-2026-09-03`**:
 
 | artifact | digest / build id | transfer bytes | raw bytes |
 | --- | --- | --- | --- |
@@ -871,35 +869,27 @@ tag **`artifacts-from-source-2026-09-03`** (`wasm/artifacts/BUNDLE.json`):
 | nng4 | `sha256:96d03497e700a738…` | 428,355,085 | 1,466,403,813 |
 | testgame | `sha256:98e8ba5e91fcdc73…` | 413,600,402 | 1,412,288,317 |
 
-| tarball | bytes | sha256 |
-| --- | --- | --- |
-| runtime.tar | 154,176,512 | `813f05681d760a69…` |
-| profiles.tar | 120,705,024 | `c0ea28cba4acd3ae…` |
-| snapshots.tar | 949,379,584 | `84f2e6a67ccd9000…` |
-
 The core library pack was repacked from this build's stage1 (facets
 byte-identical to the previous pack); the profile index now lists only the
-`core` profile. The previous bundle (`artifacts-2026-09-02`, runtime
-`wasm64-303e5c765fc415ed`) remains valid for the commit that referenced it.
+`core` profile.
 
 ## Rebuilding from a clone
 
 What a clone contains: the client and server sources, the qed64 pin
 (`client/package.json` + `package-lock.json`; `npm ci` fetches the package —
-no QED64 checkout, no git or SSH for it), the compiled gamedata for NNG4 and
-TestGame (`client/public/data`, tracked), the digest manifests of every
-served artifact, and every game's port as a patch (`wasm/patches`). What it
-does not contain: the ~2.7 GB of served binaries (Lean 4.35, ten games) —
-the Lean runtime chunks, the core library pack and the environment
-snapshots — which are published as the artifact bundle named in
-`wasm/artifacts/BUNDLE.json` (or rebuilt with `wasm/build-from-source.sh`,
-below).
+no QED64 checkout, no git or SSH for it), the compiled gamedata of every catalog
+game (`client/public/data`, tracked), the digest manifests of every served
+artifact, and every game's port as a patch (`wasm/patches`). What it does not
+contain: the served binaries of Lean 4.35 and the ten games, which are the Lean
+runtime chunks (106 MB), the environment snapshots (2.5 GB) and the core library
+pack (120 MB). To play, fetch the first two from the live site. To change them,
+rebuild them with `wasm/build-from-source.sh` (below).
 
 ```bash
 git clone -b wasm64-port https://github.com/FawadHa1der/lean4game
 cd lean4game && npm ci
-scripts/fetch-artifacts.sh            # downloads + sha256-verifies the bundle into client/public
-scripts/stage-game-assets.sh          # worker scripts from the qed64 package (+ i18n/api staging)
+scripts/stage-workers.sh              # worker scripts from the qed64 package
+node scripts/fetch-artifacts.mjs      # the runtime and the ten games from the live site, verified, into client/public
 npm --workspace client run build
 node scripts/serve-dist.mjs           # http://localhost:3006 with the COOP/COEP headers the worker needs
 ```
@@ -908,53 +898,46 @@ The shell alone — what CI builds and deploys, the artifacts living in R2 —
 is `npm ci`, `scripts/stage-workers.sh`, `npm --workspace client run build`:
 nothing outside this repository and its lockfile.
 
-`fetch-artifacts.sh --from-dir <dir>` takes local tarballs instead (what
-`scripts/pack-artifacts.sh <tag>` produces under `wasm/out/artifacts/<tag>`);
-`--base <url>` takes any HTTP host serving `<url>/<class>.tar`. The script
-refuses a tarball whose digest differs from `BUNDLE.json` and cross-checks
-the extracted runtime chunks against `runtime/runtime-manifest.json`.
+`scripts/fetch-artifacts.mjs` reads the tracked
+`client/public/runtime/runtime-manifest.json` and
+`client/public/snapshots/index.json` and GETs each chunk and `.snapz` they name
+from the live origin (`--origin <url>` for another), two at a time, chunks first,
+three tries each. A file goes to `<name>.partial` and takes its name only when
+its size and sha256 match the tracked values (a chunk: `bytes` and `sha256`, as
+served; a `.snapz`: `transfer` and `digest`, which covers the served gzip bytes).
+A rerun skips what is there and matches, and fetches the rest whole: there is no
+resume. Any failure ends in a non-zero exit and says why. `--out <dir>` writes
+elsewhere. `--only <snapshot name>...` takes the runtime and only those games, by
+their name in the index: `--only nng4` is 260 MB, all ten games 2.6 GB. The other
+games stay on the landing page but cannot start. (`testgame` is unlisted: open
+`/#/g/test/TestGame`.)
 
-Publishing a new bundle (after a rebake or a runtime pin change):
-`scripts/pack-artifacts.sh <tag>` (the bundle lane runs it) → upload the
-tarballs, any `<class>.tar.part-NNN` pieces and `SHA256SUMS` as a GitHub
-release with that tag (the script prints the `gh release create` line) →
-commit the updated `BUNDLE.json` and manifests. A tarball over
-2,000,000,000 B is packed as pieces (`PART_BYTES`), because a GitHub release
-asset must stay under 2 GiB; `BUNDLE.json` lists each piece's size and
-sha256 under the tarball's `parts`, and `fetch-artifacts.sh` checks each,
-joins them and checks the whole. Until the tag is published, a clone's
-`fetch-artifacts.sh` gets a 404 (it says so); the packing machine uses
-`--from-dir wasm/out/artifacts/<tag>`.
+**It works for a checkout of what is live.** The live Worker maps `/runtime/*`
+into the release it was deployed with (`wasm/DEPLOY.md`) and chunk names carry
+their digest, so a checkout that names another runtime gets a 404 on a chunk. The
+script says that and what to do (`git pull` to reach what is live, or build from
+source) and stops before any snapshot, since no game runs without the runtime. A
+`.snapz` the origin does not hold gets the same advice, and the other games still
+finish.
 
-**The 4.35 bundle (branch `lean-v4.35`): packed, not published.**
-`BUNDLE.json` names `artifacts-wasm64-36d7f415704473d9` (runtime
-`wasm64-36d7f415704473d9`, the ten 4.35 snapshots, Knights' rebake
-included): `runtime.tar` 106,310,144 B (the 4.35 runtime is 8 chunks,
-`lean.wasm` 106 MB), `profiles.tar` 120,369,664 B, `snapshots.tar`
-2,481,721,344 B as two pieces (2,000,000,000 + 481,721,344 B), in
-`wasm/out/artifacts/artifacts-wasm64-36d7f415704473d9/` only; uploads wait
-for the release publish and the hosting decision.
+**The core library pack is not fetched, and local play does not need it.** A game
+boot asks for no library pack (`client/src/wasm/game-boot.ts`: `installArtifacts`
+with `profiles: "none"`; a game's snapshot is a complete environment), and the
+service worker precaches only the tracked `profiles/index.json` and
+`profiles/lean-core.manifest.json` (`scripts/build-sw.mjs`). Nothing in
+`client/src` names a pack part. `scripts/upload-artifacts.sh`, through
+`scripts/preflight-artifacts.mjs`, does want the pack in `client/public/profiles`,
+but it belongs to the from-source path, whose bundle lane stages the pack from the
+release.
 
-**The 4.34 bundle (branch `lean-v4.34`): packed, not published.**
-`BUNDLE.json` names `artifacts-wasm64-57ae00dc5f6ce958` (runtime
-`wasm64-57ae00dc5f6ce958`, the ten 4.34 snapshots): `runtime.tar`
-158,883,328 B, `profiles.tar` 121,501,184 B, `snapshots.tar` 2,500,572,160 B
-as two pieces (2,000,000,000 + 500,572,160 B) — in
-`wasm/out/artifacts/artifacts-wasm64-57ae00dc5f6ce958/` only; uploads wait
-for the hosting decision (`wasm/DEPLOY.md`). Checked locally:
-`fetch-artifacts.sh --from-dir` on a fresh tree joins and verifies the
-pieces and extracts snapshots byte-identical to `client/public`; the
-default download answers 404 with the hint. The last published tag,
-`artifacts-wasm64-d77d34b97592d014`, has `runtime.tar` and `profiles.tar`
-but no `snapshots.tar` (checked 2026-10-08: no such asset, a HEAD request
-answers 404), so the clone-and-play path was already incomplete before this
-branch. Follow-up
-with the hosting decision: `runtime.tar` and `profiles.tar` repack bytes the
-toolchain release already serves (all eleven runtime files match its
-assets) — `fetch-artifacts.sh` could take them from the release with
-`lean4-wasm64 fetch --only runtime-chunks,lean-core`, leaving the bundle
-only the snapshots. The tarballs carry file mtimes, so a re-run of the
-bundle lane changes their digests even when no byte they hold changed.
+History: until 2026-11-03 this path was an artifact bundle.
+`scripts/pack-artifacts.sh` packed `client/public/{runtime,profiles,snapshots}`
+into tarballs for a GitHub release, `wasm/artifacts/BUNDLE.json` recorded their
+digests, and `scripts/fetch-artifacts.sh` fetched them. The last published tag,
+`artifacts-wasm64-d77d34b97592d014`, had no `snapshots.tar` (checked 2026-10-08)
+and the 4.34 and 4.35 bundles were packed but never published, so clone-and-play
+did not work. lean4game's architecture review, UB: the bundle went, for a fetch
+from the live site.
 
 ## Building the artifacts from the toolchain release
 
@@ -989,7 +972,7 @@ byte-identical (22/22 oleans) to the build in the emsdk image.
 | trees | `unpack` the three packs fat into `lib-tree` and `unpack --slim` into `lib-tree-slim`; every module of the release's two lists must have an olean; Lake facets from the native compiler's `lib/lean` merged into the trees (`mathlib-game-extra` ships `Lake.Util.Casing` itself, so a separate `LEAN_PATH` entry would hide the rest of Lake); the Lake facets a pack ships too must be byte-identical to native64's; while the packs lack `Batteries.Tactic.OpenPrivate` (Lean 4.35), the vendored copy (`vendor/batteries`) compiled and merged into the base tree; lean-i18n (`vendor/i18n`) and `server/GameServer` compiled with the native compiler → `lib-tree-gamebase` (fat, compiles) and `lib-tree-gamebase-slim` (bakes); last, the base stamp `wasm/out/trees/gamebase.stamp` (packs, native64 and the sha256 of those compiled sources) | Docker; 2–3.5 min |
 | games | refuses base trees whose stamp is not the record's; per selected catalog row: clone `source.url` @ `rev` + `git am` the patch when `src` is absent, and refuse an existing checkout whose `HEAD` tree is not `rev` + the patch (delete it: the lane clones it again); compile with the native compiler and the row's `leanOptions` (`-D` flags) → gamedata, echoing the warnings of modules that compile; put back the `.pot` templates the compile regenerates, from a copy taken before it (only those — translations beside them are left alone; no git command); overlay a per-game tree — **slim** by default (on `lib-tree-gamebase-slim`; `SLIM_TREES=0` = fat) — and stamp it (`lib-tree-<snapshot>.stamp`: the base stamp + `source <rev> <patch sha256>`) | Docker, one compile at a time |
 | bake | refuses a per-game tree whose stamp is not the record's and the row's; `bake-snapshot.mjs` per selected game, in place in `node_modules/qed64`, against the release's runtime (`--artifact`), the per-game tree (`--lib`), `--work wasm/out/bake-work`, `--out wasm/out/staging/<build id>/snapshots`, `--roots Game,GameServer.Runner` (the entry's `roots` = its `imports`), reserve = the row's `reserveBytes`; no environment flag (the release's runtime admits the games' legacy oleans under the wasm target by itself); raw size checked against the row's `expectedRaw` when its `runtime` equals this run's pairing key — the build id, plus `+slim` for slim trees — ±5 % stops the run, otherwise the value to paste is printed; raw > reserve only warns; superseded `.snapz` pruned; `--verify-snapshots`: every catalog probe of the row (`probe`, `probe2`, …: `games-manifest.mjs --probes`; each the document the browser sends, the client's `RUNNER_PRELUDE` included) through `snapshot-probe.mjs --via-mem` (load path + env-cache hit) and natively against the same per-game tree, each closing with no message on both; the negative control must fail with an error on both | the browser lock on a shared host; ~10 min per game |
-| bundle | refuses unless every snapshot the served index will hold pairs with the release's runtime; stages `stage-game-assets.sh`, the release's runtime manifest + chunks and `lean-core` pack into `client/public`, writes the site-owned `profiles/index.json`, `stage-snapshots.py` for the selected names from `wasm/out/staging/<build id>/snapshots` (which refuses an index mixing runtimes), client build, `pack-artifacts.sh` (a tarball over 2,000,000,000 B is written as `.part-NNN` pieces: GitHub's asset limit is 2 GiB) | — |
+| bundle | refuses unless every snapshot the served index will hold pairs with the release's runtime; stages `stage-game-assets.sh`, the release's runtime manifest + chunks and `lean-core` pack into `client/public`, writes the site-owned `profiles/index.json`, `stage-snapshots.py` for the selected names from `wasm/out/staging/<build id>/snapshots` (which refuses an index mixing runtimes), client build | — |
 
 Why two probes: `snapshot-probe.mjs` compiles through the runtime's
 one-shot `lean_wasm_compile` (kernel `Lean/Shell.lean` `wasmCompile`), which

@@ -460,8 +460,8 @@ only in editor mode; the typewriter shows the Next button instead).
    in a translated UI language.
 5. Review and commit locally (never push): `wasm/catalog.json`,
    `client/public/{api/games,data/<id>,i18n/<id>,snapshots/index.json}`,
-   `wasm/artifacts/BUNDLE.json`, the patch. `scripts/deploy-app.sh`
-   refuses a tree missing any listed game's `game.json` or `api/games`.
+   the patch. `scripts/deploy-app.sh` refuses a tree missing any listed game's
+   `game.json` or `api/games`.
 6. Publish: `wasm/DEPLOY.md` ("Adding a game" for the order, "Rollback" for
    undoing it).
 
