@@ -909,8 +909,9 @@ A rerun skips what is there and matches, and fetches the rest whole: there is no
 resume. Any failure ends in a non-zero exit and says why. `--out <dir>` writes
 elsewhere. `--only <snapshot name>...` takes the runtime and only those games, by
 their name in the index: `--only nng4` is 260 MB, all ten games 2.6 GB. The other
-games stay on the landing page but cannot start. (`testgame` is unlisted: open
-`/#/g/test/TestGame`.)
+games stay on the landing page; opening one shows "Lean could not start in your
+browser" and says its environment "is not published for this build". (`testgame`
+is unlisted: open `/#/g/test/TestGame`.)
 
 **It works for a checkout of what is live.** The live Worker maps `/runtime/*`
 into the release it was deployed with (`wasm/DEPLOY.md`) and chunk names carry
@@ -929,6 +930,17 @@ service worker precaches only the tracked `profiles/index.json` and
 `scripts/preflight-artifacts.mjs`, does want the pack in `client/public/profiles`,
 but it belongs to the from-source path, whose bundle lane stages the pack from the
 release.
+
+Checked 2026-11-03 on a `git archive` of this branch, with these steps and
+`--only testgame` (no `npm ci`: `node_modules` by symlink to an installed tree). The
+fetch took 9 files, 254.6 MB, from the live site in 72 s, all verified, and a rerun
+fetched nothing in under a second. On `scripts/serve-dist.mjs` and a fresh profile,
+TestGame's first level showed its goal pane (`x + x = y`) 3.4 s after the page opened, from
+localhost. Of `/profiles/*` the page asked only for `index.json` and
+`lean-core.manifest.json`, both tracked. A made-up chunk name got a real 404 from the
+live Worker and the runtime message. The ten games were not fetched with this
+script: an earlier scratch fetch verified all 8 chunks and 10 snapshots from the live
+site against the same tracked values on 2026-11-02.
 
 History: until 2026-11-03 this path was an artifact bundle.
 `scripts/pack-artifacts.sh` packed `client/public/{runtime,profiles,snapshots}`
