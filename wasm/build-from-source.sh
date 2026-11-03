@@ -370,7 +370,7 @@ lane_preflight() {
   # leaves one out shows up here; and the deleted kernel submodule's gitlink.
   if [ "$PLAN" = 0 ] && git -C "$G" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     local f untracked=""
-    for f in wasm/lean4-wasm64-release.json wasm/docker/Dockerfile wasm/scripts/tree-stamp.py vendor/batteries/Batteries/Tactic/OpenPrivate.lean $(node "$G/scripts/games-manifest.mjs" --list | cut -f10 | grep -v '^-$'); do
+    for f in wasm/lean4-wasm64-release.json wasm/docker/Dockerfile wasm/scripts/tree-stamp.py wasm/mathlib-roots.txt vendor/batteries/Batteries/Tactic/OpenPrivate.lean $(node "$G/scripts/games-manifest.mjs" --list | cut -f10 | grep -v '^-$'); do
       git -C "$G" ls-files --error-unmatch -- "$f" >/dev/null 2>&1 || untracked="$untracked $f"
     done
     [ -z "$untracked" ] || warn "not tracked by git — a clone would not have them (git add them with the change that needs them):$untracked"
@@ -568,9 +568,14 @@ lane_games() {
   check_stamp "$BASE_STAMP" "$(base_stamp)" "the base olean trees (wasm/out/trees)" "run the trees lane (--lanes trees, after the release lane)"
   ensure_image
   local row
+  for row in "${ROWS[@]}"; do row_vars "$row"; ensure_source "$R_SRC" "$R_URL" "$R_REV" "$R_PATCH"; done
+  # A game's new import is named here, before any compile: wasm/mathlib-roots.txt
+  # must list it, and a module in no pack of this release needs the kernel's next
+  # pack build (wasm/PORTING.md §4). vendor/batteries is what the trees lane compiles.
+  local scope=(); [ -z "$GAMES" ] || scope=(--games "$GAMES")
+  run games "$G" -- node "$G/scripts/game-roots.mjs" --check ${scope[@]+"${scope[@]}"} --have "$MIRROR/$LIST_ESSENTIAL" --have "$MIRROR/$LIST_EXTRA" --have "$G/vendor/batteries"
   for row in "${ROWS[@]}"; do
     row_vars "$row"
-    ensure_source "$R_SRC" "$R_URL" "$R_REV" "$R_PATCH"
     [ "$PLAN" = 1 ] || { rm -f "$TREES/lib-tree-$R_SNAP.stamp"; rm -rf "$PKGS/$R_SNAP"; mkdir -p "$G/$R_SRC/.lake/gamedata"; }
     # The compile rewrites the .pot translation template (creation date, msgid
     # order); put the templates back afterwards from a copy taken here, so the

@@ -19,4 +19,5 @@ GameServer, under its real module name, so every `import
 Batteries.Tactic.OpenPrivate` resolves unchanged. It does so only when the
 unpacked packs lack the module: once a release ships it again (for example in
 `mathlib-game-extra`), the lane uses the release's copy, and this directory
-can be deleted.
+can be deleted, with the games lane's `--have` for it
+(`scripts/game-roots.mjs`).
