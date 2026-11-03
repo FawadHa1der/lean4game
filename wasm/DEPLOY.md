@@ -252,7 +252,10 @@ live by then).
 
    If one differs, R2 serves an uncommitted pairing: resolve it before pushing.
    (Checked by HEAD on 2026-11-02: both ETags are the tracked files' MD5.) Note
-   the live commit: it is the pre-change rollback target.
+   the live commit and its Worker version (`npx wrangler deployments list`, or the
+   "Current Version ID" line in that commit's deploy run): it is the pre-change
+   rollback target. `wrangler rollback` takes a version id. With none it picks the
+   deployment before the current one, which stops being this one at the next deploy.
 2. No upload is needed (the same pairing).
 3. Push the guard, `deploy.yml`'s fixes and this change in one push. The guard
    checks the ten `.snapz` through the old Worker; the key is the same under both
@@ -269,7 +272,8 @@ new shell, which asks for no copy, and plays, offline too. The old Worker back, 
 plays; forward again plays.
 
 **Live checks** (`…` is `https://lean4game.fawadworkaddress.workers.dev`,
-`<snapz>` a name from `client/public/snapshots/index.json`):
+`<snapz>` the file name in an entry's `url` in `client/public/snapshots/index.json`,
+such as `testgame.8c34115c6d4b983f.snapz`):
 
 - `curl -sI …/snapshots/index.json`, `curl -sI …/profiles/index.json`: 200,
   `public, max-age=0, must-revalidate`, `application/json`, COOP, COEP, CORP
@@ -280,7 +284,7 @@ plays; forward again plays.
   `transfer`; `curl -s -o /dev/null -w '%{http_code}\n' -r 0-9 …/snapshots/<snapz>`: 206.
 - `curl -sI …/snapshots/x.0123456789abcdef.snapz`: 404, `no-store`.
 - `curl -sI …/runtime/chunks/x.part-000`: 404, `no-store`.
-- Open a level on a fresh profile, then reload it offline ("Verify a deploy").
+- Open a level on a fresh profile, then reload it offline ("The service worker").
 
 ## Adding a game
 
@@ -328,8 +332,9 @@ never `sync`), so every previously published digest-named object is still
 there, the guard finds the old `.snapz` live, and the release's owner keeps its
 immutable prefix.
 
-- **In an emergency**, `npx wrangler rollback` restores a Worker version's own
-  assets, record and indexes in seconds. Follow it with a revert and push, so
+- **In an emergency**, `npx wrangler rollback [<version-id>]` restores a Worker
+  version's own assets, record and indexes in seconds (no id: the deployment before
+  the current one). Follow it with a revert and push, so
   `wasm64-port` is what is live and the next push does not undo the rollback.
 - **If the live Worker is what broke** (`/snapshots/*` answers 404 or 5xx), the
   guard asks that same Worker and refuses the revert, and a 404 says "upload it
