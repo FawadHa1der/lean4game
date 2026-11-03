@@ -52,9 +52,8 @@ the reachability check that decides feasibility:
      and **the `Mathlib.Tactic` umbrella** (NumberTheoryGame,
      lean4game-logic, LinearAlgebraGame — the real one, 388 imports, every
      upstream leaf): in `mathlib-game-extra` — no game edit. Until Lean 4.34
-     these were compiled from `wasm/compat` (§4); a new leaf now means asking
-     the fork to add it to the extra pack's roots (its `packs.json`), not a
-     copy here;
+     these were compiled from `wasm/compat` (§4); a new leaf now means a
+     kernel pack build that carries it (§4), not a copy here;
    - **a deprecated shim** (Mathlib leaves the old name as a
      `deprecated_module` that re-exports the new home and warns on import):
      import what the shim imports — read it from the pack manifest
@@ -70,8 +69,7 @@ the reachability check that decides feasibility:
      comments), LAG's `Game/Data.lean` (22 unused `Data.*` imports), RAG's
      `Analysis.SpecialFunctions.Log.Base` (replaced by its two in-pack
      imports). Only when a lemma the levels use lives there is the game
-     blocked until the extra pack's root set grows (the fork's
-     `wasm64-build/js/packs.json`, a release input, not ours);
+     blocked until a kernel pack build carries it (§4);
    - **renamed modules**: follow the move (`Data.Matrix.* →
      LinearAlgebra.Matrix.*`, `Data.Real.{Cardinality,Sqrt} →
      Analysis.Real.*`);
@@ -337,6 +335,31 @@ essential pack, under their real module names. The trees lane unpacks it
 into the same trees as the essential pack, so a game's unmodified
 `import Mathlib.Tactic.Have` or `import Mathlib.Tactic` resolves.
 
+**Where the roots come from.** `wasm/mathlib-roots.txt`, which
+`scripts/game-roots.mjs` generates from the import headers of what the lanes
+compile: every catalog game, GameServer and lean-i18n, each walked from the
+root its compile starts at, so a file nothing imports does not count. It lists
+every module they import directly and do not build themselves, other than
+core's (`Init`, `Lean`, `Std`, `Lake`), with who imports it: 91 modules on
+2026-11-03, 82 of them in the essential pack, 8 in `mathlib-game-extra`, and
+`Batteries.Tactic.OpenPrivate` from `vendor/batteries`. The games lane runs its
+`--check` once the sources are in place and before any compile. Regenerating
+needs every catalog game's checkout under `games-src/` (`--games-src` to read
+them from elsewhere). The file is what lean4game hands the kernel; how the
+kernel consumes it is the kernel's decision, and until a pack build does, the
+kernel's own `wasm64-build/mathlib-extra-roots.txt` decides what the pack holds
+(`wasm/KERNEL.md`, "What the games need from the packs").
+
+**What a new game import costs.**
+
+- A module some pack of the pinned release holds: rerun
+  `node scripts/game-roots.mjs` and commit the file. The lane refuses until then.
+- A module in no pack: the lane stops before compiling, names it and says it
+  needs the kernel's next pack build; regenerating does not quiet it. The
+  generated list replaces the hand-kept one, not the release cycle: until a
+  release carries the module, drop the import if no level uses it (§1), or the
+  game waits.
+
 Until Lean 4.34 (branch `lean-v4.34`, 2026-10-06) this was `wasm/compat/`:
 seven modules (805 Lean lines — `Have` from v4.23.0, the full `de3a9cf`
 `Cases`, `Generalize`, the three `*.Star` leaves, and an imports-only
@@ -432,7 +455,8 @@ only in editor mode; the typewriter shows the Next button instead).
 
 ## 7. Bake, verify, stage, upload, deploy
 
-1. `node scripts/games-manifest.mjs --check`.
+1. `node scripts/games-manifest.mjs --check`, and for a new game or new
+   imports `node scripts/game-roots.mjs` (§4; commit `wasm/mathlib-roots.txt`).
 2. `wasm/build-from-source.sh --lanes preflight,release,trees` once per
    toolchain release (fetch and verify it, unpack the packs, compile
    lean-i18n and GameServer), then `wasm/build-from-source.sh --lanes

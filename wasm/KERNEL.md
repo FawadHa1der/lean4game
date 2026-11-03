@@ -151,6 +151,29 @@ Docker-memory preflights. The lane no longer copies QED64's pipeline into
 `wasm/out/pipeline` either: `bake-snapshot.mjs` takes `--work`/`--out`/
 `--lib`/`--artifact` explicitly and runs in place in `node_modules/qed64`.
 
+### What the games need from the packs (`wasm/mathlib-roots.txt`)
+
+`mathlib-game-extra` is the import closure of the kernel's extra roots, minus
+essential, minus `Init`, and that list of roots used to be kept by hand in the
+kernel repo (`wasm64-build/mathlib-extra-roots.txt`). The user chose generated
+roots on 2026-11-03 ("take the generated roots"), not whole Mathlib as build
+input. `scripts/game-roots.mjs` writes `wasm/mathlib-roots.txt` from the import
+headers of what the lanes compile, in the kernel file's format; `wasm/PORTING.md`
+§4 says what it holds and what a new game import costs.
+
+Measured on 2026-11-03 with the kernel's own `mathlib-select.py`, read only,
+over the v4.35 build. On the release's 9 roots it reproduces the published lists
+exactly (4,438 and 721 modules). On the generated 91, essential is unchanged and
+game-extra is 720: `Batteries.Tactic.OpenPrivate` joins, and
+`Mathlib.Analysis.SpecialFunctions.Log.Base` and `Mathlib.Data.Int.Log` leave.
+No game reaches those two, on Lean's own header parse of every file; RealAnalysisGame's
+patch dropped the import. All 91 names exist at Mathlib `v4.36.0-rc2` and none is
+a `deprecated_module` shim there.
+
+This is lean4game's half. How the kernel consumes the file is the kernel's
+decision, and until a pack build does, its own list decides what the pack holds.
+A new import still needs its module in a kernel pack.
+
 ### Trying a candidate runtime (`?runtime=X`)
 
 For a kernel candidate on a clone of a built `client/dist`, never on the live
@@ -982,7 +1005,7 @@ byte-identical (22/22 oleans) to the build in the emsdk image.
 | preflight | the release record (canonical, self-digest), installed tools == record == lockfile, the Mathlib packs' compiler == `native64.commit`, the files a clone needs are tracked by git (the record, `wasm/docker/Dockerfile`, `wasm/scripts/tree-stamp.py`, every catalog patch; warns), qed64 pin, the workers' kernel floor (`stage-workers.sh --check`), `games-manifest.mjs --check`, which olean trees the record still accepts (stamps), Node ≥ 24, python3/rsync/openssl, disk; when a Docker lane is selected (release, trees, games, bake with `--verify-snapshots`): Docker reachable, the native image present (built when missing) and runnable for the record's platform — a hard failure, before any fetch | — |
 | release | `lean4-wasm64 fetch --id --digest` into `wasm/out/release/<id>/mirror` (runtime manifest + chunks, `lean-core`, `mathlib-essential`, `mathlib-game-extra`, `native64`, module lists, tools; every byte sha256-checked, a rerun keeps what is verified); the fetched `release.json` must be the tracked record byte for byte; `fetch --only runtime` from the mirror into `…/artifact` (`bin/lean.js`, `lean.wasm`, `leanmake`) and the build id recomputed from `bin/lean.wasm`; the tools tgz's sha512 == the lockfile's integrity; `native64.tar.gz` unpacked once per release and its `lean --version` checked (a failing `docker run` is reported, not a silent exit) | network once (~2.3 GB), 7 min at ~5 MB/s |
 | trees | `unpack` the three packs fat into `lib-tree` and `unpack --slim` into `lib-tree-slim`; every module of the release's two lists must have an olean; Lake facets from the native compiler's `lib/lean` merged into the trees (`mathlib-game-extra` ships `Lake.Util.Casing` itself, so a separate `LEAN_PATH` entry would hide the rest of Lake); the Lake facets a pack ships too must be byte-identical to native64's; while the packs lack `Batteries.Tactic.OpenPrivate` (Lean 4.35), the vendored copy (`vendor/batteries`) compiled and merged into the base tree; lean-i18n (`vendor/i18n`) and `server/GameServer` compiled with the native compiler → `lib-tree-gamebase` (fat, compiles) and `lib-tree-gamebase-slim` (bakes); last, the base stamp `wasm/out/trees/gamebase.stamp` (packs, native64 and the sha256 of those compiled sources) | Docker; 2–3.5 min |
-| games | refuses base trees whose stamp is not the record's; per selected catalog row: clone `source.url` @ `rev` + `git am` the patch when `src` is absent, and refuse an existing checkout whose `HEAD` tree is not `rev` + the patch (delete it: the lane clones it again); compile with the native compiler and the row's `leanOptions` (`-D` flags) → gamedata, echoing the warnings of modules that compile; put back the `.pot` templates the compile regenerates, from a copy taken before it (only those — translations beside them are left alone; no git command); overlay a per-game tree — **slim** by default (on `lib-tree-gamebase-slim`; `SLIM_TREES=0` = fat) — and stamp it (`lib-tree-<snapshot>.stamp`: the base stamp + `source <rev> <patch sha256>`) | Docker, one compile at a time |
+| games | refuses base trees whose stamp is not the record's; per selected catalog row: clone `source.url` @ `rev` + `git am` the patch when `src` is absent, and refuse an existing checkout whose `HEAD` tree is not `rev` + the patch (delete it: the lane clones it again); then, before any compile, `scripts/game-roots.mjs --check` (`wasm/mathlib-roots.txt` lists their imports, and each resolves in the release's two lists or `vendor/batteries`); per row, compile with the native compiler and the row's `leanOptions` (`-D` flags) → gamedata, echoing the warnings of modules that compile; put back the `.pot` templates the compile regenerates, from a copy taken before it (only those — translations beside them are left alone; no git command); overlay a per-game tree — **slim** by default (on `lib-tree-gamebase-slim`; `SLIM_TREES=0` = fat) — and stamp it (`lib-tree-<snapshot>.stamp`: the base stamp + `source <rev> <patch sha256>`) | Docker, one compile at a time |
 | bake | refuses a per-game tree whose stamp is not the record's and the row's; `bake-snapshot.mjs` per selected game, in place in `node_modules/qed64`, against the release's runtime (`--artifact`), the per-game tree (`--lib`), `--work wasm/out/bake-work`, `--out wasm/out/staging/<build id>/snapshots`, `--roots Game,GameServer.Runner` (the entry's `roots` = its `imports`), reserve = the row's `reserveBytes`; no environment flag (the release's runtime admits the games' legacy oleans under the wasm target by itself); raw size checked against the row's `expectedRaw` when its `runtime` equals this run's pairing key — the build id, plus `+slim` for slim trees — ±5 % stops the run, otherwise the value to paste is printed; raw > reserve only warns; superseded `.snapz` pruned; `--verify-snapshots`: every catalog probe of the row (`probe`, `probe2`, …: `games-manifest.mjs --probes`; each the document the browser sends, the client's `RUNNER_PRELUDE` included) through `snapshot-probe.mjs --via-mem` (load path + env-cache hit) and natively against the same per-game tree, each closing with no message on both; the negative control must fail with an error on both | the browser lock on a shared host; ~10 min per game |
 | bundle | refuses unless every snapshot the served index will hold pairs with the release's runtime; stages `stage-game-assets.sh`, the release's runtime manifest + chunks and `lean-core` pack into `client/public`, writes the site-owned `profiles/index.json`, `stage-snapshots.py` for the selected names from `wasm/out/staging/<build id>/snapshots` (which refuses an index mixing runtimes), client build | — |
 
