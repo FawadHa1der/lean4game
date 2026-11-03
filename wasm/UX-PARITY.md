@@ -2931,9 +2931,10 @@ across a deploy that changes the worker scripts' revision or drops lazy chunks.
 - **Reference proofs that stop at the stack error in the browser** (the lane
   again; no death, the checker stays up): RAG Lecture15/1 (`bound`, 9 lines), RAG
   Lecture24/3 (1-3 lines, which ones vary by run; its proof also has `sorry`) and
-  Robo Euklid/4 (`simp`, 1-2 lines; the same stop on `1771ed3`, one run). The 4.35
-  wasm sweep (under Node) reports 0 errors on all three, so a sweep pass is not a
-  browser verdict on these levels.
+  Robo Euklid/4 (`simp`, 1-2 lines). `1771ed3` stops the same way, one run each (5,
+  3 and 2 lines), so not this branch's doing. The 4.35 wasm sweep (under Node)
+  reports 0 errors on all three, so a sweep pass is not a browser verdict on these
+  levels.
 - **NEW-2: closed**, **NEW-3: closed** ("QED64 as a dependency" above).
 - **The 30 ms "waiting for another tab to finish preparing the game
   environment" on every region download: closed upstream** in `84d594e`
