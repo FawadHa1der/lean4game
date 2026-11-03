@@ -12,7 +12,7 @@ rebuild/restage of client/dist is needed afterwards.
 The index.json it writes is the one the deploy serves (scripts/deploy-app.sh
 ships it; wasm/DEPLOY.md). A bake also writes index.<buildId>.json beside its
 own index: it is never staged. Per-runtime copies a tree staged before 2026-11
-still holds are removed here, or scripts/pack-artifacts.sh would publish them.
+still holds are removed here: nothing reads them.
 """
 import json, shutil, sys
 from pathlib import Path

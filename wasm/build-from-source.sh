@@ -13,8 +13,7 @@
 #                        slim per-game olean tree)
 #             → bake    (one environment snapshot per selected game, against
 #                        the release's runtime)
-#             → bundle  (stage into client/public, build the client, pack
-#                        the artifact bundle for publishing)
+#             → bundle  (stage into client/public, build the client)
 #
 # Which toolchain is data: the root package.json pins the release's tools
 # (devDependency `lean4-wasm64`, the release's own tgz) and
@@ -46,7 +45,6 @@
 #                          A run WITHOUT --games is a FULL run: this runtime's
 #                          snapshot staging dir is wiped and every game is
 #                          rebaked (slim, see SLIM_TREES) — the release-bump path.
-#   --tag <tag>            bundle tag (default artifacts-<runtime build id>)
 #   --verify-snapshots     run every catalog probe of each selected game
 #                          (probe, probe2, …: --probes; each a Runner document
 #                          as the browser sends it, games-manifest.mjs --probe)
@@ -133,13 +131,12 @@
 set -euo pipefail
 
 G="$(cd "$(dirname "$0")/.." && pwd)"
-PLAN=0; LANES="preflight,release,trees,games,bake,bundle"; GAMES=""; TAG=""; VERIFY=0
+PLAN=0; LANES="preflight,release,trees,games,bake,bundle"; GAMES=""; VERIFY=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --plan) PLAN=1; shift ;;
     --lanes) LANES="$2"; shift 2 ;;
     --games) GAMES="$2"; shift 2 ;;
-    --tag) TAG="$2"; shift 2 ;;
     --verify-snapshots) VERIFY=1; shift ;;
     -h|--help) awk 'NR > 1 { if (/^set -euo/) exit; print }' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
@@ -771,8 +768,7 @@ native_probe() { # native_probe <snapshot> <src> <probe file under wasm/out> <pa
 
 # ----------------------------------------------------------------- bundle --
 lane_bundle() {
-  say "bundle: stage into client/public, build the client, pack the artifact bundle"
-  [ -n "$TAG" ] || TAG="artifacts-$BUILD_ID"
+  say "bundle: stage into client/public, build the client"
   check "client dependencies installed (npm ci)" test -d "$G/node_modules"
   check "staged snapshots present (bake lane)" test -f "$STG/snapshots/index.json"
   check "release runtime + core pack fetched (release lane)" test -f "$MIRROR/profiles/lean-core.manifest.json"
@@ -796,7 +792,7 @@ if bad or missing: print('unpaired:', ', '.join(sorted(bad)) or '-', '| not in s
   # layout; chunk and part URLs are already /runtime/chunks/… and /profiles/…).
   run bundle "$G" -- bash -c "rm -rf '$PUB/runtime/chunks' && mkdir -p '$PUB/runtime' && cp '$MIRROR/$RUNTIME_MANIFEST' '$PUB/runtime/runtime-manifest.json' && cp -R '$MIRROR/runtime/chunks' '$PUB/runtime/'"
   # A tree staged before 2026-11 holds a pinned manifest copy: no shell reads it
-  # any more, and pack-artifacts.sh would publish it.
+  # any more.
   run bundle "$G" -- bash -c "find '$PUB/runtime' -maxdepth 1 -name 'runtime-manifest.wasm64-*.json' -print -delete"
   run bundle "$G" -- bash -c "rm -f '$PUB'/profiles/lean-core.pack.gzip.* && mkdir -p '$PUB/profiles' && cp '$MIRROR'/profiles/lean-core.manifest.json '$MIRROR'/profiles/lean-core.pack.gzip.* '$PUB/profiles/'"
   # /profiles/index.json is the site's own (release.json hosting.siteOwned); the
@@ -816,9 +812,8 @@ PY
   run bundle "$G" -- python3 "$G/scripts/stage-snapshots.py" "$STG/snapshots" $SELECTED_NAMES
   check "served runtime id == $BUILD_ID" bash -c "python3 -c \"import json,sys; sys.exit(0 if json.load(open('$PUB/runtime/runtime-manifest.json'))['buildId']=='$BUILD_ID' else 1)\""
   run bundle "$G" -- npm --workspace client run build
-  run bundle "$G" -- bash "$G/scripts/pack-artifacts.sh" "$TAG"
-  note "tracked files to review + commit: client/public/runtime/runtime-manifest.json, profiles/{index,lean-core.manifest}.json, snapshots/index.json, api/games, data/, i18n/, wasm/artifacts/BUNDLE.json, wasm/catalog.json (expectedRaw lines printed by the bake lane)"
-  note "then upload every wasm/out/artifacts/$TAG/*.tar and *.tar.part-NNN + SHA256SUMS as release '$TAG' (the pack script printed the gh line; wasm/KERNEL.md \"Rebuilding from a clone\")"
+  note "tracked files to review + commit: client/public/runtime/runtime-manifest.json, profiles/{index,lean-core.manifest}.json, snapshots/index.json, api/games, data/, i18n/, wasm/catalog.json (expectedRaw lines printed by the bake lane)"
+  note "then scripts/upload-artifacts.sh, before the push (wasm/DEPLOY.md, \"Deploy, in order\")"
 }
 
 # ------------------------------------------------------------------- main --
