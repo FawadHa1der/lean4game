@@ -2895,9 +2895,36 @@ across a deploy that changes the worker scripts' revision or drops lazy chunks.
   runtime `wasm64-36d7f415704473d9`) the pool grew by 12-13 Workers and never
   shrank; with it on, by 2. Known gap, accepted by D14: Runner documents run
   with async on (`RUNNER_PRELUDE`, `client/src/wasm/game-translation.ts`), so
-  `-DElab.async=false` does not bound their Runner command. A thread-growth
-  lane (the heaviest Mathlib levels plus an edit burst, recording the relay's
-  peak `pool.running` and `.unused`) is to cover it; it does not exist yet.
+  `-DElab.async=false` does not bound their Runner command. The thread-growth
+  lane measures it: under the shared browser lock, `node
+  scripts/e2e/thread-growth.mjs --origin <url> --out <dir> <game>/<world>/<n>...`
+  (options in its header; levels and why in `thread-growth-levels.json` beside
+  it). 2026-11-02, this branch served locally, runtime
+  `wasm64-36d7f415704473d9`, chrome-headless-shell 151: RAG Lecture24/3, 15/1,
+  10/1, 10/2, Robo Euklid/4, Babylon/7, NTG LinCong/11, LAG
+  LinearIndependenceSpanWorld/9, logic IffTactic/5 and NNG4 Multiplication/1,
+  twice each, the proof played, then 21 s of typing above it at 150 ms per key.
+  The pool (running + unused) stayed at 24 in 19 of 20 runs and reached 25 in
+  one (RAG Lecture15/1), peak running 20-25; 0 page crashes, 0 relay halts, 0 new
+  crash reports. The control, the same typing with no Runner in the document
+  (`--mode no-runner`, QED64's `pagelong`, rewritten in the page, not the shipped
+  path) reached 24-26 in 6 runs, like QED64's own page (26); a Runner over an
+  empty proof, 24 in 6. So on these levels async-on Runner documents grew the
+  pool no more than the page's own document does, with #59's hold on (5-29 holds
+  per run). A burst is 133 changes; the checker saw 4-40 of them.
+- **Logic IffTactic/5 runs the heap out: open** (found by the lane above; not
+  threads, the pool stays at 24). Played in the typewriter, its 92 steps end the
+  checker at about step 81-85 in 6 of 6 runs (5 on this branch, 1 on `1771ed3`):
+  `lean --worker exited with code 1`, after `INTERNAL PANIC: out of memory` in the
+  4 runs that kept Lean's stderr. The heap climbs with the steps, 1536 MiB to
+  2991 MiB (cap 3072), about 17 MiB per step; the relay's reboot starts again from
+  1536. Why it climbs, and whether a player can finish after the reboot, are not
+  checked (the lane's later steps land in the wrong place after the death).
+- **Reference proofs that stop at the stack error in the browser** (the lane
+  again; no death, the checker stays up): RAG Lecture15/1 (`bound`, 9 lines), RAG
+  Lecture24/3 (1-3 lines, which ones vary by run; its proof also has `sorry`) and
+  Robo Euklid/4 (`simp`, 1 line). The 4.35 wasm sweep (under Node) reports 0 errors
+  on all three.
 - **NEW-2: closed**, **NEW-3: closed** ("QED64 as a dependency" above).
 - **The 30 ms "waiting for another tab to finish preparing the game
   environment" on every region download: closed upstream** in `84d594e`
