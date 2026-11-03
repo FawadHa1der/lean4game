@@ -187,7 +187,8 @@ export async function checkLiveSnapshots({ index = DEFAULT_INDEX, origin = DEFAU
       const href = new URL(url, base).href;
       const r = await head(href, fetchImpl, sleep, (line) => say(`retry ${line}`));
       if (r.status === null) return refuse(`${url}: ${href} could not be reached (${r.error}, ${TRIES} tries)`);
-      if (r.status !== 200) return refuse(`${url}: HTTP ${r.status} from ${href} — upload it first (scripts/upload-artifacts.sh), then re-run the deploy`);
+      if (r.status === 404) return refuse(`${url}: HTTP 404 from ${href} — upload it first (scripts/upload-artifacts.sh), then re-run the deploy`);
+      if (r.status !== 200) return refuse(`${url}: HTTP ${r.status} from ${href} — not a missing upload: look at what the origin answers (curl -I), then re-run the deploy`);
       if (r.length !== null && r.length !== size) {
         return refuse(`${url}: ${href} answers ${r.length} bytes, the index says ${size} — R2 holds other bytes under this name`);
       }

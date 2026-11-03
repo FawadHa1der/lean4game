@@ -115,6 +115,14 @@ test("a 404 refuses, naming the url and the upload; the next entry is never aske
   assert.deepEqual(waits, []);
 });
 
+test("a 403 refuses without asking for an upload, nothing retried", async () => {
+  answers.set(NNG4, { statuses: [403] });
+  const r = await check(twoEntries());
+  assert.equal(r.ok, false);
+  assert.deepEqual(r.lines, [`deploy-guard: REFUSED: ${NNG4}: HTTP 403 from ${origin}${NNG4.slice(1)} — not a missing upload: look at what the origin answers (curl -I), then re-run the deploy`]);
+  assert.deepEqual(waits, []);
+});
+
 test("a redirect is not followed: a 301 refuses", async () => {
   answers.set(NNG4, { statuses: [301], location: `${origin}elsewhere.snapz` });
   const r = await check(twoEntries());
