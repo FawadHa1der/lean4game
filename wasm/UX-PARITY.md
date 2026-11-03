@@ -2765,7 +2765,11 @@ flips with the browser started by hand and one CDP connection to the page, no Pl
 gave no hang in 320 steps on either build, reload gaps of 0 to 420 ms swept, index-only
 deploys of a version the profile had never seen included. So a lane that crosses a deploy
 puts a timer on every step, and a hang like this is not read as the page's without that
-control. `sw.template.js` and `sw-client.ts` are unchanged since before this work.
+control. That control is narrow: headless Chromium, localhost timing, one CDP connection
+still attached; no headed browser or CDP-free run, and the cause is not known. So: not
+seen without Playwright in headless Chromium, which favours the harness and does not
+clear the page. A visitor who did meet it would see a silent hang until a reload.
+`sw.template.js` and `sw-client.ts` are unchanged since before this work.
 
 **Not yet checked:** the live checks of `wasm/DEPLOY.md`, which wait for the push; a tab
 across a deploy that changes the worker scripts' revision or drops lazy chunks.
@@ -2911,7 +2915,11 @@ across a deploy that changes the worker scripts' revision or drops lazy chunks.
   path) reached 24-26 in 6 runs, like QED64's own page (26); a Runner over an
   empty proof, 24 in 6. So on these levels async-on Runner documents grew the
   pool no more than the page's own document does, with #59's hold on (5-29 holds
-  per run). A burst is 133 changes; the checker saw 4-40 of them.
+  per run). A burst is 133 changes; the checker saw 4-40 of them. Those numbers
+  are for what a browser does with these documents, not for ten whole proofs: 6
+  of the 10 levels had a checked proof under the burst. RAG Lecture15/1, 24/3 and
+  Robo Euklid/4 stop at stack errors, and logic IffTactic/5's proof never lands
+  (both below).
 - **Logic IffTactic/5 runs the heap out: open** (found by the lane above; not
   threads, the pool stays at 24). Played in the typewriter, its 92 steps end the
   checker at about step 81-85 in 6 of 6 runs (5 on this branch, 1 on `1771ed3`):
@@ -2923,8 +2931,9 @@ across a deploy that changes the worker scripts' revision or drops lazy chunks.
 - **Reference proofs that stop at the stack error in the browser** (the lane
   again; no death, the checker stays up): RAG Lecture15/1 (`bound`, 9 lines), RAG
   Lecture24/3 (1-3 lines, which ones vary by run; its proof also has `sorry`) and
-  Robo Euklid/4 (`simp`, 1 line). The 4.35 wasm sweep (under Node) reports 0 errors
-  on all three.
+  Robo Euklid/4 (`simp`, 1-2 lines; the same stop on `1771ed3`, one run). The 4.35
+  wasm sweep (under Node) reports 0 errors on all three, so a sweep pass is not a
+  browser verdict on these levels.
 - **NEW-2: closed**, **NEW-3: closed** ("QED64 as a dependency" above).
 - **The 30 ms "waiting for another tab to finish preparing the game
   environment" on every region download: closed upstream** in `84d594e`

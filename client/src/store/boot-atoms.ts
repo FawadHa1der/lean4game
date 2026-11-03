@@ -50,9 +50,11 @@ export function formatProgress(s: BootStatus): string | null {
 
 /** Coarse checker activity, published on EVERY status event (unlike the
  * banner's filtered view): drives input gating. `switching` covers boot and
- * level/import switches — the states where typed tactics would race a
- * session replacement — but not routine per-step elaboration, which the
- * typewriter's own processing gate already handles. */
+ * a replaced session (an import switch, a re-armed pause) — the states where
+ * typed tactics would race a session replacement — but not a same-game level
+ * switch, which replaces no session (about 220 ms, the pane and the read-only
+ * input cover it), nor routine per-step elaboration, which the typewriter's
+ * own processing gate already handles. */
 export interface CheckerActivity {
   busy: boolean;
   switching: boolean;
