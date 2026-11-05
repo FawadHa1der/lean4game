@@ -22,14 +22,12 @@ const row = (snapshot, src) => ({ owner: "t", game: snapshot, listed: true, snap
 const CATALOG = { schema: "lean4game.catalog/v1", games: [row("alpha", "games-src/A"), row("beta", "cypress/B")] };
 
 const TREES = {
-  // comments before imports: block, nested block, line, module doc, trailing, abutting
+  // comments before imports: block, nested block, line, trailing, abutting. The module
+  // doc goes after them, where it ends the header, as it does in Lean.
   "games-src/A/Game.lean": `/- Copyright: import Comment.Block
    /- import Comment.Nested -/
    import Comment.AfterNested -/
 -- import Comment.Line
-/-! The module doc:
-import Comment.ModuleDoc
--/
 import Game.Levels.One -- import Comment.Trailing
 import Lean
 import Std.Data.HashMap
@@ -38,6 +36,11 @@ import Lake.Load.Manifest
 import GameServer.Commands
 import I18n
 import Mathlib.Alpha/- abutting -/import Mathlib.Beta
+import LeanSearchClient
+/-! The module doc:
+import Comment.ModuleDoc
+-/
+import Body.AfterModuleDoc
 
 def x := 1
 -- the body is not read
@@ -57,7 +60,7 @@ public section
 import Body.AfterPublicSection
 `,
   // an import two games share, and one a second file repeats
-  "games-src/A/Game/Levels/Two.lean": "import Mathlib.Alpha\nimport Shared.Module\n",
+  "games-src/A/Game/Levels/Two.lean": "prelude\nimport Mathlib.Alpha\nimport Shared.Module\n",
   // nothing imports it, so nothing compiles it
   "games-src/A/Game/Orphan.lean": "import Mathlib.Unreached\n",
   "cypress/B/Game.lean": "import Shared.Module\nimport Game.Own\n",
@@ -71,6 +74,7 @@ import Body.AfterPublicSection
 };
 const EXPECTED = [
   "Batteries.Tactic.OpenPrivate  # GameServer",
+  "LeanSearchClient  # alpha",
   "Mathlib.Alpha  # alpha",
   "Mathlib.Beta  # alpha",
   "Mathlib.Delta  # alpha",
@@ -102,8 +106,24 @@ test("keeps what a tree imports from outside: comments, the module system's form
   const f = fixture();
   const r = f.run();
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /wrote wasm\/mathlib-roots\.txt: 9 modules from 2 games, GameServer, lean-i18n/);
+  assert.match(r.stdout, /wrote wasm\/mathlib-roots\.txt: 10 modules from 2 games, GameServer, lean-i18n/);
   assert.deepEqual(f.lines(), EXPECTED);
+});
+
+test("the header ends where Lean's does (stock v4.35.0's parseImports read no import after any of these)", () => {
+  const STOPS = ["/-! doc -/\n", "/-- doc -/\n", "-- a\n/- b -/ /-- c -/ ", "/--/ ", "private ", "public private ", "meta public ", "prelude\nmodule\n", "open Foo\n"];
+  const f = fixture({ trees: {
+    ...TREES,
+    "cypress/B/Game.lean": `import Game.Kept\nimport Game.NoName\nimport Game.NoNameAfterAll\n${STOPS.map((_, i) => `import Game.S${i}`).join("\n")}\n`,
+    "cypress/B/Game/Kept.lean": "import Mathlib.Kept/-! doc -/\nimport Body.AfterAbuttingDoc\n",
+    "cypress/B/Game/NoName.lean": "import",
+    "cypress/B/Game/NoNameAfterAll.lean": "import all",
+    ...Object.fromEntries(STOPS.map((stop, i) => [`cypress/B/Game/S${i}.lean`, `${stop}import Body.After${i}\n`])),
+  } });
+  assert.equal(f.run().status, 0);
+  assert.doesNotMatch(f.roots(), /Body\./);
+  assert.ok(f.lines().includes("Mathlib.Kept  # beta"), "the import before a doc comment still counts");
+  assert.ok(f.lines().every((l) => /^[A-Z]/.test(l)), `an import with no name lists nothing: ${f.lines()}`);
 });
 
 test("what nothing imports does not count: an orphan level, server/Test, lean-i18n's CLI", () => {
@@ -137,7 +157,7 @@ test("--check: agrees with what the generator wrote, and writes nothing", () => 
   const before = fs.statSync(path.join(f.dir, "wasm/mathlib-roots.txt")).mtimeMs;
   const r = f.run("--check");
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /agrees with 2 games, GameServer, lean-i18n \(9 modules\)/);
+  assert.match(r.stdout, /agrees with 2 games, GameServer, lean-i18n \(10 modules\)/);
   assert.equal(fs.statSync(path.join(f.dir, "wasm/mathlib-roots.txt")).mtimeMs, before);
 });
 

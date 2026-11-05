@@ -58,9 +58,10 @@ for (let i = 0; i < args.length; i++) {
 }
 if (!check && (games || have.length)) die("--games and --have go with --check: the file is written from every game");
 
-/** The imports of a Lean file's header: [module] [prelude] ([public|private] [meta] import [all] Name)*.
- * It reads tokens outside comments (block comments nest) and stops at the first
- * token that cannot be in a header, so nothing in a file's body is ever read. */
+/** The imports of a Lean file's header, as Lean parses it: [module] [prelude] ([public] [meta] import [all] Name)*
+ * (Lean.Parser.Module.header). It reads tokens outside comments (block comments
+ * nest) and stops where that grammar stops: at any other word or order, and at a doc
+ * comment, since Lean reads /-! and /-- as tokens. So a file's body is not read. */
 function importsOf(text) {
   let i = 0;
   const token = () => {
@@ -69,6 +70,8 @@ function importsOf(text) {
       if (text.startsWith("--", i)) {
         const eol = text.indexOf("\n", i);
         i = eol < 0 ? text.length : eol;
+      } else if (text.startsWith("/--", i) || text.startsWith("/-!", i)) {
+        return "";
       } else if (text.startsWith("/-", i)) {
         i += 2;
         for (let depth = 1; depth > 0 && i < text.length;) {
@@ -83,14 +86,19 @@ function importsOf(text) {
     return text.slice(start, i);
   };
   const imports = [];
-  for (let t = token(); t; t = token()) {
-    if (t === "import") {
-      let name = token();
-      if (name === "all") name = token();
-      imports.push(name.replace(/[«»]/g, ""));
-    } else if (!["module", "prelude", "public", "private", "meta"].includes(t)) break;
+  let t = token();
+  if (t === "module") t = token();
+  if (t === "prelude") t = token();
+  for (;;) {
+    if (t === "public") t = token();
+    if (t === "meta") t = token();
+    if (t !== "import") return imports;
+    let name = token();
+    if (name === "all") name = token();
+    if (!name) return imports;
+    imports.push(name.replace(/[«»]/g, ""));
+    t = token();
   }
-  return imports;
 }
 
 const fileOf = (dir, mod) => path.join(dir, `${mod.replaceAll(".", "/")}.lean`);
