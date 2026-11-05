@@ -14,7 +14,8 @@
 //   --origin  where to fetch from (default the live site)
 //   --out     where to write (default <repo>/client/public)
 //   --only    only these snapshots, by their name in snapshots/index.json (the runtime always)
-// Exit 0 every file verified, 1 a file failed, 2 a bad argument.
+// Exit 0 every file verified, 1 a file failed, 2 a bad argument or a tracked url that
+// is not a plain file under its directory.
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -42,7 +43,14 @@ const names = index.snapshots.map((s) => s.name);
 const unknown = (only ?? []).filter((n) => !names.includes(n));
 if (unknown.length) die(`--only: no snapshot named ${unknown.join(", ")}; the index has ${names.join(", ")}`, 2);
 
-const entry = (dir, url, bytes, sha256) => ({ url, bytes, sha256, isChunk: dir !== "snapshots", name: path.posix.basename(url), dest: path.join(out, dir, path.posix.basename(url)) });
+// A tracked url is one plain file directly under its directory: it cannot reach another
+// host or path, or write outside --out, and a snapshot cannot be the tracked index.
+const TRACKED = { "runtime/chunks": /^\/runtime\/chunks\/([A-Za-z0-9][A-Za-z0-9._-]*)$/, snapshots: /^\/snapshots\/([A-Za-z0-9][A-Za-z0-9._-]*\.snapz)$/ };
+const entry = (dir, url, bytes, sha256) => {
+  const name = TRACKED[dir].exec(url)?.[1];
+  if (!name) die(`the tracked url ${url} is not a plain file under /${dir}/: nothing fetched`, 2);
+  return { url, bytes, sha256, isChunk: dir !== "snapshots", name, dest: path.join(out, dir, name) };
+};
 const chunks = Object.values(runtime.files).flatMap((f) => f.chunks).map((c) => entry("runtime/chunks", c.url, c.bytes, c.sha256));
 const snapshots = index.snapshots.filter((s) => !only || only.includes(s.name)).map((s) => entry("snapshots", s.url, s.transfer, s.digest.replace(/^sha256:/, "")));
 const total = chunks.length + snapshots.length;

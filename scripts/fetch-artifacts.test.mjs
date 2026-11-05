@@ -48,14 +48,21 @@ let gets = []; // every request the origin saw, in order
 let active = 0, peak = 0;
 let fault = {}; // url -> (res, nth GET of that url) => true when it answered
 
+/** The checkout's tracked manifest and index. */
+const tracked = (manifest, index) => {
+  for (const [rel, doc] of [["runtime/runtime-manifest.json", manifest], ["snapshots/index.json", index]]) {
+    const f = path.join(repo, "client/public", rel);
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    fs.writeFileSync(f, JSON.stringify(doc));
+  }
+};
+
 before(async () => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), "l4g-fetch-artifacts-"));
   repo = path.join(tmp, "repo");
   fs.mkdirSync(path.join(repo, "scripts"), { recursive: true });
   fs.copyFileSync(path.join(root, "scripts/fetch-artifacts.mjs"), path.join(repo, "scripts/fetch-artifacts.mjs"));
-  const write = (rel, doc) => { const f = path.join(repo, "client/public", rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, JSON.stringify(doc)); };
-  write("runtime/runtime-manifest.json", MANIFEST);
-  write("snapshots/index.json", INDEX);
+  tracked(MANIFEST, INDEX);
   server = http.createServer((req, res) => {
     gets.push({ url: req.url, method: req.method, encoding: req.headers["accept-encoding"] });
     active++; peak = Math.max(peak, active);
@@ -78,6 +85,7 @@ after(async () => {
 });
 beforeEach(() => {
   gets = []; peak = 0; fault = {};
+  tracked(MANIFEST, INDEX);
   fs.rmSync(path.join(repo, "client/public/runtime/chunks"), { recursive: true, force: true });
   for (const f of fs.readdirSync(path.join(repo, "client/public/snapshots"))) if (f !== "index.json") fs.rmSync(path.join(repo, "client/public/snapshots", f));
 });
@@ -226,6 +234,44 @@ test("--only with a name the index does not have fetches nothing", async () => {
   assert.match(r.stderr, /no snapshot named no-such-game; the index has testgame, nng4/);
   assert.deepEqual(gets, []);
 });
+
+for (const [what, url] of [
+  ["a traversal", "/runtime/chunks/../../../../outside.part-000"],
+  ["a name of dots", "/runtime/chunks/.."],
+  ["another host", "http://elsewhere.invalid/runtime/chunks/off.part-000"],
+  ["another host, protocol-relative", "//elsewhere.invalid/runtime/chunks/off.part-000"],
+  ["another directory", "/elsewhere/off.part-000"],
+  ["the snapshots' directory", "/snapshots/off.part-000"],
+  ["a directory below", "/runtime/chunks/sub/off.part-000"],
+  ["an unsafe name", "/runtime/chunks/off part-000"],
+  ["a query", "/runtime/chunks/off.part-000?x=1"],
+  ["no url", undefined],
+]) {
+  test(`a chunk whose tracked url is ${what}: exit 2, nothing fetched`, async () => {
+    tracked({ ...MANIFEST, files: { ...MANIFEST.files, "lean.js": { chunks: [{ url, bytes: 3000, sha256: "0".repeat(64) }] } } }, INDEX);
+    const before = fs.readdirSync(tmp, { recursive: true }).sort();
+    const r = await run();
+    assert.equal(r.status, 2, r.stderr);
+    assert.match(r.stderr, /the tracked url .* is not a plain file under \/runtime\/chunks\/: nothing fetched/);
+    assert.deepEqual(gets, []);
+    assert.deepEqual(fs.readdirSync(tmp, { recursive: true }).sort(), before, "no file written or removed");
+  });
+}
+
+for (const [what, url] of [
+  ["another directory, which once deleted the tracked index", "/elsewhere/index.json"],
+  ["the tracked index itself", "/snapshots/index.json"],
+  ["a traversal", "/snapshots/../runtime/runtime-manifest.json"],
+]) {
+  test(`a snapshot whose tracked url is ${what}: exit 2, nothing fetched, the tracked files stay`, async () => {
+    tracked(MANIFEST, { ...INDEX, snapshots: [snapEntry("testgame", TESTGAME), { ...snapEntry("nng4", NNG4), url }] });
+    const r = await run();
+    assert.equal(r.status, 2, r.stderr);
+    assert.match(r.stderr, /the tracked url .* is not a plain file under \/snapshots\/: nothing fetched/);
+    assert.deepEqual(gets, []);
+    assert.ok(fs.existsSync(inPublic("/snapshots/index.json")) && fs.existsSync(inPublic("/runtime/runtime-manifest.json")));
+  });
+}
 
 test("--out writes there, and the manifests still come from the checkout", async () => {
   const out = path.join(tmp, "elsewhere");
