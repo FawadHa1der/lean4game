@@ -242,7 +242,7 @@ for (const [what, url] of [
   ["another host", "http://elsewhere.invalid/runtime/chunks/off.part-000"],
   ["another host, protocol-relative", "//elsewhere.invalid/runtime/chunks/off.part-000"],
   ["another directory", "/elsewhere/off.part-000"],
-  ["the snapshots' directory", "/snapshots/off.part-000"],
+  ["the snapshots' directory", "/snapshots/off.snapz"],
   ["a directory below", "/runtime/chunks/sub/off.part-000"],
   ["an unsafe name", "/runtime/chunks/off part-000"],
   ["a query", "/runtime/chunks/off.part-000?x=1"],
@@ -263,6 +263,7 @@ for (const [what, url] of [
   ["another directory, which once deleted the tracked index", "/elsewhere/index.json"],
   ["the tracked index itself", "/snapshots/index.json"],
   ["a traversal", "/snapshots/../runtime/runtime-manifest.json"],
+  ["the chunks' directory", "/runtime/chunks/off.snapz"],
 ]) {
   test(`a snapshot whose tracked url is ${what}: exit 2, nothing fetched, the tracked files stay`, async () => {
     tracked(MANIFEST, { ...INDEX, snapshots: [snapEntry("testgame", TESTGAME), { ...snapEntry("nng4", NNG4), url }] });
