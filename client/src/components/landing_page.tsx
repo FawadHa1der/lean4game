@@ -415,7 +415,7 @@ function LandingPage() {
         <p className="wasm-notice">
           <Trans
             i18nKey="Wasm notice.description"
-            defaults="Games run <strong>fully in your browser</strong> — no server. Each game's environment is downloaded on first play and cached by your browser (the tiles below say how much); later visits start in seconds. The first game also downloads the checker once (about 150 MB)."
+            defaults="Games run <strong>fully in your browser</strong>: there is no Lean server behind this site. The Lean checker runs in this tab, so nothing you type leaves your computer. The first game downloads the checker once (about 106 MB), and each game's environment is downloaded on first play and kept by your browser (the tiles below say how much); later visits start in seconds."
           />
         </p>
         {smallDevice &&
@@ -475,7 +475,7 @@ function LandingPage() {
         <h2>{t("In your browser.translation", { defaultValue: "Runs entirely in your browser" })}</h2>
         <Trans
           i18nKey="In your browser.description"
-          defaults="<p>There is no game server: the Lean proof checker itself runs inside this tab as WebAssembly. Nothing you type leaves your computer, and there is no capacity limit — as many people can play at once as want to.</p><p>The first visit downloads the checker and the game's mathematical environment (each tile above says how much) and keeps it in your browser's storage, so later visits start in seconds. You need a recent desktop browser (Chrome, Edge or Firefox) and a few GB of free memory; on other browsers the game may not start yet. Your progress is saved in this browser.</p>"
+          defaults="<p>There is no game server: the Lean proof checker itself runs inside this tab as WebAssembly. Nothing you type leaves your computer, and the checking runs on your own machine, not on shared server CPUs.</p><p>The first visit downloads the checker and the game's mathematical environment (each tile above says how much) and keeps it in your browser's storage, so later visits start in seconds. You need a recent desktop Chrome or Edge and a few GB of free memory. Firefox has the WebAssembly features this needs, but this site has not been tested there yet; Safari does not ship them yet. Your progress is saved in this browser.</p>"
         />
       </div>
     </section>
@@ -493,13 +493,14 @@ function LandingPage() {
       <div className="wrapper">
         <h2>{t("Adding new games.translation", { defaultValue: "Adding new games" })}</h2>
         <Trans
-          i18nKey="Adding new games.description"
-          defaults="If you are considering writing your own game, you should use the <1>GameSkeleton Github Repo</1> as a template and read <2>How to Create a Game</2>.<p>You can directly load your games into the server and play it using the correct URL. The <3>instructions above</3> also explain the details for how to load your game to the server. We'd like to encourage you to contact us if you have any questions.</p><p>Featured games on this page are added manually. Please get in contact and we'll happily add yours.</p>"
+          i18nKey="Adding new games.wasm"
+          defaults="If you are considering writing your own game, you should use the <1>GameSkeleton Github Repo</1> as a template and read <2>How to Create a Game</2>.<p>This site has no server to load a game into: its games are compiled and packed ahead of time (see <3>how a game is ported</3>). To publish a game on a server, load it to the upstream <4>Lean Game Server</4>.</p><p>Featured games on this page are added manually.</p>"
           components={
             {
              1: <a target="_blank" href="https://github.com/hhu-adam/GameSkeleton"/>,
              2: <a target="_blank" href="https://github.com/leanprover-community/lean4game/"/>,
-             3: <a target="_blank" href="https://github.com/leanprover-community/lean4game/"/>,
+             3: <a target="_blank" href="https://github.com/FawadHa1der/lean4game/blob/wasm64-port/wasm/PORTING.md"/>,
+             4: <a target="_blank" href="https://adam.math.hhu.de"/>,
             }
           }
         />
@@ -511,8 +512,8 @@ function LandingPage() {
         <h2>{t("Funding.translation", { defaultValue: "Funding" })}</h2>
         <p>
           <Trans
-            i18nKey="Funding.description"
-            defaults="This server is hosted at Heinrich Heine University Düsseldorf. The lean4game software was developed as part of the project <1>ADAM: Anticipating the Digital Age of Mathematics</1>, funded by the programme <i>Freiraum 2022</i> of the <i>Stiftung Innovation in der Hochschullehre</i>. Ongoing maintenance and development are generously supported by <i>Renaissance Philanthropy</i> through the <i>AI for Math Fund</i>."
+            i18nKey="Funding.wasm"
+            defaults="This site is an independent in-browser fork of lean4game, not run by the lean4game team. lean4game itself was developed as part of the project <1>ADAM: Anticipating the Digital Age of Mathematics</1>, funded by the programme <i>Freiraum 2022</i> of the <i>Stiftung Innovation in der Hochschullehre</i>. Its ongoing maintenance and development are generously supported by <i>Renaissance Philanthropy</i> through the <i>AI for Math Fund</i>."
             components={{1: <a target="_blank" href="https://hhu-adam.github.io"/>}}
           />
         </p>
@@ -522,6 +523,14 @@ function LandingPage() {
       {/* Do not translate "Impressum", it's needed for German GDPR */}
       <a className="link" role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => {setPopup(PopupType.impressum)}}>Impressum</a>
       <a className="link" role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => {setPopup(PopupType.privacy)}}>{t("Privacy Policy")}</a>
+      <p className="source-links">
+        <a target="_blank" href={`https://github.com/FawadHa1der/lean4/releases/tag/${__LEAN_RELEASE_ID__}`}>Lean {__LEAN_VERSION__}</a>
+        {' · '}
+        {t("Source links", { defaultValue: "Source code:" })}{' '}
+        <a target="_blank" href="https://github.com/FawadHa1der/lean4game/tree/wasm64-port">lean4game (wasm64)</a>
+        {' · '}
+        <a target="_blank" href="https://github.com/FawadHa1der/QED64">QED64</a>
+      </p>
     </footer>
   </div>
 }

@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react-swc'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 import { normalizePath } from 'vite'
 import path from 'node:path'
+import { readFileSync } from 'node:fs'
 import svgr from "vite-plugin-svgr"
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import importMetaUrlPlugin from '@codingame/esbuild-import-meta-url-plugin'
@@ -35,8 +36,16 @@ const crossOriginIsolation = {
   },
 };
 
+// The Lean version the landing page names: from the release record, which a
+// toolchain bump changes.
+const leanRelease = JSON.parse(readFileSync(new URL('../wasm/lean4-wasm64-release.json', import.meta.url), 'utf8'));
+
 // https://vitejs.dev/config/
 export default defineConfig({
+  define: {
+    __LEAN_VERSION__: JSON.stringify(leanRelease.lean.version),
+    __LEAN_RELEASE_ID__: JSON.stringify(leanRelease.id),
+  },
   build: {
     // Relative to the root
     // Note: This has to match the path in `relay/index.mjs`

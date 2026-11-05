@@ -209,6 +209,46 @@ footer .link:focus-visible {
   outline-offset: 3px;
 }
 
+/* wasm build: where the source lives, small but always in view */
+.source-links {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: rgb(70, 70, 70);
+  background-color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+.source-links a {
+  color: rgb(0, 100, 122);
+}
+.source-links a:hover {
+  text-decoration: underline;
+}
+.source-links a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+/* On a phone it would sit on the tiles: there it joins the footer's line */
+@media (max-width: 640px) {
+  .source-links {
+    position: static;
+    margin: 16px 40px 0;
+    padding: 0;
+    color: white;
+    background: none;
+    box-shadow: none;
+  }
+  .source-links a {
+    color: white;
+    text-decoration: underline;
+  }
+}
+
 .github-link {
   height: 24px; /* TODO: why do I need that? s*/
   margin-top: auto;

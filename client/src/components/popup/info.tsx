@@ -57,8 +57,8 @@ export function InfoPopup () {
         <h2>{t("Funding.translation", { defaultValue: "Funding" })}</h2>
         <p>
           <Trans
-            i18nKey="Funding.description"
-            defaults="This server is hosted at Heinrich Heine University Düsseldorf. The lean4game software was developed as part of the project <1>ADAM: Anticipating the Digital Age of Mathematics</1>, funded by the programme <i>Freiraum 2022</i> of the <i>Stiftung Innovation in der Hochschullehre</i>. Ongoing maintenance and development are generously supported by <i>Renaissance Philanthropy</i> through the <i>AI for Math Fund</i>."
+            i18nKey="Funding.wasm"
+            defaults="This site is an independent in-browser fork of lean4game, not run by the lean4game team. lean4game itself was developed as part of the project <1>ADAM: Anticipating the Digital Age of Mathematics</1>, funded by the programme <i>Freiraum 2022</i> of the <i>Stiftung Innovation in der Hochschullehre</i>. Its ongoing maintenance and development are generously supported by <i>Renaissance Philanthropy</i> through the <i>AI for Math Fund</i>."
             components={{1: <a target="_blank" href="https://hhu-adam.github.io"/>}}
           />
         </p>

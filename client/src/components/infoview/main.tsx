@@ -738,7 +738,7 @@ function LevelLoadingIndicator({ onRetry, since, removeLastLine }: { onRetry?: (
     // D8: decimal MB, as the tiles and the banner count.
     const envSize = boundEnv ? ` (about ${wholeMB(boundEnv.transfer)} MB to download, ${wholeMB(boundEnv.bytes)} MB once unpacked)` : ''
     detail = downloading
-      ? <>The first visit downloads the Lean checker (about 150 MB, once) and this game&apos;s mathematics{envSize} and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.{smallDevice}</>
+      ? <>The first visit downloads the Lean checker (about 106 MB, once) and this game&apos;s mathematics{envSize} and keeps it in your browser, so later visits start in seconds. Nothing is sent anywhere.{smallDevice}</>
       : <>Starting the checker inside this tab: unpacking and loading the mathematics environment. On a laptop this takes about 10–30 seconds after the download.{smallDevice}</>
   } else if (activity.busy) {
     headline = <>Preparing this level — {activity.label}…</>
