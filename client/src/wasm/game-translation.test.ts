@@ -179,6 +179,52 @@ assert.deepEqual(parseLevelUri("file:///Tutorial/3.lean"), { worldId: "Tutorial"
   const d = fromServer[0];
   assert.equal(d.params.uri, "file:///levels/TestWorld__1.lean");
   assert.equal(d.params.diagnostics[0].range.start.line, 0);
+  // A proof state's goal references are released once the reply to a later
+  // request has arrived; its diagnostics' references, and other methods', never.
+  {
+    const call = (id: number, method: string, sessionId = "s1") => post({ jsonrpc: "2.0", id, method: "$/lean/rpc/call", params: { method, sessionId, textDocument: { uri: "file:///levels/TestWorld__1.lean" }, position: { line: 0, character: 0 }, params: {} } });
+    const code = (p: string) => ({ tag: [{ info: { p } }, { text: "x" }] });
+    const state = (g: string) => ({
+      steps: [
+        { goals: [], command: "", diags: [], line: 0, character: 0 },
+        { goals: [{ goal: { hyps: [{ names: ["h"], type: code(g) }], type: code(g), ctx: { p: `${g}-ctx` }, mvarId: "m" }, hints: [{ text: "t", hidden: false, p: "not a ref" }] }],
+          command: "intro h", diags: [{ severity: 1, message: { tag: [{ expr: code("d") }, { text: "e" }] } }], line: 1, character: 7 },
+      ],
+      diagnostics: [{ severity: 1, message: { expr: code("d") } }], completed: false, completedWithWarnings: false, lastPos: 1,
+    });
+    const reply = (id: number, result: unknown) => upstream.port2.postMessage({ jsonrpc: "2.0", id, result });
+    const releases = () => toWorker.filter((m) => m.method === "$/lean/rpc/release");
+    const sent = (n: number) => until(`request ${n}`, () => toWorker.some((m) => m.id === n));
+    const answered = (n: number) => until(`reply ${n}`, () => fromServer.some((m) => m.id === n));
+    call(101, "Game.getProofState"); await sent(101);
+    reply(101, state("a")); await answered(101);
+    assert.equal(releases().length, 0, "the state on screen is not released");
+    call(102, "Lean.Widget.getInteractiveDiagnostics"); await sent(102);
+    reply(102, [{ message: { expr: code("o") } }]); await answered(102);
+    assert.equal(releases().length, 0, "another method's references stay the infoview's");
+    // Two requests out: the older one's reply is held, not released, until the newest one's arrives.
+    call(103, "Game.getProofState"); call(104, "Game.getProofState"); await sent(104);
+    reply(103, state("b")); await answered(103);
+    assert.equal(releases().length, 0, "a reply the newest request has not answered yet is held");
+    reply(104, state("c")); await answered(104);
+    await until("the older states' releases", () => releases().length === 2);
+    assert.deepEqual(releases()[0].params, { uri: "file:///game/Metadata.lean", sessionId: "s1", refs: [{ p: "a" }, { p: "a" }, { p: "a-ctx" }] }, "the goals only, once per occurrence; `p` beside other keys is no reference");
+    assert.deepEqual(releases()[1].params.refs, [{ p: "b" }, { p: "b" }, { p: "b-ctx" }]);
+    // An error answer, or none, changes nothing: the state on screen stays.
+    call(105, "Game.getProofState"); await sent(105);
+    upstream.port2.postMessage({ jsonrpc: "2.0", id: 105, error: { code: -32900, message: "gone" } });
+    await answered(105);
+    call(106, "Game.getProofState"); await sent(106);
+    reply(106, null); await answered(106);
+    assert.equal(releases().length, 2);
+    // After a checker death the infoview connects a new session: the state from
+    // the old one is released under the old session's id.
+    call(107, "Game.getProofState", "s2"); await sent(107);
+    reply(107, state("e")); await answered(107);
+    await until("the old session's release", () => releases().length === 3);
+    assert.deepEqual(releases()[2].params, { uri: "file:///game/Metadata.lean", sessionId: "s1", refs: [{ p: "c" }, { p: "c" }, { p: "c-ctx" }] });
+    assert.ok(!releases().some((m) => m.params.refs.some((r: { p: string }) => r.p === "d" || r.p === "o")), "no diagnostic's reference");
+  }
   console.log("game-translation: ALL TESTS PASS");
   process.exit(0);
 }

@@ -2920,14 +2920,82 @@ across a deploy that changes the worker scripts' revision or drops lazy chunks.
   of the 10 levels had a checked proof under the burst. RAG Lecture15/1, 24/3 and
   Robo Euklid/4 stop at stack errors, and logic IffTactic/5's proof never lands
   (both below).
-- **Logic IffTactic/5 runs the heap out: open** (found by the lane above; not
-  threads, the pool stays at 24). Played in the typewriter, its 92 steps end the
-  checker at about step 81-85 in 6 of 6 runs (5 on this branch, 1 on `1771ed3`):
-  `lean --worker exited with code 1`, after `INTERNAL PANIC: out of memory` in the
-  4 runs that kept Lean's stderr. The heap climbs with the steps, 1536 MiB to
-  2991 MiB (cap 3072), about 17 MiB per step; the relay's reboot starts again from
-  1536. Why it climbs, and whether a player can finish after the reboot, are not
-  checked (the lane's later steps land in the wrong place after the death).
+- **Logic IffTactic/5 ran the heap out: fixed in the typewriter** (2026-11-05,
+  `client/src/wasm/game-translation.ts`; found by the lane above; not threads, the
+  pool stays at 24). Played in the typewriter, the checker died at about step
+  80-88 (`INTERNAL PANIC: out of memory`), the heap climbing from 1536 MiB to
+  about 2990 MiB (cap 3072). The cause is RPC references, not the document, whose
+  own need is about 100-190 MiB. Every `Game.getProofState` reply holds every
+  step's goals, about 30,000 references at the end of the proof and two replies
+  per step, and each keeps its version's info trees alive in the checker. The
+  infoview releases a reference only when the JS GC finalizes the object that
+  carried it, and the page keeps every state it showed (`console.log(proof)` in
+  `goals.tsx`, and each step's div holds it in its props), so about half stayed
+  alive: over a million by step 80. The translation layer now releases a proof
+  state's goal references (`steps[].goals`) once the reply to a later request has
+  arrived. Only the goals: GameServer builds them anew for each call
+  (`WithRpcRef.mk`), so each is served once and the infoview's own later release
+  of it finds nothing. The diagnostics in a reply are the document's cached
+  messages, which Lean serves again under the same counted reference
+  (`rpcStoreRef`), so they stay the infoview's: releasing them here too can free a
+  message that is still on screen. Measured in real replies: no goal reference was
+  ever served twice (both builds, every play below and four everyday flows), while
+  most diagnostic references were (205 of 212 in a flow on NNG4 Addition/1 with a
+  wrong step, 164 of 171 on STG4 Complement/4); on this level the goals hold all
+  but 2 of a play's 3.16 million references. A release that names a session a
+  death replaced is ignored by the new checker (`FileWorker.handleRpcRelease`).
+  Played through a real death (three exits from `#eval (IO.Process.exit 3 : IO
+  Unit)`, then the right step typed instead, as in (g) above), on NNG4 Addition/1
+  after 2 steps and on this level after 30: 45 and 10,585 references released
+  under the dead session, no further death, nothing on stderr, hovers answered
+  before and after a forced GC, and the NNG4 level completed.
+
+  2026-11-05, chrome-headless-shell 151, one browser, a local origin, difficulty
+  0, the same person-style harness and replacement rules on two builds of
+  `arch-review-followups` that differ only by this change:
+
+  | Proof played | Without the change | With it |
+  | --- | --- | --- |
+  | The author's exact 92 lines (1 run each) | no death yet (heap 2983 MiB); blocked at step 80 | heap flat at 1635 MiB; blocked at step 80 |
+  | 94 lines: step 80's `intro ⟨p, q, nr⟩` as `intro y`, `cases y`, `cases right` (3 runs each) | died at step 83, 83 and 84 (heap 2986-2995 MiB); after the reboot 1 of 3 completed, 2 stopped at stack errors (steps 90 and 94) | 0 deaths, heap 1633-1634 MiB to the end, completed 3 of 3 (a fourth run: 1729 MiB from step 90, completed) |
+  | 97 lines, no pattern `intro` (1 run each) | died at step 85; after the reboot stack errors at lines 69 and 91, not completed | 0 deaths, heap 1632 MiB; a stack error at line 94 once the last line is in, not completed |
+
+  Steps count from 0; lines are proof lines from 1. The completed unpatched play
+  had 95 lines: after its reboot `repeat assumption` hit the stack and the harness
+  typed two `assumption` instead, a rule both builds had. So the change took the
+  death away in every play with it, and the one 94-line path, which avoids the
+  stack limit, completed in one sitting 3 of 3 (and a fourth run). It does nothing
+  for the stack: proofs that reach the stack limit, the author's exact 92 lines
+  and the 97-line one among them, still stop there (next entry).
+- **Logic IffTactic/5's stack limit: open** (the user's call: grouping the tactic
+  sequence in GameServer's Runner, which needs every game re-baked, so a Lean
+  import's work). A long flat tactic list overflows the browser's stack, because
+  Lean's tactic-sequence recursion goes one level deeper per tactic. Step by step,
+  the author's `intro ⟨p, q, nr⟩` at step 80 fails with "maximum recursion depth
+  has been reached: the WebAssembly runtime's stack is exhausted …" in every play
+  on both builds, so **the author's exact 92 lines still stop at step 80**, and
+  plain tactics fail at about line 94. A check of the whole text at once (a
+  reload, a reboot, a reopen) stops earlier, and where varies with the browser's
+  state: a completed 94- or 95-line proof reopened in a new browser process showed
+  a stack error and no "Level completed" in 5 of 5 reopens (4 with the change, 1
+  without; at line 64 in the 2 that recorded the line), though the completed flag,
+  the saved text and Next stayed; a reload in the same browser process at step 50
+  or 75 showed no error and the play went on to complete (1 run each); the first
+  check after a reboot stopped at line 64 in the 3 unpatched 94-line plays (a
+  later version cleared it in the one that completed) and at 69 in the 97-line
+  one; earlier runs saw 64-69 on reboots and fresh profiles, and 81 on a second
+  reopen. Why it varies is not established. Measured only by rewriting the text,
+  `(` and `)` at line ends every 20 lines (not the shipped path): the author's
+  exact 92 lines completed on a cold check on both builds and in the typewriter
+  with this change, heap 1633 MiB (2026-11-03, 1 run each). The Runner change
+  itself is not built.
+- **Editor-mode growth on long proofs: open, not covered by the change above.**
+  RAG Lecture24/5 in editor mode, one character of a comment above the proof
+  changed per version, 12 versions, each checked with its proof state back: the
+  heap went from 1280 MiB to 1664-1674 MiB with the change and to 1664-1670 MiB
+  without it (3 runs each, 2026-11-05, same setup as the table above). The change
+  does nothing for it. Its cause is not established, nor how far it goes with more
+  versions.
 - **Reference proofs that stop at the stack error in the browser** (the lane
   again; no death, the checker stays up): RAG Lecture15/1 (`bound`, 9 lines), RAG
   Lecture24/3 (1-3 lines, which ones vary by run; its proof also has `sorry`) and

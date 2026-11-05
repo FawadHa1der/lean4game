@@ -286,6 +286,11 @@ def getProofState (p : ProofStateParams) : RequestM (RequestTask (Option ProofSt
                   let some level ← getLevel? {game := game, world := p.worldId, level := p.levelId}
                     | throwError "Level not found"
                   let hints ← findHints goal level
+                  -- Built anew on every call, so each goal's RPC references are served
+                  -- once, in this reply only. The wasm64 client relies on that: it
+                  -- releases them once a later proof state arrives
+                  -- (client/src/wasm/game-translation.ts, proofStateGoalRefs). Caching
+                  -- proof states here would need that release taken out.
                   let interactiveGoal ← goalToInteractive goal
                   return ⟨interactiveGoal, hints⟩
               return interactiveGoals

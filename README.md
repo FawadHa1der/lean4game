@@ -35,8 +35,10 @@ the one that deploys.
   of the browser's stack". This includes the reference proofs of RAG Lecture15/1
   and Lecture24/3 and Robo Euklid/4; [wasm/UX-PARITY.md](wasm/UX-PARITY.md) lists
   the cases found.
-- Logic IffTactic/5, played step by step to the end, runs the checker out of
-  memory near step 80, and the checker restarts
+- Logic IffTactic/5 meets that stack limit too: played step by step, the author's
+  92-line proof stops at step 80 (`intro ⟨p, q, nr⟩`). A version that splits that
+  step into three plain steps completes. A completed long proof reopened in a new
+  browser can show a stack error, though the level stays marked completed
   ([wasm/UX-PARITY.md](wasm/UX-PARITY.md)).
 - Games are compiled and packed ahead of time, so this site cannot load a game
   from a URL the way upstream's server can.

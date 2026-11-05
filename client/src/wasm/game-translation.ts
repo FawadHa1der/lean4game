@@ -204,6 +204,34 @@ export function rebaseSemanticTokens(data: number[]): number[] {
   return [];
 }
 
+/** The RPC references in a value, once per occurrence (the server counts how
+ * many times it served each one). A reference is what the infoview takes for
+ * one: an object whose only key is `p` (RpcSessionForFile.registerRefs). */
+export function rpcRefsIn(o: unknown, out: unknown[] = []): unknown[] {
+  if (Array.isArray(o)) for (const v of o) rpcRefsIn(v, out);
+  else if (o !== null && typeof o === "object") {
+    const keys = Object.keys(o);
+    if (keys.length === 1 && keys[0] === "p" && typeof (o as { p: unknown }).p !== "object") out.push(o);
+    else for (const k of keys) rpcRefsIn((o as Record<string, unknown>)[k], out);
+  }
+  return out;
+}
+
+/** The references in a `Game.getProofState` reply's goals, `steps[].goals`,
+ * and nowhere else. GameServer's getProofState builds every goal anew for each
+ * call (goalToInteractive, ppExprTagged: `WithRpcRef.mk`, a fresh id), so these
+ * are served once, in this reply only. The diagnostics in the reply
+ * (`steps[].diags`, `diagnostics`) are the document's cached messages: the
+ * server serves them again under the same reference and counts each time
+ * (Lean's rpcStoreRef), and the infoview releases each copy it received, so
+ * they stay the infoview's. */
+export function proofStateGoalRefs(result: unknown): unknown[] {
+  const out: unknown[] = [];
+  const steps = (result as { steps?: unknown } | null)?.steps;
+  if (Array.isArray(steps)) for (const step of steps) rpcRefsIn((step as { goals?: unknown } | null)?.goals, out);
+  return out;
+}
+
 export class GameTranslation {
   /** Hand this to the editor's LSP client (WorkerDirect messagePort). */
   readonly clientPort: MessagePort;
@@ -221,6 +249,21 @@ export class GameTranslation {
    * e.g. ones superseded by a game switch, must not accumulate). */
   private readonly inFlightMethods = new Map<number | string, string>();
   private readonly workerUri: string;
+  /** A proof state holds every step's goals: on a long proof one reply carries
+   * tens of thousands of RPC references, and each keeps that version's info
+   * trees alive in the checker. The infoview releases a reference when the JS
+   * GC finalizes it, and the page keeps the states it showed (goals.tsx logs
+   * each, and every step's div holds it in its props): logic IffTactic/5 had
+   * over a million alive by step 80 and ran the wasm heap out (UX-PARITY). So
+   * a proof state's goal references (proofStateGoalRefs) are released here
+   * once the reply to a later request has arrived (noteProofState). They were
+   * served once, so that release frees them; when the infoview later releases
+   * its copy, the checker no longer holds the reference and ignores it
+   * (rpcReleaseRef; a session never reuses a reference's number). Each
+   * forwarded Game.getProofState request's RPC session, by request id: */
+  private readonly proofCalls = new Map<number | string, unknown>();
+  private newestProofCall: number | string | null = null;
+  private heldProofStates: { sessionId: unknown; refs: unknown[] }[] = [];
 
   private config: GameTranslationConfig;
   private serverPort: MessagePort | null = null;
@@ -329,6 +372,11 @@ export class GameTranslation {
       if (out.id !== undefined && out.method !== undefined) {
         this.inFlightMethods.set(out.id, out.method);
         if (this.inFlightMethods.size > 1024) this.inFlightMethods.delete(this.inFlightMethods.keys().next().value!);
+        if (out.method === "$/lean/rpc/call" && out.params?.method === "Game.getProofState") {
+          this.proofCalls.set(out.id, out.params.sessionId);
+          this.newestProofCall = out.id;
+          if (this.proofCalls.size > 1024) this.proofCalls.delete(this.proofCalls.keys().next().value!);
+        }
       }
       // Straight to the relay. The editor-mode crash's mitigation — at most
       // one full-text change per window reaches the checker, every other
@@ -459,9 +507,30 @@ export class GameTranslation {
    * (death-kind.ts staleInitialize). */
   onOrphanedRequest: ((method: string, kind: RelayErrorKind) => void) | null = null;
 
+  /** See proofCalls. The pane shows only the reply to its newest request
+   * (goals.tsx proofRequestSeq), so a state is held until the reply to the
+   * newest request arrives, and then every state before that one is released.
+   * An error or an empty answer releases nothing. A state from a checker that
+   * has died since names that dead session: the new checker does not know it
+   * and ignores the release (FileWorker.handleRpcRelease). */
+  private noteProofState(id: number | string, result: unknown): void {
+    if (!this.proofCalls.has(id)) return;
+    const sessionId = this.proofCalls.get(id);
+    this.proofCalls.delete(id);
+    if (result === undefined || result === null) return;
+    this.heldProofStates.push({ sessionId, refs: proofStateGoalRefs(result) });
+    if (id !== this.newestProofCall) return;
+    const gone = this.heldProofStates.slice(0, -1);
+    this.heldProofStates = this.heldProofStates.slice(-1);
+    for (const s of gone) {
+      if (s.refs.length) this.serverPort?.postMessage({ jsonrpc: "2.0", method: "$/lean/rpc/release", params: { uri: this.workerUri, sessionId: s.sessionId, refs: s.refs } });
+    }
+  }
+
   /** relay: server → client rewrites. */
   private toClient(message: JsonRpc): JsonRpc {
     if (message.id !== undefined && message.method === undefined) {
+      this.noteProofState(message.id, message.result);
       const method = this.inFlightMethods.get(message.id);
       this.inFlightMethods.delete(message.id);
       const kind = method === undefined ? null : relayErrorKind(message.error);
