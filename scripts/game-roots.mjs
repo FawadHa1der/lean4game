@@ -13,8 +13,9 @@
 // minus essential, the same with or without them, and a narrower essential then
 // cannot silently break a game.
 //
-// A new game import still needs its module in a kernel pack, so still a kernel
-// pack build (wasm/PORTING.md §4). This replaces the hand-kept list, not the cycle.
+// The file is what lean4game hands the kernel. The kernel's own hand-kept list
+// decides what its packs hold until the kernel adopts this file, so a module in no
+// pack needs someone to get it into that list, then its next pack build (wasm/PORTING.md §4).
 //
 // Usage: node scripts/game-roots.mjs [--check [--games a,b] [--have <list|dir>]...] [--games-src <dir>]
 //   (none)       write wasm/mathlib-roots.txt
@@ -150,7 +151,7 @@ const file = new Map(fileText.split("\n").filter((l) => l && !l.startsWith("#"))
 const rerun = `rerun node scripts/game-roots.mjs and commit ${OUT}`;
 const problems = [];
 for (const mod of [...whoImports.keys()].sort(compare)) {
-  if (!file.has(mod)) problems.push(`+ ${mod} (imported by ${whoImports.get(mod).join(", ")}): a new import, not listed; ${rerun}. A module no pack holds also needs the kernel's next pack build (wasm/PORTING.md §4)`);
+  if (!file.has(mod)) problems.push(`+ ${mod} (imported by ${whoImports.get(mod).join(", ")}): a new import, not listed; ${rerun}. A module in no pack also has to get into the kernel's list, then its next pack build (wasm/PORTING.md §4)`);
   else if (!games && file.get(mod) !== line(mod)) problems.push(`~ ${mod}: the file says "${file.get(mod)}", the sources say "${line(mod)}"; ${rerun}`);
 }
 if (!games) {
@@ -170,7 +171,7 @@ if (have.length) {
   const wanted = new Set(whoImports.keys());
   if (!games) for (const mod of file.keys()) wanted.add(mod);
   for (const mod of [...wanted].sort(compare)) {
-    if (!resolves(mod)) problems.push(`! ${mod}${whoImports.has(mod) ? ` (imported by ${whoImports.get(mod).join(", ")})` : ""}: in no pack of the pinned release, so it cannot compile here. It needs the kernel's next pack build (wasm/PORTING.md §4)`);
+    if (!resolves(mod)) problems.push(`! ${mod}${whoImports.has(mod) ? ` (imported by ${whoImports.get(mod).join(", ")})` : ""}: in no pack of the pinned release, so it cannot compile here. Someone has to get it into the kernel's list, then its next pack build (wasm/PORTING.md §4)`);
   }
 }
 

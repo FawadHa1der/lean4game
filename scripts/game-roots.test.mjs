@@ -170,7 +170,7 @@ test("--check names a new import, a dropped one and a changed importer, and leav
   f.write("server/GameServer.lean", "import GameServer.Commands\n"); // OpenPrivate gone
   const r = f.run("--check");
   assert.equal(r.status, 1);
-  assert.match(r.stderr, /^\+ Mathlib\.New \(imported by alpha\): a new import, not listed; rerun node scripts\/game-roots\.mjs and commit wasm\/mathlib-roots\.txt\. A module no pack holds also needs the kernel's next pack build/m);
+  assert.match(r.stderr, /^\+ Mathlib\.New \(imported by alpha\): a new import, not listed; rerun node scripts\/game-roots\.mjs and commit wasm\/mathlib-roots\.txt\. A module in no pack also has to get into the kernel's list, then its next pack build/m);
   assert.match(r.stderr, /^- Batteries\.Tactic\.OpenPrivate: listed, nothing imports it any more/m);
   assert.match(r.stderr, /^~ Shared\.Module: the file says "Shared\.Module {2}# alpha, beta", the sources say "Shared\.Module {2}# alpha"/m);
   assert.match(r.stderr, /3 differences for 2 games/);
@@ -211,7 +211,7 @@ test("--games: a subset needs only its own sources, and only its imports are ask
   assert.match(r.stderr, /^\+ Mathlib\.New \(imported by beta\)/m);
 });
 
-test("--have: a module in no pack says it needs the kernel's next pack build; a vendored one resolves", () => {
+test("--have: a module in no pack says it has to get into the kernel's list; a vendored one resolves", () => {
   const f = fixture();
   f.run();
   const list = path.join(f.dir, "essential-modules.txt");
@@ -220,7 +220,7 @@ test("--have: a module in no pack says it needs the kernel's next pack build; a 
   let r = f.run("--check", "--have", list);
   assert.equal(r.status, 1);
   assert.match(r.stderr, /^! Batteries\.Tactic\.OpenPrivate \(imported by GameServer\): in no pack of the pinned release/m);
-  assert.match(r.stderr, /^! Mathlib\.Zeta \(imported by alpha\): .*It needs the kernel's next pack build/m);
+  assert.match(r.stderr, /^! Mathlib\.Zeta \(imported by alpha\): .*Someone has to get it into the kernel's list, then its next pack build/m);
   r = f.run("--check", "--have", list, "--have", path.join(f.dir, "vendored"));
   assert.equal(r.status, 1);
   assert.doesNotMatch(r.stderr, /OpenPrivate/);

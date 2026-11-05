@@ -154,12 +154,14 @@ Docker-memory preflights. The lane no longer copies QED64's pipeline into
 ### What the games need from the packs (`wasm/mathlib-roots.txt`)
 
 `mathlib-game-extra` is the import closure of the kernel's extra roots, minus
-essential, minus `Init`, and that list of roots used to be kept by hand in the
-kernel repo (`wasm64-build/mathlib-extra-roots.txt`). The user chose generated
-roots on 2026-11-03 ("take the generated roots"), not whole Mathlib as build
-input. `scripts/game-roots.mjs` writes `wasm/mathlib-roots.txt` from the import
-headers of what the lanes compile, in the kernel file's format; `wasm/PORTING.md`
-§4 says what it holds and what a new game import costs.
+essential, minus `Init`, and the kernel keeps that list of roots by hand
+(`wasm64-build/mathlib-extra-roots.txt`). The user chose generated roots on
+2026-11-03 ("take the generated roots"), not whole Mathlib as build input.
+`scripts/game-roots.mjs` writes `wasm/mathlib-roots.txt` from the import headers of
+what the lanes compile, in the kernel file's format. That file is what lean4game
+hands the kernel; the kernel's list still decides what the pack holds, until the
+kernel adopts it. `wasm/PORTING.md` §4 says what the file holds and what a new
+game import costs.
 
 Measured on 2026-11-03 with the kernel's own `mathlib-select.py`, read only,
 over the v4.35 build. On the release's 9 roots it reproduces the published lists
@@ -171,8 +173,8 @@ patch dropped the import. All 91 names exist at Mathlib `v4.36.0-rc2` and none i
 a `deprecated_module` shim there.
 
 This is lean4game's half. How the kernel consumes the file is the kernel's
-decision, and until a pack build does, its own list decides what the pack holds.
-A new import still needs its module in a kernel pack.
+decision. A new import still needs its module in a kernel pack, and a module in
+no pack needs someone to get it into the kernel's list before a pack build carries it.
 
 ### Trying a candidate runtime (`?runtime=X`)
 

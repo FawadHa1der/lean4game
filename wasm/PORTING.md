@@ -335,7 +335,7 @@ essential pack, under their real module names. The trees lane unpacks it
 into the same trees as the essential pack, so a game's unmodified
 `import Mathlib.Tactic.Have` or `import Mathlib.Tactic` resolves.
 
-**Where the roots come from.** `wasm/mathlib-roots.txt`, which
+**What lean4game asks of the packs.** `wasm/mathlib-roots.txt`, which
 `scripts/game-roots.mjs` generates from the import headers of what the lanes
 compile: every catalog game, GameServer and lean-i18n, each walked from the
 root its compile starts at, so a file nothing imports does not count. It lists
@@ -345,20 +345,20 @@ core's (`Init`, `Lean`, `Std`, `Lake`), with who imports it: 91 modules on
 `Batteries.Tactic.OpenPrivate` from `vendor/batteries`. The games lane runs its
 `--check` once the sources are in place and before any compile. Regenerating
 needs every catalog game's checkout under `games-src/` (`--games-src` to read
-them from elsewhere). The file is what lean4game hands the kernel; how the
-kernel consumes it is the kernel's decision, and until a pack build does, the
-kernel's own `wasm64-build/mathlib-extra-roots.txt` decides what the pack holds
-(`wasm/KERNEL.md`, "What the games need from the packs").
+them from elsewhere). The file is what
+lean4game hands the kernel. How the kernel consumes it is the kernel's decision,
+and until the kernel adopts it, the kernel's own
+`wasm64-build/mathlib-extra-roots.txt` decides what the pack holds (`wasm/KERNEL.md`,
+"What the games need from the packs").
 
 **What a new game import costs.**
 
 - A module some pack of the pinned release holds: rerun
   `node scripts/game-roots.mjs` and commit the file. The lane refuses until then.
-- A module in no pack: the lane stops before compiling, names it and says it
-  needs the kernel's next pack build; regenerating does not quiet it. The
-  generated list replaces the hand-kept one, not the release cycle: until a
-  release carries the module, drop the import if no level uses it (§1), or the
-  game waits.
+- A module in no pack: the lane stops before compiling and names it;
+  regenerating does not quiet it. Someone has to get the module into the kernel's
+  list: its next pack build reads that list, not this file. Until a release
+  carries the module, drop the import if no level uses it (§1), or the game waits.
 
 Until Lean 4.34 (branch `lean-v4.34`, 2026-10-06) this was `wasm/compat/`:
 seven modules (805 Lean lines — `Have` from v4.23.0, the full `de3a9cf`
