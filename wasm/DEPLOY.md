@@ -144,7 +144,8 @@ re-cut, `<id>-r<N>`). The Worker maps `/runtime/*` and `/profiles/*` by the
 record's id, so a push before that release is in R2 answers 404 to every runtime
 manifest fetch and takes down every boot. With no new `.snapz` the guard passes
 it: step 1 is the only check that R2 holds the release, and nothing on the push
-path repeats it.
+path repeats it. The user decided on 2026-11-03 to keep this documented rule for
+R19a's release half, rather than add a check of the release to the push path.
 
 `.github/workflows/deploy.yml` runs step 2 on every push to `wasm64-port`
 when the fork has the `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit only)

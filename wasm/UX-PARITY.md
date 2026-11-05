@@ -2934,7 +2934,9 @@ across a deploy that changes the worker scripts' revision or drops lazy chunks.
   Robo Euklid/4 (`simp`, 1-2 lines). `1771ed3` stops the same way, one run each (5,
   3 and 2 lines), so not this branch's doing. The 4.35 wasm sweep (under Node)
   reports 0 errors on all three, so a sweep pass is not a browser verdict on these
-  levels.
+  levels. The user decided on 2026-11-03 that they stay a known limit under the
+  stack-backstop decision (2026-10-12: no Lean runtime or stack tuning, and QED64's
+  page backstop handles an overflow).
 - **NEW-2: closed**, **NEW-3: closed** ("QED64 as a dependency" above).
 - **The 30 ms "waiting for another tab to finish preparing the game
   environment" on every region download: closed upstream** in `84d594e`
