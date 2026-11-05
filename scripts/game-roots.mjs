@@ -18,7 +18,7 @@
 // pack needs someone to get it into that list, then its next pack build (wasm/PORTING.md §4).
 //
 // Usage: node scripts/game-roots.mjs [--check [--games a,b] [--have <list|dir>]...] [--games-src <dir>]
-//   (none)       write wasm/mathlib-roots.txt
+//   (none)       write wasm/mathlib-roots.txt; needs every catalog game's checkout
 //   --check      write nothing; exit 1 naming each difference from the file
 //   --games      with --check, only these games, by snapshot name (the lane's
 //                --games; the other sources may be absent): their imports must be
@@ -109,7 +109,7 @@ const isCore = (mod) => CORE.has(mod.split(".")[0]);
 function externalImports(tree) {
   const seen = new Set(), todo = [tree.root], external = new Set();
   if (!fs.existsSync(fileOf(tree.dir, tree.root)))
-    die(`no ${tree.root}.lean in ${tree.dir} (${tree.who}): the games lane clones a game's source, or pass --games-src`);
+    die(`no ${tree.root}.lean in ${tree.dir} (${tree.who}): wasm/build-from-source.sh --lanes games with no --games clones every game's source (wasm/PORTING.md §4), or pass --games-src`);
   while (todo.length) {
     const mod = todo.pop();
     if (seen.has(mod)) continue;

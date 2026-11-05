@@ -345,7 +345,9 @@ core's (`Init`, `Lean`, `Std`, `Lake`), with who imports it: 91 modules on
 `Batteries.Tactic.OpenPrivate` from `vendor/batteries`. The games lane runs its
 `--check` once the sources are in place and before any compile. Regenerating
 needs every catalog game's checkout under `games-src/` (`--games-src` to read
-them from elsewhere). The file is what
+them from elsewhere). `wasm/build-from-source.sh --lanes games` with no `--games`
+clones them all, once the release and trees lanes have run, then stops at this
+check if the file is stale; with `--games` it clones only those. The file is what
 lean4game hands the kernel. How the kernel consumes it is the kernel's decision,
 and until the kernel adopts it, the kernel's own
 `wasm64-build/mathlib-extra-roots.txt` decides what the pack holds (`wasm/KERNEL.md`,
@@ -455,12 +457,16 @@ only in editor mode; the typewriter shows the Next button instead).
 
 ## 7. Bake, verify, stage, upload, deploy
 
-1. `node scripts/games-manifest.mjs --check`, and for a new game or new
-   imports `node scripts/game-roots.mjs` (§4; commit `wasm/mathlib-roots.txt`).
+1. `node scripts/games-manifest.mjs --check`.
 2. `wasm/build-from-source.sh --lanes preflight,release,trees` once per
    toolchain release (fetch and verify it, unpack the packs, compile
-   lean-i18n and GameServer), then `wasm/build-from-source.sh --lanes
-   games,bake --games <snapshot> --verify-snapshots` (Docker; flags per the
+   lean-i18n and GameServer). For a new game or new imports, regenerate the
+   roots next, which needs every checkout (§4): `wasm/build-from-source.sh --lanes
+   games` with no `--games` clones what is missing and stops at the check (if the
+   file is not stale it goes on to compile every game: stop it there), then `node
+   scripts/game-roots.mjs` and commit `wasm/mathlib-roots.txt`. Then
+   `wasm/build-from-source.sh --lanes games,bake --games <snapshot>
+   --verify-snapshots` (Docker; flags per the
    script header; on a shared host run the bake under the browser lock, one
    game per hold): compiles the game with the release's native compiler
    against `lib-tree-gamebase` and the row's `leanOptions`, writes
