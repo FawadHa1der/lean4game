@@ -572,7 +572,7 @@ lane_games() {
   # A game's new import is named here, before any compile: wasm/mathlib-roots.txt
   # must list it, and a module in no pack of this release needs the kernel's next
   # pack build (wasm/PORTING.md §4). vendor/batteries is what the trees lane compiles.
-  local scope=(); [ -z "$GAMES" ] || scope=(--games "$GAMES")
+  local scope=(); [ -z "$GAMES" ] || scope=(--games "${SELECTED_NAMES// /,}")
   run games "$G" -- node "$G/scripts/game-roots.mjs" --check ${scope[@]+"${scope[@]}"} --have "$MIRROR/$LIST_ESSENTIAL" --have "$MIRROR/$LIST_EXTRA" --have "$G/vendor/batteries"
   for row in "${ROWS[@]}"; do
     row_vars "$row"

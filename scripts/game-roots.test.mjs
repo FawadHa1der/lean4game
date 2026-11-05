@@ -230,6 +230,37 @@ test("--have: a module in no pack says it needs the kernel's next pack build; a 
   assert.match(r.stdout, /every one resolves in the pinned release/);
 });
 
+test("--check --games --have, the lane's form on a subset: regenerating does not quiet a new import in no pack, and another game's module is not asked about", () => {
+  const f = fixture();
+  f.write("cypress/B/Game.lean", "import Shared.Module\nimport Mathlib.InNoPack\nimport Game.Own\n");
+  assert.equal(f.run().status, 0); // the file lists it now
+  assert.ok(f.lines().includes("Mathlib.InNoPack  # beta"));
+  fs.rmSync(path.join(f.dir, "games-src/A"), { recursive: true }); // a subset run clones only its own game
+  const list = path.join(f.dir, "lists.txt");
+  f.write("lists.txt", "Shared.Module\nBatteries.Tactic.OpenPrivate\n"); // not the new module, and nothing of alpha's
+  let r = f.run("--check", "--games", "beta", "--have", list);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /^! Mathlib\.InNoPack \(imported by beta\): in no pack of the pinned release/m);
+  assert.doesNotMatch(r.stderr, /Mathlib\.(Alpha|Zeta)/);
+  assert.match(r.stderr, /1 difference for beta, GameServer, lean-i18n/);
+  f.write("lists.txt", "Shared.Module\nBatteries.Tactic.OpenPrivate\nMathlib.InNoPack\n");
+  r = f.run("--check", "--games", "beta", "--have", list);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /agrees with beta, GameServer, lean-i18n \(3 modules\); every one resolves/);
+});
+
+test("--check --have on a full run asks about a listed module nothing imports any more, too", () => {
+  const f = fixture();
+  f.run();
+  f.write("server/GameServer.lean", "import GameServer.Commands\n"); // OpenPrivate gone, still listed
+  const list = path.join(f.dir, "lists.txt");
+  f.write("lists.txt", `${MODULES.filter((m) => !m.startsWith("Batteries")).join("\n")}\n`);
+  const r = f.run("--check", "--have", list);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /^- Batteries\.Tactic\.OpenPrivate: listed, nothing imports it any more/m);
+  assert.match(r.stderr, /^! Batteries\.Tactic\.OpenPrivate: in no pack of the pinned release/m);
+});
+
 test("--games-src: the catalog's games-src/ checkouts from another directory", () => {
   const f = fixture();
   fs.renameSync(path.join(f.dir, "games-src"), path.join(f.dir, "elsewhere"));
@@ -246,6 +277,24 @@ test("bad arguments: exit 2", () => {
     const r = f.run(...args);
     assert.equal(r.status, 2, `${args.join(" ")}: ${r.stderr}`);
   }
+});
+
+test("this tree: the games lane checks before its first compile, on the names it validated (--plan runs nothing)", () => {
+  const checkLine = (...games) => {
+    const r = spawnSync("bash", [path.join(root, "wasm/build-from-source.sh"), "--plan", "--lanes", "games", ...games], { encoding: "utf8" });
+    assert.equal(r.status, 0, r.stderr);
+    const lines = r.stdout.split("\n");
+    const check = lines.findIndex((l) => l.includes("scripts/game-roots.mjs --check"));
+    assert.ok(check >= 0, "the lane runs the check");
+    assert.ok(check < lines.findIndex((l) => l.includes("wasm/scripts/compile-pkg.py")), "before its first compile");
+    assert.match(lines[check], /--have .*essential.* --have .*extra.* --have .*vendor\/batteries/);
+    return lines[check];
+  };
+  assert.doesNotMatch(checkLine(), /--games/);
+  assert.match(checkLine("--games", "stg4"), / --games stg4 --have /);
+  // Every spelling the lane accepts: a,b, words, a trailing comma. Catalog order.
+  for (const spelling of ["stg4,nng4", "stg4 nng4"]) assert.match(checkLine("--games", spelling), / --games nng4,stg4 --have /);
+  assert.match(checkLine("--games", "stg4,"), / --games stg4 --have /);
 });
 
 test("this tree: the tracked file lists what its in-repo sources import (TestGame, GameServer, lean-i18n)", () => {
