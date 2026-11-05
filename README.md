@@ -1,11 +1,65 @@
-# Lean 4 Game
+# Lean 4 Game, in your browser
 
-This is the source code for the Lean Game Server hosted at [adam.math.hhu.de](https://adam.math.hhu.de).
+A fork of [lean4game](https://github.com/leanprover-community/lean4game) whose
+games run entirely in the browser tab. There is no Lean server behind it.
 
-## The in-browser (wasm64) build
+**Play:** <https://lean4game.fawadworkaddress.workers.dev>
 
-This fork runs the Lean server in the browser tab, on the QED64 wasm64 runtime.
-Building it from a clean clone needs no QED64 checkout: the runtime's
+This fork is not run by the lean4game team. Upstream's server-hosted version is
+at [adam.math.hhu.de](https://adam.math.hhu.de). This branch,
+[`wasm64-port`](https://github.com/FawadHa1der/lean4game/tree/wasm64-port), is
+the one that deploys.
+
+## What "no server" means
+
+- **Lean runs in the tab.** Lean 4.35.0, compiled to 64-bit WebAssembly
+  (Memory64), checks your proof in Web Workers inside the page, against the game's
+  environment (the game, GameServer and Mathlib), which is downloaded as data. What
+  you type stays on your computer, and your progress is saved in your browser's
+  storage.
+- **The host only serves files.** A Cloudflare Worker and R2 serve the page and
+  its downloads and answer only `GET` and `HEAD`. No Lean process runs there.
+- **The first visit downloads, later visits start in seconds.** The checker is
+  106 MB, once. Each game's environment is a further 154-362 MB, which unpacks to
+  0.6-1.3 GB and stays in browser storage. A level you have played reloads with
+  the network off.
+- **What you need.** A recent desktop Chrome or Edge and a few GB of free memory.
+  Firefox has the WebAssembly features this needs, and QED64 runs in it, but this
+  site has not been tested there yet. Safari does not ship Memory64 yet.
+
+## Known limits
+
+- A browser gives Lean far less stack than a native process. Some deeply recursive
+  steps fail here although native Lean accepts them: Lean reports "the WebAssembly
+  runtime's stack is exhausted" on the line, or checking pauses with "Lean ran out
+  of the browser's stack". This includes the reference proofs of RAG Lecture15/1
+  and Lecture24/3 and Robo Euklid/4; [wasm/UX-PARITY.md](wasm/UX-PARITY.md) lists
+  the cases found.
+- Logic IffTactic/5, played step by step to the end, runs the checker out of
+  memory near step 80, and the checker restarts
+  ([wasm/UX-PARITY.md](wasm/UX-PARITY.md)).
+- Games are compiled and packed ahead of time, so this site cannot load a game
+  from a URL the way upstream's server can.
+  [wasm/PORTING.md](wasm/PORTING.md) describes how a game is ported.
+
+## How it fits together
+
+| Repository | Role |
+| --- | --- |
+| [lean4game, `wasm64-port`](https://github.com/FawadHa1der/lean4game/tree/wasm64-port) (this one) | The game interface, the catalog of nine games (plus a test game) with their ports, the build and the site |
+| [QED64](https://github.com/FawadHa1der/QED64) | The library that runs Lean in a web page: workers, the language-server relay, environment snapshots. A git dependency, pinned by commit in `client/package.json` |
+| [lean4, wasm64 fork](https://github.com/FawadHa1der/lean4/tree/qed64-wasm64) | Lean built for wasm64 on branch `qed64-wasm64`: the runtime and library packs, published as toolchain releases (today [`lean-v4.35.0-b081e7c`](https://github.com/FawadHa1der/lean4/releases/tag/lean-v4.35.0-b081e7c)) |
+| [lean4game, upstream](https://github.com/leanprover-community/lean4game) | The original game engine and interface |
+
+`server/` (GameServer) is compiled into each game's environment, so it runs in
+the tab too. `relay/` is upstream's Node server, which connects the browser to
+`lake serve` over a websocket; this build does not use it. (The relay in QED64's
+row is a different thing: a class inside the page, between the editor and the
+Lean worker.)
+
+## Building it
+
+Building from a clean clone needs no QED64 checkout: the runtime's
 browser-side code, worker scripts and pipeline scripts are the `qed64` npm
 package, a git dependency pinned by commit in `client/package.json`
 ([wasm/KERNEL.md](wasm/KERNEL.md), "The qed64 dependency").
@@ -51,6 +105,20 @@ own ~40 MB image from `wasm/docker/Dockerfile`. Lanes, checks and the
 release bump: [wasm/KERNEL.md](wasm/KERNEL.md) ("Toolchain dependency",
 "Building the artifacts from the toolchain release"); porting a game:
 [wasm/PORTING.md](wasm/PORTING.md).
+
+### Deploying
+
+A push to `wasm64-port` runs the tests and deploys the site:
+[wasm/DEPLOY.md](wasm/DEPLOY.md).
+
+## Upstream's documentation
+
+Everything from here on is upstream lean4game's documentation, with notes for this
+build under Security, Contact and Credits. Its documents describe the
+server-hosted version, including hosting and publishing to `adam.math.hhu.de`. For
+this build, see [wasm/KERNEL.md](wasm/KERNEL.md),
+[wasm/DEPLOY.md](wasm/DEPLOY.md), [wasm/PORTING.md](wasm/PORTING.md) and
+[wasm/UX-PARITY.md](wasm/UX-PARITY.md).
 
 ## Creating a Game
 
@@ -99,11 +167,11 @@ We welcome translations of the game interface and of the various games hosted on
 
 ## Security
 
-Providing the use access to a Lean instance running on the server is a severe security risk. That is why we start the Lean server with bubblewrap.
+Upstream gives users access to a Lean instance on its server, which is a severe security risk, so it starts the Lean server with bubblewrap. In this build Lean runs inside the visitor's own browser sandbox, so there is no server-side Lean to protect.
 
 ## Contact
 
-In case of a server outage at `adam.math.hhu.de` please open an [issue](issues) and/or contact us by <a href="mailto:adam@math.hhu.de?subject=Server Outage">email</a>.  Bug reports and feature requests regarding the game interface should be filed on the [issues page](issues) of this repository.   For specific games on the [Lean Game Server](https://adam.math.hhu.de), please refer to the github repositories linked to below or contact the maintainers.
+These are upstream's contacts. In case of a server outage at `adam.math.hhu.de` please open an [issue](https://github.com/leanprover-community/lean4game/issues) and/or contact them by <a href="mailto:adam@math.hhu.de?subject=Server Outage">email</a>.  Bug reports and feature requests regarding upstream's game interface should be filed on [its issues page](https://github.com/leanprover-community/lean4game/issues).   For specific games on the [Lean Game Server](https://adam.math.hhu.de), please refer to the github repositories linked to below or contact the maintainers.
 
 | Game/repository                                                                   | Maintainer                                              |
 |-----------------------------------------------------------------------------------|---------------------------------------------------------|
@@ -114,12 +182,13 @@ In case of a server outage at `adam.math.hhu.de` please open an [issue](issues) 
 | [Real Analysis Game](https://github.com/alexkontorovich/realanalysisgame)         | [Alex Kontorovich](https://github.com/AlexKontorovich)  |
 | [Reintroduction to Proofs](https://github.com/emilyriehl/reintroductiontoproofs)  | [Emily Riehl](https://github.com/emilyriehl)            |
 | [Robo / Scribble](https://github.com/hhu-adam/robo)                               | [Marcus Zibrowius](https://github.com/TentativeConvert) |
-| [Set Theory Game](https://github.com/djvelleman/stg4)                             | [Dan Velleman](https://github.com/djvelleman)
+| [Set Theory Game](https://github.com/djvelleman/stg4)                             | [Dan Velleman](https://github.com/djvelleman)           |
+| [Number Theory Game](https://github.com/k88-b/NumberTheoryGame)                   | [k88-b](https://github.com/k88-b)                       |
 
 
 ## Credits
 
-The project has primarily been developed by Alexander Bentkamp and Jon Eugster.
+lean4game has primarily been developed by Alexander Bentkamp and Jon Eugster. The in-browser build is by [FawadHa1der](https://github.com/FawadHa1der).
 
 It is based on ideas from the [Lean Game Maker](https://github.com/mpedramfar/Lean-game-maker) and the [Natural Number Game
 (NNG)](https://www.ma.imperial.ac.uk/~buzzard/xena/natural_number_game/)
