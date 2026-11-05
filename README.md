@@ -82,7 +82,9 @@ node scripts/serve-dist.mjs          # http://localhost:3006 with the COOP/COEP 
 
 This works for a checkout of what is live: the live site serves one runtime, and
 a checkout that names another gets a 404 and a message saying what to do
-([wasm/KERNEL.md](wasm/KERNEL.md), "Rebuilding from a clone").
+([wasm/KERNEL.md](wasm/KERNEL.md), "Rebuilding from a clone"). Games not fetched
+stay listed, and opening one shows a card saying its environment is "not published
+for this build"; rerunning the fetch and the build adds them.
 
 ### Building the artifacts from source
 

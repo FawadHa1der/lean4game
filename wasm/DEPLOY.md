@@ -49,10 +49,10 @@ existing bucket-scoped upload token serve both.
 
 A clone reads this origin too: `scripts/fetch-artifacts.mjs` GETs the runtime
 chunks and `.snapz` a checkout's tracked manifest and index name, for local play
-(`wasm/KERNEL.md`, "Rebuilding from a clone"). No other copy is published. It
-works for a checkout of what is live: once a deploy moves the Worker to another
-release, an older checkout's chunk names answer 404, and the script tells that
-person to `git pull`.
+(`wasm/KERNEL.md`, "Rebuilding from a clone"). No other copy of the snapshots is
+published. It works for a checkout of what is live: once a deploy moves the Worker
+to another release, an older checkout's chunk names answer 404, and the script tells
+that person to `git pull`.
 
 ## Deploy, in order
 
