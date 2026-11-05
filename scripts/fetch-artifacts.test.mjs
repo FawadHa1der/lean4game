@@ -165,6 +165,7 @@ test("a 404 on a runtime chunk says the live site serves another runtime, and wh
   assert.match(r.stderr, /build the artifacts from source/);
   assert.ok(urls().every((u) => u.startsWith("/runtime/chunks/")), `no snapshot is worth fetching without the runtime: ${urls()}`);
   assert.ok(urls().every((u) => count(u) === 1), "a 404 gets no second try");
+  assert.equal(gets.length, 2, "a chunk's final failure ends the chunks: the third is never asked");
   assert.equal(fs.existsSync(inPublic("snapshots/testgame.dd.snapz")), false);
 });
 
@@ -270,6 +271,24 @@ for (const [what, url] of [
     assert.match(r.stderr, /the tracked url .* is not a plain file under \/snapshots\/: nothing fetched/);
     assert.deepEqual(gets, []);
     assert.ok(fs.existsSync(inPublic("/snapshots/index.json")) && fs.existsSync(inPublic("/runtime/runtime-manifest.json")));
+  });
+}
+
+for (const [what, manifest, index, message] of [
+  ["no files in the manifest", { buildId: BUILD_ID, files: {} }, INDEX, /the runtime manifest lists no chunks/],
+  ["files with no chunks", { buildId: BUILD_ID, files: { "lean.js": { chunks: [] }, "lean.wasm": {} } }, INDEX, /the runtime manifest lists no chunks/],
+  ["no manifest files key", { buildId: BUILD_ID }, INDEX, /the runtime manifest lists no chunks/],
+  ["an empty index", MANIFEST, { snapshots: [] }, /the snapshot index lists no snapshots/],
+  ["no index key", MANIFEST, {}, /the snapshot index lists no snapshots/],
+  ["both empty", { buildId: BUILD_ID, files: {} }, { snapshots: [] }, /the runtime manifest lists no chunks/],
+]) {
+  test(`nothing to verify is not a success, exit 2 before any fetch: ${what}`, async () => {
+    tracked(manifest, index);
+    const r = await run();
+    assert.equal(r.status, 2, r.stderr);
+    assert.match(r.stderr, message);
+    assert.doesNotMatch(r.stdout, /verified/);
+    assert.deepEqual(gets, []);
   });
 }
 
